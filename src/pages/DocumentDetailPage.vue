@@ -14,22 +14,22 @@
 
     <div class="actions" v-if="doc.is_applicable">
       <!-- ÉMETTEUR : émettre -->
-      <button v-if="doc.statut==='non_emis'" class="btn" @click="doAct('emettre')">Émettre le document</button>
+      <button v-if="doc.statut==='non_emis' && canEmit" class="btn" @click="doAct('emettre')">Émettre le document</button>
 
       <!-- ÉMETTEUR : rectifier après retour -->
-      <button v-if="doc.statut==='retour_emetteur'" class="btn" @click="doAct('rectifier')">Rectifier et renvoyer à l'AQ</button>
+      <button v-if="doc.statut==='retour_emetteur' && canRectifier" class="btn" @click="doAct('rectifier')">Rectifier et renvoyer à l'AQ</button>
 
       <!-- AQ : vérifier et transmettre au DT -->
-      <button v-if="doc.statut==='emis' || doc.statut==='verification_aq'" class="btn" @click="doAct('verifier_aq')">Vérifier et transmettre au DT</button>
+      <button v-if="(doc.statut==='emis' || doc.statut==='verification_aq') && canVerify" class="btn" @click="doAct('verifier_aq')">Vérifier et transmettre au DT</button>
 
       <!-- AQ : retourner à l'émetteur -->
-      <button v-if="doc.statut==='emis' || doc.statut==='verification_aq'" class="btn br" @click="prepareRetour('emetteur')">Retourner à l'émetteur</button>
+      <button v-if="(doc.statut==='emis' || doc.statut==='verification_aq') && canRetourner" class="btn br" @click="prepareRetour('emetteur')">Retourner à l'émetteur</button>
 
       <!-- DT : approuver -->
-      <button v-if="doc.statut==='approuve_aq'" class="btn bg" @click="doAct('approuver_dt')">Approuver (DT)</button>
+      <button v-if="doc.statut==='approuve_aq' && canApprove" class="btn bg" @click="doAct('approuver_dt')">Approuver (DT)</button>
 
       <!-- DT : retourner à l'AQ -->
-      <button v-if="doc.statut==='approuve_aq'" class="btn br" @click="prepareRetour('aq')">Retourner à l'AQ</button>
+      <button v-if="doc.statut==='approuve_aq' && canRetourner" class="btn br" @click="prepareRetour('aq')">Retourner à l'AQ</button>
     </div>
 
     <div class="rb" v-if="showRetour">
@@ -63,7 +63,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { supabase } from '../supabase'
-import { loadPermissions } from '../services/permissions'
+import { loadPermissions, canPerform } from '../services/permissions'
 import { createNotification } from '../services/notifications'
 export default {
   setup() {
@@ -103,6 +103,12 @@ export default {
     }
 
     var fmtDt = function(d) { return d ? new Date(d).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—' }
+    // Permissions selon type de document courant
+    var canEmit = computed(function(){ return doc.value && canPerform('emettre_'+doc.value.type_document) })
+    var canVerify = computed(function(){ return doc.value && canPerform('verifier_'+doc.value.type_document) })
+    var canApprove = computed(function(){ return doc.value && canPerform('approuver_'+doc.value.type_document) })
+    var canRetourner = computed(function(){ return canPerform('retourner_document') })
+    var canRectifier = computed(function(){ return canPerform('rectifier_document') })
     var dotClass = function(a) { return a === 'retour' ? 'dot-ret' : a === 'approbation' ? 'dot-ok' : 'dot-prog' }
 
     var prepareRetour = function(dest) {
@@ -205,7 +211,7 @@ export default {
       loadDoc()
     })
 
-    return { doc, movements, showRetour, motif, retourDest, typeLabels, actionLabelsMap, statusLabel, spClass, flowClass, fmtDt, dotClass, prepareRetour, doAct, doRetour }
+    return { doc, movements, showRetour, motif, retourDest, typeLabels, actionLabelsMap, statusLabel, spClass, flowClass, fmtDt, dotClass, prepareRetour, doAct, doRetour, canEmit, canVerify, canApprove, canRetourner, canRectifier }
   }
 }
 </script>
