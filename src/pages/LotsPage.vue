@@ -18,87 +18,11 @@
     <div class="bulk-bar">
       <select v-model="actionType" class="bulk-sel">
         <option value="">— Choisir une action —</option>
-        <optgroup label="Circuit OF">
-          <option value="of_planification">OF — Mise en circuit</option>
-          <option value="of_stock">OF — Validation Stock</option>
-          <option value="of_aq">OF — Validation AQ</option>
-          <option value="of_dt">OF — Autorisation DT</option>
-          <option value="of_aq_dap">OF — Remise AQ DAP</option>
-          <option value="of_production">OF — Accusé réception</option>
-        </optgroup>
-        <optgroup label="Circuit OC">
-          <option value="oc_planification">OC — Mise en circuit</option>
-          <option value="oc_stock">OC — Validation Stock</option>
-          <option value="oc_aq">OC — Validation AQ</option>
-          <option value="oc_dt">OC — Autorisation DT</option>
-          <option value="oc_aq_dap">OC — Remise AQ DAP</option>
-          <option value="oc_production">OC — Accusé réception</option>
-        </optgroup>
-        <optgroup label="Documents — Émission">
-          <option value="doc_if">IF — Émettre</option>
-          <option value="doc_ic">IC — Émettre</option>
-          <option value="doc_da_pc">DA Physico — Émettre</option>
-          <option value="doc_da_micro">DA Micro — Émettre</option>
-        </optgroup>
-        <optgroup label="Documents — Vérification AQ → DT">
-          <option value="doc_if_verifier">IF — Vérifier AQ → DT</option>
-          <option value="doc_ic_verifier">IC — Vérifier AQ → DT</option>
-          <option value="doc_da_pc_verifier">DA Physico — Vérifier AQ → DT</option>
-          <option value="doc_da_micro_verifier">DA Micro — Vérifier AQ → DT</option>
-        </optgroup>
-        <optgroup label="Documents — Approbation DT">
-          <option value="doc_if_approuver">IF — Approuver DT</option>
-          <option value="doc_ic_approuver">IC — Approuver DT</option>
-          <option value="doc_da_pc_approuver">DA Physico — Approuver DT</option>
-          <option value="doc_da_micro_approuver">DA Micro — Approuver DT</option>
-        </optgroup>
-        <optgroup label="Documents — Retour">
-          <option value="doc_if_retour_emetteur">IF — Retourner à l'émetteur</option>
-          <option value="doc_ic_retour_emetteur">IC — Retourner à l'émetteur</option>
-          <option value="doc_da_pc_retour_emetteur">DA Physico — Retourner à l'émetteur</option>
-          <option value="doc_da_micro_retour_emetteur">DA Micro — Retourner à l'émetteur</option>
-          <option value="doc_if_retour_aq">IF — DT retourne à l'AQ</option>
-          <option value="doc_ic_retour_aq">IC — DT retourne à l'AQ</option>
-          <option value="doc_da_pc_retour_aq">DA Physico — DT retourne à l'AQ</option>
-          <option value="doc_da_micro_retour_aq">DA Micro — DT retourne à l'AQ</option>
-        </optgroup>
-        <optgroup label="AQL">
-          <option value="aql_fab_demander">AQL Fabrication — Demander</option>
-          <option value="aql_fab_relancer">AQL Fabrication — Relancer</option>
-          <option value="aql_fab_conforme">AQL Fabrication — Conforme</option>
-          <option value="aql_fab_non_conforme">AQL Fabrication — Non conforme</option>
-          <option value="aql_cond_demander">AQL Conditionnement — Demander</option>
-          <option value="aql_cond_relancer">AQL Conditionnement — Relancer</option>
-          <option value="aql_cond_conforme">AQL Conditionnement — Conforme</option>
-          <option value="aql_cond_non_conforme">AQL Conditionnement — Non conforme</option>
-        </optgroup>
-        <optgroup label="RVP — Émission">
-          <option value="rvp_fab_emettre">RVP Fabrication — Émettre</option>
-          <option value="rvp_cond_emettre">RVP Conditionnement — Émettre</option>
-          <option value="rvp_lcq_emettre">RVP LCQ — Émettre</option>
-        </optgroup>
-        <optgroup label="RVP — Vérification AQ → DT">
-          <option value="rvp_fab_verifier">RVP Fabrication — Vérifier AQ → DT</option>
-          <option value="rvp_cond_verifier">RVP Conditionnement — Vérifier AQ → DT</option>
-          <option value="rvp_lcq_verifier">RVP LCQ — Vérifier AQ → DT</option>
-        </optgroup>
-        <optgroup label="RVP — Approbation DT">
-          <option value="rvp_fab_approuver">RVP Fabrication — Approuver DT</option>
-          <option value="rvp_cond_approuver">RVP Conditionnement — Approuver DT</option>
-          <option value="rvp_lcq_approuver">RVP LCQ — Approuver DT</option>
-        </optgroup>
-        <optgroup label="RVP — Retour">
-          <option value="rvp_fab_retour_emetteur">RVP Fabrication — Retourner à l'émetteur</option>
-          <option value="rvp_cond_retour_emetteur">RVP Conditionnement — Retourner à l'émetteur</option>
-          <option value="rvp_lcq_retour_emetteur">RVP LCQ — Retourner à l'émetteur</option>
-          <option value="rvp_fab_retour_aq">RVP Fabrication — DT retourne à l'AQ</option>
-          <option value="rvp_cond_retour_aq">RVP Conditionnement — DT retourne à l'AQ</option>
-          <option value="rvp_lcq_retour_aq">RVP LCQ — DT retourne à l'AQ</option>
-        </optgroup>
-        <optgroup label="Déviation">
-          <option value="dev_declarer">Déviation — Déclarer</option>
-          <option value="dev_cloture">Déviation — Clôturer</option>
-        </optgroup>
+        <template v-for="grp in actionGroups" :key="grp.label">
+          <optgroup :label="grp.label">
+            <option v-for="opt in grp.actions" :key="opt.value" :value="opt.value">{{opt.label}}</option>
+          </optgroup>
+        </template>
       </select>
       <button class="bulk-btn" :disabled="!canExecute" @click="showConfirm=true">
         Exécuter<span v-if="selected.length"> ({{selected.length}})</span>
@@ -188,6 +112,56 @@ export default {
     var sortCol = ref(''), sortDir = ref('asc'), showDates = ref(false)
     var selected = ref([]), actionType = ref(''), showConfirm = ref(false)
     var executing = ref(false), progress = ref(0), execResult = ref(null)
+    var userService = ref('')
+
+    // ── Table service → actions autorisées ─────────────────────────────
+    var serviceActionMap = {
+      planification: ['of_planification','oc_planification','dev_declarer','dev_cloture'],
+      stock:         ['of_stock','oc_stock'],
+      aq:            ['of_aq','oc_aq',
+                      'doc_if_verifier','doc_ic_verifier','doc_da_pc_verifier','doc_da_micro_verifier',
+                      'doc_if_retour_emetteur','doc_ic_retour_emetteur','doc_da_pc_retour_emetteur','doc_da_micro_retour_emetteur',
+                      'rvp_fab_verifier','rvp_cond_verifier','rvp_lcq_verifier',
+                      'rvp_fab_retour_emetteur','rvp_cond_retour_emetteur','rvp_lcq_retour_emetteur',
+                      'aql_fab_demander','aql_fab_relancer','aql_fab_conforme','aql_fab_non_conforme',
+                      'aql_cond_demander','aql_cond_relancer','aql_cond_conforme','aql_cond_non_conforme',
+                      'dev_declarer','dev_cloture'],
+      aq_dap:        ['of_aq_dap','oc_aq_dap'],
+      dt:            ['of_dt','oc_dt',
+                      'doc_if_approuver','doc_ic_approuver','doc_da_pc_approuver','doc_da_micro_approuver',
+                      'doc_if_retour_aq','doc_ic_retour_aq','doc_da_pc_retour_aq','doc_da_micro_retour_aq',
+                      'rvp_fab_approuver','rvp_cond_approuver','rvp_lcq_approuver',
+                      'rvp_fab_retour_aq','rvp_cond_retour_aq','rvp_lcq_retour_aq'],
+      fabrication:   ['of_production','doc_if','rvp_fab_emettre','dev_declarer'],
+      conditionnement:['oc_production','doc_ic','rvp_cond_emettre','dev_declarer'],
+      lcq:           ['doc_da_pc','doc_da_micro','rvp_lcq_emettre','dev_declarer'],
+    }
+    var canAction = function(action) {
+      if (userService.value === 'admin') return true
+      return (serviceActionMap[userService.value] || []).indexOf(action) >= 0
+    }
+
+    // ── Définition complète des groupes d'actions ───────────────────────
+    var actionGroupDefs = [
+      {label:'Circuit OF',actions:[{value:'of_planification',label:'OF — Mise en circuit'},{value:'of_stock',label:'OF — Validation Stock'},{value:'of_aq',label:'OF — Validation AQ'},{value:'of_dt',label:'OF — Autorisation DT'},{value:'of_aq_dap',label:'OF — Remise AQ DAP'},{value:'of_production',label:'OF — Accusé réception'}]},
+      {label:'Circuit OC',actions:[{value:'oc_planification',label:'OC — Mise en circuit'},{value:'oc_stock',label:'OC — Validation Stock'},{value:'oc_aq',label:'OC — Validation AQ'},{value:'oc_dt',label:'OC — Autorisation DT'},{value:'oc_aq_dap',label:'OC — Remise AQ DAP'},{value:'oc_production',label:'OC — Accusé réception'}]},
+      {label:'Documents — Émission',actions:[{value:'doc_if',label:'IF — Émettre'},{value:'doc_ic',label:'IC — Émettre'},{value:'doc_da_pc',label:'DA Physico — Émettre'},{value:'doc_da_micro',label:'DA Micro — Émettre'}]},
+      {label:'Documents — Vérification AQ → DT',actions:[{value:'doc_if_verifier',label:'IF — Vérifier AQ → DT'},{value:'doc_ic_verifier',label:'IC — Vérifier AQ → DT'},{value:'doc_da_pc_verifier',label:'DA Physico — Vérifier AQ → DT'},{value:'doc_da_micro_verifier',label:'DA Micro — Vérifier AQ → DT'}]},
+      {label:'Documents — Approbation DT',actions:[{value:'doc_if_approuver',label:'IF — Approuver DT'},{value:'doc_ic_approuver',label:'IC — Approuver DT'},{value:'doc_da_pc_approuver',label:'DA Physico — Approuver DT'},{value:'doc_da_micro_approuver',label:'DA Micro — Approuver DT'}]},
+      {label:'Documents — Retour',actions:[{value:'doc_if_retour_emetteur',label:"IF — Retourner à l'émetteur"},{value:'doc_ic_retour_emetteur',label:"IC — Retourner à l'émetteur"},{value:'doc_da_pc_retour_emetteur',label:"DA Physico — Retourner à l'émetteur"},{value:'doc_da_micro_retour_emetteur',label:"DA Micro — Retourner à l'émetteur"},{value:'doc_if_retour_aq',label:"IF — DT retourne à l'AQ"},{value:'doc_ic_retour_aq',label:"IC — DT retourne à l'AQ"},{value:'doc_da_pc_retour_aq',label:"DA Physico — DT retourne à l'AQ"},{value:'doc_da_micro_retour_aq',label:"DA Micro — DT retourne à l'AQ"}]},
+      {label:'AQL',actions:[{value:'aql_fab_demander',label:'AQL Fabrication — Demander'},{value:'aql_fab_relancer',label:'AQL Fabrication — Relancer'},{value:'aql_fab_conforme',label:'AQL Fabrication — Conforme'},{value:'aql_fab_non_conforme',label:'AQL Fabrication — Non conforme'},{value:'aql_cond_demander',label:'AQL Conditionnement — Demander'},{value:'aql_cond_relancer',label:'AQL Conditionnement — Relancer'},{value:'aql_cond_conforme',label:'AQL Conditionnement — Conforme'},{value:'aql_cond_non_conforme',label:'AQL Conditionnement — Non conforme'}]},
+      {label:'RVP — Émission',actions:[{value:'rvp_fab_emettre',label:'RVP Fabrication — Émettre'},{value:'rvp_cond_emettre',label:'RVP Conditionnement — Émettre'},{value:'rvp_lcq_emettre',label:'RVP LCQ — Émettre'}]},
+      {label:'RVP — Vérification AQ → DT',actions:[{value:'rvp_fab_verifier',label:'RVP Fabrication — Vérifier AQ → DT'},{value:'rvp_cond_verifier',label:'RVP Conditionnement — Vérifier AQ → DT'},{value:'rvp_lcq_verifier',label:'RVP LCQ — Vérifier AQ → DT'}]},
+      {label:'RVP — Approbation DT',actions:[{value:'rvp_fab_approuver',label:'RVP Fabrication — Approuver DT'},{value:'rvp_cond_approuver',label:'RVP Conditionnement — Approuver DT'},{value:'rvp_lcq_approuver',label:'RVP LCQ — Approuver DT'}]},
+      {label:'RVP — Retour',actions:[{value:'rvp_fab_retour_emetteur',label:"RVP Fabrication — Retourner à l'émetteur"},{value:'rvp_cond_retour_emetteur',label:"RVP Conditionnement — Retourner à l'émetteur"},{value:'rvp_lcq_retour_emetteur',label:"RVP LCQ — Retourner à l'émetteur"},{value:'rvp_fab_retour_aq',label:"RVP Fabrication — DT retourne à l'AQ"},{value:'rvp_cond_retour_aq',label:"RVP Conditionnement — DT retourne à l'AQ"},{value:'rvp_lcq_retour_aq',label:"RVP LCQ — DT retourne à l'AQ"}]},
+      {label:'Déviation',actions:[{value:'dev_declarer',label:'Déviation — Déclarer'},{value:'dev_cloture',label:'Déviation — Clôturer'}]},
+    ]
+    var actionGroups = computed(function(){
+      return actionGroupDefs.map(function(g){
+        return {label:g.label,actions:g.actions.filter(function(a){return canAction(a.value)})}
+      }).filter(function(g){return g.actions.length>0})
+    })
+    // ───────────────────────────────────────────────────────────────────
 
     var statusLabels = {vide:'Planifié',quarantaine:'Quarantaine',sous_investigation:'Investigation',accepte:'Accepté',refuse:'Refusé'}
     var filterOptions = [
@@ -403,6 +377,12 @@ export default {
     var getLotNum = function(id){ var l=lots.value.find(function(x){return x.id===id}); return l?l.numero_lot:id }
 
     var executeAction = async function() {
+      // Garde — vérification permission avant tout traitement
+      if (!canAction(actionType.value)) {
+        execResult.value = {ok:0,fail:selected.value.length,errors:['Action non autorisée pour votre service ('+userService.value+')']}
+        showConfirm.value = false
+        return
+      }
       executing.value = true; progress.value = 0
       var result = { ok:0, fail:0, errors:[] }
       var now = new Date().toISOString()
@@ -561,7 +541,12 @@ export default {
     }
     // ────────────────────────────────────────────────────────────────────
 
-    onMounted(function(){
+    onMounted(async function(){
+      var u = await supabase.auth.getUser()
+      if (u.data.user) {
+        var p = await supabase.from('profiles').select('service').eq('id', u.data.user.id).single()
+        if (p.data) userService.value = p.data.service
+      }
       if(route.query.filters)activeFilters.value=route.query.filters.split(',')
       load()
     })
@@ -571,7 +556,8 @@ export default {
       toggleFilter,sortBy,sortIcon,goToLot,doExportExcel,doExportPDF,
       selected,actionType,showConfirm,executing,progress,execResult,
       actionLabel,canExecute,allVisibleChecked,someVisibleChecked,
-      isSelected,toggleLot,toggleAll,getLotNum,executeAction}
+      isSelected,toggleLot,toggleAll,getLotNum,executeAction,
+      actionGroups,userService}
   }
 }
 </script>
