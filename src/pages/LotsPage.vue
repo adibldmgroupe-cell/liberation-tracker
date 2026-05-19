@@ -31,22 +31,37 @@
       <button v-if="selected.length" class="bulk-clear" @click="selected=[]">✕ Tout désélectionner</button>
     </div>
 
+    <!-- Chips filtres colonnes actifs -->
+    <div v-if="hasColumnFilters" class="cf-bar">
+      <span class="cf-label">Filtres actifs :</span>
+      <span v-for="(val,col) in columnFilters" :key="col" class="cf-chip">
+        {{col}} : <strong>{{val}}</strong>
+        <button class="cf-rm" @click="removeColumnFilter(col)">✕</button>
+      </span>
+      <button class="cf-clear" @click="clearColumnFilters">Tout effacer</button>
+    </div>
+
     <div v-if="!filteredLots.length" class="empty">Aucun lot trouvé</div>
     <div v-else class="table-wrap">
       <table class="tb">
         <thead><tr>
           <th class="th-chk"><input type="checkbox" :checked="allVisibleChecked" @change="toggleAll" /></th>
-          <th @click="sortBy('numero_lot')" class="sortable">N° Lot <span class="sort-arrow">{{sortIcon('numero_lot')}}</span></th>
-          <th @click="sortBy('prod_desc')" class="sortable">Produit <span class="sort-arrow">{{sortIcon('prod_desc')}}</span></th>
-          <th @click="sortBy('statut_label')" class="sortable">Statut <span class="sort-arrow">{{sortIcon('statut_label')}}</span></th>
-          <th @click="sortBy('of_label')" class="sortable">OF</th>
-          <th @click="sortBy('oc_label')" class="sortable">OC</th>
-          <th>AQL Fab</th><th>AQL Cond</th>
-          <th @click="sortBy('if_label')" class="sortable">IF</th>
-          <th @click="sortBy('ic_label')" class="sortable">IC</th>
-          <th>DA PC</th><th>DA Micro</th>
-          <th>Dév.</th><th>RVP Fab</th><th>RVP Cond</th><th>RVP LCQ</th>
-          <th @click="sortBy('date_fmt')" class="sortable">{{showDates?'Libération':'Entrée'}}</th>
+          <th class="th-s"><span class="th-txt" @click="sortBy('numero_lot')">N° Lot <span class="sort-arrow">{{sortIcon('numero_lot')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['numero_lot']}" @click="openDropdown('numero_lot',$event)">⌄</button></th>
+          <th class="th-s"><span class="th-txt" @click="sortBy('prod_desc')">Produit <span class="sort-arrow">{{sortIcon('prod_desc')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['prod_desc']}" @click="openDropdown('prod_desc',$event)">⌄</button></th>
+          <th class="th-s"><span class="th-txt" @click="sortBy('statut_label')">Statut <span class="sort-arrow">{{sortIcon('statut_label')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['statut_label']}" @click="openDropdown('statut_label',$event)">⌄</button></th>
+          <th class="th-s"><span class="th-txt" @click="sortBy('of_label')">OF <span class="sort-arrow">{{sortIcon('of_label')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['of_label']}" @click="openDropdown('of_label',$event)">⌄</button></th>
+          <th class="th-s"><span class="th-txt" @click="sortBy('oc_label')">OC <span class="sort-arrow">{{sortIcon('oc_label')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['oc_label']}" @click="openDropdown('oc_label',$event)">⌄</button></th>
+          <th class="th-s"><span class="th-txt">AQL Fab</span><button class="th-f" :class="{'th-f-on':columnFilters['aql_fab_label']}" @click="openDropdown('aql_fab_label',$event)">⌄</button></th>
+          <th class="th-s"><span class="th-txt">AQL Cond</span><button class="th-f" :class="{'th-f-on':columnFilters['aql_cond_label']}" @click="openDropdown('aql_cond_label',$event)">⌄</button></th>
+          <th class="th-s"><span class="th-txt" @click="sortBy('if_label')">IF <span class="sort-arrow">{{sortIcon('if_label')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['if_label']}" @click="openDropdown('if_label',$event)">⌄</button></th>
+          <th class="th-s"><span class="th-txt" @click="sortBy('ic_label')">IC <span class="sort-arrow">{{sortIcon('ic_label')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['ic_label']}" @click="openDropdown('ic_label',$event)">⌄</button></th>
+          <th class="th-s"><span class="th-txt">DA PC</span><button class="th-f" :class="{'th-f-on':columnFilters['dapc_label']}" @click="openDropdown('dapc_label',$event)">⌄</button></th>
+          <th class="th-s"><span class="th-txt">DA Micro</span><button class="th-f" :class="{'th-f-on':columnFilters['damicro_label']}" @click="openDropdown('damicro_label',$event)">⌄</button></th>
+          <th class="th-s"><span class="th-txt">Dév.</span><button class="th-f" :class="{'th-f-on':columnFilters['dev_label']}" @click="openDropdown('dev_label',$event)">⌄</button></th>
+          <th class="th-s"><span class="th-txt">RVP Fab</span><button class="th-f" :class="{'th-f-on':columnFilters['rvp_fab_label']}" @click="openDropdown('rvp_fab_label',$event)">⌄</button></th>
+          <th class="th-s"><span class="th-txt">RVP Cond</span><button class="th-f" :class="{'th-f-on':columnFilters['rvp_cond_label']}" @click="openDropdown('rvp_cond_label',$event)">⌄</button></th>
+          <th class="th-s"><span class="th-txt">RVP LCQ</span><button class="th-f" :class="{'th-f-on':columnFilters['rvp_lcq_label']}" @click="openDropdown('rvp_lcq_label',$event)">⌄</button></th>
+          <th class="th-s"><span class="th-txt" @click="sortBy('date_fmt')">{{showDates?'Libération':'Entrée'}} <span class="sort-arrow">{{sortIcon('date_fmt')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['date_fmt']}" @click="openDropdown('date_fmt',$event)">⌄</button></th>
         </tr></thead>
         <tbody><tr v-for="l in filteredLots" :key="l.id" :class="{'row-sel':isSelected(l.id)}" @click="goToLot(l.id)">
           <td class="td-chk" @click.stop><input type="checkbox" :value="l.id" v-model="selected" /></td>
@@ -69,6 +84,12 @@
         </tr></tbody>
       </table>
     </div>
+    <!-- Dropdown filtre colonne (position:fixed) -->
+    <div v-if="activeDropdown" class="col-dd" :style="{top:ddPos.top+'px',left:ddPos.left+'px'}" @click.stop>
+      <div class="col-dd-item col-dd-all" @click="setColumnFilter(null)">— Tout —</div>
+      <div v-for="v in getColumnValues(activeDropdown)" :key="v" class="col-dd-item" :class="{'col-dd-on':columnFilters[activeDropdown]===v}" @click="setColumnFilter(v)">{{v}}</div>
+    </div>
+
     <!-- Modal confirmation action en masse -->
     <div class="m-overlay" v-if="showConfirm" @click.self="showConfirm=false">
       <div class="m-box">
@@ -100,7 +121,7 @@
   </div>
 </template>
 <script>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../supabase'
 import { exportToExcel, exportToPDF } from '../services/export'
@@ -262,17 +283,54 @@ export default {
           rvp_fab_label:rvpFab.label,rvp_fab_class:rvpFab.cls,
           rvp_cond_label:rvpCond.label,rvp_cond_class:rvpCond.cls,
           rvp_lcq_label:rvpLcq.label,rvp_lcq_class:rvpLcq.cls,
-          dev_count:devs.length,dev_open:devOpen,
+          dev_count:devs.length,dev_open:devOpen,dev_label:devs.length>0?(devOpen>0?'Ouverte':'Clôturée'):'—',
           of_id:of?of.id:null,oc_id:oc?oc.id:null,docs:docs,
         }
       })
     }
+
+    // ── Filtres par colonne ─────────────────────────────────────────────
+    var columnFilters = ref({})
+    var activeDropdown = ref(null)
+    var ddPos = ref({top:0,left:0})
+
+    var openDropdown = function(col, event) {
+      event.stopPropagation()
+      if (activeDropdown.value === col) { activeDropdown.value = null; return }
+      var rect = event.currentTarget.getBoundingClientRect()
+      ddPos.value = { top: rect.bottom + 2, left: rect.left }
+      activeDropdown.value = col
+    }
+    var getColumnValues = function(col) {
+      var seen = {}, vals = []
+      lots.value.forEach(function(l) {
+        var v = l[col]
+        if (v !== undefined && v !== null && v !== '' && v !== '—' && !seen[v]) { seen[v]=true; vals.push(v) }
+      })
+      return vals.sort()
+    }
+    var setColumnFilter = function(val) {
+      var col = activeDropdown.value
+      if (val === null) {
+        var nf = {}; Object.keys(columnFilters.value).forEach(function(k){ if(k!==col)nf[k]=columnFilters.value[k] }); columnFilters.value = nf
+      } else {
+        columnFilters.value = Object.assign({}, columnFilters.value, {[col]: val})
+      }
+      activeDropdown.value = null
+    }
+    var clearColumnFilters = function(){ columnFilters.value = {}; activeDropdown.value = null }
+    var removeColumnFilter = function(col){ var nf={}; Object.keys(columnFilters.value).forEach(function(k){if(k!==col)nf[k]=columnFilters.value[k]}); columnFilters.value=nf }
+    var hasColumnFilters = computed(function(){ return Object.keys(columnFilters.value).length > 0 })
+    var closeDropdownGlobal = function(){ activeDropdown.value = null }
+    // ───────────────────────────────────────────────────────────────────
 
     var filteredLots = computed(function(){
       var result = lots.value
       if(activeFilters.value.length>0){
         result=result.filter(function(l){return activeFilters.value.indexOf(l.statut_filter)>=0})
       }
+      var cf=columnFilters.value, cfk=Object.keys(cf)
+      if(cfk.length>0){result=result.filter(function(l){return cfk.every(function(k){return l[k]===cf[k]})})}
       if(sortCol.value){
         var col=sortCol.value,dir=sortDir.value
         result=result.slice().sort(function(a,b){
@@ -527,13 +585,15 @@ export default {
       if (u.data.user) {
         var p = await supabase.from('profiles').select('service').eq('id', u.data.user.id).single()
         if (p.data) {
-          await loadPermissions(p.data.service) // charger les permissions AVANT de setter userService
-          userService.value = p.data.service    // → déclenche recompute de actionGroups avec canPerform correct
+          await loadPermissions(p.data.service)
+          userService.value = p.data.service
         }
       }
       if(route.query.filters)activeFilters.value=route.query.filters.split(',')
       load()
+      document.addEventListener('click', closeDropdownGlobal)
     })
+    onUnmounted(function(){ document.removeEventListener('click', closeDropdownGlobal) })
     watch(function(){return route.query},load,{deep:true})
 
     return{lots,total,activeFilters,showDates,filteredLots,filterOptions,
@@ -541,7 +601,8 @@ export default {
       selected,actionType,showConfirm,executing,progress,execResult,
       actionLabel,canExecute,allVisibleChecked,someVisibleChecked,
       isSelected,toggleLot,toggleAll,getLotNum,executeAction,
-      actionGroups,userService}
+      actionGroups,userService,
+      columnFilters,activeDropdown,ddPos,openDropdown,getColumnValues,setColumnFilter,clearColumnFilters,removeColumnFilter,hasColumnFilters}
   }
 }
 </script>
@@ -569,6 +630,26 @@ export default {
 .pip-done-t{background:#EAF3DE;color:#3B6D11}.pip-prog-t{background:#FAEEDA;color:#854F0B}
 .dev-badge{font-size:9px;padding:2px 5px;border-radius:2px;font-weight:500}.dev-open{background:#FCEBEB;color:#A32D2D}.dev-closed{background:#EAF3DE;color:#3B6D11}
 .empty{text-align:center;padding:40px;color:#999}
+/* column filter chips */
+.cf-bar{display:flex;align-items:center;gap:6px;padding:5px 0;flex-wrap:wrap;font-size:11px;border-bottom:1px solid #e8e8e8;margin-bottom:0}
+.cf-label{color:#999;font-weight:500;white-space:nowrap}
+.cf-chip{display:flex;align-items:center;gap:4px;background:#E6F1FB;color:#0C447C;padding:2px 8px;border-radius:10px;font-size:11px}
+.cf-chip strong{font-weight:600}
+.cf-rm{background:none;border:none;cursor:pointer;color:#185FA5;font-size:11px;padding:0 0 0 2px;line-height:1}
+.cf-clear{font-size:11px;padding:2px 10px;border:1px solid #E24B4A;border-radius:10px;background:#fff;color:#E24B4A;cursor:pointer;white-space:nowrap}.cf-clear:hover{background:#FCEBEB}
+/* column header with filter button */
+.th-s{display:flex;align-items:center;gap:2px;padding:5px 4px !important;white-space:nowrap}
+.th-txt{cursor:pointer;flex:1;display:flex;align-items:center;gap:2px}
+.th-txt:hover{color:#185FA5}
+.th-f{background:none;border:none;cursor:pointer;color:#ccc;font-size:11px;padding:0 2px;line-height:1;border-radius:2px;flex-shrink:0;transition:.1s}
+.th-f:hover{color:#185FA5;background:#f0f0f0}
+.th-f-on{color:#185FA5 !important;background:#E6F1FB}
+/* column dropdown */
+.col-dd{position:fixed;background:#fff;border:1px solid #ddd;border-radius:4px;box-shadow:0 6px 20px rgba(0,0,0,.12);z-index:300;min-width:160px;max-width:260px;max-height:280px;overflow-y:auto;font-size:12px}
+.col-dd-item{padding:7px 12px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:.1s}
+.col-dd-item:hover{background:#f5f5f5}
+.col-dd-all{color:#999;font-style:italic;border-bottom:1px solid #f0f0f0}
+.col-dd-on{background:#E6F1FB;color:#0C447C;font-weight:500}
 /* bulk bar */
 .bulk-bar{display:flex;align-items:center;gap:8px;padding:6px 0;flex-wrap:wrap;border-bottom:1px solid #e8e8e8;margin-bottom:0}
 .bulk-sel{padding:5px 8px;font-size:12px;border:1px solid #ddd;border-radius:3px;outline:none;font-family:inherit;min-width:220px}.bulk-sel:focus{border-color:#185FA5}
