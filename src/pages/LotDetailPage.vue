@@ -66,8 +66,8 @@
     <!-- AQL -->
     <div class="section"><div class="sh"><span>AQL</span></div>
       <div class="action-btns">
-        <button class="btn-action" @click="doRequestAql('fabrication')">Demander AQL Fabrication</button>
-        <button class="btn-action" @click="doRequestAql('conditionnement')">Demander AQL Conditionnement</button>
+        <button v-if="canPerform('demander_aql_fab')" class="btn-action" @click="doRequestAql('fabrication')">Demander AQL Fabrication</button>
+        <button v-if="canPerform('demander_aql_cond')" class="btn-action" @click="doRequestAql('conditionnement')">Demander AQL Conditionnement</button>
       </div>
       <div v-if="!aqls.length" class="em">Aucune demande AQL</div>
       <table class="ct" v-else><tr v-for="a in aqls" :key="a.id">
@@ -75,9 +75,9 @@
         <td><span class="sp2" :class="a.resultat==='conforme'?'sp2-ok':a.resultat==='non_conforme'?'sp2-ko':'sp2-wait'">{{a.resultat==='en_attente'?'En attente':a.resultat==='conforme'?'Conforme':'Non conforme'}}</span></td>
         <td class="cdt">{{fmtDt(a.inspected_at||a.requested_at)}}</td>
         <td class="cac">
-          <button v-if="a.resultat==='en_attente'" class="btn bg" @click="doAqlConforme(a.id)">Conforme</button>
-          <button v-if="a.resultat==='en_attente'" class="btn br" @click="doAqlNonConforme(a.id)">Non conforme</button>
-          <button v-if="a.resultat==='non_conforme' && isLatestAql(a)" class="btn" @click="doRelanceAql(a)">Relancer AQL</button>
+          <button v-if="a.resultat==='en_attente' && canPerform('realiser_aql')" class="btn bg" @click="doAqlConforme(a.id)">Conforme</button>
+          <button v-if="a.resultat==='en_attente' && canPerform('realiser_aql')" class="btn br" @click="doAqlNonConforme(a.id)">Non conforme</button>
+          <button v-if="a.resultat==='non_conforme' && isLatestAql(a) && canRelanceAql(a)" class="btn" @click="doRelanceAql(a)">Relancer AQL</button>
         </td>
       </tr></table>
     </div>
@@ -95,7 +95,7 @@
 
     <!-- Déviations -->
     <div class="section"><div class="sh"><span>Déviations</span></div>
-      <div class="action-btns"><button class="btn-action btn-orange" @click="showDevForm=!showDevForm">Déclarer déviation</button></div>
+      <div class="action-btns"><button v-if="canPerform('declarer_nc')" class="btn-action btn-orange" @click="showDevForm=!showDevForm">Déclarer déviation</button></div>
       <div class="dev-form" v-if="showDevForm">
         <textarea v-model="devObs" rows="2" placeholder="Observation (facultatif)..." class="dev-input"></textarea>
         <button class="btn" @click="doDeclareDeviation">Confirmer</button>
@@ -105,16 +105,16 @@
         <td class="mono cs">{{d.numero_deviation}}</td>
         <td><span class="sp2" :class="d.statut==='ouverte'?'sp2-ko':'sp2-ok'">{{d.statut==='ouverte'?'Ouverte':'Clôturée'}}</span></td>
         <td class="dim" style="max-width:200px;overflow:hidden;text-overflow:ellipsis">{{d.description||'—'}}</td>
-        <td class="cac"><button v-if="d.statut==='ouverte'" class="btn-sm" @click="doCloseDeviation(d.id)">Clôturer</button></td>
+        <td class="cac"><button v-if="d.statut==='ouverte' && canPerform('cloturer_deviation')" class="btn-sm" @click="doCloseDeviation(d.id)">Clôturer</button></td>
       </tr></table>
     </div>
 
     <!-- RVP -->
     <div class="section"><div class="sh"><span>RVP</span></div>
       <div class="action-btns">
-        <button class="btn-action btn-violet" @click="doDeclareRvp('rvp_fab')">RVP Fabrication</button>
-        <button class="btn-action btn-violet" @click="doDeclareRvp('rvp_cond')">RVP Conditionnement</button>
-        <button class="btn-action btn-violet" @click="doDeclareRvp('rvp_lcq')">RVP LCQ</button>
+        <button v-if="canPerform('emettre_rvp')" class="btn-action btn-violet" @click="doDeclareRvp('rvp_fab')">RVP Fabrication</button>
+        <button v-if="canPerform('emettre_rvp')" class="btn-action btn-violet" @click="doDeclareRvp('rvp_cond')">RVP Conditionnement</button>
+        <button v-if="canPerform('emettre_rvp')" class="btn-action btn-violet" @click="doDeclareRvp('rvp_lcq')">RVP LCQ</button>
       </div>
       <div v-if="!rvpDocs.length" class="em">Aucun RVP</div>
       <div class="dg" v-else>
@@ -135,7 +135,7 @@
         <div class="syc"><span>Dév. clôturées</span><span :class="dossier.deviations_closed?'ok':'ko'">{{dossier.deviations_closed?'✓':'✕'}}</span></div>
         <div class="syc"><span>Pièces compl.</span><span :class="dossier.pieces_complementaires_ok?'ok':'ko'">{{dossier.pieces_complementaires_ok?'✓':'✕'}}</span></div>
       </div>
-      <div class="lz"><button class="lb" :disabled="!dossierComplete" @click="doLiberer">{{dossierComplete?'Libérer le lot':'Conditions non remplies'}}</button></div>
+      <div class="lz" v-if="canPerform('liberer_lot')"><button class="lb" :disabled="!dossierComplete" @click="doLiberer">{{dossierComplete?'Libérer le lot':'Conditions non remplies'}}</button></div>
     </div>
   </div>
   <div v-else class="loading">Chargement...</div>
@@ -144,8 +144,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../supabase'
-import { loadPermissions } from '../services/permissions'
-import { validateOrder, getRequiredService, libererLot, declareDeviation, closeDeviation, declareRVP, requestAql, respondAql, isAqlConforme, modifyLot, deleteLot } from '../services/actions'
+import { loadPermissions, canPerform, getPermissionForEtape } from '../services/permissions'
+import { validateOrder, libererLot, declareDeviation, closeDeviation, declareRVP, requestAql, respondAql, isAqlConforme, modifyLot, deleteLot } from '../services/actions'
 export default {
   setup() {
     var route = useRoute(), router = useRouter()
@@ -168,8 +168,8 @@ export default {
 
     var canValidateStep = function(orderType, etape) {
       if (userService.value === 'admin') return true
-      var required = getRequiredService(orderType, etape)
-      return userService.value === required
+      var permKey = getPermissionForEtape(etape, orderType)
+      return permKey ? canPerform(permKey) : false
     }
 
     var getVal = function(type,etape){return (type==='of'?ofVals:ocVals).value.find(function(v){return v.etape===etape})}
@@ -209,6 +209,7 @@ export default {
     var doAqlConforme = async function(id){await respondAql(id,'conforme','',userId.value,lot.value.id);loadLot()}
     var doAqlNonConforme = async function(id){var reco=prompt('Recommandations :');await respondAql(id,'non_conforme',reco||'',userId.value,lot.value.id);loadLot()}
     var isLatestAql = function(a){var sameType=aqls.value.filter(function(x){return x.type===a.type});return sameType.length>0&&sameType[0].id===a.id}
+    var canRelanceAql = function(a){return canPerform('demander_aql_'+(a.type==='fabrication'?'fab':'cond'))}
     var doRelanceAql = async function(a){await requestAql(lot.value.id,a.type,userId.value);loadLot()}
 
     var searchProd = async function(){
@@ -254,8 +255,8 @@ export default {
       showDevForm,devObs,showModify,editNumLot,editCodeProd,prodSuggestions,rvpDocs,mainDocs,
       getVal,pipClass,fmtDt,ofV,ocV,docsOk,docsReq,devsOpen,leadTime,dossierComplete,canValidateStep,
       docTypeLabel,docStatLabel,indClass,dsClass,rvpServiceLabel,isDocBlocked,goBack,
-      doValidate,doLiberer,doDeclareDeviation,doCloseDeviation,doDeclareRvp,doRequestAql,doAqlConforme,doAqlNonConforme,doRelanceAql,isLatestAql,
-      searchProd,selectProd,doModify,confirmDelete}
+      doValidate,doLiberer,doDeclareDeviation,doCloseDeviation,doDeclareRvp,doRequestAql,doAqlConforme,doAqlNonConforme,doRelanceAql,isLatestAql,canRelanceAql,
+      searchProd,selectProd,doModify,confirmDelete,canPerform}
   }
 }
 </script>

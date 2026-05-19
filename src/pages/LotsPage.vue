@@ -105,6 +105,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../supabase'
 import { exportToExcel, exportToPDF } from '../services/export'
 import { createNotification } from '../services/notifications'
+import { canPerform, loadPermissions, getPermissionForBulkAction } from '../services/permissions'
 export default {
   setup() {
     var route = useRoute(), router = useRouter()
@@ -114,31 +115,11 @@ export default {
     var executing = ref(false), progress = ref(0), execResult = ref(null)
     var userService = ref('')
 
-    // ── Table service → actions autorisées ─────────────────────────────
-    var serviceActionMap = {
-      planification: ['of_planification','oc_planification','dev_declarer','dev_cloture'],
-      stock:         ['of_stock','oc_stock'],
-      aq:            ['of_aq','oc_aq',
-                      'doc_if_verifier','doc_ic_verifier','doc_da_pc_verifier','doc_da_micro_verifier',
-                      'doc_if_retour_emetteur','doc_ic_retour_emetteur','doc_da_pc_retour_emetteur','doc_da_micro_retour_emetteur',
-                      'rvp_fab_verifier','rvp_cond_verifier','rvp_lcq_verifier',
-                      'rvp_fab_retour_emetteur','rvp_cond_retour_emetteur','rvp_lcq_retour_emetteur',
-                      'aql_fab_demander','aql_fab_relancer','aql_fab_conforme','aql_fab_non_conforme',
-                      'aql_cond_demander','aql_cond_relancer','aql_cond_conforme','aql_cond_non_conforme',
-                      'dev_declarer','dev_cloture'],
-      aq_dap:        ['of_aq_dap','oc_aq_dap'],
-      dt:            ['of_dt','oc_dt',
-                      'doc_if_approuver','doc_ic_approuver','doc_da_pc_approuver','doc_da_micro_approuver',
-                      'doc_if_retour_aq','doc_ic_retour_aq','doc_da_pc_retour_aq','doc_da_micro_retour_aq',
-                      'rvp_fab_approuver','rvp_cond_approuver','rvp_lcq_approuver',
-                      'rvp_fab_retour_aq','rvp_cond_retour_aq','rvp_lcq_retour_aq'],
-      fabrication:   ['of_production','doc_if','rvp_fab_emettre','dev_declarer'],
-      conditionnement:['oc_production','doc_ic','rvp_cond_emettre','dev_declarer'],
-      lcq:           ['doc_da_pc','doc_da_micro','rvp_lcq_emettre','dev_declarer'],
-    }
+    // ── Autorisation via table permissions DB (canPerform) ─────────────
     var canAction = function(action) {
       if (userService.value === 'admin') return true
-      return (serviceActionMap[userService.value] || []).indexOf(action) >= 0
+      var permKey = getPermissionForBulkAction(action)
+      return permKey ? canPerform(permKey) : false
     }
 
     // ── Définition complète des groupes d'actions ───────────────────────
@@ -545,7 +526,10 @@ export default {
       var u = await supabase.auth.getUser()
       if (u.data.user) {
         var p = await supabase.from('profiles').select('service').eq('id', u.data.user.id).single()
-        if (p.data) userService.value = p.data.service
+        if (p.data) {
+          await loadPermissions(p.data.service) // charger les permissions AVANT de setter userService
+          userService.value = p.data.service    // → déclenche recompute de actionGroups avec canPerform correct
+        }
       }
       if(route.query.filters)activeFilters.value=route.query.filters.split(',')
       load()
