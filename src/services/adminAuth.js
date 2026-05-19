@@ -10,7 +10,7 @@ async function callAdminFunction(body) {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) throw new Error('Non authentifié')
 
-  const res = await fetch(supabaseUrl + '/functions/v1/admin-users', {
+  const res = await fetch(supabaseUrl + '/functions/v1/clever-task', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
