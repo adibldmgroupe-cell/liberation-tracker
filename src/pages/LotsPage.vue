@@ -88,7 +88,7 @@
           <th @click="sortBy('date_fmt')" class="sortable">{{showDates?'Libération':'Entrée'}}</th>
         </tr></thead>
         <tbody><tr v-for="l in filteredLots" :key="l.id" :class="{'row-sel':isSelected(l.id)}" @click="goToLot(l.id)">
-          <td class="td-chk" @click.stop="toggleLot(l.id)"><input type="checkbox" :checked="isSelected(l.id)" @click.stop /></td>
+          <td class="td-chk" @click.stop><input type="checkbox" :value="l.id" v-model="selected" /></td>
           <td class="mono bold">{{l.numero_lot}}</td>
           <td class="td-prod">{{l.prod_desc}}<span class="code">{{l.prod_code}}</span></td>
           <td><span class="sp" :class="l.statut_class">{{l.statut_label}}</span></td>
