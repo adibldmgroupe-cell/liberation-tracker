@@ -263,6 +263,12 @@ export default {
 .tb td{padding:6px 4px;border-bottom:1px solid #f5f5f5}.tb tr{cursor:pointer}.tb tr:hover td{background:#fafafa}
 .bold{font-weight:500}.mono{font-family:'SF Mono',monospace;font-size:10px}.dim{color:#999;font-size:10px}
 .td-prod{max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
+/* colonnes figées : N° Lot, Produit, Statut */
+.tb th:nth-child(1),.tb td:nth-child(1){position:sticky;left:0;z-index:2;background:#fff;min-width:88px}
+.tb th:nth-child(2),.tb td:nth-child(2){position:sticky;left:88px;z-index:2;background:#fff;min-width:160px}
+.tb th:nth-child(3),.tb td:nth-child(3){position:sticky;left:248px;z-index:2;background:#fff;min-width:78px;box-shadow:2px 0 4px rgba(0,0,0,.07)}
+.tb th:nth-child(1),.tb th:nth-child(2),.tb th:nth-child(3){z-index:3}
+.tb tr:hover td:nth-child(1),.tb tr:hover td:nth-child(2),.tb tr:hover td:nth-child(3){background:#fafafa}
 .code{font-size:9px;color:#999;font-family:'SF Mono',monospace;margin-left:3px}
 .sp{font-size:9px;padding:2px 5px;border-radius:2px;font-weight:500;white-space:nowrap}
 .s-quarantaine{background:#FAEEDA;color:#854F0B}.s-accepte{background:#EAF3DE;color:#3B6D11}.s-sous_investigation{background:#FCEBEB;color:#A32D2D}.s-vide{background:#f5f5f5;color:#999}.s-enprod{background:#E6F1FB;color:#0C447C}.s-enprep{background:#F0EBFE;color:#5B3CC4}.s-refuse{background:#e8e8e8;color:#333}
