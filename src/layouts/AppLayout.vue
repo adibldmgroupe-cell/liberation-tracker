@@ -14,6 +14,11 @@
           <span class="nav-icon">🔔</span>Notifications
           <span class="notif-badge" v-if="unreadCount>0">{{unreadCount}}</span>
         </router-link>
+        <template v-if="isAdmin">
+          <div class="nav-sep">Administration</div>
+          <router-link to="/admin/users" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">👥</span>Utilisateurs</router-link>
+          <router-link to="/admin/permissions" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🔑</span>Permissions</router-link>
+        </template>
       </nav>
       <div class="sidebar-user" v-if="profile">
         <div class="user-avatar">{{initials}}</div>
@@ -143,7 +148,7 @@ export default {
     })
     onUnmounted(function(){clearInterval(clockInt);clearInterval(notifInt)})
 
-    return {profile,initials,searchQuery,suggestions,showSug,clock,unreadCount,searchInput,
+    return {profile,initials,isAdmin,searchQuery,suggestions,showSug,clock,unreadCount,searchInput,
       mobileMenuOpen,toasts,serviceLabels,onSearch,submitSearch,selectSug,hideSug,logout,goToLot}
   }
 }
@@ -154,6 +159,7 @@ export default {
 .sidebar-logo{padding:16px 18px;border-bottom:1px solid #222}.logo-text{font-size:16px;font-weight:600;letter-spacing:1px}.logo-sub{font-size:10px;color:#666;display:block;margin-top:2px;text-transform:uppercase;letter-spacing:.5px}
 .sidebar-nav{flex:1;padding:12px 8px;overflow-y:auto}
 .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;color:#888;text-decoration:none;font-size:13px;border-radius:4px;margin-bottom:2px;transition:.15s;position:relative}.nav-item:hover{color:#ccc;background:#161616}.nav-item.active{color:#fff;background:#1a1a1a}
+.nav-sep{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#444;padding:12px 12px 4px;}
 .nav-icon{font-size:14px;width:18px;text-align:center}
 .notif-badge{position:absolute;right:8px;background:#E24B4A;color:#fff;font-size:10px;font-weight:600;padding:1px 6px;border-radius:8px;min-width:16px;text-align:center}
 .sidebar-user{padding:14px 16px;border-top:1px solid #222;display:flex;align-items:center;gap:10px}

@@ -19,6 +19,9 @@ const routes = [
       { path: 'planifier', name: 'Planifier', component: () => import('../pages/PlanifierPage.vue') },
       { path: 'actions', name: 'Actions', component: () => import('../pages/BulkPage.vue') },
       { path: 'notifications', name: 'Notifications', component: () => import('../pages/NotificationsPage.vue') },
+      // Routes administration — réservées au service 'admin'
+      { path: 'admin/users', name: 'AdminUsers', component: () => import('../pages/AdminUsersPage.vue'), meta: { requiresAdmin: true } },
+      { path: 'admin/permissions', name: 'AdminPermissions', component: () => import('../pages/AdminPermissionsPage.vue'), meta: { requiresAdmin: true } },
     ],
   },
 ]
@@ -26,9 +29,27 @@ const routes = [
 const router = createRouter({ history: createWebHashHistory(), routes })
 
 router.beforeEach(async (to) => {
-  if (to.meta.requiresAuth) {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return '/login'
+  if (!to.meta.requiresAuth) return
+
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) return '/login'
+
+  // Vérification du profil : compte actif + service admin si nécessaire
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('is_active, service')
+    .eq('id', session.user.id)
+    .single()
+
+  // Compte désactivé : déconnexion et redirection
+  if (!profile || !profile.is_active) {
+    await supabase.auth.signOut()
+    return '/login'
+  }
+
+  // Route admin réservée au service 'admin'
+  if (to.meta.requiresAdmin && profile.service !== 'admin') {
+    return '/dashboard'
   }
 })
 
