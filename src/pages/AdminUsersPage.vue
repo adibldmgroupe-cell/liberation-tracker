@@ -86,7 +86,8 @@
 </template>
 <script>
 import { ref, onMounted } from 'vue'
-import { supabase, supabaseAdmin } from '../supabase'
+import { supabase } from '../supabase'
+import { adminCreateUser, adminDeleteUser } from '../services/adminAuth'
 export default {
   setup() {
     var profiles = ref([]), loading = ref(true), currentUserId = ref(null)
@@ -143,19 +144,14 @@ export default {
           if (error) throw error
         } else {
           if (!form.value.email || !form.value.password) { formErr.value = 'Email et mot de passe requis'; saving.value = false; return }
-          if (!supabaseAdmin) { formErr.value = 'Service key non configurée (VITE_SUPABASE_SERVICE_KEY manquante)'; saving.value = false; return }
-          var { error: ce } = await supabaseAdmin.auth.admin.createUser({
+          await adminCreateUser({
             email: form.value.email,
             password: form.value.password,
-            email_confirm: true,
-            user_metadata: {
-              nom: form.value.nom,
-              prenom: form.value.prenom,
-              service: form.value.service,
-              role: form.value.role
-            }
+            nom: form.value.nom,
+            prenom: form.value.prenom,
+            service: form.value.service,
+            role: form.value.role
           })
-          if (ce) throw ce
         }
         showModal.value = false
         await loadProfiles()
@@ -167,10 +163,12 @@ export default {
 
     var confirmDelete = async function(p) {
       if (!confirm('Supprimer le compte de ' + p.prenom + ' ' + p.nom + ' ?\nCette action est irréversible.')) return
-      if (!supabaseAdmin) { alert('Service key non configurée'); return }
-      var { error } = await supabaseAdmin.auth.admin.deleteUser(p.id)
-      if (error) { alert('Erreur : ' + error.message); return }
-      await loadProfiles()
+      try {
+        await adminDeleteUser(p.id)
+        await loadProfiles()
+      } catch(e) {
+        alert('Erreur : ' + (e.message || 'Impossible de supprimer le compte'))
+      }
     }
 
     var sendReset = async function() {
