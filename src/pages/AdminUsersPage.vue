@@ -154,6 +154,8 @@ export default {
           })
         }
         showModal.value = false
+        // Petit délai pour laisser le trigger PostgreSQL créer le profil
+        await new Promise(function(r){ setTimeout(r, 800) })
         await loadProfiles()
       } catch(e) {
         formErr.value = e.message || 'Une erreur est survenue'
