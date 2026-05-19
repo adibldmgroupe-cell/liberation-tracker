@@ -1,43 +1,34 @@
-// Opérations d'administration des comptes via l'API REST Supabase
-// (le SDK JS bloque l'usage de la service key en navigateur depuis les nouvelles versions ;
-//  fetch() appelle directement le serveur sans cette restriction côté client)
+// Opérations d'administration des comptes via une Supabase Edge Function.
+// L'Edge Function tourne côté serveur et utilise la service key sans restriction navigateur.
+
+import { supabase } from '../supabase'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const serviceKey = import.meta.env.VITE_SUPABASE_SERVICE_KEY
+const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-function authHeaders() {
-  return {
-    'Content-Type': 'application/json',
-    'apikey': serviceKey,
-    'Authorization': 'Bearer ' + serviceKey
-  }
-}
+async function callAdminFunction(body) {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) throw new Error('Non authentifié')
 
-export async function adminCreateUser({ email, password, nom, prenom, service, role }) {
-  if (!serviceKey) throw new Error('VITE_SUPABASE_SERVICE_KEY non configurée')
-  const res = await fetch(supabaseUrl + '/auth/v1/admin/users', {
+  const res = await fetch(supabaseUrl + '/functions/v1/admin-users', {
     method: 'POST',
-    headers: authHeaders(),
-    body: JSON.stringify({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { nom, prenom, service, role }
-    })
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + session.access_token,
+      'apikey': anonKey
+    },
+    body: JSON.stringify(body)
   })
+
   const data = await res.json()
-  if (!res.ok) throw new Error(data.message || data.msg || 'Erreur lors de la création du compte')
+  if (!res.ok) throw new Error(data.error || 'Erreur lors de l\'opération')
   return data
 }
 
+export async function adminCreateUser({ email, password, nom, prenom, service, role }) {
+  return callAdminFunction({ action: 'create', email, password, nom, prenom, service, role })
+}
+
 export async function adminDeleteUser(userId) {
-  if (!serviceKey) throw new Error('VITE_SUPABASE_SERVICE_KEY non configurée')
-  const res = await fetch(supabaseUrl + '/auth/v1/admin/users/' + userId, {
-    method: 'DELETE',
-    headers: authHeaders()
-  })
-  if (!res.ok) {
-    const data = await res.json()
-    throw new Error(data.message || data.msg || 'Erreur lors de la suppression du compte')
-  }
+  return callAdminFunction({ action: 'delete', userId })
 }
