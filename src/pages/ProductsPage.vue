@@ -47,8 +47,8 @@ export default {
 <style scoped>
 .ph{display:flex;align-items:baseline;justify-content:space-between;padding-bottom:10px;border-bottom:2px solid #0a0a0a;margin-bottom:2px}
 .pt{font-size:11px;font-weight:500;letter-spacing:1.5px}.pc{font-size:11px;color:#999;font-family:'SF Mono',monospace}
-.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.tb{width:100%;border-collapse:collapse;font-size:13px}.tb th{font-size:10px;text-transform:uppercase;color:#999;font-weight:500;padding:6px 8px;text-align:left;border-bottom:1px solid #e8e8e8}
+.table-wrap{overflow-x:auto;overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:calc(100vh - 150px)}
+.tb{width:100%;border-collapse:collapse;font-size:13px}.tb th{font-size:10px;text-transform:uppercase;color:#999;font-weight:500;padding:6px 8px;text-align:left;border-bottom:1px solid #e8e8e8;position:sticky;top:0;background:#fff;z-index:1}
 .tb td{padding:8px;border-bottom:1px solid #f5f5f5}.tb tr{cursor:pointer}.tb tr:hover td{background:#fafafa}
 .bold{font-weight:500}.mono{font-family:'SF Mono',monospace;font-size:12px}
 .cw{color:#BA7517}.cd{color:#E24B4A}.cg{color:#1D9E75}
@@ -56,8 +56,6 @@ export default {
 @media(max-width:768px){
   .tb{font-size:12px}
   .tb td{padding:9px 8px}
-  /* masquer Investig. et Total sur mobile */
-  .tb th:nth-child(4),.tb td:nth-child(4),
-  .tb th:nth-child(6),.tb td:nth-child(6){display:none}
+  .table-wrap{max-height:calc(100vh - 180px)}
 }
 </style>
