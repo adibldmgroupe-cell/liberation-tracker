@@ -46,22 +46,22 @@
       <table class="tb">
         <thead><tr>
           <th class="th-chk"><input type="checkbox" :checked="allVisibleChecked" @change="toggleAll" /></th>
-          <th class="th-s"><span class="th-txt" @click="sortBy('numero_lot')">N° Lot <span class="sort-arrow">{{sortIcon('numero_lot')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['numero_lot']}" @click="openDropdown('numero_lot',$event)">⌄</button></th>
-          <th class="th-s"><span class="th-txt" @click="sortBy('prod_desc')">Produit <span class="sort-arrow">{{sortIcon('prod_desc')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['prod_desc']}" @click="openDropdown('prod_desc',$event)">⌄</button></th>
-          <th class="th-s"><span class="th-txt" @click="sortBy('statut_label')">Statut <span class="sort-arrow">{{sortIcon('statut_label')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['statut_label']}" @click="openDropdown('statut_label',$event)">⌄</button></th>
-          <th class="th-s"><span class="th-txt" @click="sortBy('of_label')">OF <span class="sort-arrow">{{sortIcon('of_label')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['of_label']}" @click="openDropdown('of_label',$event)">⌄</button></th>
-          <th class="th-s"><span class="th-txt" @click="sortBy('oc_label')">OC <span class="sort-arrow">{{sortIcon('oc_label')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['oc_label']}" @click="openDropdown('oc_label',$event)">⌄</button></th>
-          <th class="th-s"><span class="th-txt">AQL Fab</span><button class="th-f" :class="{'th-f-on':columnFilters['aql_fab_label']}" @click="openDropdown('aql_fab_label',$event)">⌄</button></th>
-          <th class="th-s"><span class="th-txt">AQL Cond</span><button class="th-f" :class="{'th-f-on':columnFilters['aql_cond_label']}" @click="openDropdown('aql_cond_label',$event)">⌄</button></th>
-          <th class="th-s"><span class="th-txt" @click="sortBy('if_label')">IF <span class="sort-arrow">{{sortIcon('if_label')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['if_label']}" @click="openDropdown('if_label',$event)">⌄</button></th>
-          <th class="th-s"><span class="th-txt" @click="sortBy('ic_label')">IC <span class="sort-arrow">{{sortIcon('ic_label')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['ic_label']}" @click="openDropdown('ic_label',$event)">⌄</button></th>
-          <th class="th-s"><span class="th-txt">DA PC</span><button class="th-f" :class="{'th-f-on':columnFilters['dapc_label']}" @click="openDropdown('dapc_label',$event)">⌄</button></th>
-          <th class="th-s"><span class="th-txt">DA Micro</span><button class="th-f" :class="{'th-f-on':columnFilters['damicro_label']}" @click="openDropdown('damicro_label',$event)">⌄</button></th>
-          <th class="th-s"><span class="th-txt">Dév.</span><button class="th-f" :class="{'th-f-on':columnFilters['dev_label']}" @click="openDropdown('dev_label',$event)">⌄</button></th>
-          <th class="th-s"><span class="th-txt">RVP Fab</span><button class="th-f" :class="{'th-f-on':columnFilters['rvp_fab_label']}" @click="openDropdown('rvp_fab_label',$event)">⌄</button></th>
-          <th class="th-s"><span class="th-txt">RVP Cond</span><button class="th-f" :class="{'th-f-on':columnFilters['rvp_cond_label']}" @click="openDropdown('rvp_cond_label',$event)">⌄</button></th>
-          <th class="th-s"><span class="th-txt">RVP LCQ</span><button class="th-f" :class="{'th-f-on':columnFilters['rvp_lcq_label']}" @click="openDropdown('rvp_lcq_label',$event)">⌄</button></th>
-          <th class="th-s"><span class="th-txt" @click="sortBy('date_fmt')">{{showDates?'Libération':'Entrée'}} <span class="sort-arrow">{{sortIcon('date_fmt')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['date_fmt']}" @click="openDropdown('date_fmt',$event)">⌄</button></th>
+          <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('numero_lot')">N° Lot <span class="sort-arrow">{{sortIcon('numero_lot')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['numero_lot']}" @click="openDropdown('numero_lot',$event)">⌄</button></div></th>
+          <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('prod_desc')">Produit <span class="sort-arrow">{{sortIcon('prod_desc')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['prod_desc']}" @click="openDropdown('prod_desc',$event)">⌄</button></div></th>
+          <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('statut_label')">Statut <span class="sort-arrow">{{sortIcon('statut_label')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['statut_label']}" @click="openDropdown('statut_label',$event)">⌄</button></div></th>
+          <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('of_label')">OF <span class="sort-arrow">{{sortIcon('of_label')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['of_label']}" @click="openDropdown('of_label',$event)">⌄</button></div></th>
+          <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('oc_label')">OC <span class="sort-arrow">{{sortIcon('oc_label')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['oc_label']}" @click="openDropdown('oc_label',$event)">⌄</button></div></th>
+          <th><div class="th-i"><span class="th-txt">AQL Fab</span><button class="th-f" :class="{'th-f-on':columnFilters['aql_fab_label']}" @click="openDropdown('aql_fab_label',$event)">⌄</button></div></th>
+          <th><div class="th-i"><span class="th-txt">AQL Cond</span><button class="th-f" :class="{'th-f-on':columnFilters['aql_cond_label']}" @click="openDropdown('aql_cond_label',$event)">⌄</button></div></th>
+          <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('if_label')">IF <span class="sort-arrow">{{sortIcon('if_label')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['if_label']}" @click="openDropdown('if_label',$event)">⌄</button></div></th>
+          <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('ic_label')">IC <span class="sort-arrow">{{sortIcon('ic_label')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['ic_label']}" @click="openDropdown('ic_label',$event)">⌄</button></div></th>
+          <th><div class="th-i"><span class="th-txt">DA PC</span><button class="th-f" :class="{'th-f-on':columnFilters['dapc_label']}" @click="openDropdown('dapc_label',$event)">⌄</button></div></th>
+          <th><div class="th-i"><span class="th-txt">DA Micro</span><button class="th-f" :class="{'th-f-on':columnFilters['damicro_label']}" @click="openDropdown('damicro_label',$event)">⌄</button></div></th>
+          <th><div class="th-i"><span class="th-txt">Dév.</span><button class="th-f" :class="{'th-f-on':columnFilters['dev_label']}" @click="openDropdown('dev_label',$event)">⌄</button></div></th>
+          <th><div class="th-i"><span class="th-txt">RVP Fab</span><button class="th-f" :class="{'th-f-on':columnFilters['rvp_fab_label']}" @click="openDropdown('rvp_fab_label',$event)">⌄</button></div></th>
+          <th><div class="th-i"><span class="th-txt">RVP Cond</span><button class="th-f" :class="{'th-f-on':columnFilters['rvp_cond_label']}" @click="openDropdown('rvp_cond_label',$event)">⌄</button></div></th>
+          <th><div class="th-i"><span class="th-txt">RVP LCQ</span><button class="th-f" :class="{'th-f-on':columnFilters['rvp_lcq_label']}" @click="openDropdown('rvp_lcq_label',$event)">⌄</button></div></th>
+          <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('date_fmt')">{{showDates?'Libération':'Entrée'}} <span class="sort-arrow">{{sortIcon('date_fmt')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['date_fmt']}" @click="openDropdown('date_fmt',$event)">⌄</button></div></th>
         </tr></thead>
         <tbody><tr v-for="l in filteredLots" :key="l.id" :class="{'row-sel':isSelected(l.id)}" @click="goToLot(l.id)">
           <td class="td-chk" @click.stop><input type="checkbox" :value="l.id" v-model="selected" /></td>
@@ -637,10 +637,10 @@ export default {
 .cf-chip strong{font-weight:600}
 .cf-rm{background:none;border:none;cursor:pointer;color:#185FA5;font-size:11px;padding:0 0 0 2px;line-height:1}
 .cf-clear{font-size:11px;padding:2px 10px;border:1px solid #E24B4A;border-radius:10px;background:#fff;color:#E24B4A;cursor:pointer;white-space:nowrap}.cf-clear:hover{background:#FCEBEB}
-/* column header with filter button */
-.th-s{display:flex;align-items:center;gap:2px;padding:5px 4px !important;white-space:nowrap}
-.th-txt{cursor:pointer;flex:1;display:flex;align-items:center;gap:2px}
-.th-txt:hover{color:#185FA5}
+/* column header with filter button — wrapper DIV interne, jamais display:flex sur <th> */
+.th-i{display:flex;align-items:center;gap:2px;white-space:nowrap}
+.th-txt{display:flex;align-items:center;gap:2px;flex:1}
+.th-txt.sortable{cursor:pointer}.th-txt.sortable:hover{color:#185FA5}
 .th-f{background:none;border:none;cursor:pointer;color:#ccc;font-size:11px;padding:0 2px;line-height:1;border-radius:2px;flex-shrink:0;transition:.1s}
 .th-f:hover{color:#185FA5;background:#f0f0f0}
 .th-f-on{color:#185FA5 !important;background:#E6F1FB}
