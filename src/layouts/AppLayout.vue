@@ -8,8 +8,7 @@
         <router-link to="/products" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">▤</span>Produits</router-link>
         <router-link to="/lots" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">▥</span>Lots</router-link>
         <router-link to="/planifier" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">+</span>Planifier</router-link>
-        <router-link to="/actions" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">⚡</span>Actions masse</router-link>
-        <router-link to="/import" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">↑</span>Import Excel</router-link>
+<router-link to="/import" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">↑</span>Import Excel</router-link>
         <router-link to="/notifications" class="nav-item" active-class="active" @click="mobileMenuOpen=false">
           <span class="nav-icon">🔔</span>Notifications
           <span class="notif-badge" v-if="unreadCount>0">{{unreadCount}}</span>

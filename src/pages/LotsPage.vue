@@ -14,10 +14,67 @@
         <span class="fdot" :style="{background:f.color}"></span>{{f.label}}
       </button>
     </div>
+    <!-- Barre d'actions en masse -->
+    <div class="bulk-bar">
+      <select v-model="actionType" class="bulk-sel">
+        <option value="">— Choisir une action —</option>
+        <optgroup label="Circuit OF">
+          <option value="of_planification">OF — Mise en circuit</option>
+          <option value="of_stock">OF — Validation Stock</option>
+          <option value="of_aq">OF — Validation AQ</option>
+          <option value="of_dt">OF — Autorisation DT</option>
+          <option value="of_aq_dap">OF — Remise AQ DAP</option>
+          <option value="of_production">OF — Accusé réception</option>
+        </optgroup>
+        <optgroup label="Circuit OC">
+          <option value="oc_planification">OC — Mise en circuit</option>
+          <option value="oc_stock">OC — Validation Stock</option>
+          <option value="oc_aq">OC — Validation AQ</option>
+          <option value="oc_dt">OC — Autorisation DT</option>
+          <option value="oc_aq_dap">OC — Remise AQ DAP</option>
+          <option value="oc_production">OC — Accusé réception</option>
+        </optgroup>
+        <optgroup label="Documents — Émission">
+          <option value="doc_if">IF — Émettre</option>
+          <option value="doc_ic">IC — Émettre</option>
+          <option value="doc_da_pc">DA Physico — Émettre</option>
+          <option value="doc_da_micro">DA Micro — Émettre</option>
+        </optgroup>
+        <optgroup label="Documents — Vérification AQ → DT">
+          <option value="doc_if_verifier">IF — Vérifier AQ → DT</option>
+          <option value="doc_ic_verifier">IC — Vérifier AQ → DT</option>
+          <option value="doc_da_pc_verifier">DA Physico — Vérifier AQ → DT</option>
+          <option value="doc_da_micro_verifier">DA Micro — Vérifier AQ → DT</option>
+        </optgroup>
+        <optgroup label="Documents — Approbation DT">
+          <option value="doc_if_approuver">IF — Approuver DT</option>
+          <option value="doc_ic_approuver">IC — Approuver DT</option>
+          <option value="doc_da_pc_approuver">DA Physico — Approuver DT</option>
+          <option value="doc_da_micro_approuver">DA Micro — Approuver DT</option>
+        </optgroup>
+        <optgroup label="Documents — Retour">
+          <option value="doc_if_retour_emetteur">IF — Retourner à l'émetteur</option>
+          <option value="doc_ic_retour_emetteur">IC — Retourner à l'émetteur</option>
+          <option value="doc_da_pc_retour_emetteur">DA Physico — Retourner à l'émetteur</option>
+          <option value="doc_da_micro_retour_emetteur">DA Micro — Retourner à l'émetteur</option>
+          <option value="doc_if_retour_aq">IF — DT retourne à l'AQ</option>
+          <option value="doc_ic_retour_aq">IC — DT retourne à l'AQ</option>
+          <option value="doc_da_pc_retour_aq">DA Physico — DT retourne à l'AQ</option>
+          <option value="doc_da_micro_retour_aq">DA Micro — DT retourne à l'AQ</option>
+        </optgroup>
+      </select>
+      <button class="bulk-btn" :disabled="!canExecute" @click="showConfirm=true">
+        Exécuter<span v-if="selected.length"> ({{selected.length}})</span>
+      </button>
+      <span v-if="selected.length" class="bulk-info">{{selected.length}} lot(s) sélectionné(s)</span>
+      <button v-if="selected.length" class="bulk-clear" @click="selected=[]">✕ Tout désélectionner</button>
+    </div>
+
     <div v-if="!filteredLots.length" class="empty">Aucun lot trouvé</div>
     <div v-else class="table-wrap">
       <table class="tb">
         <thead><tr>
+          <th class="th-chk"><input type="checkbox" :checked="allVisibleChecked" @change="toggleAll" /></th>
           <th @click="sortBy('numero_lot')" class="sortable">N° Lot <span class="sort-arrow">{{sortIcon('numero_lot')}}</span></th>
           <th @click="sortBy('prod_desc')" class="sortable">Produit <span class="sort-arrow">{{sortIcon('prod_desc')}}</span></th>
           <th @click="sortBy('statut_label')" class="sortable">Statut <span class="sort-arrow">{{sortIcon('statut_label')}}</span></th>
@@ -30,7 +87,8 @@
           <th>Dév.</th><th>RVP Fab</th><th>RVP Cond</th><th>RVP LCQ</th>
           <th @click="sortBy('date_fmt')" class="sortable">{{showDates?'Libération':'Entrée'}}</th>
         </tr></thead>
-        <tbody><tr v-for="l in filteredLots" :key="l.id" @click="goToLot(l.id)">
+        <tbody><tr v-for="l in filteredLots" :key="l.id" :class="{'row-sel':isSelected(l.id)}" @click="goToLot(l.id)">
+          <td class="td-chk" @click.stop="toggleLot(l.id)"><input type="checkbox" :checked="isSelected(l.id)" @click.stop /></td>
           <td class="mono bold">{{l.numero_lot}}</td>
           <td class="td-prod">{{l.prod_desc}}<span class="code">{{l.prod_code}}</span></td>
           <td><span class="sp" :class="l.statut_class">{{l.statut_label}}</span></td>
@@ -50,6 +108,34 @@
         </tr></tbody>
       </table>
     </div>
+    <!-- Modal confirmation action en masse -->
+    <div class="m-overlay" v-if="showConfirm" @click.self="showConfirm=false">
+      <div class="m-box">
+        <div class="m-title">Confirmer l'action en masse</div>
+        <div class="m-body">
+          <div class="m-line"><span class="m-lbl">Action</span><span>{{actionLabel}}</span></div>
+          <div class="m-line"><span class="m-lbl">Lots concernés</span><span class="mono">{{selected.length}}</span></div>
+          <div class="m-chips">
+            <span v-for="id in selected.slice(0,20)" :key="id" class="m-chip">{{getLotNum(id)}}</span>
+            <span v-if="selected.length>20" class="m-chip m-more">+{{selected.length-20}} autres</span>
+          </div>
+        </div>
+        <div class="m-result" v-if="execResult">
+          <div class="m-rh">Exécution terminée</div>
+          <div class="m-rg">
+            <div class="m-rc"><div class="m-rv" style="color:#1D9E75">{{execResult.ok}}</div><div class="m-rl">Réussis</div></div>
+            <div class="m-rc"><div class="m-rv" style="color:#E24B4A">{{execResult.fail}}</div><div class="m-rl">Échoués</div></div>
+          </div>
+          <div v-if="execResult.errors.length" class="m-errs">
+            <div v-for="(e,i) in execResult.errors" :key="i" class="m-err">{{e}}</div>
+          </div>
+        </div>
+        <div class="m-actions">
+          <button class="m-btn-ok" @click="executeAction" :disabled="executing">{{executing?'En cours... '+progress+'/'+selected.length:'Confirmer'}}</button>
+          <button class="m-btn-cancel" @click="showConfirm=false;execResult=null">Annuler</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 <script>
@@ -62,6 +148,8 @@ export default {
     var route = useRoute(), router = useRouter()
     var lots = ref([]), total = ref(0), activeFilters = ref([])
     var sortCol = ref(''), sortDir = ref('asc'), showDates = ref(false)
+    var selected = ref([]), actionType = ref(''), showConfirm = ref(false)
+    var executing = ref(false), progress = ref(0), execResult = ref(null)
 
     var statusLabels = {vide:'Planifié',quarantaine:'Quarantaine',sous_investigation:'Investigation',accepte:'Accepté',refuse:'Refusé'}
     var filterOptions = [
@@ -129,7 +217,7 @@ export default {
     }
 
     var load = async function() {
-      var query = supabase.from('lots').select('*, products(code_article,description), orders_of(id,statut,etape_circuit,updated_at), orders_oc(id,statut,etape_circuit,updated_at), liberation_documents(type_document,statut,is_applicable,service_emetteur,emitted_at,approved_at), deviations(statut), aql_inspections(type,resultat,requested_at,inspected_at)', {count:'exact'})
+      var query = supabase.from('lots').select('*, products(code_article,description), orders_of(id,statut,etape_circuit,updated_at), orders_oc(id,statut,etape_circuit,updated_at), liberation_documents(id,type_document,statut,is_applicable,service_emetteur,emitted_at,approved_at), deviations(statut), aql_inspections(type,resultat,requested_at,inspected_at)', {count:'exact'})
 
       var q = route.query.q
       if(q){
@@ -182,6 +270,7 @@ export default {
           rvp_cond_label:rvpCond.label,rvp_cond_class:rvpCond.cls,
           rvp_lcq_label:rvpLcq.label,rvp_lcq_class:rvpLcq.cls,
           dev_count:devs.length,dev_open:devOpen,
+          of_id:of?of.id:null,oc_id:oc?oc.id:null,docs:docs,
         }
       })
     }
@@ -236,6 +325,110 @@ export default {
     var doExportExcel = function(){exportToExcel(filteredLots.value,exportCols,'lots_liberation')}
     var doExportPDF = function(){exportToPDF(filteredLots.value,exportCols,'lots_liberation')}
 
+    // ── Actions en masse ────────────────────────────────────────────────
+    var actionLabels = {
+      of_planification:'OF — Mise en circuit',of_stock:'OF — Validation Stock',of_aq:'OF — Validation AQ',
+      of_dt:'OF — Autorisation DT',of_aq_dap:'OF — Remise AQ DAP',of_production:'OF — Accusé réception',
+      oc_planification:'OC — Mise en circuit',oc_stock:'OC — Validation Stock',oc_aq:'OC — Validation AQ',
+      oc_dt:'OC — Autorisation DT',oc_aq_dap:'OC — Remise AQ DAP',oc_production:'OC — Accusé réception',
+      doc_if:'IF — Émettre',doc_ic:'IC — Émettre',doc_da_pc:'DA Physico — Émettre',doc_da_micro:'DA Micro — Émettre',
+      doc_if_verifier:'IF — Vérifier AQ → DT',doc_ic_verifier:'IC — Vérifier AQ → DT',
+      doc_da_pc_verifier:'DA Physico — Vérifier AQ → DT',doc_da_micro_verifier:'DA Micro — Vérifier AQ → DT',
+      doc_if_approuver:'IF — Approuver DT',doc_ic_approuver:'IC — Approuver DT',
+      doc_da_pc_approuver:'DA Physico — Approuver DT',doc_da_micro_approuver:'DA Micro — Approuver DT',
+      doc_if_retour_emetteur:'IF — Retourner à l\'émetteur',doc_ic_retour_emetteur:'IC — Retourner à l\'émetteur',
+      doc_da_pc_retour_emetteur:'DA Physico — Retourner à l\'émetteur',doc_da_micro_retour_emetteur:'DA Micro — Retourner à l\'émetteur',
+      doc_if_retour_aq:'IF — DT retourne à l\'AQ',doc_ic_retour_aq:'IC — DT retourne à l\'AQ',
+      doc_da_pc_retour_aq:'DA Physico — DT retourne à l\'AQ',doc_da_micro_retour_aq:'DA Micro — DT retourne à l\'AQ',
+    }
+    var actionLabel = computed(function(){ return actionLabels[actionType.value] || '' })
+    var canExecute = computed(function(){ return selected.value.length > 0 && actionType.value !== '' })
+
+    var isSelected = function(id){ return selected.value.indexOf(id) >= 0 }
+    var toggleLot = function(id){ var idx=selected.value.indexOf(id); if(idx>=0)selected.value.splice(idx,1); else selected.value.push(id) }
+    var allVisibleChecked = computed(function(){ return filteredLots.value.length>0 && filteredLots.value.every(function(l){return isSelected(l.id)}) })
+    var someVisibleChecked = computed(function(){ return filteredLots.value.some(function(l){return isSelected(l.id)}) })
+    var toggleAll = function(){
+      if(allVisibleChecked.value){ filteredLots.value.forEach(function(l){ var i=selected.value.indexOf(l.id); if(i>=0)selected.value.splice(i,1) }) }
+      else { filteredLots.value.forEach(function(l){ if(!isSelected(l.id))selected.value.push(l.id) }) }
+    }
+    var getLotNum = function(id){ var l=lots.value.find(function(x){return x.id===id}); return l?l.numero_lot:id }
+
+    var executeAction = async function() {
+      executing.value = true; progress.value = 0
+      var result = { ok:0, fail:0, errors:[] }
+      var now = new Date().toISOString()
+      var userRes = await supabase.auth.getUser()
+      var userId = userRes.data.user.id
+      var flow = ['planification','stock','aq','dt','aq_dap','production']
+
+      for (var i=0; i<selected.value.length; i++) {
+        var lotId = selected.value[i]
+        var lot = lots.value.find(function(x){return x.id===lotId})
+        if (!lot) { result.fail++; continue }
+        try {
+          var action = actionType.value
+          if (action.startsWith('of_') || action.startsWith('oc_')) {
+            var parts=action.split('_'), orderType=parts[0], etape=parts.slice(1).join('_')
+            var orderId = orderType==='of' ? lot.of_id : lot.oc_id
+            if (!orderId) { result.errors.push(lot.numero_lot+': pas d\'ordre '+orderType.toUpperCase()); result.fail++; continue }
+            var idx2=flow.indexOf(etape), nextEtape=idx2<flow.length-1?flow[idx2+1]:null
+            var tbl = orderType==='of'?'orders_of':'orders_oc'
+            await supabase.from('order_validations').insert({order_type:orderType,order_id:orderId,etape:etape,action:'valide',validated_by:userId,validated_at:now})
+            await supabase.from(tbl).update({statut:nextEtape?'en_circuit':'termine',etape_circuit:nextEtape||etape,updated_at:now}).eq('id',orderId)
+            var nextLabel=nextEtape?(etapeLabels[nextEtape]||nextEtape):'Terminé'
+            await supabase.from('lots').update({statut_operationnel:orderType.toUpperCase()+' — '+nextLabel,updated_at:now}).eq('id',lotId)
+            await supabase.from('lot_events').insert({lot_id:lotId,event_type:'validation_'+orderType,description:'Circuit '+orderType.toUpperCase()+' — '+etape+' validé (masse)',triggered_by:userId,created_at:now})
+            result.ok++
+          } else if (action.startsWith('doc_')) {
+            var docAction=action.replace('doc_','')
+            var isApprouver=docAction.endsWith('_approuver'),isVerifier=docAction.endsWith('_verifier')
+            var isRetourEmetteur=docAction.endsWith('_retour_emetteur'),isRetourAQ=docAction.endsWith('_retour_aq')
+            var docType=docAction
+            if(isApprouver)docType=docAction.replace('_approuver','')
+            if(isVerifier)docType=docAction.replace('_verifier','')
+            if(isRetourEmetteur)docType=docAction.replace('_retour_emetteur','')
+            if(isRetourAQ)docType=docAction.replace('_retour_aq','')
+            var doc=null; if(lot.docs){for(var j=0;j<lot.docs.length;j++){if(lot.docs[j].type_document===docType){doc=lot.docs[j];break}}}
+            if(!doc){result.errors.push(lot.numero_lot+': document '+docType+' non trouvé');result.fail++;continue}
+            if(isApprouver){
+              await supabase.from('liberation_documents').update({statut:'approuve_dt',approved_at:now,updated_at:now}).eq('id',doc.id)
+              var fldMap={'if':'if_approved',ic:'ic_approved',da_pc:'da_pc_approved',da_micro:'da_micro_approved'}
+              var fld=fldMap[docType]; if(fld)await supabase.from('liberation_dossiers').update({[fld]:true,updated_at:now}).eq('lot_id',lotId)
+              await supabase.from('document_movements').insert({document_id:doc.id,action:'approbation',from_service:'dt',performed_by:userId,performed_at:now})
+            } else if(isVerifier){
+              await supabase.from('liberation_documents').update({statut:'approuve_aq',updated_at:now}).eq('id',doc.id)
+              await supabase.from('document_movements').insert({document_id:doc.id,action:'approbation',from_service:'aq',to_service:'dt',performed_by:userId,performed_at:now})
+            } else if(isRetourEmetteur){
+              var svcMap2={'if':'fabrication',ic:'conditionnement',da_pc:'lcq',da_micro:'lcq'}
+              await supabase.from('liberation_documents').update({statut:'retour_emetteur',updated_at:now}).eq('id',doc.id)
+              await supabase.from('document_movements').insert({document_id:doc.id,action:'retour',from_service:'aq',to_service:svcMap2[docType]||'',motif_retour:'Retour en masse',performed_by:userId,performed_at:now})
+            } else if(isRetourAQ){
+              await supabase.from('liberation_documents').update({statut:'verification_aq',updated_at:now}).eq('id',doc.id)
+              await supabase.from('document_movements').insert({document_id:doc.id,action:'retour',from_service:'dt',to_service:'aq',motif_retour:'Retour DT en masse',performed_by:userId,performed_at:now})
+            } else {
+              if(docType==='da_micro'){
+                await supabase.from('liberation_documents').update({statut:'emis',emitted_at:now,emitted_by:userId,is_applicable:true,is_required:true,updated_at:now}).eq('id',doc.id)
+                await supabase.from('liberation_dossiers').update({da_micro_applicable:true,updated_at:now}).eq('lot_id',lotId)
+              } else {
+                await supabase.from('liberation_documents').update({statut:'emis',emitted_at:now,emitted_by:userId,updated_at:now}).eq('id',doc.id)
+              }
+              var svcMap={'if':'fabrication',ic:'conditionnement',da_pc:'lcq',da_micro:'lcq'}
+              await supabase.from('document_movements').insert({document_id:doc.id,action:'emission',from_service:svcMap[docType]||'',to_service:'aq',performed_by:userId,performed_at:now})
+            }
+            var actionDesc=isApprouver?'approuvé DT':isVerifier?'vérifié AQ → DT':isRetourEmetteur?'retourné à l\'émetteur':isRetourAQ?'retourné DT → AQ':'émis'
+            await supabase.from('lot_events').insert({lot_id:lotId,event_type:'document_masse',description:docType.toUpperCase()+' — '+actionDesc+' (masse)',triggered_by:userId,created_at:now})
+            result.ok++
+          }
+        } catch(e) { result.errors.push(lot.numero_lot+': '+e.message); result.fail++ }
+        progress.value = i+1
+      }
+      execResult.value = result; executing.value = false; showConfirm.value = false
+      selected.value = []; actionType.value = ''
+      load()
+    }
+    // ────────────────────────────────────────────────────────────────────
+
     onMounted(function(){
       if(route.query.filters)activeFilters.value=route.query.filters.split(',')
       load()
@@ -243,7 +436,10 @@ export default {
     watch(function(){return route.query},load,{deep:true})
 
     return{lots,total,activeFilters,showDates,filteredLots,filterOptions,
-      toggleFilter,sortBy,sortIcon,goToLot,doExportExcel,doExportPDF}
+      toggleFilter,sortBy,sortIcon,goToLot,doExportExcel,doExportPDF,
+      selected,actionType,showConfirm,executing,progress,execResult,
+      actionLabel,canExecute,allVisibleChecked,someVisibleChecked,
+      isSelected,toggleLot,toggleAll,getLotNum,executeAction}
   }
 }
 </script>
@@ -271,6 +467,34 @@ export default {
 .pip-done-t{background:#EAF3DE;color:#3B6D11}.pip-prog-t{background:#FAEEDA;color:#854F0B}
 .dev-badge{font-size:9px;padding:2px 5px;border-radius:2px;font-weight:500}.dev-open{background:#FCEBEB;color:#A32D2D}.dev-closed{background:#EAF3DE;color:#3B6D11}
 .empty{text-align:center;padding:40px;color:#999}
+/* bulk bar */
+.bulk-bar{display:flex;align-items:center;gap:8px;padding:6px 0;flex-wrap:wrap;border-bottom:1px solid #e8e8e8;margin-bottom:0}
+.bulk-sel{padding:5px 8px;font-size:12px;border:1px solid #ddd;border-radius:3px;outline:none;font-family:inherit;min-width:220px}.bulk-sel:focus{border-color:#185FA5}
+.bulk-btn{padding:5px 14px;font-size:12px;font-weight:500;background:#185FA5;color:#fff;border:none;border-radius:3px;cursor:pointer;white-space:nowrap}.bulk-btn:hover{background:#0C447C}.bulk-btn:disabled{opacity:.35;cursor:not-allowed}
+.bulk-info{font-size:11px;color:#185FA5;font-family:'SF Mono',monospace}
+.bulk-clear{font-size:11px;padding:3px 10px;border:1px solid #E24B4A;border-radius:3px;background:#fff;color:#E24B4A;cursor:pointer}.bulk-clear:hover{background:#FCEBEB}
+/* checkboxes */
+.th-chk,.td-chk{width:32px;text-align:center;padding:0 4px !important}
+.td-chk{cursor:pointer}
+.row-sel td{background:#E6F1FB !important}
+/* modal masse */
+.m-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:200;padding:16px}
+.m-box{background:#fff;padding:24px;width:min(100%,460px);border-radius:4px;max-height:85vh;overflow-y:auto}
+.m-title{font-size:16px;font-weight:500;margin-bottom:16px}
+.m-body{margin-bottom:16px}
+.m-line{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid #f5f5f5}.m-lbl{color:#999}
+.m-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:10px}
+.m-chip{font-size:11px;font-family:'SF Mono',monospace;padding:2px 8px;background:#f5f5f5;border-radius:2px;color:#666}
+.m-more{background:#E6F1FB;color:#185FA5}
+.m-actions{display:flex;gap:8px;margin-top:16px}
+.m-btn-ok{flex:1;padding:11px;background:#185FA5;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer;border-radius:2px;min-height:44px}.m-btn-ok:hover{background:#0C447C}.m-btn-ok:disabled{opacity:.5}
+.m-btn-cancel{flex:1;padding:11px;background:#f5f5f5;color:#666;border:none;font-size:13px;cursor:pointer;border-radius:2px;min-height:44px}
+.m-result{border:1px solid #e8e8e8;padding:16px;margin-top:12px}
+.m-rh{font-size:13px;font-weight:500;margin-bottom:10px}
+.m-rg{display:grid;grid-template-columns:1fr 1fr;border:1px solid #e8e8e8}
+.m-rc{padding:10px;text-align:center;border-right:1px solid #e8e8e8}.m-rc:last-child{border-right:none}
+.m-rv{font-size:18px;font-weight:500;font-family:'SF Mono',monospace}.m-rl{font-size:10px;color:#999;text-transform:uppercase;margin-top:2px}
+.m-errs{margin-top:10px}.m-err{font-size:11px;color:#E24B4A;padding:3px 0;border-bottom:1px solid #f5f5f5}
 @media(max-width:768px){
   .ph{flex-direction:column;gap:6px}
   .ph-right{width:100%;justify-content:flex-start;gap:4px}
@@ -280,6 +504,9 @@ export default {
   .fbtn{min-height:36px;padding:6px 12px;white-space:nowrap}
   .td-prod{max-width:110px}
   .tb td{padding:8px 4px}
-  .table-wrap{max-height:calc(100vh - 180px)}
+  .table-wrap{max-height:calc(100vh - 220px)}
+  .bulk-sel{min-width:0;width:100%}
+  .bulk-bar{flex-direction:column;align-items:stretch}
+  .bulk-btn{width:100%;padding:10px;min-height:44px}
 }
 </style>

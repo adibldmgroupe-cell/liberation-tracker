@@ -17,8 +17,7 @@ const routes = [
       { path: 'lots/:lotId/documents/:docId', name: 'DocumentDetail', component: () => import('../pages/DocumentDetailPage.vue') },
       { path: 'import', name: 'Import', component: () => import('../pages/ImportPage.vue') },
       { path: 'planifier', name: 'Planifier', component: () => import('../pages/PlanifierPage.vue') },
-      { path: 'actions', name: 'Actions', component: () => import('../pages/BulkPage.vue') },
-      { path: 'notifications', name: 'Notifications', component: () => import('../pages/NotificationsPage.vue') },
+{ path: 'notifications', name: 'Notifications', component: () => import('../pages/NotificationsPage.vue') },
       // Routes administration — réservées au service 'admin'
       { path: 'admin/users', name: 'AdminUsers', component: () => import('../pages/AdminUsersPage.vue'), meta: { requiresAdmin: true } },
       { path: 'admin/permissions', name: 'AdminPermissions', component: () => import('../pages/AdminPermissionsPage.vue'), meta: { requiresAdmin: true } },
