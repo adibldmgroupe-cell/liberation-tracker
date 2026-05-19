@@ -304,9 +304,39 @@ export default {
 .auto-list{border:1px solid #ddd;border-radius:4px;margin-top:2px;max-height:160px;overflow-y:auto}.auto-item{padding:6px 10px;cursor:pointer;font-size:12px}.auto-item:hover{background:#f5f5f5}.auto-code{font-family:'SF Mono',monospace;font-weight:500;color:#185FA5;margin-right:8px}
 .modal-actions{display:flex;gap:8px}
 @media(max-width:768px){
-  .ks{grid-template-columns:repeat(3,1fr)}.lh{flex-direction:column;align-items:flex-start}
-  .dg{grid-template-columns:1fr}.di:nth-child(2n){border-right:1px solid #e8e8e8}
-  .ct td{padding:6px 4px;font-size:12px}.action-btns{flex-direction:column}
-  .modal{width:90%;margin:0 5%}
+  .ks{grid-template-columns:repeat(3,1fr)}
+  .k:nth-child(3){border-right:none}
+  .k:nth-child(4),.k:nth-child(5){border-top:1px solid #e8e8e8}
+  .k:nth-child(5){border-right:none}
+  .lh{flex-direction:column;align-items:flex-start;gap:8px}
+  .lh-right{flex-wrap:wrap}
+  .ln{font-size:18px}
+  .lp{display:block;margin-left:0;margin-top:2px}
+  .dg{grid-template-columns:1fr}
+  .di:nth-child(2n){border-right:1px solid #e8e8e8}
+  .ct{font-size:12px}
+  .ct td{padding:7px 4px}
+  .cdt{display:none}
+  .cs{width:40%}.cv{width:20%}.cac{width:40%}
+  .action-btns{gap:6px}
+  .btn-action{width:100%;padding:10px 16px;min-height:44px;text-align:center}
+  .modal{width:min(90vw,400px)}
+  .lb{width:100%;padding:12px;font-size:14px;min-height:44px}
+  .dev-form{flex-direction:column}
+  .dev-form .btn{width:100%;min-height:44px;margin-left:0}
+  .btn-sm{min-height:36px;padding:5px 12px}
+}
+@media(max-width:480px){
+  .ks{grid-template-columns:repeat(2,1fr)}
+  .k:nth-child(3){border-top:1px solid #e8e8e8;border-right:1px solid #e8e8e8}
+  .k:nth-child(4){border-top:1px solid #e8e8e8;border-right:none}
+  .k:nth-child(5){border-top:1px solid #e8e8e8;border-right:none;grid-column:span 2}
+  .kv{font-size:14px}
+  .section{margin-top:12px}
+  .cv{display:none}
+  .cs{width:50%}.cac{width:50%}
+  .syg{grid-template-columns:1fr}
+  .syc{border-right:1px solid #e8e8e8}
+  .syc:nth-child(2n){border-right:1px solid #e8e8e8}
 }
 </style>

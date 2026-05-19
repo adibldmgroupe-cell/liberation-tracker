@@ -161,13 +161,32 @@ export default {
 .k{padding:14px 12px;text-align:center;border-right:1px solid #e8e8e8}.k:last-child{border-right:none}
 .kv{font-size:22px;font-weight:500;font-family:'SF Mono',monospace}.ku{font-size:13px;font-weight:400;color:#999}.kl{font-size:10px;color:#999;text-transform:uppercase;margin-top:4px}
 .section{margin-top:16px}.sh{display:flex;justify-content:space-between;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:#999;padding-bottom:6px;border-bottom:1px solid #e8e8e8}
-.table-wrap{overflow-x:auto}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .mtb{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}.mtb th{font-size:10px;text-transform:uppercase;color:#999;font-weight:500;padding:6px 8px;text-align:center;border-bottom:1px solid #e8e8e8}.mtb th:first-child{text-align:left}
 .mtb td{padding:6px 8px;border-bottom:1px solid #f5f5f5;text-align:center}.mtb td:first-child{text-align:left}
 .row-label{font-weight:500;font-size:12px;white-space:nowrap}.mono{font-family:'SF Mono',monospace;font-size:11px}
 .ytd{background:#fafafa;font-weight:500}.ytd-val{background:#fafafa;font-weight:500;color:#185FA5}
 .cw{color:#BA7517}.cd{color:#E24B4A}
-.al{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f5f5f5;font-size:12px;cursor:pointer}.al:hover{background:#fafafa}
+.al{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f5f5f5;font-size:12px;cursor:pointer;min-height:44px}.al:hover{background:#fafafa}
 .ap{width:6px;height:6px;border-radius:50%;flex-shrink:0}.ap-critique{background:#E24B4A}
 .aln{font-family:'SF Mono',monospace;font-size:11px;color:#666;min-width:90px}.am{flex:1}
+@media(max-width:768px){
+  .ks{grid-template-columns:repeat(3,1fr)}
+  .k:nth-child(3){border-right:none}
+  .k:nth-child(4),.k:nth-child(5){border-top:1px solid #e8e8e8}
+  .k:nth-child(5){border-right:none}
+  .kv{font-size:18px}
+}
+@media(max-width:480px){
+  .ks{grid-template-columns:repeat(2,1fr)}
+  .k:nth-child(2){border-right:none}
+  .k:nth-child(3){border-top:1px solid #e8e8e8;border-right:1px solid #e8e8e8}
+  .k:nth-child(3n){border-right:none}
+  .k:nth-child(4){border-top:1px solid #e8e8e8;border-right:none}
+  .k:nth-child(5){border-top:1px solid #e8e8e8;border-right:none}
+  .k:nth-child(odd):last-child{grid-column:span 2}
+  .kv{font-size:20px}
+  .kl{font-size:9px}
+  .dh{padding-bottom:8px}
+}
 </style>

@@ -254,13 +254,13 @@ export default {
 .btn-exp{font-size:11px;padding:4px 10px;border:1px solid #ddd;border-radius:3px;background:#fff;cursor:pointer;color:#666;font-family:inherit}.btn-exp:hover{background:#f5f5f5}
 .btn-toggle{font-size:11px;padding:4px 10px;border:1px solid #185FA5;border-radius:3px;background:#E6F1FB;cursor:pointer;color:#0C447C;font-family:inherit}.btn-toggle:hover{background:#d0e3f5}
 .filters{display:flex;gap:4px;padding:8px 0;flex-wrap:wrap}
-.fbtn{display:flex;align-items:center;gap:4px;padding:4px 10px;font-size:11px;border:1px solid #e8e8e8;border-radius:3px;background:#fff;cursor:pointer;color:#666;font-family:inherit;transition:.15s}
+.fbtn{display:flex;align-items:center;gap:4px;padding:5px 10px;min-height:32px;font-size:11px;border:1px solid #e8e8e8;border-radius:3px;background:#fff;cursor:pointer;color:#666;font-family:inherit;transition:.15s}
 .fbtn:hover{border-color:#ccc}.fbtn.active{border-color:#185FA5;background:#E6F1FB;color:#0C447C}
-.fdot{width:6px;height:6px;border-radius:50%}
-.table-wrap{overflow-x:auto}
+.fdot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .tb{width:100%;border-collapse:collapse;font-size:11px;white-space:nowrap}.tb th{font-size:9px;text-transform:uppercase;color:#999;font-weight:500;padding:5px 4px;text-align:left;border-bottom:1px solid #e8e8e8;position:sticky;top:0;background:#fff;z-index:1}
 .sortable{cursor:pointer;user-select:none}.sortable:hover{color:#185FA5}.sort-arrow{font-size:10px;color:#ccc}
-.tb td{padding:5px 4px;border-bottom:1px solid #f5f5f5}.tb tr{cursor:pointer}.tb tr:hover td{background:#fafafa}
+.tb td{padding:6px 4px;border-bottom:1px solid #f5f5f5}.tb tr{cursor:pointer}.tb tr:hover td{background:#fafafa}
 .bold{font-weight:500}.mono{font-family:'SF Mono',monospace;font-size:10px}.dim{color:#999;font-size:10px}
 .td-prod{max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
 .code{font-size:9px;color:#999;font-family:'SF Mono',monospace;margin-left:3px}
@@ -272,8 +272,28 @@ export default {
 .dev-badge{font-size:9px;padding:2px 5px;border-radius:2px;font-weight:500}.dev-open{background:#FCEBEB;color:#A32D2D}.dev-closed{background:#EAF3DE;color:#3B6D11}
 .empty{text-align:center;padding:40px;color:#999}
 @media(max-width:768px){
-  .ph{flex-direction:column}.ph-right{width:100%;justify-content:flex-end}
-  .filters{overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px}
-  .td-prod{max-width:100px}
+  .ph{flex-direction:column;gap:6px}
+  .ph-right{width:100%;justify-content:flex-start;gap:4px}
+  .btn-exp,.btn-toggle{padding:6px 10px;min-height:36px}
+  .filters{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;padding-bottom:6px;padding-top:6px;gap:6px;scrollbar-width:none}
+  .filters::-webkit-scrollbar{display:none}
+  .fbtn{min-height:36px;padding:6px 12px;white-space:nowrap}
+  .td-prod{max-width:110px}
+  /* masquer les colonnes secondaires sur mobile, garder N° lot, Produit, Statut, IF, IC, Date */
+  .tb th:nth-child(4),.tb td:nth-child(4),
+  .tb th:nth-child(5),.tb td:nth-child(5),
+  .tb th:nth-child(6),.tb td:nth-child(6),
+  .tb th:nth-child(7),.tb td:nth-child(7),
+  .tb th:nth-child(10),.tb td:nth-child(10),
+  .tb th:nth-child(11),.tb td:nth-child(11),
+  .tb th:nth-child(12),.tb td:nth-child(12),
+  .tb th:nth-child(13),.tb td:nth-child(13),
+  .tb th:nth-child(14),.tb td:nth-child(14),
+  .tb th:nth-child(15),.tb td:nth-child(15){display:none}
+  .tb td{padding:8px 4px}
+}
+@media(max-width:480px){
+  .tb th:nth-child(9),.tb td:nth-child(9){display:none}
+  .td-prod{max-width:80px}
 }
 </style>

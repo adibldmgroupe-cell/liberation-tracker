@@ -418,14 +418,14 @@ export default {
 .ph{display:flex;align-items:baseline;justify-content:space-between;padding-bottom:10px;border-bottom:2px solid #0a0a0a;margin-bottom:2px}
 .pt{font-size:11px;font-weight:500;letter-spacing:1.5px}.pc{font-size:11px;color:#185FA5;font-family:'SF Mono',monospace}
 .toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 0;gap:12px;flex-wrap:wrap}
-.tool-left{display:flex;align-items:center;gap:8px}.tool-right{display:flex;align-items:center;gap:8px}
+.tool-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.tool-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .sel{padding:6px 8px;font-size:12px;border:1px solid #ddd;border-radius:3px;outline:none;font-family:inherit;min-width:220px}.sel:focus{border-color:#185FA5}
 .sel-sm{padding:6px 8px;font-size:11px;border:1px solid #ddd;border-radius:3px;outline:none;font-family:inherit}
 .input-filter{padding:6px 8px;font-size:12px;border:1px solid #ddd;border-radius:3px;outline:none;width:160px;font-family:inherit}.input-filter:focus{border-color:#185FA5}
 .btn-exec{padding:6px 16px;font-size:12px;font-weight:500;background:#185FA5;color:#fff;border:none;border-radius:3px;cursor:pointer}.btn-exec:hover{background:#0C447C}.btn-exec:disabled{opacity:.3;cursor:not-allowed}
-.table-wrap{overflow-x:auto;max-height:60vh;overflow-y:auto}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-height:60vh;overflow-y:auto}
 .tb{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}.tb th{font-size:10px;text-transform:uppercase;color:#999;font-weight:500;padding:6px 6px;text-align:left;border-bottom:1px solid #e8e8e8;position:sticky;top:0;background:#fff;z-index:1}
-.tb td{padding:5px 6px;border-bottom:1px solid #f5f5f5}.tb tr{cursor:pointer}.tb tr:hover td{background:#f5f8ff}
+.tb td{padding:7px 6px;border-bottom:1px solid #f5f5f5}.tb tr{cursor:pointer}.tb tr:hover td{background:#f5f8ff}
 .row-selected td{background:#E6F1FB !important}
 .th-check,.td-check{width:30px;text-align:center}
 .bold{font-weight:500}.mono{font-family:'SF Mono',monospace;font-size:11px}.dim{color:#999;font-size:11px}
@@ -437,8 +437,8 @@ export default {
 .pip-label{font-size:10px;color:#666}
 .doc-pip{font-size:10px;padding:2px 5px;border-radius:2px;font-weight:500}
 .dc-ok{background:#EAF3DE;color:#3B6D11}.dc-ret{background:#FCEBEB;color:#A32D2D}.dc-wait{background:#f5f5f5;color:#999}.dc-prog{background:#E6F1FB;color:#0C447C}.dc-na{background:transparent;color:#ccc}
-.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:100}
-.modal{background:#fff;padding:24px;width:440px;border-radius:4px;max-height:80vh;overflow-y:auto}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
+.modal{background:#fff;padding:24px;width:min(100%,440px);border-radius:4px;max-height:80vh;overflow-y:auto}
 .modal-title{font-size:16px;font-weight:500;margin-bottom:16px}
 .modal-body{margin-bottom:20px}
 .modal-line{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid #f5f5f5}.ml{color:#999}
@@ -446,8 +446,8 @@ export default {
 .lot-chip{font-size:11px;font-family:'SF Mono',monospace;padding:2px 8px;background:#f5f5f5;border-radius:2px;color:#666}
 .lot-chip.more{background:#E6F1FB;color:#185FA5}
 .modal-actions{display:flex;gap:8px}
-.btn-confirm{flex:1;padding:10px;background:#185FA5;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer;border-radius:2px}.btn-confirm:hover{background:#0C447C}.btn-confirm:disabled{opacity:.5}
-.btn-cancel{flex:1;padding:10px;background:#f5f5f5;color:#666;border:none;font-size:13px;cursor:pointer;border-radius:2px}
+.btn-confirm{flex:1;padding:12px 10px;background:#185FA5;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer;border-radius:2px;min-height:44px}.btn-confirm:hover{background:#0C447C}.btn-confirm:disabled{opacity:.5}
+.btn-cancel{flex:1;padding:12px 10px;background:#f5f5f5;color:#666;border:none;font-size:13px;cursor:pointer;border-radius:2px;min-height:44px}
 .result{border:1px solid #e8e8e8;padding:20px;margin-top:16px}
 .rh{font-size:14px;font-weight:500;margin-bottom:12px}
 .rg{display:grid;grid-template-columns:repeat(2,1fr);border:1px solid #e8e8e8}
@@ -455,4 +455,22 @@ export default {
 .rv{font-size:20px;font-weight:500;font-family:'SF Mono',monospace}.rl{font-size:10px;color:#999;text-transform:uppercase;margin-top:2px}
 .errors-list{margin-top:12px}.err-line{font-size:12px;color:#E24B4A;padding:3px 0;border-bottom:1px solid #f5f5f5}
 .empty{text-align:center;padding:40px;color:#999}
+@media(max-width:768px){
+  .toolbar{flex-direction:column;align-items:stretch;gap:8px}
+  .tool-left,.tool-right{flex-direction:column;align-items:stretch;gap:6px}
+  .sel{min-width:0;width:100%}
+  .sel-sm{width:100%}
+  .input-filter{width:100%;box-sizing:border-box}
+  .btn-exec{width:100%;padding:10px;min-height:44px;font-size:13px}
+  /* garder seulement : checkbox(1), N° lot(2), Produit(3), Statut(4), IF(7), IC(8) */
+  .tb th:nth-child(5),.tb td:nth-child(5),
+  .tb th:nth-child(6),.tb td:nth-child(6),
+  .tb th:nth-child(9),.tb td:nth-child(9),
+  .tb th:nth-child(10),.tb td:nth-child(10){display:none}
+  .td-prod{max-width:90px}
+}
+@media(max-width:480px){
+  .tb th:nth-child(8),.tb td:nth-child(8){display:none}
+  .td-prod{max-width:70px}
+}
 </style>

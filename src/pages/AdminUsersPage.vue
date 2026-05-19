@@ -222,5 +222,23 @@ export default {
 .inp{width:100%;padding:7px 10px;border:1px solid #ddd;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit;border-radius:2px}.inp:focus{border-color:#185FA5}
 .merr{background:#FCEBEB;color:#A32D2D;font-size:12px;padding:8px;margin-bottom:12px;border-radius:2px}
 .ma{display:flex;gap:8px;margin-top:16px;align-items:center;flex-wrap:wrap}
-@media(max-width:768px){.fg{grid-template-columns:1fr}.ut td{padding:8px 4px;font-size:12px}.modal{width:90%}}
+@media(max-width:768px){
+  .fg{grid-template-columns:1fr}
+  .modal{width:min(92vw,480px)}
+  .ut{font-size:12px}
+  .ut td{padding:9px 4px}
+  /* masquer Service, Créé le sur mobile — garder Utilisateur, Rôle, Statut, Actions */
+  .ut th:nth-child(2),.ut td:nth-child(2),
+  .ut th:nth-child(5),.ut td:nth-child(5){display:none}
+  .ph{flex-direction:column;align-items:flex-start;gap:8px}
+  .btn.bg{width:100%;padding:10px 16px;min-height:44px}
+  .ma{flex-wrap:wrap}
+  .ma .btn{min-height:44px;flex:1}
+}
+@media(max-width:480px){
+  .ut th:nth-child(3),.ut td:nth-child(3){display:none}
+  .btn-sm{min-height:36px;padding:5px 8px}
+  .ua{gap:6px}
+  .av{width:28px;height:28px;font-size:10px}
+}
 </style>

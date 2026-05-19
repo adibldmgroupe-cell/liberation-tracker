@@ -194,5 +194,19 @@ export default {
 .akey{font-size:11px;color:#bbb;font-family:'SF Mono',monospace;margin-top:1px}
 .tog{font-size:11px;padding:4px 14px;border:none;border-radius:10px;cursor:pointer;font-weight:500;flex-shrink:0;margin-left:12px}
 .ton{background:#EAF3DE;color:#3B6D11}.toff{background:#f5f5f5;color:#999}
-@media(max-width:768px){.tabs{gap:2px}.tab{font-size:11px;padding:6px 10px}}
+@media(max-width:768px){
+  .tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;gap:2px;scrollbar-width:none;padding-bottom:2px}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{font-size:11px;padding:8px 12px;white-space:nowrap;min-height:40px;flex-shrink:0}
+  .arow{padding:10px 12px;gap:8px}
+  .aname{font-size:12px}
+  .tog{padding:6px 14px;min-height:36px;font-size:11px}
+  .akey{display:none}
+}
+@media(max-width:480px){
+  .tab{font-size:10px;padding:8px 10px}
+  .tog{padding:5px 10px;font-size:10px}
+  .aname{font-size:13px}
+  .group{margin-bottom:14px}
+}
 </style>

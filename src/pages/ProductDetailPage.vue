@@ -2,7 +2,7 @@
   <div v-if="product">
     <div class="bc"><span @click="$router.push('/products')">Produits</span> › {{ product.code_article }}</div>
     <div class="ph"><span class="pt">{{ product.description }}</span></div>
-    <table class="tb">
+    <div class="table-wrap"><table class="tb">
       <thead><tr><th>N° Lot</th><th>Statut</th><th>Quantité</th><th>Entrée</th><th>Libération</th></tr></thead>
       <tbody><tr v-for="l in lots" :key="l.id" @click="$router.push('/lots/'+l.id)">
         <td class="mono bold">{{l.numero_lot}}</td>
@@ -11,7 +11,7 @@
         <td class="mono dim">{{fmt(l.date_enregistrement)}}</td>
         <td class="mono dim">{{fmt(l.date_liberation)}}</td>
       </tr></tbody>
-    </table>
+    </table></div>
   </div>
 </template>
 <script>
@@ -36,9 +36,18 @@ export default {
 <style scoped>
 .bc{font-size:12px;color:#999;margin-bottom:8px}.bc span{cursor:pointer;color:#185FA5}
 .ph{padding-bottom:10px;border-bottom:2px solid #0a0a0a;margin-bottom:2px}.pt{font-size:16px;font-weight:500}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .tb{width:100%;border-collapse:collapse;font-size:13px}.tb th{font-size:10px;text-transform:uppercase;color:#999;font-weight:500;padding:6px 8px;text-align:left;border-bottom:1px solid #e8e8e8}
-.tb td{padding:7px 8px;border-bottom:1px solid #f5f5f5}.tb tr{cursor:pointer}.tb tr:hover td{background:#fafafa}
+.tb td{padding:8px;border-bottom:1px solid #f5f5f5}.tb tr{cursor:pointer}.tb tr:hover td{background:#fafafa}
 .bold{font-weight:500}.mono{font-family:'SF Mono',monospace;font-size:12px}.dim{color:#999}
 .sp{font-size:11px;padding:2px 8px;border-radius:2px;font-weight:500}
 .s-quarantaine{background:#FAEEDA;color:#854F0B}.s-accepte{background:#EAF3DE;color:#3B6D11}.s-sous_investigation{background:#FCEBEB;color:#A32D2D}.s-vide{background:#f5f5f5;color:#999}
+@media(max-width:768px){
+  .pt{font-size:14px}
+  .tb{font-size:12px}
+  .tb td{padding:9px 8px}
+  /* masquer Quantité et Libération sur mobile */
+  .tb th:nth-child(3),.tb td:nth-child(3),
+  .tb th:nth-child(5),.tb td:nth-child(5){display:none}
+}
 </style>
