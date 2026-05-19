@@ -143,6 +143,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../supabase'
 import { exportToExcel, exportToPDF } from '../services/export'
+import { createNotification } from '../services/notifications'
 export default {
   setup() {
     var route = useRoute(), router = useRouter()
@@ -418,6 +419,22 @@ export default {
             }
             var actionDesc=isApprouver?'approuvé DT':isVerifier?'vérifié AQ → DT':isRetourEmetteur?'retourné à l\'émetteur':isRetourAQ?'retourné DT → AQ':'émis'
             await supabase.from('lot_events').insert({lot_id:lotId,event_type:'document_masse',description:docType.toUpperCase()+' — '+actionDesc+' (masse)',triggered_by:userId,created_at:now})
+            // Notifications
+            var typeLabel=docType.toUpperCase().replace('_',' ')
+            if(!isApprouver&&!isVerifier&&!isRetourEmetteur&&!isRetourAQ){
+              await createNotification('aq',lotId,doc.id,'Lot '+lot.numero_lot+' — '+typeLabel+' émis, en attente de vérification','document_transmis')
+            } else if(isVerifier){
+              await createNotification('dt',lotId,doc.id,'Lot '+lot.numero_lot+' — '+typeLabel+' vérifié AQ, en attente d\'approbation DT','document_transmis')
+            } else if(isRetourEmetteur){
+              var svcNotif={'if':'fabrication',ic:'conditionnement',da_pc:'lcq',da_micro:'lcq'}
+              if(svcNotif[docType])await createNotification(svcNotif[docType],lotId,doc.id,'Lot '+lot.numero_lot+' — '+typeLabel+' retourné pour rectification','document_retourne')
+            } else if(isRetourAQ){
+              await createNotification('aq',lotId,doc.id,'Lot '+lot.numero_lot+' — '+typeLabel+' retourné par le DT','document_retourne')
+            } else if(isApprouver){
+              await createNotification('aq',lotId,doc.id,'Lot '+lot.numero_lot+' — '+typeLabel+' approuvé par le DT','document_approuve')
+              var svcEm={'if':'fabrication',ic:'conditionnement',da_pc:'lcq',da_micro:'lcq'}
+              if(svcEm[docType])await createNotification(svcEm[docType],lotId,doc.id,'Lot '+lot.numero_lot+' — '+typeLabel+' approuvé par le DT','document_approuve')
+            }
             result.ok++
           }
         } catch(e) { result.errors.push(lot.numero_lot+': '+e.message); result.fail++ }
