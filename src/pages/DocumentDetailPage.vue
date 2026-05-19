@@ -64,6 +64,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { supabase } from '../supabase'
 import { loadPermissions } from '../services/permissions'
+import { createNotification } from '../services/notifications'
 export default {
   setup() {
     var route = useRoute()
@@ -132,6 +133,25 @@ export default {
       }
 
       await supabase.from('lot_events').insert({ lot_id: lotId, event_type: 'document_' + action, description: doc.value.type_document.toUpperCase() + ' — ' + action, triggered_by: userId.value, created_at: now })
+
+      // Notifications
+      var lotRes = await supabase.from('lots').select('numero_lot').eq('id', lotId).single()
+      var lotNum = lotRes.data ? lotRes.data.numero_lot : ''
+      var typeLabel = doc.value.type_document.toUpperCase().replace('_', ' ')
+      if (action === 'emettre') {
+        await createNotification('aq', lotId, doc.value.id, 'Lot ' + lotNum + ' — ' + typeLabel + ' émis, en attente de vérification', 'document_transmis')
+      } else if (action === 'verifier_aq') {
+        await createNotification('dt', lotId, doc.value.id, 'Lot ' + lotNum + ' — ' + typeLabel + ' vérifié AQ, en attente d\'approbation DT', 'document_transmis')
+      } else if (action === 'rectifier') {
+        await createNotification('aq', lotId, doc.value.id, 'Lot ' + lotNum + ' — ' + typeLabel + ' rectifié, en attente de vérification', 'document_transmis')
+      } else if (action === 'approuver_dt') {
+        await createNotification('aq', lotId, doc.value.id, 'Lot ' + lotNum + ' — ' + typeLabel + ' approuvé par le DT', 'document_approuve')
+        var svcMap = { fabrication: 'fabrication', conditionnement: 'conditionnement', lcq: 'lcq' }
+        if (svcMap[doc.value.service_emetteur]) {
+          await createNotification(svcMap[doc.value.service_emetteur], lotId, doc.value.id, 'Lot ' + lotNum + ' — ' + typeLabel + ' approuvé par le DT', 'document_approuve')
+        }
+      }
+
       loadDoc()
     }
 
@@ -151,6 +171,20 @@ export default {
       }
 
       await supabase.from('lot_events').insert({ lot_id: lotId, event_type: 'document_retour', description: doc.value.type_document.toUpperCase() + ' — retourné vers ' + retourDest.value, triggered_by: userId.value, created_at: now })
+
+      // Notifications
+      var lotRes2 = await supabase.from('lots').select('numero_lot').eq('id', lotId).single()
+      var lotNum2 = lotRes2.data ? lotRes2.data.numero_lot : ''
+      var typeLabel2 = doc.value.type_document.toUpperCase().replace('_', ' ')
+      if (retourDest.value === 'emetteur') {
+        var svcMap2 = { fabrication: 'fabrication', conditionnement: 'conditionnement', lcq: 'lcq' }
+        if (svcMap2[doc.value.service_emetteur]) {
+          await createNotification(svcMap2[doc.value.service_emetteur], lotId, doc.value.id, 'Lot ' + lotNum2 + ' — ' + typeLabel2 + ' retourné pour rectification', 'document_retourne')
+        }
+      } else if (retourDest.value === 'aq') {
+        await createNotification('aq', lotId, doc.value.id, 'Lot ' + lotNum2 + ' — ' + typeLabel2 + ' retourné par le DT', 'document_retourne')
+      }
+
       showRetour.value = false
       motif.value = ''
       loadDoc()

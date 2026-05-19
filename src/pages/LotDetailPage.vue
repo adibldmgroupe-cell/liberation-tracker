@@ -77,7 +77,7 @@
         <td class="cac">
           <button v-if="a.resultat==='en_attente'" class="btn bg" @click="doAqlConforme(a.id)">Conforme</button>
           <button v-if="a.resultat==='en_attente'" class="btn br" @click="doAqlNonConforme(a.id)">Non conforme</button>
-          <button v-if="a.resultat==='non_conforme'" class="btn" @click="doRelanceAql(a)">Relancer AQL</button>
+          <button v-if="a.resultat==='non_conforme' && isLatestAql(a)" class="btn" @click="doRelanceAql(a)">Relancer AQL</button>
         </td>
       </tr></table>
     </div>
@@ -208,6 +208,7 @@ export default {
     var doRequestAql = async function(type){await requestAql(lot.value.id,type,userId.value);loadLot()}
     var doAqlConforme = async function(id){await respondAql(id,'conforme','',userId.value,lot.value.id);loadLot()}
     var doAqlNonConforme = async function(id){var reco=prompt('Recommandations :');await respondAql(id,'non_conforme',reco||'',userId.value,lot.value.id);loadLot()}
+    var isLatestAql = function(a){var sameType=aqls.value.filter(function(x){return x.type===a.type});return sameType.length>0&&sameType[0].id===a.id}
     var doRelanceAql = async function(a){await requestAql(lot.value.id,a.type,userId.value);loadLot()}
 
     var searchProd = async function(){
@@ -253,7 +254,7 @@ export default {
       showDevForm,devObs,showModify,editNumLot,editCodeProd,prodSuggestions,rvpDocs,mainDocs,
       getVal,pipClass,fmtDt,ofV,ocV,docsOk,docsReq,devsOpen,leadTime,dossierComplete,canValidateStep,
       docTypeLabel,docStatLabel,indClass,dsClass,rvpServiceLabel,isDocBlocked,goBack,
-      doValidate,doLiberer,doDeclareDeviation,doCloseDeviation,doDeclareRvp,doRequestAql,doAqlConforme,doAqlNonConforme,doRelanceAql,
+      doValidate,doLiberer,doDeclareDeviation,doCloseDeviation,doDeclareRvp,doRequestAql,doAqlConforme,doAqlNonConforme,doRelanceAql,isLatestAql,
       searchProd,selectProd,doModify,confirmDelete}
   }
 }
