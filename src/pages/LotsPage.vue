@@ -62,6 +62,43 @@
           <option value="doc_da_pc_retour_aq">DA Physico — DT retourne à l'AQ</option>
           <option value="doc_da_micro_retour_aq">DA Micro — DT retourne à l'AQ</option>
         </optgroup>
+        <optgroup label="AQL">
+          <option value="aql_fab_demander">AQL Fabrication — Demander</option>
+          <option value="aql_fab_relancer">AQL Fabrication — Relancer</option>
+          <option value="aql_fab_conforme">AQL Fabrication — Conforme</option>
+          <option value="aql_fab_non_conforme">AQL Fabrication — Non conforme</option>
+          <option value="aql_cond_demander">AQL Conditionnement — Demander</option>
+          <option value="aql_cond_relancer">AQL Conditionnement — Relancer</option>
+          <option value="aql_cond_conforme">AQL Conditionnement — Conforme</option>
+          <option value="aql_cond_non_conforme">AQL Conditionnement — Non conforme</option>
+        </optgroup>
+        <optgroup label="RVP — Émission">
+          <option value="rvp_fab_emettre">RVP Fabrication — Émettre</option>
+          <option value="rvp_cond_emettre">RVP Conditionnement — Émettre</option>
+          <option value="rvp_lcq_emettre">RVP LCQ — Émettre</option>
+        </optgroup>
+        <optgroup label="RVP — Vérification AQ → DT">
+          <option value="rvp_fab_verifier">RVP Fabrication — Vérifier AQ → DT</option>
+          <option value="rvp_cond_verifier">RVP Conditionnement — Vérifier AQ → DT</option>
+          <option value="rvp_lcq_verifier">RVP LCQ — Vérifier AQ → DT</option>
+        </optgroup>
+        <optgroup label="RVP — Approbation DT">
+          <option value="rvp_fab_approuver">RVP Fabrication — Approuver DT</option>
+          <option value="rvp_cond_approuver">RVP Conditionnement — Approuver DT</option>
+          <option value="rvp_lcq_approuver">RVP LCQ — Approuver DT</option>
+        </optgroup>
+        <optgroup label="RVP — Retour">
+          <option value="rvp_fab_retour_emetteur">RVP Fabrication — Retourner à l'émetteur</option>
+          <option value="rvp_cond_retour_emetteur">RVP Conditionnement — Retourner à l'émetteur</option>
+          <option value="rvp_lcq_retour_emetteur">RVP LCQ — Retourner à l'émetteur</option>
+          <option value="rvp_fab_retour_aq">RVP Fabrication — DT retourne à l'AQ</option>
+          <option value="rvp_cond_retour_aq">RVP Conditionnement — DT retourne à l'AQ</option>
+          <option value="rvp_lcq_retour_aq">RVP LCQ — DT retourne à l'AQ</option>
+        </optgroup>
+        <optgroup label="Déviation">
+          <option value="dev_declarer">Déviation — Déclarer</option>
+          <option value="dev_cloture">Déviation — Clôturer</option>
+        </optgroup>
       </select>
       <button class="bulk-btn" :disabled="!canExecute" @click="showConfirm=true">
         Exécuter<span v-if="selected.length"> ({{selected.length}})</span>
@@ -341,6 +378,16 @@ export default {
       doc_da_pc_retour_emetteur:'DA Physico — Retourner à l\'émetteur',doc_da_micro_retour_emetteur:'DA Micro — Retourner à l\'émetteur',
       doc_if_retour_aq:'IF — DT retourne à l\'AQ',doc_ic_retour_aq:'IC — DT retourne à l\'AQ',
       doc_da_pc_retour_aq:'DA Physico — DT retourne à l\'AQ',doc_da_micro_retour_aq:'DA Micro — DT retourne à l\'AQ',
+      aql_fab_demander:'AQL Fabrication — Demander',aql_fab_relancer:'AQL Fabrication — Relancer',
+      aql_fab_conforme:'AQL Fabrication — Conforme',aql_fab_non_conforme:'AQL Fabrication — Non conforme',
+      aql_cond_demander:'AQL Conditionnement — Demander',aql_cond_relancer:'AQL Conditionnement — Relancer',
+      aql_cond_conforme:'AQL Conditionnement — Conforme',aql_cond_non_conforme:'AQL Conditionnement — Non conforme',
+      rvp_fab_emettre:'RVP Fabrication — Émettre',rvp_cond_emettre:'RVP Conditionnement — Émettre',rvp_lcq_emettre:'RVP LCQ — Émettre',
+      rvp_fab_verifier:'RVP Fabrication — Vérifier AQ → DT',rvp_cond_verifier:'RVP Conditionnement — Vérifier AQ → DT',rvp_lcq_verifier:'RVP LCQ — Vérifier AQ → DT',
+      rvp_fab_approuver:'RVP Fabrication — Approuver DT',rvp_cond_approuver:'RVP Conditionnement — Approuver DT',rvp_lcq_approuver:'RVP LCQ — Approuver DT',
+      rvp_fab_retour_emetteur:'RVP Fabrication — Retourner à l\'émetteur',rvp_cond_retour_emetteur:'RVP Conditionnement — Retourner à l\'émetteur',rvp_lcq_retour_emetteur:'RVP LCQ — Retourner à l\'émetteur',
+      rvp_fab_retour_aq:'RVP Fabrication — DT retourne à l\'AQ',rvp_cond_retour_aq:'RVP Conditionnement — DT retourne à l\'AQ',rvp_lcq_retour_aq:'RVP LCQ — DT retourne à l\'AQ',
+      dev_declarer:'Déviation — Déclarer',dev_cloture:'Déviation — Clôturer',
     }
     var actionLabel = computed(function(){ return actionLabels[actionType.value] || '' })
     var canExecute = computed(function(){ return selected.value.length > 0 && actionType.value !== '' })
@@ -380,6 +427,10 @@ export default {
             var nextLabel=nextEtape?(etapeLabels[nextEtape]||nextEtape):'Terminé'
             await supabase.from('lots').update({statut_operationnel:orderType.toUpperCase()+' — '+nextLabel,updated_at:now}).eq('id',lotId)
             await supabase.from('lot_events').insert({lot_id:lotId,event_type:'validation_'+orderType,description:'Circuit '+orderType.toUpperCase()+' — '+etape+' validé (masse)',triggered_by:userId,created_at:now})
+            // Notification — service responsable de l'étape suivante
+            var notifSvc = nextEtape === 'stock' ? 'stock' : nextEtape === 'aq' ? 'aq' : nextEtape === 'dt' ? 'dt' : nextEtape === 'aq_dap' ? 'aq_dap' : nextEtape === 'production' ? (orderType==='of'?'fabrication':'conditionnement') : 'planification'
+            var stepLbl = etapeLabels[etape]||etape
+            await createNotification(notifSvc, lotId, null, 'Lot '+lot.numero_lot+' — Circuit '+orderType.toUpperCase()+' : '+stepLbl+' validé', 'circuit_avance')
             result.ok++
           } else if (action.startsWith('doc_')) {
             var docAction=action.replace('doc_','')
@@ -436,6 +487,70 @@ export default {
               if(svcEm[docType])await createNotification(svcEm[docType],lotId,doc.id,'Lot '+lot.numero_lot+' — '+typeLabel+' approuvé par le DT','document_approuve')
             }
             result.ok++
+          } else if (action.startsWith('aql_')) {
+            var aqlParts=action.split('_'), aqlSvc=aqlParts[1], aqlOp=aqlParts.slice(2).join('_')
+            var aqlTypeVal=aqlSvc==='fab'?'fabrication':'conditionnement'
+            var aqlSvcLabel=aqlSvc==='fab'?'Fabrication':'Conditionnement'
+            if(aqlOp==='demander'||aqlOp==='relancer'){
+              await supabase.from('aql_inspections').insert({lot_id:lotId,type:aqlTypeVal,requested_at:now,requested_by:userId})
+              await supabase.from('lot_events').insert({lot_id:lotId,event_type:'aql_demande',description:'AQL '+aqlSvcLabel+' — '+(aqlOp==='relancer'?'relancé':'demandé')+' (masse)',triggered_by:userId,created_at:now})
+              await createNotification('aq',lotId,null,'Lot '+lot.numero_lot+' — AQL '+aqlSvcLabel+(aqlOp==='relancer'?' relancé':' demandé'),'aql_demande')
+              result.ok++
+            } else if(aqlOp==='conforme'||aqlOp==='non_conforme'){
+              var aqlRes=await supabase.from('aql_inspections').select('id').eq('lot_id',lotId).eq('type',aqlTypeVal).is('resultat',null).order('requested_at',{ascending:false}).limit(1)
+              var latestAql=aqlRes.data&&aqlRes.data[0]
+              if(!latestAql){result.errors.push(lot.numero_lot+': pas d\'AQL '+aqlSvcLabel+' en attente');result.fail++;continue}
+              await supabase.from('aql_inspections').update({resultat:aqlOp,inspected_at:now,inspected_by:userId}).eq('id',latestAql.id)
+              await supabase.from('lot_events').insert({lot_id:lotId,event_type:'aql_resultat',description:'AQL '+aqlSvcLabel+' — '+aqlOp.replace('_',' ')+' (masse)',triggered_by:userId,created_at:now})
+              await createNotification('planification',lotId,null,'Lot '+lot.numero_lot+' — AQL '+aqlSvcLabel+' : '+aqlOp.replace('_',' '),'aql_resultat')
+              result.ok++
+            } else {result.errors.push(lot.numero_lot+': action AQL inconnue');result.fail++}
+          } else if (action.startsWith('rvp_')) {
+            var rvpParts=action.split('_'), rvpSvc=rvpParts[1], rvpOp=rvpParts.slice(2).join('_')
+            var rvpSvcMap={fab:'fabrication',cond:'conditionnement',lcq:'lcq'}
+            var rvpEmetteur=rvpSvcMap[rvpSvc]||rvpSvc
+            var rvpDoc=null
+            if(lot.docs){for(var jj=0;jj<lot.docs.length;jj++){if(lot.docs[jj].type_document==='rvp'&&lot.docs[jj].service_emetteur===rvpEmetteur){rvpDoc=lot.docs[jj];break}}}
+            if(!rvpDoc){result.errors.push(lot.numero_lot+': RVP '+rvpEmetteur+' non trouvé');result.fail++;continue}
+            if(rvpOp==='emettre'){
+              await supabase.from('liberation_documents').update({statut:'emis',emitted_at:now,emitted_by:userId,updated_at:now}).eq('id',rvpDoc.id)
+              await supabase.from('document_movements').insert({document_id:rvpDoc.id,action:'emission',from_service:rvpEmetteur,to_service:'aq',performed_by:userId,performed_at:now})
+              await createNotification('aq',lotId,rvpDoc.id,'Lot '+lot.numero_lot+' — RVP '+rvpEmetteur+' émis, en attente de vérification','document_transmis')
+            } else if(rvpOp==='verifier'){
+              await supabase.from('liberation_documents').update({statut:'approuve_aq',updated_at:now}).eq('id',rvpDoc.id)
+              await supabase.from('document_movements').insert({document_id:rvpDoc.id,action:'approbation',from_service:'aq',to_service:'dt',performed_by:userId,performed_at:now})
+              await createNotification('dt',lotId,rvpDoc.id,'Lot '+lot.numero_lot+' — RVP '+rvpEmetteur+' vérifié AQ → DT','document_transmis')
+            } else if(rvpOp==='approuver'){
+              await supabase.from('liberation_documents').update({statut:'approuve_dt',approved_at:now,updated_at:now}).eq('id',rvpDoc.id)
+              await supabase.from('document_movements').insert({document_id:rvpDoc.id,action:'approbation',from_service:'dt',performed_by:userId,performed_at:now})
+              await createNotification('aq',lotId,rvpDoc.id,'Lot '+lot.numero_lot+' — RVP '+rvpEmetteur+' approuvé DT','document_approuve')
+              await createNotification(rvpEmetteur,lotId,rvpDoc.id,'Lot '+lot.numero_lot+' — RVP '+rvpEmetteur+' approuvé DT','document_approuve')
+            } else if(rvpOp==='retour_emetteur'){
+              await supabase.from('liberation_documents').update({statut:'retour_emetteur',updated_at:now}).eq('id',rvpDoc.id)
+              await supabase.from('document_movements').insert({document_id:rvpDoc.id,action:'retour',from_service:'aq',to_service:rvpEmetteur,motif_retour:'Retour en masse',performed_by:userId,performed_at:now})
+              await createNotification(rvpEmetteur,lotId,rvpDoc.id,'Lot '+lot.numero_lot+' — RVP '+rvpEmetteur+' retourné pour rectification','document_retourne')
+            } else if(rvpOp==='retour_aq'){
+              await supabase.from('liberation_documents').update({statut:'verification_aq',updated_at:now}).eq('id',rvpDoc.id)
+              await supabase.from('document_movements').insert({document_id:rvpDoc.id,action:'retour',from_service:'dt',to_service:'aq',motif_retour:'Retour DT en masse',performed_by:userId,performed_at:now})
+              await createNotification('aq',lotId,rvpDoc.id,'Lot '+lot.numero_lot+' — RVP '+rvpEmetteur+' retourné par le DT','document_retourne')
+            } else {result.errors.push(lot.numero_lot+': action RVP inconnue');result.fail++;continue}
+            await supabase.from('lot_events').insert({lot_id:lotId,event_type:'rvp_masse',description:'RVP '+rvpEmetteur+' — '+rvpOp.replace(/_/g,' ')+' (masse)',triggered_by:userId,created_at:now})
+            result.ok++
+          } else if (action.startsWith('dev_')) {
+            var devOp=action.replace('dev_','')
+            if(devOp==='declarer'){
+              await supabase.from('deviations').insert({lot_id:lotId,statut:'ouverte',description:'Déclaration en masse',declared_by:userId,declared_at:now,created_at:now})
+              await supabase.from('lot_events').insert({lot_id:lotId,event_type:'deviation_declaree',description:'Déviation déclarée (masse)',triggered_by:userId,created_at:now})
+              result.ok++
+            } else if(devOp==='cloture'){
+              var openDevs=await supabase.from('deviations').select('id').eq('lot_id',lotId).in('statut',['ouverte','en_cours'])
+              if(!openDevs.data||!openDevs.data.length){result.errors.push(lot.numero_lot+': aucune déviation ouverte');result.fail++;continue}
+              for(var kk=0;kk<openDevs.data.length;kk++){
+                await supabase.from('deviations').update({statut:'cloturee',closed_at:now,closed_by:userId,updated_at:now}).eq('id',openDevs.data[kk].id)
+              }
+              await supabase.from('lot_events').insert({lot_id:lotId,event_type:'deviation_cloturee',description:openDevs.data.length+' déviation(s) clôturée(s) (masse)',triggered_by:userId,created_at:now})
+              result.ok++
+            } else {result.errors.push(lot.numero_lot+': action déviation inconnue');result.fail++}
           }
         } catch(e) { result.errors.push(lot.numero_lot+': '+e.message); result.fail++ }
         progress.value = i+1
