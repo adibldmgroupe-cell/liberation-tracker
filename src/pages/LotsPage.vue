@@ -279,21 +279,6 @@ export default {
   .filters::-webkit-scrollbar{display:none}
   .fbtn{min-height:36px;padding:6px 12px;white-space:nowrap}
   .td-prod{max-width:110px}
-  /* masquer les colonnes secondaires sur mobile, garder N° lot, Produit, Statut, IF, IC, Date */
-  .tb th:nth-child(4),.tb td:nth-child(4),
-  .tb th:nth-child(5),.tb td:nth-child(5),
-  .tb th:nth-child(6),.tb td:nth-child(6),
-  .tb th:nth-child(7),.tb td:nth-child(7),
-  .tb th:nth-child(10),.tb td:nth-child(10),
-  .tb th:nth-child(11),.tb td:nth-child(11),
-  .tb th:nth-child(12),.tb td:nth-child(12),
-  .tb th:nth-child(13),.tb td:nth-child(13),
-  .tb th:nth-child(14),.tb td:nth-child(14),
-  .tb th:nth-child(15),.tb td:nth-child(15){display:none}
   .tb td{padding:8px 4px}
-}
-@media(max-width:480px){
-  .tb th:nth-child(9),.tb td:nth-child(9){display:none}
-  .td-prod{max-width:80px}
 }
 </style>
