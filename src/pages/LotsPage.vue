@@ -228,9 +228,9 @@ export default {
         else{query=query.ilike('numero_lot','%'+q+'%')}
       }
 
-      query=query.order('date_enregistrement',{ascending:false,nullsFirst:false}).limit(500)
+      query=query.order('date_enregistrement',{ascending:false,nullsFirst:false})
       var result=await query
-      total.value=result.count||0
+      total.value=result.count||(result.data?result.data.length:0)
 
       lots.value=(result.data||[]).map(function(l){
         var docs=l.liberation_documents||[]
