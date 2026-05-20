@@ -469,6 +469,20 @@ export default {
         if (lot.docs) { for (var i=0;i<lot.docs.length;i++){if(lot.docs[i].type_document===col){doc=lot.docs[i];break}} }
         if (doc) {
           ;(function(d, col3) {
+            // DA Micro : si non applicable, proposer de la déclarer applicable en priorité
+            if (col3==='da_micro' && !d.is_applicable) {
+              if (isAdmin||canPerform('emettre_da_micro')) {
+                actions.push({label:'Déclarer DA Micro applicable', fn: async function(){
+                  var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+                  await supabase.from('liberation_documents').update({is_applicable:true,is_required:true,updated_at:n}).eq('id',d.id)
+                  await supabase.from('liberation_dossiers').update({da_micro_applicable:true,updated_at:n}).eq('lot_id',lot.id)
+                  await supabase.from('lot_events').insert({lot_id:lot.id,event_type:'da_micro_applicable',description:'DA Microbiologie déclarée applicable depuis le tableau',triggered_by:uid,created_at:n})
+                  await createNotification('lcq',lot.id,d.id,'Lot '+lot.numero_lot+' — DA Microbiologie déclarée applicable','da_micro_applicable')
+                }})
+              }
+              return // ne pas afficher les autres actions tant que non applicable
+            }
+            if (!d.is_applicable) return // doc non applicable, pas d'action
             if (d.statut==='non_emis' && (isAdmin||canPerform('emettre_'+col3))) {
               actions.push({label:'Émettre '+col3.toUpperCase().replace('_',' '), fn: async function(){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
@@ -510,7 +524,7 @@ export default {
         var aqlType2 = col==='aql_fab'?'fabrication':'conditionnement'
         var aqlPerm = col==='aql_fab'?'demander_aql_fab':'demander_aql_cond'
         var aqlLabel = col==='aql_fab'?'Fabrication':'Conditionnement'
-        var pendingAqls = (lot.aqls_raw||[]).filter(function(a){return a.type===aqlType2&&!a.resultat})
+        var pendingAqls = (lot.aqls_raw||[]).filter(function(a){return a.type===aqlType2&&(a.resultat===null||a.resultat===undefined||a.resultat==='en_attente')})
         var hasPending = pendingAqls.length > 0
         ;(function(aType, aLabel, pending) {
           if (isAdmin || canPerform(aqlPerm)) {
@@ -539,7 +553,12 @@ export default {
         if (isAdmin||canPerform('declarer_nc')) {
           actions.push({label:'Déclarer déviation', fn: async function(){
             var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
-            await supabase.from('deviations').insert({lot_id:lot.id,statut:'ouverte',description:'Déclaration rapide tableau',declared_by:uid,declared_at:n,created_at:n})
+            // Générer le numéro de déviation comme dans actions.js
+            var countRes = await supabase.from('deviations').select('*',{count:'exact',head:true})
+            var numero = 'DEV-' + new Date().getFullYear() + '-' + String(((countRes.count||0)+1)).padStart(3,'0')
+            await supabase.from('deviations').insert({lot_id:lot.id,numero_deviation:numero,statut:'ouverte',description:'Déclaration rapide tableau',declared_by:uid,declared_at:n,created_at:n})
+            await supabase.from('liberation_dossiers').update({deviations_closed:false,updated_at:n}).eq('lot_id',lot.id)
+            await createNotification('aq',lot.id,null,'Lot '+lot.numero_lot+' — Déviation '+numero+' déclarée','deviation_declaree')
           }})
         }
         if (lot.dev_open>0 && (isAdmin||canPerform('cloturer_deviation'))) {
@@ -554,7 +573,20 @@ export default {
         var rvpEmetteur = rvpSvcMap2[col]
         var rvpDoc = null
         if (lot.docs) { for(var jj=0;jj<lot.docs.length;jj++){if(lot.docs[jj].type_document==='rvp'&&lot.docs[jj].service_emetteur===rvpEmetteur){rvpDoc=lot.docs[jj];break}} }
-        if (rvpDoc) {
+        if (!rvpDoc) {
+          // Le document RVP n'existe pas encore — proposer de le déclarer
+          ;(function(re) {
+            if (isAdmin||canPerform('emettre_rvp')) {
+              actions.push({label:'Déclarer RVP '+re, fn: async function(){
+                var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+                var ins = await supabase.from('liberation_documents').insert({lot_id:lot.id,type_document:'rvp',statut:'non_emis',is_applicable:true,is_required:true,service_emetteur:re,created_at:n,updated_at:n}).select().single()
+                await supabase.from('liberation_dossiers').update({pieces_complementaires_ok:false,updated_at:n}).eq('lot_id',lot.id)
+                await supabase.from('lot_events').insert({lot_id:lot.id,event_type:'rvp_declare',description:'RVP '+re+' déclaré depuis le tableau',triggered_by:uid,created_at:n})
+                await createNotification(re,lot.id,ins.data?ins.data.id:null,'Lot '+lot.numero_lot+' — RVP '+re+' à émettre','rvp_declare')
+              }})
+            }
+          })(rvpEmetteur)
+        } else if (rvpDoc) {
           ;(function(rd, re) {
             if (rd.statut==='non_emis' && (isAdmin||canPerform('emettre_rvp'))) {
               actions.push({label:'Émettre RVP '+re, fn: async function(){
