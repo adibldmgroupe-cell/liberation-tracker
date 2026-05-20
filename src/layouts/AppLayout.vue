@@ -59,6 +59,7 @@ import { supabase } from '../supabase'
 import { loadPermissions } from '../services/permissions'
 import { getUnreadCount, getNewNotifications } from '../services/notifications'
 import { checkPlanningAlerts } from '../services/planningAlerts'
+import { playSoundForEvent } from '../services/sounds'
 export default {
   setup() {
     var router = useRouter()
@@ -72,32 +73,11 @@ export default {
 
     var updateClock = function(){var n=new Date(),p=function(v){return String(v).padStart(2,'0')};clock.value=p(n.getHours())+':'+p(n.getMinutes())+':'+p(n.getSeconds())}
 
-    // Notification sound
-    var playSound = function() {
-      try {
-        var ctx = new (window.AudioContext || window.webkitAudioContext)()
-        var o = ctx.createOscillator(); var g = ctx.createGain()
-        o.connect(g); g.connect(ctx.destination)
-        o.type = 'sine'; o.frequency.value = 880
-        g.gain.setValueAtTime(0.15, ctx.currentTime)
-        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5)
-        o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.5)
-        setTimeout(function(){
-          var o2 = ctx.createOscillator(); var g2 = ctx.createGain()
-          o2.connect(g2); g2.connect(ctx.destination)
-          o2.type = 'sine'; o2.frequency.value = 1100
-          g2.gain.setValueAtTime(0.12, ctx.currentTime)
-          g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
-          o2.start(ctx.currentTime); o2.stop(ctx.currentTime + 0.4)
-        }, 200)
-      } catch(e) {}
-    }
-
     var showToast = function(notif) {
       toastId.value++
       var t = { id: toastId.value, message: notif.message, lots: notif.lots, lot_id: notif.lot_id }
       toasts.value.push(t)
-      playSound()
+      try { playSoundForEvent(notif.event_type) } catch(e) {}
       setTimeout(function() { toasts.value = toasts.value.filter(function(x){return x.id !== t.id}) }, 4000)
     }
 
