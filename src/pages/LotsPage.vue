@@ -530,7 +530,7 @@ export default {
           if (isAdmin || canPerform(aqlPerm)) {
             actions.push({label: hasPending?'Relancer AQL '+aLabel:'Demander AQL '+aLabel, fn: async function(){
               var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
-              await supabase.from('aql_inspections').insert({lot_id:lot.id,type:aType,resultat:'en_attente',requested_at:n,requested_by:uid})
+              await supabase.from('aql_inspections').insert({lot_id:lot.id,type:aType,resultat:'en_attente',requested_at:n})
               await createNotification('aq',lot.id,null,'Lot '+lot.numero_lot+' — AQL '+aLabel+(hasPending?' relancé':' demandé'),'aql_demande')
             }})
           }
@@ -556,7 +556,7 @@ export default {
             // Générer le numéro de déviation comme dans actions.js
             var countRes = await supabase.from('deviations').select('*',{count:'exact',head:true})
             var numero = 'DEV-' + new Date().getFullYear() + '-' + String(((countRes.count||0)+1)).padStart(3,'0')
-            await supabase.from('deviations').insert({lot_id:lot.id,numero_deviation:numero,statut:'ouverte',description:'Déclaration rapide tableau',declared_by:uid,declared_at:n,created_at:n})
+            await supabase.from('deviations').insert({lot_id:lot.id,numero_deviation:numero,type:'deviation',statut:'ouverte',description:'Déclaration rapide tableau',declared_by:uid,declared_at:n})
             await supabase.from('liberation_dossiers').update({deviations_closed:false,updated_at:n}).eq('lot_id',lot.id)
             await createNotification('aq',lot.id,null,'Lot '+lot.numero_lot+' — Déviation '+numero+' déclarée','deviation_declaree')
           }})
@@ -823,7 +823,7 @@ export default {
             var aqlTypeVal=aqlSvc==='fab'?'fabrication':'conditionnement'
             var aqlSvcLabel=aqlSvc==='fab'?'Fabrication':'Conditionnement'
             if(aqlOp==='demander'||aqlOp==='relancer'){
-              await supabase.from('aql_inspections').insert({lot_id:lotId,type:aqlTypeVal,resultat:'en_attente',requested_at:now,requested_by:userId})
+              await supabase.from('aql_inspections').insert({lot_id:lotId,type:aqlTypeVal,resultat:'en_attente',requested_at:now})
               await supabase.from('lot_events').insert({lot_id:lotId,event_type:'aql_demande',description:'AQL '+aqlSvcLabel+' — '+(aqlOp==='relancer'?'relancé':'demandé')+' (masse)',triggered_by:userId,created_at:now})
               await createNotification('aq',lotId,null,'Lot '+lot.numero_lot+' — AQL '+aqlSvcLabel+(aqlOp==='relancer'?' relancé':' demandé'),'aql_demande')
               result.ok++
@@ -874,7 +874,7 @@ export default {
             if(devOp==='declarer'){
               var devCountRes=await supabase.from('deviations').select('*',{count:'exact',head:true})
               var devNumero='DEV-'+new Date().getFullYear()+'-'+String(((devCountRes.count||0)+1)).padStart(3,'0')
-              await supabase.from('deviations').insert({lot_id:lotId,numero_deviation:devNumero,statut:'ouverte',description:'Déclaration en masse',declared_by:userId,declared_at:now,created_at:now})
+              await supabase.from('deviations').insert({lot_id:lotId,numero_deviation:devNumero,type:'deviation',statut:'ouverte',description:'Déclaration en masse',declared_by:userId,declared_at:now})
               await supabase.from('liberation_dossiers').update({deviations_closed:false,updated_at:now}).eq('lot_id',lotId)
               await supabase.from('lot_events').insert({lot_id:lotId,event_type:'deviation_declaree',description:'Déviation '+devNumero+' déclarée (masse)',triggered_by:userId,created_at:now})
               await createNotification('aq',lotId,null,'Lot '+lot.numero_lot+' — Déviation '+devNumero+' déclarée','deviation_declaree')
