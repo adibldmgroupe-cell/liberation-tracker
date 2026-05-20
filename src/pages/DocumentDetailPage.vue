@@ -55,7 +55,7 @@
       <button v-if="doc.statut==='valide_planif' && canApprove && isClotSap" class="btn bg" @click="doAct('demander_cloture')">Demander la clôture SAP</button>
 
       <!-- CLÔTURE SAP : Planification confirme la clôture finale -->
-      <button v-if="doc.statut==='cloture_demandee' && canVerify && isClotSap" class="btn bg" @click="doAct('cloturer')">Confirmer la clôture SAP</button>
+      <button v-if="doc.statut==='cloture_demandee' && canConfirmClot && isClotSap" class="btn bg" @click="doAct('cloturer')">Confirmer la clôture SAP</button>
     </div>
 
     <div class="rb" v-if="showRetour">
@@ -154,23 +154,36 @@ export default {
     var canEmit = computed(function(){
       if (!doc.value) return false
       var t = doc.value.type_document
-      if (t.startsWith('maj_')) return canPerform('emettre_maj_doc')
-      if (t.startsWith('cloture_sap_')) return canPerform('emettre_cloture_sap')
+      if (t === 'maj_if') return canPerform('emettre_maj_if')
+      if (t === 'maj_ic') return canPerform('emettre_maj_ic')
+      if (t === 'maj_nmcl_of') return canPerform('emettre_maj_nmcl_of')
+      if (t === 'maj_nmcl_oc') return canPerform('emettre_maj_nmcl_oc')
+      if (t === 'cloture_sap_of') return canPerform('emettre_cloture_sap_of')
+      if (t === 'cloture_sap_oc') return canPerform('emettre_cloture_sap_oc')
       return canPerform('emettre_' + t)
     })
     var canVerify = computed(function(){
       if (!doc.value) return false
       var t = doc.value.type_document
       if (t.startsWith('maj_')) return canPerform('verifier_maj_doc')
-      if (t.startsWith('cloture_sap_')) return canPerform('valider_cloture_sap')
+      if (t === 'cloture_sap_of') return canPerform('valider_cloture_sap_of')
+      if (t === 'cloture_sap_oc') return canPerform('valider_cloture_sap_oc')
       return canPerform('verifier_' + t)
     })
     var canApprove = computed(function(){
       if (!doc.value) return false
       var t = doc.value.type_document
       if (t.startsWith('maj_')) return canPerform('approuver_maj_doc')
-      if (t.startsWith('cloture_sap_')) return canPerform('demander_cloture_sap')
+      if (t === 'cloture_sap_of') return canPerform('demander_cloture_sap_of')
+      if (t === 'cloture_sap_oc') return canPerform('demander_cloture_sap_oc')
       return canPerform('approuver_' + t)
+    })
+    var canConfirmClot = computed(function(){
+      if (!doc.value) return false
+      var t = doc.value.type_document
+      if (t === 'cloture_sap_of') return canPerform('confirmer_cloture_sap_of')
+      if (t === 'cloture_sap_oc') return canPerform('confirmer_cloture_sap_oc')
+      return false
     })
     var canRetourner = computed(function(){ return canPerform('retourner_document') })
     var canRectifier = computed(function(){ return canPerform('rectifier_document') })

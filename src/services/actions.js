@@ -198,17 +198,25 @@ export async function declareMajDoc(lotId, docType, userId) {
 export async function declareClotureSap(lotId, clotType, userId) {
   var now = new Date().toISOString()
   var svcMap = { cloture_sap_of: 'fabrication', cloture_sap_oc: 'conditionnement' }
+  var svc = svcMap[clotType] || 'fabrication'
   var res = await supabase.from('liberation_documents').insert({
-    lot_id: lotId, type_document: clotType, statut: 'non_emis',
+    lot_id: lotId, type_document: clotType, statut: 'emis',
     is_applicable: true, is_required: false,
-    service_emetteur: svcMap[clotType] || 'fabrication'
-  })
+    service_emetteur: svc, emitted_at: now, emitted_by: userId
+  }).select().single()
   if (res.error) throw new Error(res.error.message)
+  var docId = res.data.id
+  await supabase.from('document_movements').insert({
+    document_id: docId, action: 'emission',
+    from_service: svc, to_service: 'planification',
+    performed_by: userId, performed_at: now
+  })
   var lotRes = await supabase.from('lots').select('numero_lot').eq('id', lotId).single()
   var lotNum = lotRes.data ? lotRes.data.numero_lot : ''
+  await createNotification('planification', lotId, docId, 'Lot ' + lotNum + ' — ' + clotType + ' émis, en attente validation', 'document_transmis')
   await supabase.from('lot_events').insert({
-    lot_id: lotId, event_type: 'cloture_sap_declare',
-    description: clotType + ' déclaré', triggered_by: userId, created_at: now
+    lot_id: lotId, event_type: 'cloture_sap_emis',
+    description: clotType + ' émis', triggered_by: userId, created_at: now
   })
 }
 

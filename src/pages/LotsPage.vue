@@ -208,7 +208,7 @@ export default {
       {label:'RVP — Approbation DT',actions:[{value:'rvp_fab_approuver',label:'RVP Fabrication — Approuver DT'},{value:'rvp_cond_approuver',label:'RVP Conditionnement — Approuver DT'},{value:'rvp_lcq_approuver',label:'RVP LCQ — Approuver DT'}]},
       {label:'RVP — Retour',actions:[{value:'rvp_fab_retour_emetteur',label:"RVP Fabrication — Retourner à l'émetteur"},{value:'rvp_cond_retour_emetteur',label:"RVP Conditionnement — Retourner à l'émetteur"},{value:'rvp_lcq_retour_emetteur',label:"RVP LCQ — Retourner à l'émetteur"},{value:'rvp_fab_retour_aq',label:"RVP Fabrication — DT retourne à l'AQ"},{value:'rvp_cond_retour_aq',label:"RVP Conditionnement — DT retourne à l'AQ"},{value:'rvp_lcq_retour_aq',label:"RVP LCQ — DT retourne à l'AQ"}]},
       {label:'MàJ Documents',actions:[{value:'maj_if_declarer',label:'MàJ IF — Déclarer'},{value:'maj_if_emettre',label:'MàJ IF — Émettre'},{value:'maj_if_verifier',label:'MàJ IF — Vérifier AQ'},{value:'maj_if_approuver',label:'MàJ IF — Approuver DT'},{value:'maj_ic_declarer',label:'MàJ IC — Déclarer'},{value:'maj_ic_emettre',label:'MàJ IC — Émettre'},{value:'maj_ic_verifier',label:'MàJ IC — Vérifier AQ'},{value:'maj_ic_approuver',label:'MàJ IC — Approuver DT'},{value:'maj_nmcl_of_declarer',label:'MàJ Nmcl OF — Déclarer'},{value:'maj_nmcl_of_emettre',label:'MàJ Nmcl OF — Émettre'},{value:'maj_nmcl_of_verifier',label:'MàJ Nmcl OF — Vérifier AQ'},{value:'maj_nmcl_of_approuver',label:'MàJ Nmcl OF — Approuver DT'},{value:'maj_nmcl_oc_declarer',label:'MàJ Nmcl OC — Déclarer'},{value:'maj_nmcl_oc_emettre',label:'MàJ Nmcl OC — Émettre'},{value:'maj_nmcl_oc_verifier',label:'MàJ Nmcl OC — Vérifier AQ'},{value:'maj_nmcl_oc_approuver',label:'MàJ Nmcl OC — Approuver DT'}]},
-      {label:'Clôture SAP',actions:[{value:'clot_of_declarer',label:'Clôt. SAP OF — Déclarer'},{value:'clot_of_emettre',label:'Clôt. SAP OF — Dem. validation'},{value:'clot_of_valider',label:'Clôt. SAP OF — Valider (Planif.)'},{value:'clot_of_cloture',label:'Clôt. SAP OF — Dem. clôture'},{value:'clot_of_confirmer',label:'Clôt. SAP OF — Confirmer clôture'},{value:'clot_oc_declarer',label:'Clôt. SAP OC — Déclarer'},{value:'clot_oc_emettre',label:'Clôt. SAP OC — Dem. validation'},{value:'clot_oc_valider',label:'Clôt. SAP OC — Valider (Planif.)'},{value:'clot_oc_cloture',label:'Clôt. SAP OC — Dem. clôture'},{value:'clot_oc_confirmer',label:'Clôt. SAP OC — Confirmer clôture'}]},
+      {label:'Clôture SAP',actions:[{value:'clot_of_emettre',label:'Clôt. SAP OF — Émettre'},{value:'clot_of_valider',label:'Clôt. SAP OF — Valider (Planif.)'},{value:'clot_of_cloture',label:'Clôt. SAP OF — Dem. clôture'},{value:'clot_of_confirmer',label:'Clôt. SAP OF — Confirmer clôture'},{value:'clot_oc_emettre',label:'Clôt. SAP OC — Émettre'},{value:'clot_oc_valider',label:'Clôt. SAP OC — Valider (Planif.)'},{value:'clot_oc_cloture',label:'Clôt. SAP OC — Dem. clôture'},{value:'clot_oc_confirmer',label:'Clôt. SAP OC — Confirmer clôture'}]},
       {label:'Déviation',actions:[{value:'dev_declarer',label:'Déviation — Déclarer'},{value:'dev_cloture',label:'Déviation — Clôturer'}]},
       {label:'Dates prévisionnelles',actions:[{value:'plan_lcq_cible',label:'Libération LCQ — Date cible'},{value:'plan_lcq',label:'Libération LCQ — Date révisée'},{value:'plan_aq_cible',label:'Libération AQ — Date cible'},{value:'plan_aq',label:'Libération AQ — Date révisée'},{value:'plan_dt1',label:'Libération DT — Date cible'},{value:'plan_dt2',label:'Libération DT — Date révisée'}]},
     ]
@@ -278,7 +278,7 @@ export default {
     ]
     var etapeLabels = {planification:'Planif.',stock:'Stock',aq:'AQ',dt:'DT',aq_dap:'AQ DAP',production:'Prod.'}
     var docStatutLabels = {non_emis:'Non émis',emis:'Émis',verification_aq:'Vérif AQ',retour_emetteur:'Retourné',rectification:'Rectif.',approuve_aq:'Appr. AQ',approbation_dt:'Appr. DT',approuve_dt:'Approuvé'}
-    var clotureSapLabels = {non_emis:'Non émis',emis:'Dem. valid.',valide_planif:'Validé',cloture_demandee:'Dem. clôt.',cloture:'Clôturé'}
+    var clotureSapLabels = {non_emis:'Dem. valid.',emis:'Dem. valid.',valide_planif:'Validé',cloture_demandee:'Dem. clôt.',cloture:'Clôturé'}
     var fmt = function(d){return d?new Date(d).toLocaleDateString('fr-FR'):'—'}
     var fmtPlan = function(d){return d?new Date(d+'T00:00:00').toLocaleDateString('fr-FR'):null}
 
@@ -318,7 +318,7 @@ export default {
 
     var getClotureSapInfo = function(docs,type){
       var d=null;if(docs){for(var i=0;i<docs.length;i++){if(docs[i].type_document===type){d=docs[i];break}}}
-      if(!d)return{label:'—',cls:'dc-na',date:null}
+      if(!d)return{label:'Dem. valid.',cls:'dc-wait',date:null}
       var label=clotureSapLabels[d.statut]||d.statut
       var cls='dc-wait';if(d.statut==='cloture')cls='dc-ok';else if(d.statut==='cloture_demandee')cls='dc-prog';else if(d.statut!=='non_emis')cls='dc-prog'
       var date=d.updated_at;return{label:label,cls:cls,date:date?fmt(date):null}
@@ -702,11 +702,13 @@ export default {
       } else if (col==='maj_if'||col==='maj_ic'||col==='maj_nmcl_of'||col==='maj_nmcl_oc') {
         // MàJ documents — même circuit que RVP (declare → emit → verify → approve)
         var majType = col // type_document in DB
+        var majEmitPermMap = {maj_if:'emettre_maj_if',maj_ic:'emettre_maj_ic',maj_nmcl_of:'emettre_maj_nmcl_of',maj_nmcl_oc:'emettre_maj_nmcl_oc'}
+        var majEmitPerm = majEmitPermMap[col]||'emettre_maj_doc'
         var majDoc = null
         if (lot.docs) { for(var mm=0;mm<lot.docs.length;mm++){if(lot.docs[mm].type_document===majType){majDoc=lot.docs[mm];break}} }
         if (!majDoc) {
-          ;(function(mt,svc) {
-            if (isAdmin||canPerform('emettre_maj_doc')) {
+          ;(function(mt,svc,ep) {
+            if (isAdmin||canPerform(ep)) {
               actions.push({label:'Déclarer '+COL_LABELS2[mt], fn: async function(){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
                 await supabase.from('liberation_documents').insert({lot_id:lot.id,type_document:mt,statut:'non_emis',is_applicable:true,is_required:false,service_emetteur:svc,created_at:n,updated_at:n})
@@ -714,10 +716,10 @@ export default {
                 await createNotification(svc,lot.id,null,'Lot '+lot.numero_lot+' — '+COL_LABELS2[mt]+' à émettre','document_transmis')
               }})
             }
-          })(majType, SVC_MAP[majType]||'planification')
+          })(majType, SVC_MAP[majType]||'planification', majEmitPerm)
         } else {
-          ;(function(md, mt, svc) {
-            if (md.statut==='non_emis' && (isAdmin||canPerform('emettre_maj_doc'))) {
+          ;(function(md, mt, svc, ep) {
+            if (md.statut==='non_emis' && (isAdmin||canPerform(ep))) {
               actions.push({label:'Émettre '+COL_LABELS2[mt], fn: async function(){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
                 await supabase.from('liberation_documents').update({statut:'emis',emitted_at:n,emitted_by:uid,updated_at:n}).eq('id',md.id)
@@ -742,7 +744,7 @@ export default {
                 if(svc)await createNotification(svc,lot.id,md.id,'Lot '+lot.numero_lot+' — '+COL_LABELS2[mt]+' approuvé DT','document_approuve')
               }})
             }
-            if (md.statut==='retour_emetteur' && (isAdmin||canPerform('emettre_maj_doc'))) {
+            if (md.statut==='retour_emetteur' && (isAdmin||canPerform(ep))) {
               actions.push({label:'Rectifier / Réémettre', fn: async function(){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
                 await supabase.from('liberation_documents').update({statut:'emis',emitted_at:n,emitted_by:uid,updated_at:n}).eq('id',md.id)
@@ -758,53 +760,58 @@ export default {
                 if(svc)await createNotification(svc,lot.id,md.id,'Lot '+lot.numero_lot+' — '+COL_LABELS2[mt]+' retourné','document_retourne')
               }})
             }
-          })(majDoc, majType, SVC_MAP[majType]||'planification')
+          })(majDoc, majType, SVC_MAP[majType]||'planification', majEmitPerm)
         }
 
       } else if (col==='cloture_sap_of'||col==='cloture_sap_oc') {
-        // Clôture SAP — Fab/Condt émet → Planif valide → Fab/Condt demande clôture
-        var clotType = col // type_document
+        // Clôture SAP — Émettre → Planif valide → Dem. clôture → Confirmer
+        var clotType = col
         var clotSvc = CLOT_SVC[col]
         var clotDoc = null
         if (lot.docs) { for(var cc2=0;cc2<lot.docs.length;cc2++){if(lot.docs[cc2].type_document===clotType){clotDoc=lot.docs[cc2];break}} }
-        if (!clotDoc) {
-          ;(function(ct,cs) {
-            if (isAdmin||canPerform('emettre_cloture_sap')) {
-              actions.push({label:'Déclarer '+COL_LABELS2[ct], fn: async function(){
-                var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
-                await supabase.from('liberation_documents').insert({lot_id:lot.id,type_document:ct,statut:'non_emis',is_applicable:true,is_required:false,service_emetteur:cs,created_at:n,updated_at:n})
-                await supabase.from('lot_events').insert({lot_id:lot.id,event_type:'cloture_sap_declare',description:COL_LABELS2[ct]+' déclaré',triggered_by:uid,created_at:n})
-              }})
-            }
-          })(clotType, clotSvc)
-        } else {
-          ;(function(cd, ct, cs) {
-            if (cd.statut==='non_emis' && (isAdmin||canPerform('emettre_cloture_sap'))) {
-              actions.push({label:'Émettre', fn: async function(){
-                var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+        var clotEmitPerm = col==='cloture_sap_of'?'emettre_cloture_sap_of':'emettre_cloture_sap_oc'
+        var clotValidPerm = col==='cloture_sap_of'?'valider_cloture_sap_of':'valider_cloture_sap_oc'
+        var clotDemPerm = col==='cloture_sap_of'?'demander_cloture_sap_of':'demander_cloture_sap_oc'
+        var clotConfPerm = col==='cloture_sap_of'?'confirmer_cloture_sap_of':'confirmer_cloture_sap_oc'
+        ;(function(cd, ct, cs, ep, vp, dp, cp) {
+          if ((!cd || cd.statut==='non_emis') && (isAdmin||canPerform(ep))) {
+            actions.push({label:'Émettre', fn: async function(){
+              var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+              if (!cd) {
+                var ins=await supabase.from('liberation_documents').insert({lot_id:lot.id,type_document:ct,statut:'emis',is_applicable:true,is_required:false,service_emetteur:cs,emitted_at:n,emitted_by:uid,created_at:n,updated_at:n}).select().single()
+                if(ins.data)await supabase.from('document_movements').insert({document_id:ins.data.id,action:'emission',from_service:cs,to_service:'planification',performed_by:uid,performed_at:n})
+              } else {
                 await supabase.from('liberation_documents').update({statut:'emis',emitted_at:n,emitted_by:uid,updated_at:n}).eq('id',cd.id)
                 await supabase.from('document_movements').insert({document_id:cd.id,action:'emission',from_service:cs,to_service:'planification',performed_by:uid,performed_at:n})
-                await createNotification('planification',lot.id,cd.id,'Lot '+lot.numero_lot+' — '+COL_LABELS2[ct]+' émis, en attente validation','document_transmis')
-              }})
-            }
-            if (cd.statut==='emis' && (isAdmin||canPerform('valider_cloture_sap'))) {
-              actions.push({label:'Valider (Planif.)', fn: async function(){
-                var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
-                await supabase.from('liberation_documents').update({statut:'valide_planif',updated_at:n}).eq('id',cd.id)
-                await supabase.from('document_movements').insert({document_id:cd.id,action:'validation',from_service:'planification',to_service:cs,performed_by:uid,performed_at:n})
-                await createNotification(cs,lot.id,cd.id,'Lot '+lot.numero_lot+' — '+COL_LABELS2[ct]+' validé, demande de clôture possible','document_transmis')
-              }})
-            }
-            if (cd.statut==='valide_planif' && (isAdmin||canPerform('demander_cloture_sap'))) {
-              actions.push({label:'Demander clôture', fn: async function(){
-                var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
-                await supabase.from('liberation_documents').update({statut:'cloture_demandee',updated_at:n}).eq('id',cd.id)
-                await supabase.from('document_movements').insert({document_id:cd.id,action:'cloture',from_service:cs,performed_by:uid,performed_at:n})
-                await createNotification('planification',lot.id,cd.id,'Lot '+lot.numero_lot+' — '+COL_LABELS2[ct]+' clôture demandée','document_approuve')
-              }})
-            }
-          })(clotDoc, clotType, clotSvc)
-        }
+              }
+              await createNotification('planification',lot.id,null,'Lot '+lot.numero_lot+' — '+COL_LABELS2[ct]+' émis, en attente validation','document_transmis')
+            }})
+          }
+          if (cd && cd.statut==='emis' && (isAdmin||canPerform(vp))) {
+            actions.push({label:'Valider (Planif.)', fn: async function(){
+              var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+              await supabase.from('liberation_documents').update({statut:'valide_planif',updated_at:n}).eq('id',cd.id)
+              await supabase.from('document_movements').insert({document_id:cd.id,action:'validation',from_service:'planification',to_service:cs,performed_by:uid,performed_at:n})
+              await createNotification(cs,lot.id,cd.id,'Lot '+lot.numero_lot+' — '+COL_LABELS2[ct]+' validé, demande de clôture possible','document_transmis')
+            }})
+          }
+          if (cd && cd.statut==='valide_planif' && (isAdmin||canPerform(dp))) {
+            actions.push({label:'Demander clôture', fn: async function(){
+              var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+              await supabase.from('liberation_documents').update({statut:'cloture_demandee',updated_at:n}).eq('id',cd.id)
+              await supabase.from('document_movements').insert({document_id:cd.id,action:'cloture',from_service:cs,to_service:'planification',performed_by:uid,performed_at:n})
+              await createNotification('planification',lot.id,cd.id,'Lot '+lot.numero_lot+' — '+COL_LABELS2[ct]+' clôture demandée','document_approuve')
+            }})
+          }
+          if (cd && cd.statut==='cloture_demandee' && (isAdmin||canPerform(cp))) {
+            actions.push({label:'Confirmer clôture', fn: async function(){
+              var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+              await supabase.from('liberation_documents').update({statut:'cloture',updated_at:n}).eq('id',cd.id)
+              await supabase.from('document_movements').insert({document_id:cd.id,action:'cloture_confirmee',from_service:'planification',performed_by:uid,performed_at:n})
+              await createNotification(cs,lot.id,cd.id,'Lot '+lot.numero_lot+' — '+COL_LABELS2[ct]+' clôturé','document_approuve')
+            }})
+          }
+        })(clotDoc, clotType, clotSvc, clotEmitPerm, clotValidPerm, clotDemPerm, clotConfPerm)
       }
       return actions
     }
@@ -1173,24 +1180,29 @@ export default {
             } else {result.errors.push(lot.numero_lot+': action MàJ inconnue');result.fail++}
 
           } else if (action.startsWith('clot_')) {
-            // Clôture SAP bulk: clot_of_declarer, clot_of_emettre, clot_of_valider, clot_of_cloture
+            // Clôture SAP bulk: clot_of_emettre, clot_of_valider, clot_of_cloture, clot_of_confirmer
             var clotParts=action.match(/^clot_(of|oc)_(\w+)$/)
             if(!clotParts){result.errors.push(lot.numero_lot+': action Clôture inconnue');result.fail++;continue}
             var clotDocType='cloture_sap_'+clotParts[1],clotOp=clotParts[2]
             var clotSvc2=clotParts[1]==='of'?'fabrication':'conditionnement'
-            if(clotOp==='declarer'){
-              await supabase.from('liberation_documents').insert({lot_id:lotId,type_document:clotDocType,statut:'non_emis',is_applicable:true,is_required:false,service_emetteur:clotSvc2,created_at:now,updated_at:now})
-              await supabase.from('lot_events').insert({lot_id:lotId,event_type:'cloture_sap_declare',description:clotDocType+' déclaré (masse)',triggered_by:userId,created_at:now})
-              result.ok++
-            } else {
-              var clotD=null;if(lot.docs){for(var cc3=0;cc3<lot.docs.length;cc3++){if(lot.docs[cc3].type_document===clotDocType){clotD=lot.docs[cc3];break}}}
-              if(!clotD){result.errors.push(lot.numero_lot+': '+clotDocType+' non déclaré');result.fail++;continue}
-              if(clotOp==='emettre'){
+            var clotD=null;if(lot.docs){for(var cc3=0;cc3<lot.docs.length;cc3++){if(lot.docs[cc3].type_document===clotDocType){clotD=lot.docs[cc3];break}}}
+            if(clotOp==='emettre'){
+              if(!clotD){
+                // Créer + émettre en une seule étape
+                var insRes=await supabase.from('liberation_documents').insert({lot_id:lotId,type_document:clotDocType,statut:'emis',is_applicable:true,is_required:false,service_emetteur:clotSvc2,emitted_at:now,emitted_by:userId,created_at:now,updated_at:now}).select().single()
+                if(insRes.data){
+                  await supabase.from('document_movements').insert({document_id:insRes.data.id,action:'emission',from_service:clotSvc2,to_service:'planification',performed_by:userId,performed_at:now})
+                  await createNotification('planification',lotId,insRes.data.id,'Lot '+lot.numero_lot+' — '+clotDocType+' émis','document_transmis')
+                }
+              } else {
                 await supabase.from('liberation_documents').update({statut:'emis',emitted_at:now,emitted_by:userId,updated_at:now}).eq('id',clotD.id)
                 await supabase.from('document_movements').insert({document_id:clotD.id,action:'emission',from_service:clotSvc2,to_service:'planification',performed_by:userId,performed_at:now})
                 await createNotification('planification',lotId,clotD.id,'Lot '+lot.numero_lot+' — '+clotDocType+' émis','document_transmis')
-                result.ok++
-              } else if(clotOp==='valider'){
+              }
+              result.ok++
+            } else {
+              if(!clotD){result.errors.push(lot.numero_lot+': '+clotDocType+' non trouvé');result.fail++;continue}
+              if(clotOp==='valider'){
                 await supabase.from('liberation_documents').update({statut:'valide_planif',updated_at:now}).eq('id',clotD.id)
                 await supabase.from('document_movements').insert({document_id:clotD.id,action:'validation',from_service:'planification',to_service:clotSvc2,performed_by:userId,performed_at:now})
                 await createNotification(clotSvc2,lotId,clotD.id,'Lot '+lot.numero_lot+' — '+clotDocType+' validé Planif.','document_transmis')

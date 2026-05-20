@@ -104,17 +104,30 @@ export default {
       {
         label: 'MàJ Documents',
         actions: [
-          { key: 'emettre_maj_doc', label: 'Émettre une MàJ documentaire' },
+          { key: 'emettre_maj_if', label: 'Émettre MàJ IF (Fabrication)' },
+          { key: 'emettre_maj_ic', label: 'Émettre MàJ IC (Conditionnement)' },
+          { key: 'emettre_maj_nmcl_of', label: 'Émettre MàJ Nmcl OF (Planification)' },
+          { key: 'emettre_maj_nmcl_oc', label: 'Émettre MàJ Nmcl OC (Planification)' },
           { key: 'verifier_maj_doc', label: 'Vérifier une MàJ documentaire (AQ)' },
           { key: 'approuver_maj_doc', label: 'Approuver une MàJ documentaire (DT)' },
         ]
       },
       {
-        label: 'Clôture SAP',
+        label: 'Clôture SAP — OF',
         actions: [
-          { key: 'emettre_cloture_sap', label: 'Émettre une demande de clôture SAP' },
-          { key: 'valider_cloture_sap', label: 'Valider une clôture SAP (Planification)' },
-          { key: 'demander_cloture_sap', label: 'Demander la clôture SAP' },
+          { key: 'emettre_cloture_sap_of', label: 'Émettre demande clôture SAP OF (Fabrication)' },
+          { key: 'valider_cloture_sap_of', label: 'Valider clôture SAP OF (Planification)' },
+          { key: 'demander_cloture_sap_of', label: 'Demander clôture SAP OF (Fabrication)' },
+          { key: 'confirmer_cloture_sap_of', label: 'Confirmer clôture SAP OF (Planification)' },
+        ]
+      },
+      {
+        label: 'Clôture SAP — OC',
+        actions: [
+          { key: 'emettre_cloture_sap_oc', label: 'Émettre demande clôture SAP OC (Conditionnement)' },
+          { key: 'valider_cloture_sap_oc', label: 'Valider clôture SAP OC (Planification)' },
+          { key: 'demander_cloture_sap_oc', label: 'Demander clôture SAP OC (Conditionnement)' },
+          { key: 'confirmer_cloture_sap_oc', label: 'Confirmer clôture SAP OC (Planification)' },
         ]
       },
       {

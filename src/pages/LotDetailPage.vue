@@ -138,10 +138,10 @@
     <div v-if="docErrMsg" class="doc-err">{{docErrMsg}}</div>
     <div class="section"><div class="sh"><span>Mises à jour documentaires</span></div>
       <div class="action-btns">
-        <button v-if="canPerform('emettre_maj_doc')" class="btn-action btn-teal" @click="doDeclareMajDoc('maj_if')">MàJ IF</button>
-        <button v-if="canPerform('emettre_maj_doc')" class="btn-action btn-teal" @click="doDeclareMajDoc('maj_ic')">MàJ IC</button>
-        <button v-if="canPerform('emettre_maj_doc')" class="btn-action btn-teal" @click="doDeclareMajDoc('maj_nmcl_of')">MàJ Nmcl OF</button>
-        <button v-if="canPerform('emettre_maj_doc')" class="btn-action btn-teal" @click="doDeclareMajDoc('maj_nmcl_oc')">MàJ Nmcl OC</button>
+        <button v-if="canPerform('emettre_maj_if')" class="btn-action btn-teal" @click="doDeclareMajDoc('maj_if')">MàJ IF</button>
+        <button v-if="canPerform('emettre_maj_ic')" class="btn-action btn-teal" @click="doDeclareMajDoc('maj_ic')">MàJ IC</button>
+        <button v-if="canPerform('emettre_maj_nmcl_of')" class="btn-action btn-teal" @click="doDeclareMajDoc('maj_nmcl_of')">MàJ Nmcl OF</button>
+        <button v-if="canPerform('emettre_maj_nmcl_oc')" class="btn-action btn-teal" @click="doDeclareMajDoc('maj_nmcl_oc')">MàJ Nmcl OC</button>
       </div>
       <div v-if="!majDocs.length" class="em">Aucune mise à jour documentaire</div>
       <div class="dg" v-else>
@@ -155,8 +155,8 @@
     <!-- Clôture SAP -->
     <div class="section"><div class="sh"><span>Clôture SAP</span></div>
       <div class="action-btns">
-        <button v-if="canPerform('emettre_cloture_sap')" class="btn-action btn-slate" @click="doDeclareClotureSap('cloture_sap_of')">Clôt. SAP OF</button>
-        <button v-if="canPerform('emettre_cloture_sap')" class="btn-action btn-slate" @click="doDeclareClotureSap('cloture_sap_oc')">Clôt. SAP OC</button>
+        <button v-if="canPerform('emettre_cloture_sap_of')" class="btn-action btn-slate" @click="doDeclareClotureSap('cloture_sap_of')">Émettre Clôt. SAP OF</button>
+        <button v-if="canPerform('emettre_cloture_sap_oc')" class="btn-action btn-slate" @click="doDeclareClotureSap('cloture_sap_oc')">Émettre Clôt. SAP OC</button>
       </div>
       <div v-if="!clotDocs.length" class="em">Aucune clôture SAP</div>
       <div class="dg" v-else>
@@ -308,7 +308,7 @@ export default {
     }
     var majDocLabel = function(d){var map={maj_if:'MàJ IF',maj_ic:'MàJ IC',maj_nmcl_of:'MàJ Nmcl OF',maj_nmcl_oc:'MàJ Nmcl OC'};return map[d.type_document]||d.type_document}
     var clotDocLabel = function(d){var map={cloture_sap_of:'Clôture SAP OF',cloture_sap_oc:'Clôture SAP OC'};return map[d.type_document]||d.type_document}
-    var clotStatLabels = {non_emis:'Non émis',emis:'Émis',valide_planif:'Validé Planif.',cloture_demandee:'Clôturé'}
+    var clotStatLabels = {emis:'Dem. valid.',valide_planif:'Validé',cloture_demandee:'Dem. clôt.',cloture:'Clôturé'}
     var clotStatLabel = function(d){return clotStatLabels[d.statut]||d.statut}
     var clotIndClass = function(d){if(d.statut==='cloture')return'ind-done';if(d.statut==='non_emis')return'ind-wait';return'ind-prog'}
     var clotDsClass = function(d){if(d.statut==='cloture')return'ds-ok';return''}
