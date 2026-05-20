@@ -85,10 +85,19 @@
     <!-- Documents -->
     <div class="section"><div class="sh"><span>Dossier de libération</span><span class="dc">{{docsOk}}/{{docsReq}}</span></div>
       <div class="dg">
-        <div class="di" v-for="d in mainDocs" :key="d.id" :class="{'dna':!d.is_applicable}" @click="$router.push('/lots/'+lot.id+'/documents/'+d.id)">
+        <div class="di" v-for="d in mainDocs" :key="d.id" :class="{'dna':!d.is_applicable&&d.type_document!=='da_micro'}" @click="$router.push('/lots/'+lot.id+'/documents/'+d.id)">
           <div class="dind" :class="indClass(d)"></div>
-          <div><div class="dn">{{docTypeLabel(d)}}</div><div class="ds" :class="dsClass(d)">{{docStatLabel(d)}}</div>
-            <div class="ds-block" v-if="isDocBlocked(d)">⚠ AQL requis</div></div>
+          <div>
+            <div class="dn">{{docTypeLabel(d)}}</div>
+            <div class="ds" :class="dsClass(d)">{{docStatLabel(d)}}</div>
+            <div class="ds-block" v-if="isDocBlocked(d)">⚠ AQL requis</div>
+            <!-- DA Micro : bouton déclarer applicable -->
+            <button v-if="d.type_document==='da_micro' && !d.is_applicable && canPerform('emettre_da_micro')"
+                    class="btn-app" @click.stop="doSetDaMicroApplicable(d.id)">
+              ＋ Déclarer applicable
+            </button>
+            <span v-if="d.type_document==='da_micro' && !d.is_applicable && !canPerform('emettre_da_micro')" class="ds-na-hint">Non applicable (LCQ)</span>
+          </div>
         </div>
       </div>
     </div>
@@ -258,6 +267,14 @@ export default {
     var canRelanceAql = function(a){return canPerform('demander_aql_'+(a.type==='fabrication'?'fab':'cond'))}
     var doRelanceAql = async function(a){await requestAql(lot.value.id,a.type,userId.value);loadLot()}
 
+    var doSetDaMicroApplicable = async function(docId) {
+      var now = new Date().toISOString()
+      await supabase.from('liberation_documents').update({is_applicable:true,is_required:true,updated_at:now}).eq('id',docId)
+      await supabase.from('liberation_dossiers').update({da_micro_applicable:true,updated_at:now}).eq('lot_id',lot.value.id)
+      await supabase.from('lot_events').insert({lot_id:lot.value.id,event_type:'da_micro_applicable',description:'DA Microbiologie déclarée applicable',triggered_by:userId.value,created_at:now})
+      loadLot()
+    }
+
     var savePlanning = async function(field) {
       planSaving.value = true
       var val = planEdit.value[field] || null
@@ -322,7 +339,8 @@ export default {
       docTypeLabel,docStatLabel,indClass,dsClass,rvpServiceLabel,isDocBlocked,goBack,
       doValidate,doLiberer,doDeclareDeviation,doCloseDeviation,doDeclareRvp,doRequestAql,doAqlConforme,doAqlNonConforme,doRelanceAql,isLatestAql,canRelanceAql,
       searchProd,selectProd,doModify,confirmDelete,canPerform,
-      planning,planEdit,planSaving,savePlanning}
+      planning,planEdit,planSaving,savePlanning,
+      doSetDaMicroApplicable}
   }
 }
 </script>
@@ -357,6 +375,8 @@ export default {
 .dind{width:3px;height:28px;border-radius:1px;flex-shrink:0}.ind-wait{background:#e8e8e8}.ind-prog{background:#185FA5}.ind-done{background:#1D9E75}.ind-ret{background:#E24B4A}.ind-na{background:#e8e8e8;opacity:.3}
 .dn{font-size:13px;font-weight:500}.ds{font-size:11px;color:#999;margin-top:1px}.ds-ok{color:#1D9E75}.ds-ret{color:#E24B4A}.ds-na{color:#ccc}
 .ds-block{font-size:10px;color:#BA7517;margin-top:2px}
+.btn-app{font-size:10px;padding:3px 8px;border:1px solid #1D9E75;border-radius:3px;background:#EAF3DE;color:#3B6D11;cursor:pointer;margin-top:4px;display:block;font-family:inherit}.btn-app:hover{background:#d4edda}
+.ds-na-hint{font-size:10px;color:#ccc;display:block;margin-top:2px}
 .sp2{font-size:11px;padding:2px 8px;border-radius:2px;font-weight:500}.sp2-ok{background:#EAF3DE;color:#3B6D11}.sp2-ko{background:#FCEBEB;color:#A32D2D}.sp2-wait{background:#f5f5f5;color:#999}
 .dev-form{display:flex;gap:8px;align-items:flex-start;margin:10px 0}.dev-input{flex:1;border:1px solid #ddd;padding:6px 8px;font-size:13px;resize:vertical;font-family:inherit;border-radius:2px}
 .dim{color:#999;font-size:12px}.mono{font-family:'SF Mono',monospace;font-size:12px}

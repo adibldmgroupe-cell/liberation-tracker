@@ -12,6 +12,19 @@
       <div class="flow-step" :class="flowClass(3)"><span class="fs-num">3</span><span class="fs-label">Approbation DT</span></div>
     </div>
 
+    <!-- DA Micro non applicable : permettre de la déclarer applicable -->
+    <div class="na-bloc" v-if="!doc.is_applicable && doc.type_document==='da_micro'">
+      <div class="na-icon">🧫</div>
+      <div class="na-msg">
+        <strong>DA Microbiologie — Non applicable</strong><br>
+        Ce document n'est pas encore requis pour ce lot. Le LCQ peut le déclarer applicable si des analyses microbiologiques sont nécessaires.
+      </div>
+      <button v-if="canEmit" class="btn bg" @click="doSetApplicable">Déclarer applicable et lancer le circuit</button>
+    </div>
+    <div class="na-bloc na-info" v-else-if="!doc.is_applicable">
+      <div class="na-msg">Ce document est marqué <strong>Non applicable</strong> pour ce lot.</div>
+    </div>
+
     <div class="actions" v-if="doc.is_applicable">
       <!-- ÉMETTEUR : émettre -->
       <button v-if="doc.statut==='non_emis' && canEmit" class="btn" @click="doAct('emettre')">Émettre le document</button>
@@ -116,6 +129,15 @@ export default {
       showRetour.value = true
     }
 
+    var doSetApplicable = async function() {
+      var now = new Date().toISOString()
+      var lotId = parseInt(route.params.lotId)
+      await supabase.from('liberation_documents').update({is_applicable:true,is_required:true,updated_at:now}).eq('id',doc.value.id)
+      await supabase.from('liberation_dossiers').update({da_micro_applicable:true,updated_at:now}).eq('lot_id',lotId)
+      await supabase.from('lot_events').insert({lot_id:lotId,event_type:'da_micro_applicable',description:'DA Microbiologie déclarée applicable',triggered_by:userId.value,created_at:now})
+      loadDoc()
+    }
+
     var doAct = async function(action) {
       var now = new Date().toISOString()
       var docId = doc.value.id
@@ -211,7 +233,7 @@ export default {
       loadDoc()
     })
 
-    return { doc, movements, showRetour, motif, retourDest, typeLabels, actionLabelsMap, statusLabel, spClass, flowClass, fmtDt, dotClass, prepareRetour, doAct, doRetour, canEmit, canVerify, canApprove, canRetourner, canRectifier }
+    return { doc, movements, showRetour, motif, retourDest, typeLabels, actionLabelsMap, statusLabel, spClass, flowClass, fmtDt, dotClass, prepareRetour, doAct, doRetour, doSetApplicable, canEmit, canVerify, canApprove, canRetourner, canRectifier }
   }
 }
 </script>
@@ -231,6 +253,9 @@ export default {
 .fs-active{background:#E6F1FB}.fs-active .fs-num{background:#185FA5;color:#fff}.fs-active .fs-label{color:#0C447C;font-weight:500}
 .fs-wait{background:#fafafa}.fs-wait .fs-num{background:#e8e8e8;color:#999}.fs-wait .fs-label{color:#999}
 .fs-ret{background:#FCEBEB}.fs-ret .fs-num{background:#E24B4A;color:#fff}.fs-ret .fs-label{color:#A32D2D}
+.na-bloc{display:flex;align-items:flex-start;gap:12px;padding:16px;border:1px solid #ddd;border-radius:4px;margin:12px 0;background:#fafafa}
+.na-info{background:#f5f5f5}.na-icon{font-size:28px;flex-shrink:0}.na-msg{flex:1;font-size:13px;line-height:1.5;color:#555}.na-msg strong{color:#333}
+.na-bloc .btn{margin-top:10px;white-space:nowrap;flex-shrink:0}
 .actions{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap}.btn{font-size:12px;padding:8px 18px;border-radius:2px;border:none;cursor:pointer;font-weight:500;background:#185FA5;color:#fff;min-height:40px}.btn:hover{opacity:.9}.br{background:#E24B4A}.bg{background:#1D9E75}.bc2{background:#f5f5f5;color:#666}
 .rb{border:1px solid #E24B4A;padding:14px;margin:12px 0;border-radius:2px}.rb label{font-size:12px;font-weight:500;display:block;margin-bottom:6px}.rb textarea{width:100%;border:1px solid #ddd;padding:8px;font-size:13px;box-sizing:border-box;resize:vertical;font-family:inherit}.ra{display:flex;gap:8px;margin-top:8px}
 .section{margin-top:20px}.sh{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:#999;padding-bottom:6px;border-bottom:1px solid #e8e8e8}
