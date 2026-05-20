@@ -158,7 +158,7 @@ export default {
 .sug-label{font-weight:500}.sug-sub{color:#999;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .notif-bell{font-size:18px;cursor:pointer;position:relative;padding:4px}.bell-badge{position:absolute;top:-2px;right:-4px;background:#E24B4A;color:#fff;font-size:9px;font-weight:600;padding:1px 4px;border-radius:6px}
 .clock{margin-left:auto;font-family:'SF Mono','Fira Code',monospace;font-size:12px;color:#999;white-space:nowrap}
-.page-content{flex:1;overflow-y:auto;padding:16px 20px}
+.page-content{flex:1;overflow-y:auto;overflow-x:hidden;padding:16px 20px;min-width:0}
 
 /* Toast */
 .toast-container{position:fixed;bottom:20px;right:20px;z-index:200;display:flex;flex-direction:column-reverse;gap:8px;max-width:360px}
