@@ -5,11 +5,15 @@
     <div class="info"><div class="ic"><span class="il">Émetteur</span>{{doc.service_emetteur}}</div><div class="ic"><span class="il">Émis le</span><span class="mono">{{fmtDt(doc.emitted_at)}}</span></div><div class="ic"><span class="il">Approuvé le</span><span class="mono">{{fmtDt(doc.approved_at)}}</span></div></div>
 
     <div class="flow">
-      <div class="flow-step" :class="flowClass(1)"><span class="fs-num">1</span><span class="fs-label">Émission</span></div>
+      <div class="flow-step" :class="flowClass(1)"><span class="fs-num">1</span><span class="fs-label">{{isClotSap?'Demande valid.':'Émission'}}</span></div>
       <div class="flow-arrow">→</div>
       <div class="flow-step" :class="flowClass(2)"><span class="fs-num">2</span><span class="fs-label">{{isClotSap?'Validation Planif.':'Vérif. AQ'}}</span></div>
       <div class="flow-arrow">→</div>
-      <div class="flow-step" :class="flowClass(3)"><span class="fs-num">3</span><span class="fs-label">{{isClotSap?'Clôture demandée':'Approbation DT'}}</span></div>
+      <div class="flow-step" :class="flowClass(3)"><span class="fs-num">3</span><span class="fs-label">{{isClotSap?'Demande clôture':'Approbation DT'}}</span></div>
+      <template v-if="isClotSap">
+        <div class="flow-arrow">→</div>
+        <div class="flow-step" :class="flowClass(4)"><span class="fs-num">4</span><span class="fs-label">Clôture</span></div>
+      </template>
     </div>
 
     <!-- DA Micro non applicable : permettre de la déclarer applicable -->
@@ -49,6 +53,9 @@
 
       <!-- CLÔTURE SAP : Fab/Condt demande clôture -->
       <button v-if="doc.statut==='valide_planif' && canApprove && isClotSap" class="btn bg" @click="doAct('demander_cloture')">Demander la clôture SAP</button>
+
+      <!-- CLÔTURE SAP : Planification confirme la clôture finale -->
+      <button v-if="doc.statut==='cloture_demandee' && canVerify && isClotSap" class="btn bg" @click="doAct('cloturer')">Confirmer la clôture SAP</button>
     </div>
 
     <div class="rb" v-if="showRetour">
@@ -89,17 +96,17 @@ export default {
     var route = useRoute()
     var doc = ref(null), movements = ref([]), showRetour = ref(false), motif = ref(''), userId = ref(null), retourDest = ref('')
     var typeLabels = { if:'IF (Instruction de fabrication)', ic:'IC (Instruction de conditionnement)', da_pc:'DA Physico-chimie', da_micro:'DA Microbiologie', rvp:'RVP', deviation:'Déviation', analyse_risque:'Analyse de risque', autorisation_partenaire:'Autorisation partenaire', autre:'Autre', maj_if:'MàJ IF', maj_ic:'MàJ IC', maj_nmcl_of:'MàJ Nomenclature OF', maj_nmcl_oc:'MàJ Nomenclature OC', cloture_sap_of:'Clôture SAP OF', cloture_sap_oc:'Clôture SAP OC' }
-    var actionLabelsMap = { emission:'Émission', transmission:'Transmission', reception:'Réception', retour:'Retour pour rectification', rectification:'Rectification et renvoi', approbation:'Approbation' }
-    var statusMap = { non_emis:'Non émis', emis:'Émis — en attente', verification_aq:'En cours de vérification AQ', retour_emetteur:'Retourné à l\'émetteur', rectification:'En cours de rectification', approuve_aq:'Vérifié AQ — en attente DT', approbation_dt:'En cours d\'approbation DT', approuve_dt:'Approuvé DT', valide_planif:'Validé Planification — en attente clôture', cloture_demandee:'Clôture demandée' }
+    var actionLabelsMap = { emission:'Émission', transmission:'Transmission', reception:'Réception', retour:'Retour pour rectification', rectification:'Rectification et renvoi', approbation:'Approbation', validation:'Validation Planification', cloture:'Demande de clôture', cloture_confirmee:'Clôture confirmée' }
+    var statusMap = { non_emis:'Non émis', emis:'Émis — en attente', verification_aq:'En cours de vérification AQ', retour_emetteur:'Retourné à l\'émetteur', rectification:'En cours de rectification', approuve_aq:'Vérifié AQ — en attente DT', approbation_dt:'En cours d\'approbation DT', approuve_dt:'Approuvé DT', valide_planif:'Validé Planif. — en attente demande clôture', cloture_demandee:'Clôture demandée — en attente confirmation', cloture:'Clôturé' }
     var statusLabel = computed(function() { return statusMap[doc.value ? doc.value.statut : ''] || '' })
     var isClotSap = computed(function(){ return doc.value && doc.value.type_document && doc.value.type_document.startsWith('cloture_sap_') })
     var isMajDoc = computed(function(){ return doc.value && doc.value.type_document && doc.value.type_document.startsWith('maj_') })
     var spClass = computed(function() {
       var s = doc.value ? doc.value.statut : ''
-      if (s === 'approuve_dt' || s === 'cloture_demandee') return 'sp-ok'
+      if (s === 'approuve_dt' || s === 'cloture') return 'sp-ok'
       if (s === 'retour_emetteur') return 'sp-ret'
       if (s === 'non_emis') return 'sp-wait'
-      if (s === 'approuve_aq' || s === 'valide_planif') return 'sp-dt'
+      if (s === 'approuve_aq' || s === 'valide_planif' || s === 'cloture_demandee') return 'sp-dt'
       return 'sp-prog'
     })
 
@@ -114,7 +121,7 @@ export default {
       if (step === 2) {
         if (clot) {
           if (s === 'emis') return 'fs-active'
-          if (s === 'valide_planif' || s === 'cloture_demandee') return 'fs-done'
+          if (s === 'valide_planif' || s === 'cloture_demandee' || s === 'cloture') return 'fs-done'
           return 'fs-wait'
         }
         if (s === 'emis' || s === 'verification_aq') return 'fs-active'
@@ -124,11 +131,19 @@ export default {
       if (step === 3) {
         if (clot) {
           if (s === 'valide_planif') return 'fs-active'
-          if (s === 'cloture_demandee') return 'fs-done'
+          if (s === 'cloture_demandee' || s === 'cloture') return 'fs-done'
           return 'fs-wait'
         }
         if (s === 'approuve_aq' || s === 'approbation_dt') return 'fs-active'
         if (s === 'approuve_dt') return 'fs-done'
+        return 'fs-wait'
+      }
+      if (step === 4) {
+        if (clot) {
+          if (s === 'cloture_demandee') return 'fs-active'
+          if (s === 'cloture') return 'fs-done'
+          return 'fs-wait'
+        }
         return 'fs-wait'
       }
       return 'fs-wait'
@@ -203,7 +218,10 @@ export default {
         if (field) { await supabase.from('liberation_dossiers').update({ [field]: true, updated_at: now }).eq('lot_id', lotId) }
       } else if (action === 'demander_cloture') {
         await supabase.from('liberation_documents').update({ statut: 'cloture_demandee', updated_at: now }).eq('id', docId)
-        await supabase.from('document_movements').insert({ document_id: docId, action: 'cloture', from_service: doc.value.service_emetteur, performed_by: userId.value, performed_at: now })
+        await supabase.from('document_movements').insert({ document_id: docId, action: 'cloture', from_service: doc.value.service_emetteur, to_service: 'planification', performed_by: userId.value, performed_at: now })
+      } else if (action === 'cloturer') {
+        await supabase.from('liberation_documents').update({ statut: 'cloture', updated_at: now }).eq('id', docId)
+        await supabase.from('document_movements').insert({ document_id: docId, action: 'cloture_confirmee', from_service: 'planification', performed_by: userId.value, performed_at: now })
       }
 
       await supabase.from('lot_events').insert({ lot_id: lotId, event_type: 'document_' + action, description: t.toUpperCase() + ' — ' + action, triggered_by: userId.value, created_at: now })
@@ -227,7 +245,9 @@ export default {
         var svcMap = { fabrication: 'fabrication', conditionnement: 'conditionnement', lcq: 'lcq' }
         if (svcMap[svc]) { await createNotification(svcMap[svc], lotId, doc.value.id, 'Lot ' + lotNum + ' — ' + typeLabel + ' approuvé par le DT', 'document_approuve') }
       } else if (action === 'demander_cloture') {
-        await createNotification('planification', lotId, doc.value.id, 'Lot ' + lotNum + ' — ' + typeLabel + ' : clôture demandée', 'document_approuve')
+        await createNotification('planification', lotId, doc.value.id, 'Lot ' + lotNum + ' — ' + typeLabel + ' : clôture demandée, en attente confirmation', 'document_approuve')
+      } else if (action === 'cloturer') {
+        if (svc) await createNotification(svc, lotId, doc.value.id, 'Lot ' + lotNum + ' — ' + typeLabel + ' : clôturé par Planification', 'document_approuve')
       }
 
       loadDoc()

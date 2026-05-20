@@ -71,9 +71,9 @@ export function getPermissionForBulkAction(action) {
     maj_nmcl_oc_verifier:'verifier_maj_doc', maj_nmcl_oc_approuver:'approuver_maj_doc',
     // Clôture SAP
     clot_of_declarer:'emettre_cloture_sap', clot_of_emettre:'emettre_cloture_sap',
-    clot_of_valider:'valider_cloture_sap', clot_of_cloture:'demander_cloture_sap',
+    clot_of_valider:'valider_cloture_sap', clot_of_cloture:'demander_cloture_sap', clot_of_confirmer:'valider_cloture_sap',
     clot_oc_declarer:'emettre_cloture_sap', clot_oc_emettre:'emettre_cloture_sap',
-    clot_oc_valider:'valider_cloture_sap', clot_oc_cloture:'demander_cloture_sap',
+    clot_oc_valider:'valider_cloture_sap', clot_oc_cloture:'demander_cloture_sap', clot_oc_confirmer:'valider_cloture_sap',
     // Planning
     plan_lcq_cible:'modifier_planning', plan_lcq:'modifier_planning',
     plan_aq_cible:'modifier_planning',  plan_aq:'modifier_planning',

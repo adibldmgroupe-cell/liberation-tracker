@@ -310,8 +310,8 @@ export default {
     var clotDocLabel = function(d){var map={cloture_sap_of:'Clôture SAP OF',cloture_sap_oc:'Clôture SAP OC'};return map[d.type_document]||d.type_document}
     var clotStatLabels = {non_emis:'Non émis',emis:'Émis',valide_planif:'Validé Planif.',cloture_demandee:'Clôturé'}
     var clotStatLabel = function(d){return clotStatLabels[d.statut]||d.statut}
-    var clotIndClass = function(d){if(d.statut==='cloture_demandee')return'ind-done';if(d.statut==='non_emis')return'ind-wait';return'ind-prog'}
-    var clotDsClass = function(d){if(d.statut==='cloture_demandee')return'ds-ok';return''}
+    var clotIndClass = function(d){if(d.statut==='cloture')return'ind-done';if(d.statut==='non_emis')return'ind-wait';return'ind-prog'}
+    var clotDsClass = function(d){if(d.statut==='cloture')return'ds-ok';return''}
     var doRequestAql = async function(type){await requestAql(lot.value.id,type,userId.value);loadLot()}
     var doAqlConforme = async function(id){await respondAql(id,'conforme','',userId.value,lot.value.id);loadLot()}
     var doAqlNonConforme = async function(id){var reco=prompt('Recommandations :');await respondAql(id,'non_conforme',reco||'',userId.value,lot.value.id);loadLot()}

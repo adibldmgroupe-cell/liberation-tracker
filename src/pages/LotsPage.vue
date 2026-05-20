@@ -208,7 +208,7 @@ export default {
       {label:'RVP — Approbation DT',actions:[{value:'rvp_fab_approuver',label:'RVP Fabrication — Approuver DT'},{value:'rvp_cond_approuver',label:'RVP Conditionnement — Approuver DT'},{value:'rvp_lcq_approuver',label:'RVP LCQ — Approuver DT'}]},
       {label:'RVP — Retour',actions:[{value:'rvp_fab_retour_emetteur',label:"RVP Fabrication — Retourner à l'émetteur"},{value:'rvp_cond_retour_emetteur',label:"RVP Conditionnement — Retourner à l'émetteur"},{value:'rvp_lcq_retour_emetteur',label:"RVP LCQ — Retourner à l'émetteur"},{value:'rvp_fab_retour_aq',label:"RVP Fabrication — DT retourne à l'AQ"},{value:'rvp_cond_retour_aq',label:"RVP Conditionnement — DT retourne à l'AQ"},{value:'rvp_lcq_retour_aq',label:"RVP LCQ — DT retourne à l'AQ"}]},
       {label:'MàJ Documents',actions:[{value:'maj_if_declarer',label:'MàJ IF — Déclarer'},{value:'maj_if_emettre',label:'MàJ IF — Émettre'},{value:'maj_if_verifier',label:'MàJ IF — Vérifier AQ'},{value:'maj_if_approuver',label:'MàJ IF — Approuver DT'},{value:'maj_ic_declarer',label:'MàJ IC — Déclarer'},{value:'maj_ic_emettre',label:'MàJ IC — Émettre'},{value:'maj_ic_verifier',label:'MàJ IC — Vérifier AQ'},{value:'maj_ic_approuver',label:'MàJ IC — Approuver DT'},{value:'maj_nmcl_of_declarer',label:'MàJ Nmcl OF — Déclarer'},{value:'maj_nmcl_of_emettre',label:'MàJ Nmcl OF — Émettre'},{value:'maj_nmcl_of_verifier',label:'MàJ Nmcl OF — Vérifier AQ'},{value:'maj_nmcl_of_approuver',label:'MàJ Nmcl OF — Approuver DT'},{value:'maj_nmcl_oc_declarer',label:'MàJ Nmcl OC — Déclarer'},{value:'maj_nmcl_oc_emettre',label:'MàJ Nmcl OC — Émettre'},{value:'maj_nmcl_oc_verifier',label:'MàJ Nmcl OC — Vérifier AQ'},{value:'maj_nmcl_oc_approuver',label:'MàJ Nmcl OC — Approuver DT'}]},
-      {label:'Clôture SAP',actions:[{value:'clot_of_declarer',label:'Clôt. SAP OF — Déclarer'},{value:'clot_of_emettre',label:'Clôt. SAP OF — Émettre'},{value:'clot_of_valider',label:'Clôt. SAP OF — Valider Planif.'},{value:'clot_of_cloture',label:'Clôt. SAP OF — Demander clôture'},{value:'clot_oc_declarer',label:'Clôt. SAP OC — Déclarer'},{value:'clot_oc_emettre',label:'Clôt. SAP OC — Émettre'},{value:'clot_oc_valider',label:'Clôt. SAP OC — Valider Planif.'},{value:'clot_oc_cloture',label:'Clôt. SAP OC — Demander clôture'}]},
+      {label:'Clôture SAP',actions:[{value:'clot_of_declarer',label:'Clôt. SAP OF — Déclarer'},{value:'clot_of_emettre',label:'Clôt. SAP OF — Dem. validation'},{value:'clot_of_valider',label:'Clôt. SAP OF — Valider (Planif.)'},{value:'clot_of_cloture',label:'Clôt. SAP OF — Dem. clôture'},{value:'clot_of_confirmer',label:'Clôt. SAP OF — Confirmer clôture'},{value:'clot_oc_declarer',label:'Clôt. SAP OC — Déclarer'},{value:'clot_oc_emettre',label:'Clôt. SAP OC — Dem. validation'},{value:'clot_oc_valider',label:'Clôt. SAP OC — Valider (Planif.)'},{value:'clot_oc_cloture',label:'Clôt. SAP OC — Dem. clôture'},{value:'clot_oc_confirmer',label:'Clôt. SAP OC — Confirmer clôture'}]},
       {label:'Déviation',actions:[{value:'dev_declarer',label:'Déviation — Déclarer'},{value:'dev_cloture',label:'Déviation — Clôturer'}]},
       {label:'Dates prévisionnelles',actions:[{value:'plan_lcq_cible',label:'Libération LCQ — Date cible'},{value:'plan_lcq',label:'Libération LCQ — Date révisée'},{value:'plan_aq_cible',label:'Libération AQ — Date cible'},{value:'plan_aq',label:'Libération AQ — Date révisée'},{value:'plan_dt1',label:'Libération DT — Date cible'},{value:'plan_dt2',label:'Libération DT — Date révisée'}]},
     ]
@@ -278,7 +278,7 @@ export default {
     ]
     var etapeLabels = {planification:'Planif.',stock:'Stock',aq:'AQ',dt:'DT',aq_dap:'AQ DAP',production:'Prod.'}
     var docStatutLabels = {non_emis:'Non émis',emis:'Émis',verification_aq:'Vérif AQ',retour_emetteur:'Retourné',rectification:'Rectif.',approuve_aq:'Appr. AQ',approbation_dt:'Appr. DT',approuve_dt:'Approuvé'}
-    var clotureSapLabels = {non_emis:'Non émis',emis:'Émis',valide_planif:'Validé Planif.',cloture_demandee:'Clôturé'}
+    var clotureSapLabels = {non_emis:'Non émis',emis:'Dem. valid.',valide_planif:'Validé',cloture_demandee:'Dem. clôt.',cloture:'Clôturé'}
     var fmt = function(d){return d?new Date(d).toLocaleDateString('fr-FR'):'—'}
     var fmtPlan = function(d){return d?new Date(d+'T00:00:00').toLocaleDateString('fr-FR'):null}
 
@@ -320,7 +320,7 @@ export default {
       var d=null;if(docs){for(var i=0;i<docs.length;i++){if(docs[i].type_document===type){d=docs[i];break}}}
       if(!d)return{label:'—',cls:'dc-na',date:null}
       var label=clotureSapLabels[d.statut]||d.statut
-      var cls='dc-wait';if(d.statut==='cloture_demandee')cls='dc-ok';else if(d.statut!=='non_emis')cls='dc-prog'
+      var cls='dc-wait';if(d.statut==='cloture')cls='dc-ok';else if(d.statut==='cloture_demandee')cls='dc-prog';else if(d.statut!=='non_emis')cls='dc-prog'
       var date=d.updated_at;return{label:label,cls:cls,date:date?fmt(date):null}
     }
 
@@ -966,8 +966,8 @@ export default {
       maj_ic_declarer:'MàJ IC — Déclarer',maj_ic_emettre:'MàJ IC — Émettre',maj_ic_verifier:'MàJ IC — Vérifier',maj_ic_approuver:'MàJ IC — Approuver',
       maj_nmcl_of_declarer:'MàJ N. OF — Déclarer',maj_nmcl_of_emettre:'MàJ N. OF — Émettre',maj_nmcl_of_verifier:'MàJ N. OF — Vérifier',maj_nmcl_of_approuver:'MàJ N. OF — Approuver',
       maj_nmcl_oc_declarer:'MàJ N. OC — Déclarer',maj_nmcl_oc_emettre:'MàJ N. OC — Émettre',maj_nmcl_oc_verifier:'MàJ N. OC — Vérifier',maj_nmcl_oc_approuver:'MàJ N. OC — Approuver',
-      clot_of_declarer:'Clôt. OF — Déclarer',clot_of_emettre:'Clôt. OF — Émettre',clot_of_valider:'Clôt. OF — Valider',clot_of_cloture:'Clôt. OF — Clôturer',
-      clot_oc_declarer:'Clôt. OC — Déclarer',clot_oc_emettre:'Clôt. OC — Émettre',clot_oc_valider:'Clôt. OC — Valider',clot_oc_cloture:'Clôt. OC — Clôturer',
+      clot_of_declarer:'Clôt. OF — Déclarer',clot_of_emettre:'Clôt. OF — Dem. validation',clot_of_valider:'Clôt. OF — Valider (Planif.)',clot_of_cloture:'Clôt. OF — Dem. clôture',clot_of_confirmer:'Clôt. OF — Confirmer clôture',
+      clot_oc_declarer:'Clôt. OC — Déclarer',clot_oc_emettre:'Clôt. OC — Dem. validation',clot_oc_valider:'Clôt. OC — Valider (Planif.)',clot_oc_cloture:'Clôt. OC — Dem. clôture',clot_oc_confirmer:'Clôt. OC — Confirmer clôture',
       dev_declarer:'Déviation — Déclarer',dev_cloture:'Déviation — Clôturer',
       plan_lcq_cible:'Lib. LCQ — Date cible',plan_lcq:'Lib. LCQ — Date révisée',
       plan_aq_cible:'Lib. AQ — Date cible',plan_aq:'Lib. AQ — Date révisée',
@@ -1197,8 +1197,13 @@ export default {
                 result.ok++
               } else if(clotOp==='cloture'){
                 await supabase.from('liberation_documents').update({statut:'cloture_demandee',updated_at:now}).eq('id',clotD.id)
-                await supabase.from('document_movements').insert({document_id:clotD.id,action:'cloture',from_service:clotSvc2,performed_by:userId,performed_at:now})
+                await supabase.from('document_movements').insert({document_id:clotD.id,action:'cloture',from_service:clotSvc2,to_service:'planification',performed_by:userId,performed_at:now})
                 await createNotification('planification',lotId,clotD.id,'Lot '+lot.numero_lot+' — '+clotDocType+' clôture demandée','document_approuve')
+                result.ok++
+              } else if(clotOp==='confirmer'){
+                await supabase.from('liberation_documents').update({statut:'cloture',updated_at:now}).eq('id',clotD.id)
+                await supabase.from('document_movements').insert({document_id:clotD.id,action:'cloture_confirmee',from_service:'planification',performed_by:userId,performed_at:now})
+                await createNotification(clotSvc2,lotId,clotD.id,'Lot '+lot.numero_lot+' — '+clotDocType+' clôturé','document_approuve')
                 result.ok++
               } else {result.errors.push(lot.numero_lot+': action Clôture inconnue');result.fail++}
             }
