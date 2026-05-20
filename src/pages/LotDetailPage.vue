@@ -66,8 +66,8 @@
     <!-- AQL -->
     <div class="section"><div class="sh"><span>AQL</span></div>
       <div class="action-btns">
-        <button v-if="canPerform('demander_aql_fab')" class="btn-action" @click="doRequestAql('fabrication')">Demander AQL Fabrication</button>
-        <button v-if="canPerform('demander_aql_cond')" class="btn-action" @click="doRequestAql('conditionnement')">Demander AQL Conditionnement</button>
+        <button v-if="canPerform('demander_aql_fab') && canDemanderAql('fabrication')" class="btn-action" @click="doRequestAql('fabrication')">Demander AQL Fabrication</button>
+        <button v-if="canPerform('demander_aql_cond') && canDemanderAql('conditionnement')" class="btn-action" @click="doRequestAql('conditionnement')">Demander AQL Conditionnement</button>
       </div>
       <div v-if="!aqls.length" class="em">Aucune demande AQL</div>
       <table class="ct" v-else><tr v-for="a in aqls" :key="a.id">
@@ -266,6 +266,15 @@ export default {
     var isLatestAql = function(a){var sameType=aqls.value.filter(function(x){return x.type===a.type});return sameType.length>0&&sameType[0].id===a.id}
     var canRelanceAql = function(a){return canPerform('demander_aql_'+(a.type==='fabrication'?'fab':'cond'))}
     var doRelanceAql = async function(a){await requestAql(lot.value.id,a.type,userId.value);loadLot()}
+    // Masquer "Demander AQL" si le dernier AQL de ce type est en attente ou non_conforme (relancer via bouton per-ligne)
+    var canDemanderAql = function(type) {
+      var sameType = aqls.value.filter(function(x){return x.type===type})
+      if (!sameType.length) return true // aucun AQL → afficher Demander
+      var latest = sameType[0] // déjà trié par created_at desc
+      if (latest.resultat==='en_attente'||latest.resultat===null) return false // en attente → masquer
+      if (latest.resultat==='non_conforme') return false // non conforme → relancer via bouton per-ligne
+      return true // conforme → on peut redemander un nouveau cycle
+    }
 
     var doSetDaMicroApplicable = async function(docId) {
       var now = new Date().toISOString()
@@ -337,7 +346,7 @@ export default {
       showDevForm,devObs,showModify,editNumLot,editCodeProd,prodSuggestions,rvpDocs,mainDocs,
       getVal,pipClass,fmtDt,ofV,ocV,docsOk,docsReq,devsOpen,leadTime,dossierComplete,canValidateStep,
       docTypeLabel,docStatLabel,indClass,dsClass,rvpServiceLabel,isDocBlocked,goBack,
-      doValidate,doLiberer,doDeclareDeviation,doCloseDeviation,doDeclareRvp,doRequestAql,doAqlConforme,doAqlNonConforme,doRelanceAql,isLatestAql,canRelanceAql,
+      doValidate,doLiberer,doDeclareDeviation,doCloseDeviation,doDeclareRvp,doRequestAql,doAqlConforme,doAqlNonConforme,doRelanceAql,isLatestAql,canRelanceAql,canDemanderAql,
       searchProd,selectProd,doModify,confirmDelete,canPerform,
       planning,planEdit,planSaving,savePlanning,
       doSetDaMicroApplicable}

@@ -541,30 +541,46 @@ export default {
         var aqlType2 = col==='aql_fab'?'fabrication':'conditionnement'
         var aqlPerm = col==='aql_fab'?'demander_aql_fab':'demander_aql_cond'
         var aqlLabel = col==='aql_fab'?'Fabrication':'Conditionnement'
-        var pendingAqls = (lot.aqls_raw||[]).filter(function(a){return a.type===aqlType2&&(a.resultat===null||a.resultat===undefined||a.resultat==='en_attente')})
-        var hasPending = pendingAqls.length > 0
-        ;(function(aType, aLabel, pending) {
-          if (isAdmin || canPerform(aqlPerm)) {
-            actions.push({label: hasPending?'Relancer AQL '+aLabel:'Demander AQL '+aLabel, fn: async function(){
-              var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
-              await supabase.from('aql_inspections').insert({lot_id:lot.id,type:aType,resultat:'en_attente',requested_at:n})
-              await createNotification('aq',lot.id,null,'Lot '+lot.numero_lot+' — AQL '+aLabel+(hasPending?' relancé':' demandé'),'aql_demande')
-            }})
+        // Trouver le dernier AQL de ce type
+        var typeAqls = (lot.aqls_raw||[]).filter(function(a){return a.type===aqlType2})
+        var latestAql2 = null
+        for (var ka=0;ka<typeAqls.length;ka++){if(!latestAql2||new Date(typeAqls[ka].requested_at||0)>new Date(latestAql2.requested_at||0))latestAql2=typeAqls[ka]}
+        ;(function(aType, aLabel, latest) {
+          if (!latest) {
+            // Aucun AQL → Demander
+            if (isAdmin||canPerform(aqlPerm)) {
+              actions.push({label:'Demander AQL '+aLabel, fn: async function(){
+                var u=await supabase.auth.getUser();var n=new Date().toISOString()
+                await supabase.from('aql_inspections').insert({lot_id:lot.id,type:aType,resultat:'en_attente',requested_at:n})
+                await createNotification('aq',lot.id,null,'Lot '+lot.numero_lot+' — AQL '+aLabel+' demandé','aql_demande')
+              }})
+            }
+          } else if (latest.resultat===null||latest.resultat===undefined||latest.resultat==='en_attente') {
+            // En attente → Conforme / Non conforme uniquement
+            if (isAdmin||canPerform('realiser_aql')) {
+              actions.push({label:'AQL Conforme', fn: async function(){
+                var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+                await supabase.from('aql_inspections').update({resultat:'conforme',inspected_at:n,inspected_by:uid}).eq('id',latest.id)
+                await createNotification('planification',lot.id,null,'Lot '+lot.numero_lot+' — AQL '+aLabel+' : conforme','aql_resultat')
+              }})
+              actions.push({label:'AQL Non conforme', fn: async function(){
+                var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+                await supabase.from('aql_inspections').update({resultat:'non_conforme',inspected_at:n,inspected_by:uid}).eq('id',latest.id)
+                await createNotification('planification',lot.id,null,'Lot '+lot.numero_lot+' — AQL '+aLabel+' : non conforme','aql_resultat')
+              }})
+            }
+          } else if (latest.resultat==='non_conforme') {
+            // Non conforme → Relancer
+            if (isAdmin||canPerform(aqlPerm)) {
+              actions.push({label:'Relancer AQL '+aLabel, fn: async function(){
+                var u=await supabase.auth.getUser();var n=new Date().toISOString()
+                await supabase.from('aql_inspections').insert({lot_id:lot.id,type:aType,resultat:'en_attente',requested_at:n})
+                await createNotification('aq',lot.id,null,'Lot '+lot.numero_lot+' — AQL '+aLabel+' relancé','aql_demande')
+              }})
+            }
           }
-          if (pending.length && (isAdmin||canPerform('realiser_aql'))) {
-            var latest = pending.sort(function(a,b){return new Date(b.requested_at||0)-new Date(a.requested_at||0)})[0]
-            actions.push({label:'AQL Conforme', fn: async function(){
-              var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
-              await supabase.from('aql_inspections').update({resultat:'conforme',inspected_at:n,inspected_by:uid}).eq('id',latest.id)
-              await createNotification('planification',lot.id,null,'Lot '+lot.numero_lot+' — AQL '+aLabel+' : conforme','aql_resultat')
-            }})
-            actions.push({label:'AQL Non conforme', fn: async function(){
-              var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
-              await supabase.from('aql_inspections').update({resultat:'non_conforme',inspected_at:n,inspected_by:uid}).eq('id',latest.id)
-              await createNotification('planification',lot.id,null,'Lot '+lot.numero_lot+' — AQL '+aLabel+' : non conforme','aql_resultat')
-            }})
-          }
-        })(aqlType2, aqlLabel, pendingAqls)
+          // Conforme → aucune action
+        })(aqlType2, aqlLabel, latestAql2)
 
       } else if (col==='dev') {
         if (isAdmin||canPerform('declarer_nc')) {
