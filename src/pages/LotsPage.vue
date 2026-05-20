@@ -78,10 +78,10 @@
           <th v-show="isColVisible('rvp_fab')"><div class="th-i"><span class="th-txt">RVP Fab</span><button class="th-f" :class="{'th-f-on':columnFilters['rvp_fab_label']}" @click="openDropdown('rvp_fab_label',$event)">⌄</button></div></th>
           <th v-show="isColVisible('rvp_cond')"><div class="th-i"><span class="th-txt">RVP Cond</span><button class="th-f" :class="{'th-f-on':columnFilters['rvp_cond_label']}" @click="openDropdown('rvp_cond_label',$event)">⌄</button></div></th>
           <th v-show="isColVisible('rvp_lcq')"><div class="th-i"><span class="th-txt">RVP LCQ</span><button class="th-f" :class="{'th-f-on':columnFilters['rvp_lcq_label']}" @click="openDropdown('rvp_lcq_label',$event)">⌄</button></div></th>
-          <th v-show="isColVisible('plan_lcq')"><div class="th-i"><span class="th-txt">Lib. LCQ</span><button class="th-f" :class="{'th-f-on':columnFilters['plan_lcq']}" @click="openDropdown('plan_lcq',$event)">⌄</button></div></th>
-          <th v-show="isColVisible('plan_aq')"><div class="th-i"><span class="th-txt">Lib. AQ</span><button class="th-f" :class="{'th-f-on':columnFilters['plan_aq']}" @click="openDropdown('plan_aq',$event)">⌄</button></div></th>
-          <th v-show="isColVisible('plan_dt1')"><div class="th-i"><span class="th-txt">Lib. DT1</span><button class="th-f" :class="{'th-f-on':columnFilters['plan_dt1']}" @click="openDropdown('plan_dt1',$event)">⌄</button></div></th>
-          <th v-show="isColVisible('plan_dt2')"><div class="th-i"><span class="th-txt">Lib. DT2</span><button class="th-f" :class="{'th-f-on':columnFilters['plan_dt2']}" @click="openDropdown('plan_dt2',$event)">⌄</button></div></th>
+          <th v-show="isColVisible('plan_lcq')"><div class="th-i"><span class="th-txt sortable" @click="sortBy('plan_lcq_raw')">Lib. LCQ <span class="sort-arrow">{{sortIcon('plan_lcq_raw')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['plan_lcq']}" @click="openDropdown('plan_lcq',$event)">⌄</button></div></th>
+          <th v-show="isColVisible('plan_aq')"><div class="th-i"><span class="th-txt sortable" @click="sortBy('plan_aq_raw')">Lib. AQ <span class="sort-arrow">{{sortIcon('plan_aq_raw')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['plan_aq']}" @click="openDropdown('plan_aq',$event)">⌄</button></div></th>
+          <th v-show="isColVisible('plan_dt1')"><div class="th-i"><span class="th-txt sortable" @click="sortBy('plan_dt1_raw')">Lib. DT1 <span class="sort-arrow">{{sortIcon('plan_dt1_raw')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['plan_dt1']}" @click="openDropdown('plan_dt1',$event)">⌄</button></div></th>
+          <th v-show="isColVisible('plan_dt2')"><div class="th-i"><span class="th-txt sortable" @click="sortBy('plan_dt2_raw')">Lib. DT2 <span class="sort-arrow">{{sortIcon('plan_dt2_raw')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['plan_dt2']}" @click="openDropdown('plan_dt2',$event)">⌄</button></div></th>
           <th v-show="isColVisible('date')"><div class="th-i"><span class="th-txt sortable" @click="sortBy('date_fmt')">{{showDates?'Libération':'Entrée'}} <span class="sort-arrow">{{sortIcon('date_fmt')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['date_fmt']}" @click="openDropdown('date_fmt',$event)">⌄</button></div></th>
         </tr></thead>
         <tbody>
@@ -102,9 +102,9 @@
               <span v-if="l.dev_count>0" class="dev-badge" :class="l.dev_open>0?'dev-open':'dev-closed'">{{l.dev_open>0?'Ouverte':'Clôturée'}}</span>
               <span v-else class="dim">—</span>
             </td>
-            <td v-show="isColVisible('rvp_fab')" class="td-action" @click.stop="openInlineMenu($event,l,'rvp_fab')"><span class="doc-pip" :class="l.rvp_fab_class">{{l.rvp_fab_label}}</span></td>
-            <td v-show="isColVisible('rvp_cond')" class="td-action" @click.stop="openInlineMenu($event,l,'rvp_cond')"><span class="doc-pip" :class="l.rvp_cond_class">{{l.rvp_cond_label}}</span></td>
-            <td v-show="isColVisible('rvp_lcq')" class="td-action" @click.stop="openInlineMenu($event,l,'rvp_lcq')"><span class="doc-pip" :class="l.rvp_lcq_class">{{l.rvp_lcq_label}}</span></td>
+            <td v-show="isColVisible('rvp_fab')" class="td-action" @click.stop="openInlineMenu($event,l,'rvp_fab')"><span class="doc-pip" :class="showDates&&l.rvp_fab_date?'dc-date':l.rvp_fab_class">{{showDates&&l.rvp_fab_date?l.rvp_fab_date:l.rvp_fab_label}}</span></td>
+            <td v-show="isColVisible('rvp_cond')" class="td-action" @click.stop="openInlineMenu($event,l,'rvp_cond')"><span class="doc-pip" :class="showDates&&l.rvp_cond_date?'dc-date':l.rvp_cond_class">{{showDates&&l.rvp_cond_date?l.rvp_cond_date:l.rvp_cond_label}}</span></td>
+            <td v-show="isColVisible('rvp_lcq')" class="td-action" @click.stop="openInlineMenu($event,l,'rvp_lcq')"><span class="doc-pip" :class="showDates&&l.rvp_lcq_date?'dc-date':l.rvp_lcq_class">{{showDates&&l.rvp_lcq_date?l.rvp_lcq_date:l.rvp_lcq_label}}</span></td>
             <!-- Dates prévisionnelles -->
             <td v-show="isColVisible('plan_lcq')" class="td-plan td-action" @click.stop="openDatePicker($event,l,'plan_lcq')">
               <span v-if="l.plan_lcq" class="plan-date" :class="getPlanClass(l,'lcq')">{{l.plan_lcq}}</span>
@@ -301,7 +301,7 @@ export default {
       if(!d)return{label:'—',cls:'dc-na'}
       var label=docStatutLabels[d.statut]||d.statut
       var cls='dc-wait';if(d.statut==='approuve_dt')cls='dc-ok';else if(d.statut==='retour_emetteur')cls='dc-ret';else if(d.statut!=='non_emis')cls='dc-prog'
-      return{label:label,cls:cls}
+      var date=d.approved_at||d.emitted_at;return{label:label,cls:cls,date:date?fmt(date):null}
     }
 
     var getAqlInfo = function(aqls,type){
@@ -388,9 +388,9 @@ export default {
           damicro_label:damicroInfo.label,damicro_class:damicroInfo.cls,damicro_date:damicroInfo.date,
           aql_fab_label:aqlFab.label,aql_fab_class:aqlFab.cls,aql_fab_date:aqlFab.date,
           aql_cond_label:aqlCond.label,aql_cond_class:aqlCond.cls,aql_cond_date:aqlCond.date,
-          rvp_fab_label:rvpFab.label,rvp_fab_class:rvpFab.cls,
-          rvp_cond_label:rvpCond.label,rvp_cond_class:rvpCond.cls,
-          rvp_lcq_label:rvpLcq.label,rvp_lcq_class:rvpLcq.cls,
+          rvp_fab_label:rvpFab.label,rvp_fab_class:rvpFab.cls,rvp_fab_date:rvpFab.date,
+          rvp_cond_label:rvpCond.label,rvp_cond_class:rvpCond.cls,rvp_cond_date:rvpCond.date,
+          rvp_lcq_label:rvpLcq.label,rvp_lcq_class:rvpLcq.cls,rvp_lcq_date:rvpLcq.date,
           dev_count:devs.length,dev_open:devOpen,dev_label:devs.length>0?(devOpen>0?'Ouverte':'Clôturée'):'—',
           plan_lcq:fmtPlan(planLcqRaw),plan_lcq_raw:planLcqRaw,
           plan_lcq_cible_raw:planning?planning.date_lcq_cible:null,
