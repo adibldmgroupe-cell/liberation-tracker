@@ -879,20 +879,13 @@ export default {
       chargeLoading.value = true
       var dateStr = datePicker.value.value // 'YYYY-MM-DD'
       var cibleF = fields[0], reviseeF = fields[1]
-      // Récupérer les deux champs (cible + révisée) de tous les autres lots
+      // Comptage côté serveur : date effective = révisée si elle existe, sinon cible
+      // Indépendant des filtres/recherche actifs côté client, sans limite de 1000 lignes
       var res = await supabase.from('lot_planning')
-        .select('lot_id,' + cibleF + ',' + reviseeF)
+        .select('lot_id', { count: 'exact', head: true })
         .neq('lot_id', datePicker.value.lotId)
-      var count = 0
-      if (res.data) {
-        for (var i = 0; i < res.data.length; i++) {
-          var row = res.data[i]
-          // Date effective = révisée si elle existe, sinon cible
-          var eff = row[reviseeF] || row[cibleF]
-          if (eff && eff.substring(0, 10) === dateStr) count++
-        }
-      }
-      chargeCount.value = count
+        .or(reviseeF + '.eq.' + dateStr + ',and(' + reviseeF + '.is.null,' + cibleF + '.eq.' + dateStr + ')')
+      chargeCount.value = res.count || 0
       chargeLoading.value = false
     }
 
