@@ -688,9 +688,14 @@ export default {
       var dbField = PLAN_DB_FIELD[datePicker.value.col]
       if (!dbField) { chargeCount.value = null; return }
       chargeLoading.value = true
+      var dateStr = datePicker.value.value // 'YYYY-MM-DD'
+      var nextDay = new Date(dateStr + 'T00:00:00')
+      nextDay.setDate(nextDay.getDate() + 1)
+      var nextDayStr = nextDay.toISOString().split('T')[0]
       var res = await supabase.from('lot_planning')
         .select('*', {count:'exact', head:true})
-        .eq(dbField, datePicker.value.value)
+        .gte(dbField, dateStr)
+        .lt(dbField, nextDayStr)
         .neq('lot_id', datePicker.value.lotId)
       chargeCount.value = res.count || 0
       chargeLoading.value = false
