@@ -144,7 +144,14 @@
     <!-- Date picker inline planification (position:fixed) -->
     <div v-if="datePicker" class="date-picker-pop" :style="{top:datePicker.top+'px',left:datePicker.left+'px'}" @click.stop>
       <div class="dp-title">{{datePicker.label}}</div>
-      <input type="date" v-model="datePicker.value" class="dp-input" @keydown.enter="savePlanning" @keydown.escape="datePicker=null" ref="dpInput" />
+      <input type="date" v-model="datePicker.value" class="dp-input" @change="loadCharge" @keydown.enter="savePlanning" @keydown.escape="datePicker=null" ref="dpInput" />
+      <div class="dp-charge" v-if="datePicker.value">
+        <span v-if="chargeLoading" class="charge-loading">⟳ Vérification…</span>
+        <span v-else-if="chargeCount===0" class="charge-ok">✓ Aucun autre lot prévu ce jour</span>
+        <span v-else-if="chargeCount!==null" :class="chargeCount>=15?'charge-high':chargeCount>=8?'charge-med':'charge-low'">
+          📅 {{chargeCount}} autre{{chargeCount>1?'s':''}} lot{{chargeCount>1?'s':''}} prévu{{chargeCount>1?'s':''}} ce jour
+        </span>
+      </div>
       <div class="dp-actions">
         <button class="dp-ok" @click="savePlanning">✓ Valider</button>
         <button class="dp-cancel" @click="datePicker=null">✕</button>
@@ -661,6 +668,24 @@ export default {
       var top = rect.bottom + 2, left = rect.left
       if (left + 200 > window.innerWidth) left = window.innerWidth - 210
       datePicker.value = { lotId: lot.id, col: effectiveCol, label: PLAN_LABELS[effectiveCol]||effectiveCol, top: top, left: left, value: rawVal }
+      chargeCount.value = null
+      if (rawVal) loadCharge()
+    }
+
+    var chargeCount = ref(null)
+    var chargeLoading = ref(false)
+
+    var loadCharge = async function() {
+      if (!datePicker.value || !datePicker.value.value) { chargeCount.value = null; return }
+      var dbField = PLAN_DB_FIELD[datePicker.value.col]
+      if (!dbField) { chargeCount.value = null; return }
+      chargeLoading.value = true
+      var res = await supabase.from('lot_planning')
+        .select('*', {count:'exact', head:true})
+        .eq(dbField, datePicker.value.value)
+        .neq('lot_id', datePicker.value.lotId)
+      chargeCount.value = res.count || 0
+      chargeLoading.value = false
     }
 
     var savePlanning = async function() {
@@ -674,6 +699,7 @@ export default {
         { onConflict: 'lot_id' }
       )
       datePicker.value = null
+      chargeCount.value = null
       await load()
     }
     // ──────────────────────────────────────────────────────────────────
@@ -941,7 +967,8 @@ export default {
       columnFilters,activeDropdown,ddPos,openDropdown,getColumnValues,setColumnFilter,clearColumnFilters,removeColumnFilter,hasColumnFilters,
       visibleCols,showColPanel,colDefs,isColVisible,toggleCol,resetCols,
       inlineMenu,openInlineMenu,executeInline,closeAll,
-      datePicker,dpInput,openDatePicker,savePlanning,getPlanClass}
+      datePicker,dpInput,openDatePicker,savePlanning,getPlanClass,
+      chargeCount,chargeLoading,loadCharge}
   }
 }
 </script>
@@ -1012,6 +1039,12 @@ export default {
 .date-picker-pop{position:fixed;background:#fff;border:1px solid #ddd;border-radius:4px;box-shadow:0 6px 20px rgba(0,0,0,.15);z-index:400;padding:12px;min-width:200px}
 .dp-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:#999;margin-bottom:8px}
 .dp-input{width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:3px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box}.dp-input:focus{border-color:#185FA5}
+.dp-charge{margin:7px 0 2px;padding:5px 8px;border-radius:3px;font-size:11px;line-height:1.4;background:#fafafa;border:1px solid #f0f0f0}
+.charge-loading{color:#999}
+.charge-ok{color:#1D9E75;font-weight:500}
+.charge-low{color:#185FA5;font-weight:500}
+.charge-med{color:#FFA94D;font-weight:600}
+.charge-high{color:#E24B4A;font-weight:700}
 .dp-actions{display:flex;gap:6px;margin-top:8px}
 .dp-ok{flex:1;padding:6px;background:#185FA5;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px;font-weight:500}.dp-ok:hover{background:#0C447C}
 .dp-cancel{padding:6px 10px;background:#f5f5f5;color:#666;border:none;border-radius:3px;cursor:pointer;font-size:12px}
