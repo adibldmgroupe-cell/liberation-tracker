@@ -60,6 +60,21 @@ export function getPermissionForBulkAction(action) {
     rvp_lcq_retour_emetteur:'retourner_document', rvp_fab_retour_aq:'retourner_document',
     rvp_cond_retour_aq:'retourner_document', rvp_lcq_retour_aq:'retourner_document',
     dev_declarer:'declarer_nc', dev_cloture:'cloturer_deviation',
+    // MàJ documents
+    maj_if_declarer:'emettre_maj_doc', maj_if_emettre:'emettre_maj_doc',
+    maj_if_verifier:'verifier_maj_doc', maj_if_approuver:'approuver_maj_doc',
+    maj_ic_declarer:'emettre_maj_doc', maj_ic_emettre:'emettre_maj_doc',
+    maj_ic_verifier:'verifier_maj_doc', maj_ic_approuver:'approuver_maj_doc',
+    maj_nmcl_of_declarer:'emettre_maj_doc', maj_nmcl_of_emettre:'emettre_maj_doc',
+    maj_nmcl_of_verifier:'verifier_maj_doc', maj_nmcl_of_approuver:'approuver_maj_doc',
+    maj_nmcl_oc_declarer:'emettre_maj_doc', maj_nmcl_oc_emettre:'emettre_maj_doc',
+    maj_nmcl_oc_verifier:'verifier_maj_doc', maj_nmcl_oc_approuver:'approuver_maj_doc',
+    // Clôture SAP
+    clot_of_declarer:'emettre_cloture_sap', clot_of_emettre:'emettre_cloture_sap',
+    clot_of_valider:'valider_cloture_sap', clot_of_cloture:'demander_cloture_sap',
+    clot_oc_declarer:'emettre_cloture_sap', clot_oc_emettre:'emettre_cloture_sap',
+    clot_oc_valider:'valider_cloture_sap', clot_oc_cloture:'demander_cloture_sap',
+    // Planning
     plan_lcq_cible:'modifier_planning', plan_lcq:'modifier_planning',
     plan_aq_cible:'modifier_planning',  plan_aq:'modifier_planning',
     plan_dt1:'modifier_planning', plan_dt2:'modifier_planning',

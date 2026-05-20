@@ -8,12 +8,14 @@
         <div class="col-panel-wrap" @click.stop>
           <button class="btn-cols" :class="{'btn-cols-on':showColPanel}" @click="showColPanel=!showColPanel">⚙ Colonnes</button>
           <div class="col-panel" v-if="showColPanel">
-            <div class="col-panel-title">Afficher / masquer</div>
-            <label v-for="col in colDefs" :key="col.key" class="col-item">
+            <div class="col-panel-title">Colonnes (ordre & visibilité)</div>
+            <div v-for="col in colDefs" :key="col.key" class="col-item">
               <input type="checkbox" :checked="isColVisible(col.key)" @change="toggleCol(col.key)" />
-              {{col.label}}
-            </label>
-            <button class="col-reset" @click="resetCols">Tout afficher</button>
+              <span class="col-item-label">{{col.label}}</span>
+              <button class="col-mv" @click.stop="moveColUp(col.key)" title="Monter">▲</button>
+              <button class="col-mv" @click.stop="moveColDown(col.key)" title="Descendre">▼</button>
+            </div>
+            <button class="col-reset" @click="resetCols">Réinitialiser</button>
           </div>
         </div>
         <button class="btn-exp" @click="doExportExcel">📥 Excel</button>
@@ -62,67 +64,43 @@
     <div v-else class="table-wrap">
       <table class="tb">
         <thead><tr>
-          <th class="th-chk"><input type="checkbox" :checked="allVisibleChecked" @change="toggleAll" /></th>
-          <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('numero_lot')">N° Lot <span class="sort-arrow">{{sortIcon('numero_lot')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['numero_lot']}" @click="openDropdown('numero_lot',$event)">⌄</button></div></th>
+          <th class="th-chk th-sticky" style="left:0;z-index:3"><input type="checkbox" :checked="allVisibleChecked" @change="toggleAll" /></th>
+          <th class="th-sticky th-lot" style="left:32px;z-index:3"><div class="th-i"><span class="th-txt sortable" @click="sortBy('numero_lot')">N° Lot <span class="sort-arrow">{{sortIcon('numero_lot')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['numero_lot']}" @click="openDropdown('numero_lot',$event)">⌄</button></div></th>
           <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('prod_desc')">Produit <span class="sort-arrow">{{sortIcon('prod_desc')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['prod_desc']}" @click="openDropdown('prod_desc',$event)">⌄</button></div></th>
           <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('statut_label')">Statut <span class="sort-arrow">{{sortIcon('statut_label')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['statut_label']}" @click="openDropdown('statut_label',$event)">⌄</button></div></th>
-          <th v-show="isColVisible('of')"><div class="th-i"><span class="th-txt sortable" @click="sortBy('of_label')">OF <span class="sort-arrow">{{sortIcon('of_label')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['of_label']}" @click="openDropdown('of_label',$event)">⌄</button></div></th>
-          <th v-show="isColVisible('oc')"><div class="th-i"><span class="th-txt sortable" @click="sortBy('oc_label')">OC <span class="sort-arrow">{{sortIcon('oc_label')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['oc_label']}" @click="openDropdown('oc_label',$event)">⌄</button></div></th>
-          <th v-show="isColVisible('aql_fab')"><div class="th-i"><span class="th-txt">AQL Fab</span><button class="th-f" :class="{'th-f-on':columnFilters['aql_fab_label']}" @click="openDropdown('aql_fab_label',$event)">⌄</button></div></th>
-          <th v-show="isColVisible('aql_cond')"><div class="th-i"><span class="th-txt">AQL Cond</span><button class="th-f" :class="{'th-f-on':columnFilters['aql_cond_label']}" @click="openDropdown('aql_cond_label',$event)">⌄</button></div></th>
-          <th v-show="isColVisible('if')"><div class="th-i"><span class="th-txt sortable" @click="sortBy('if_label')">IF <span class="sort-arrow">{{sortIcon('if_label')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['if_label']}" @click="openDropdown('if_label',$event)">⌄</button></div></th>
-          <th v-show="isColVisible('ic')"><div class="th-i"><span class="th-txt sortable" @click="sortBy('ic_label')">IC <span class="sort-arrow">{{sortIcon('ic_label')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['ic_label']}" @click="openDropdown('ic_label',$event)">⌄</button></div></th>
-          <th v-show="isColVisible('da_pc')"><div class="th-i"><span class="th-txt">DA PC</span><button class="th-f" :class="{'th-f-on':columnFilters['dapc_label']}" @click="openDropdown('dapc_label',$event)">⌄</button></div></th>
-          <th v-show="isColVisible('da_micro')"><div class="th-i"><span class="th-txt">DA Micro</span><button class="th-f" :class="{'th-f-on':columnFilters['damicro_label']}" @click="openDropdown('damicro_label',$event)">⌄</button></div></th>
-          <th v-show="isColVisible('dev')"><div class="th-i"><span class="th-txt">Dév.</span><button class="th-f" :class="{'th-f-on':columnFilters['dev_label']}" @click="openDropdown('dev_label',$event)">⌄</button></div></th>
-          <th v-show="isColVisible('rvp_fab')"><div class="th-i"><span class="th-txt">RVP Fab</span><button class="th-f" :class="{'th-f-on':columnFilters['rvp_fab_label']}" @click="openDropdown('rvp_fab_label',$event)">⌄</button></div></th>
-          <th v-show="isColVisible('rvp_cond')"><div class="th-i"><span class="th-txt">RVP Cond</span><button class="th-f" :class="{'th-f-on':columnFilters['rvp_cond_label']}" @click="openDropdown('rvp_cond_label',$event)">⌄</button></div></th>
-          <th v-show="isColVisible('rvp_lcq')"><div class="th-i"><span class="th-txt">RVP LCQ</span><button class="th-f" :class="{'th-f-on':columnFilters['rvp_lcq_label']}" @click="openDropdown('rvp_lcq_label',$event)">⌄</button></div></th>
-          <th v-show="isColVisible('plan_lcq')"><div class="th-i"><span class="th-txt sortable" @click="sortBy('plan_lcq_raw')">Lib. LCQ <span class="sort-arrow">{{sortIcon('plan_lcq_raw')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['plan_lcq']}" @click="openDropdown('plan_lcq',$event)">⌄</button></div></th>
-          <th v-show="isColVisible('plan_aq')"><div class="th-i"><span class="th-txt sortable" @click="sortBy('plan_aq_raw')">Lib. AQ <span class="sort-arrow">{{sortIcon('plan_aq_raw')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['plan_aq']}" @click="openDropdown('plan_aq',$event)">⌄</button></div></th>
-          <th v-show="isColVisible('plan_dt1')"><div class="th-i"><span class="th-txt sortable" @click="sortBy('plan_dt1_raw')">Lib. DT1 <span class="sort-arrow">{{sortIcon('plan_dt1_raw')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['plan_dt1']}" @click="openDropdown('plan_dt1',$event)">⌄</button></div></th>
-          <th v-show="isColVisible('plan_dt2')"><div class="th-i"><span class="th-txt sortable" @click="sortBy('plan_dt2_raw')">Lib. DT2 <span class="sort-arrow">{{sortIcon('plan_dt2_raw')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['plan_dt2']}" @click="openDropdown('plan_dt2',$event)">⌄</button></div></th>
-          <th v-show="isColVisible('date')"><div class="th-i"><span class="th-txt sortable" @click="sortBy('date_fmt')">{{showDates?'Libération':'Entrée'}} <span class="sort-arrow">{{sortIcon('date_fmt')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['date_fmt']}" @click="openDropdown('date_fmt',$event)">⌄</button></div></th>
+          <!-- Dynamic columns driven by visibleCols order -->
+          <template v-for="ck in visibleCols" :key="'h-'+ck">
+            <th><div class="th-i">
+              <span class="th-txt" :class="{'sortable':CC[ck].s}" @click="CC[ck].s?sortBy(CC[ck].s):null">{{CC[ck].l2&&showDates?CC[ck].l2:CC[ck].l}} <span v-if="CC[ck].s" class="sort-arrow">{{sortIcon(CC[ck].s)}}</span></span>
+              <button class="th-f" :class="{'th-f-on':columnFilters[CC[ck].f]}" @click="openDropdown(CC[ck].f,$event)">⌄</button>
+            </div></th>
+          </template>
         </tr></thead>
         <tbody>
           <tr v-for="l in filteredLots" :key="l.id" :class="{'row-sel':isSelected(l.id)}" @click="goToLot(l.id)">
-            <td class="td-chk" @click.stop><input type="checkbox" :value="l.id" v-model="selected" /></td>
-            <td class="mono bold">{{l.numero_lot}}</td>
+            <td class="td-chk td-sticky" style="left:0" @click.stop><input type="checkbox" :value="l.id" v-model="selected" /></td>
+            <td class="mono bold td-sticky td-lot" style="left:32px">{{l.numero_lot}}</td>
             <td class="td-prod">{{l.prod_desc}}<span class="code">{{l.prod_code}}</span></td>
             <td><span class="sp" :class="l.statut_class">{{l.statut_label}}</span></td>
-            <td v-show="isColVisible('of')" class="td-action" @click.stop="openInlineMenu($event,l,'of')"><span class="doc-pip" :class="showDates&&l.of_date?'dc-date':l.of_done?'pip-done-t':'pip-prog-t'">{{showDates&&l.of_date?l.of_date:l.of_label}}</span></td>
-            <td v-show="isColVisible('oc')" class="td-action" @click.stop="openInlineMenu($event,l,'oc')"><span class="doc-pip" :class="showDates&&l.oc_date?'dc-date':l.oc_done?'pip-done-t':'pip-prog-t'">{{showDates&&l.oc_date?l.oc_date:l.oc_label}}</span></td>
-            <td v-show="isColVisible('aql_fab')" class="td-action" @click.stop="openInlineMenu($event,l,'aql_fab')"><span class="doc-pip" :class="l.aql_fab_class">{{showDates&&l.aql_fab_date?l.aql_fab_date:l.aql_fab_label}}</span></td>
-            <td v-show="isColVisible('aql_cond')" class="td-action" @click.stop="openInlineMenu($event,l,'aql_cond')"><span class="doc-pip" :class="l.aql_cond_class">{{showDates&&l.aql_cond_date?l.aql_cond_date:l.aql_cond_label}}</span></td>
-            <td v-show="isColVisible('if')" class="td-action" @click.stop="openInlineMenu($event,l,'if')"><span class="doc-pip" :class="showDates&&l.if_date?'dc-date':l.if_class">{{showDates&&l.if_date?l.if_date:l.if_label}}</span></td>
-            <td v-show="isColVisible('ic')" class="td-action" @click.stop="openInlineMenu($event,l,'ic')"><span class="doc-pip" :class="showDates&&l.ic_date?'dc-date':l.ic_class">{{showDates&&l.ic_date?l.ic_date:l.ic_label}}</span></td>
-            <td v-show="isColVisible('da_pc')" class="td-action" @click.stop="openInlineMenu($event,l,'da_pc')"><span class="doc-pip" :class="showDates&&l.dapc_date?'dc-date':l.dapc_class">{{showDates&&l.dapc_date?l.dapc_date:l.dapc_label}}</span></td>
-            <td v-show="isColVisible('da_micro')" class="td-action" @click.stop="openInlineMenu($event,l,'da_micro')"><span class="doc-pip" :class="showDates&&l.damicro_date?'dc-date':l.damicro_class">{{showDates&&l.damicro_date?l.damicro_date:l.damicro_label}}</span></td>
-            <td v-show="isColVisible('dev')" class="td-action" @click.stop="openInlineMenu($event,l,'dev')">
-              <span v-if="l.dev_count>0" class="dev-badge" :class="l.dev_open>0?'dev-open':'dev-closed'">{{l.dev_open>0?'Ouverte':'Clôturée'}}</span>
-              <span v-else class="dim">—</span>
-            </td>
-            <td v-show="isColVisible('rvp_fab')" class="td-action" @click.stop="openInlineMenu($event,l,'rvp_fab')"><span class="doc-pip" :class="showDates&&l.rvp_fab_date?'dc-date':l.rvp_fab_class">{{showDates&&l.rvp_fab_date?l.rvp_fab_date:l.rvp_fab_label}}</span></td>
-            <td v-show="isColVisible('rvp_cond')" class="td-action" @click.stop="openInlineMenu($event,l,'rvp_cond')"><span class="doc-pip" :class="showDates&&l.rvp_cond_date?'dc-date':l.rvp_cond_class">{{showDates&&l.rvp_cond_date?l.rvp_cond_date:l.rvp_cond_label}}</span></td>
-            <td v-show="isColVisible('rvp_lcq')" class="td-action" @click.stop="openInlineMenu($event,l,'rvp_lcq')"><span class="doc-pip" :class="showDates&&l.rvp_lcq_date?'dc-date':l.rvp_lcq_class">{{showDates&&l.rvp_lcq_date?l.rvp_lcq_date:l.rvp_lcq_label}}</span></td>
-            <!-- Dates prévisionnelles -->
-            <td v-show="isColVisible('plan_lcq')" class="td-plan td-action" @click.stop="openDatePicker($event,l,'plan_lcq')">
-              <span v-if="l.plan_lcq" class="plan-date" :class="getPlanClass(l,'lcq')">{{l.plan_lcq}}</span>
-              <span v-else class="plan-empty">＋</span>
-            </td>
-            <td v-show="isColVisible('plan_aq')" class="td-plan td-action" @click.stop="openDatePicker($event,l,'plan_aq')">
-              <span v-if="l.plan_aq" class="plan-date" :class="getPlanClass(l,'aq')">{{l.plan_aq}}</span>
-              <span v-else class="plan-empty">＋</span>
-            </td>
-            <td v-show="isColVisible('plan_dt1')" class="td-plan td-action" @click.stop="openDatePicker($event,l,'plan_dt1')">
-              <span v-if="l.plan_dt1" class="plan-date" :class="getPlanClass(l,'dt')">{{l.plan_dt1}}</span>
-              <span v-else class="plan-empty">＋</span>
-            </td>
-            <td v-show="isColVisible('plan_dt2')" class="td-plan td-action" @click.stop="openDatePicker($event,l,'plan_dt2')">
-              <span v-if="l.plan_dt2" class="plan-date plan-revised" :class="getPlanClass(l,'dt')">{{l.plan_dt2}}</span>
-              <span v-else class="plan-empty">＋</span>
-            </td>
-            <td v-show="isColVisible('date')" class="mono dim">{{showDates?(l.date_lib||l.date_fmt):l.date_fmt}}</td>
+            <!-- Dynamic columns -->
+            <template v-for="ck in visibleCols" :key="'c-'+ck+'-'+l.id">
+              <!-- OF/OC -->
+              <td v-if="CC[ck].r==='ofoc'" class="td-action" @click.stop="openInlineMenu($event,l,ck)"><span class="doc-pip" :class="showDates&&l[CC[ck].dp]?'dc-date':l[CC[ck].xp]?'pip-done-t':'pip-prog-t'">{{showDates&&l[CC[ck].dp]?l[CC[ck].dp]:l[CC[ck].lp]}}</span></td>
+              <!-- Standard doc / AQL / RVP / MàJ / Clôture SAP -->
+              <td v-else-if="CC[ck].r==='doc'" class="td-action" @click.stop="openInlineMenu($event,l,ck)"><span class="doc-pip" :class="showDates&&l[CC[ck].dp]?'dc-date':l[CC[ck].cp]">{{showDates&&l[CC[ck].dp]?l[CC[ck].dp]:l[CC[ck].lp]}}</span></td>
+              <!-- Planning dates -->
+              <td v-else-if="CC[ck].r==='plan'" class="td-plan td-action" @click.stop="openDatePicker($event,l,ck)">
+                <span v-if="l[ck]" class="plan-date" :class="[getPlanClass(l,CC[ck].pt),CC[ck].rv?'plan-revised':'']">{{l[ck]}}</span>
+                <span v-else class="plan-empty">＋</span>
+              </td>
+              <!-- Déviation -->
+              <td v-else-if="CC[ck].r==='dev'" class="td-action" @click.stop="openInlineMenu($event,l,'dev')">
+                <span v-if="l.dev_count>0" class="dev-badge" :class="l.dev_open>0?'dev-open':'dev-closed'">{{l.dev_open>0?'Ouverte':'Clôturée'}}</span>
+                <span v-else class="dim">—</span>
+              </td>
+              <!-- Date -->
+              <td v-else class="mono dim">{{showDates?(l.date_lib||l.date_fmt):l.date_fmt}}</td>
+            </template>
           </tr>
         </tbody>
       </table>
@@ -229,6 +207,8 @@ export default {
       {label:'RVP — Vérification AQ → DT',actions:[{value:'rvp_fab_verifier',label:'RVP Fabrication — Vérifier AQ → DT'},{value:'rvp_cond_verifier',label:'RVP Conditionnement — Vérifier AQ → DT'},{value:'rvp_lcq_verifier',label:'RVP LCQ — Vérifier AQ → DT'}]},
       {label:'RVP — Approbation DT',actions:[{value:'rvp_fab_approuver',label:'RVP Fabrication — Approuver DT'},{value:'rvp_cond_approuver',label:'RVP Conditionnement — Approuver DT'},{value:'rvp_lcq_approuver',label:'RVP LCQ — Approuver DT'}]},
       {label:'RVP — Retour',actions:[{value:'rvp_fab_retour_emetteur',label:"RVP Fabrication — Retourner à l'émetteur"},{value:'rvp_cond_retour_emetteur',label:"RVP Conditionnement — Retourner à l'émetteur"},{value:'rvp_lcq_retour_emetteur',label:"RVP LCQ — Retourner à l'émetteur"},{value:'rvp_fab_retour_aq',label:"RVP Fabrication — DT retourne à l'AQ"},{value:'rvp_cond_retour_aq',label:"RVP Conditionnement — DT retourne à l'AQ"},{value:'rvp_lcq_retour_aq',label:"RVP LCQ — DT retourne à l'AQ"}]},
+      {label:'MàJ Documents',actions:[{value:'maj_if_declarer',label:'MàJ IF — Déclarer'},{value:'maj_if_emettre',label:'MàJ IF — Émettre'},{value:'maj_if_verifier',label:'MàJ IF — Vérifier AQ'},{value:'maj_if_approuver',label:'MàJ IF — Approuver DT'},{value:'maj_ic_declarer',label:'MàJ IC — Déclarer'},{value:'maj_ic_emettre',label:'MàJ IC — Émettre'},{value:'maj_ic_verifier',label:'MàJ IC — Vérifier AQ'},{value:'maj_ic_approuver',label:'MàJ IC — Approuver DT'},{value:'maj_nmcl_of_declarer',label:'MàJ Nmcl OF — Déclarer'},{value:'maj_nmcl_of_emettre',label:'MàJ Nmcl OF — Émettre'},{value:'maj_nmcl_of_verifier',label:'MàJ Nmcl OF — Vérifier AQ'},{value:'maj_nmcl_of_approuver',label:'MàJ Nmcl OF — Approuver DT'},{value:'maj_nmcl_oc_declarer',label:'MàJ Nmcl OC — Déclarer'},{value:'maj_nmcl_oc_emettre',label:'MàJ Nmcl OC — Émettre'},{value:'maj_nmcl_oc_verifier',label:'MàJ Nmcl OC — Vérifier AQ'},{value:'maj_nmcl_oc_approuver',label:'MàJ Nmcl OC — Approuver DT'}]},
+      {label:'Clôture SAP',actions:[{value:'clot_of_declarer',label:'Clôt. SAP OF — Déclarer'},{value:'clot_of_emettre',label:'Clôt. SAP OF — Émettre'},{value:'clot_of_valider',label:'Clôt. SAP OF — Valider Planif.'},{value:'clot_of_cloture',label:'Clôt. SAP OF — Demander clôture'},{value:'clot_oc_declarer',label:'Clôt. SAP OC — Déclarer'},{value:'clot_oc_emettre',label:'Clôt. SAP OC — Émettre'},{value:'clot_oc_valider',label:'Clôt. SAP OC — Valider Planif.'},{value:'clot_oc_cloture',label:'Clôt. SAP OC — Demander clôture'}]},
       {label:'Déviation',actions:[{value:'dev_declarer',label:'Déviation — Déclarer'},{value:'dev_cloture',label:'Déviation — Clôturer'}]},
       {label:'Dates prévisionnelles',actions:[{value:'plan_lcq_cible',label:'Libération LCQ — Date cible'},{value:'plan_lcq',label:'Libération LCQ — Date révisée'},{value:'plan_aq_cible',label:'Libération AQ — Date cible'},{value:'plan_aq',label:'Libération AQ — Date révisée'},{value:'plan_dt1',label:'Libération DT — Date cible'},{value:'plan_dt2',label:'Libération DT — Date révisée'}]},
     ]
@@ -239,13 +219,42 @@ export default {
     })
 
     // ── Colonnes show/hide ─────────────────────────────────────────────
-    var ALL_COLS = ['of','oc','aql_fab','aql_cond','if','ic','da_pc','da_micro','dev','rvp_fab','rvp_cond','rvp_lcq','plan_lcq','plan_aq','plan_dt1','plan_dt2','date']
-    var COL_LABELS = {of:'OF',oc:'OC',aql_fab:'AQL Fab',aql_cond:'AQL Cond','if':'IF',ic:'IC',da_pc:'DA PC',da_micro:'DA Micro',dev:'Dév.',rvp_fab:'RVP Fab',rvp_cond:'RVP Cond',rvp_lcq:'RVP LCQ',plan_lcq:'Lib. LCQ',plan_aq:'Lib. AQ',plan_dt1:'Lib. DT1',plan_dt2:'Lib. DT2',date:'Date entrée'}
+    // ── Column config (pilote headers, cells, tri, filtre) ────────────
+    // l=label, s=sortKey, f=filterKey, r=renderType, lp=labelProp, cp=classProp, dp=dateProp, xp=doneProp, pt=planType, rv=revised
+    var CC = {
+      of:{l:'OF',s:'of_label',f:'of_label',r:'ofoc',lp:'of_label',dp:'of_date',xp:'of_done'},
+      oc:{l:'OC',s:'oc_label',f:'oc_label',r:'ofoc',lp:'oc_label',dp:'oc_date',xp:'oc_done'},
+      aql_fab:{l:'AQL Fab',s:null,f:'aql_fab_label',r:'doc',lp:'aql_fab_label',cp:'aql_fab_class',dp:'aql_fab_date'},
+      aql_cond:{l:'AQL Cond',s:null,f:'aql_cond_label',r:'doc',lp:'aql_cond_label',cp:'aql_cond_class',dp:'aql_cond_date'},
+      'if':{l:'IF',s:'if_label',f:'if_label',r:'doc',lp:'if_label',cp:'if_class',dp:'if_date'},
+      ic:{l:'IC',s:'ic_label',f:'ic_label',r:'doc',lp:'ic_label',cp:'ic_class',dp:'ic_date'},
+      da_pc:{l:'DA PC',s:null,f:'dapc_label',r:'doc',lp:'dapc_label',cp:'dapc_class',dp:'dapc_date'},
+      da_micro:{l:'DA Micro',s:null,f:'damicro_label',r:'doc',lp:'damicro_label',cp:'damicro_class',dp:'damicro_date'},
+      dev:{l:'Dév.',s:null,f:'dev_label',r:'dev'},
+      rvp_fab:{l:'RVP Fab',s:null,f:'rvp_fab_label',r:'doc',lp:'rvp_fab_label',cp:'rvp_fab_class',dp:'rvp_fab_date'},
+      rvp_cond:{l:'RVP Cond',s:null,f:'rvp_cond_label',r:'doc',lp:'rvp_cond_label',cp:'rvp_cond_class',dp:'rvp_cond_date'},
+      rvp_lcq:{l:'RVP LCQ',s:null,f:'rvp_lcq_label',r:'doc',lp:'rvp_lcq_label',cp:'rvp_lcq_class',dp:'rvp_lcq_date'},
+      maj_if:{l:'MàJ IF',s:null,f:'maj_if_label',r:'doc',lp:'maj_if_label',cp:'maj_if_class',dp:'maj_if_date'},
+      maj_ic:{l:'MàJ IC',s:null,f:'maj_ic_label',r:'doc',lp:'maj_ic_label',cp:'maj_ic_class',dp:'maj_ic_date'},
+      maj_nmcl_of:{l:'MàJ N. OF',s:null,f:'maj_nmcl_of_label',r:'doc',lp:'maj_nmcl_of_label',cp:'maj_nmcl_of_class',dp:'maj_nmcl_of_date'},
+      maj_nmcl_oc:{l:'MàJ N. OC',s:null,f:'maj_nmcl_oc_label',r:'doc',lp:'maj_nmcl_oc_label',cp:'maj_nmcl_oc_class',dp:'maj_nmcl_oc_date'},
+      cloture_sap_of:{l:'Clôt. OF',s:null,f:'clot_of_label',r:'doc',lp:'clot_of_label',cp:'clot_of_class',dp:'clot_of_date'},
+      cloture_sap_oc:{l:'Clôt. OC',s:null,f:'clot_oc_label',r:'doc',lp:'clot_oc_label',cp:'clot_oc_class',dp:'clot_oc_date'},
+      plan_lcq:{l:'Lib. LCQ',s:'plan_lcq_raw',f:'plan_lcq',r:'plan',pt:'lcq'},
+      plan_aq:{l:'Lib. AQ',s:'plan_aq_raw',f:'plan_aq',r:'plan',pt:'aq'},
+      plan_dt1:{l:'Lib. DT1',s:'plan_dt1_raw',f:'plan_dt1',r:'plan',pt:'dt'},
+      plan_dt2:{l:'Lib. DT2',s:'plan_dt2_raw',f:'plan_dt2',r:'plan',pt:'dt',rv:true},
+      date:{l:'Date',l2:'Libération',s:'date_fmt',f:'date_fmt',r:'date'},
+    }
+    var ALL_COLS = ['of','oc','aql_fab','aql_cond','if','ic','da_pc','da_micro','dev','rvp_fab','rvp_cond','rvp_lcq','maj_if','maj_ic','maj_nmcl_of','maj_nmcl_oc','cloture_sap_of','cloture_sap_oc','plan_lcq','plan_aq','plan_dt1','plan_dt2','date']
+    var COL_LABELS = {};ALL_COLS.forEach(function(k){COL_LABELS[k]=CC[k].l})
     var savedCols = null
     try { savedCols = JSON.parse(localStorage.getItem('lots_vis_cols')) } catch(e) {}
+    // Merge new columns not in saved list
+    if (savedCols) { ALL_COLS.forEach(function(k){ if(savedCols.indexOf(k)<0) savedCols.push(k) }) }
     var visibleCols = ref(savedCols || ALL_COLS.slice())
     var showColPanel = ref(false)
-    var colDefs = ALL_COLS.map(function(k){return{key:k,label:COL_LABELS[k]}})
+    var colDefs = computed(function(){return visibleCols.value.map(function(k){return{key:k,label:CC[k].l}})})
     var isColVisible = function(col){ return visibleCols.value.indexOf(col) >= 0 }
     var toggleCol = function(col){
       var idx = visibleCols.value.indexOf(col)
@@ -253,6 +262,8 @@ export default {
       try { localStorage.setItem('lots_vis_cols', JSON.stringify(visibleCols.value)) } catch(e) {}
     }
     var resetCols = function(){ visibleCols.value = ALL_COLS.slice(); try{localStorage.removeItem('lots_vis_cols')}catch(e){} }
+    var moveColUp = function(col){var i=visibleCols.value.indexOf(col);if(i>0){var a=visibleCols.value.slice();var t=a[i];a[i]=a[i-1];a[i-1]=t;visibleCols.value=a;try{localStorage.setItem('lots_vis_cols',JSON.stringify(a))}catch(e){}}}
+    var moveColDown = function(col){var i=visibleCols.value.indexOf(col);if(i>=0&&i<visibleCols.value.length-1){var a=visibleCols.value.slice();var t=a[i];a[i]=a[i+1];a[i+1]=t;visibleCols.value=a;try{localStorage.setItem('lots_vis_cols',JSON.stringify(a))}catch(e){}}}
     // ──────────────────────────────────────────────────────────────────
 
     var statusLabels = {vide:'Planifié',quarantaine:'Quarantaine',sous_investigation:'Investigation',accepte:'Accepté',refuse:'Refusé'}
@@ -267,6 +278,7 @@ export default {
     ]
     var etapeLabels = {planification:'Planif.',stock:'Stock',aq:'AQ',dt:'DT',aq_dap:'AQ DAP',production:'Prod.'}
     var docStatutLabels = {non_emis:'Non émis',emis:'Émis',verification_aq:'Vérif AQ',retour_emetteur:'Retourné',rectification:'Rectif.',approuve_aq:'Appr. AQ',approbation_dt:'Appr. DT',approuve_dt:'Approuvé'}
+    var clotureSapLabels = {non_emis:'Non émis',emis:'Émis',valide_planif:'Validé Planif.',cloture_demandee:'Clôturé'}
     var fmt = function(d){return d?new Date(d).toLocaleDateString('fr-FR'):'—'}
     var fmtPlan = function(d){return d?new Date(d+'T00:00:00').toLocaleDateString('fr-FR'):null}
 
@@ -302,6 +314,14 @@ export default {
       var label=docStatutLabels[d.statut]||d.statut
       var cls='dc-wait';if(d.statut==='approuve_dt')cls='dc-ok';else if(d.statut==='retour_emetteur')cls='dc-ret';else if(d.statut!=='non_emis')cls='dc-prog'
       var date=d.approved_at||d.emitted_at;return{label:label,cls:cls,date:date?fmt(date):null}
+    }
+
+    var getClotureSapInfo = function(docs,type){
+      var d=null;if(docs){for(var i=0;i<docs.length;i++){if(docs[i].type_document===type){d=docs[i];break}}}
+      if(!d)return{label:'—',cls:'dc-na',date:null}
+      var label=clotureSapLabels[d.statut]||d.statut
+      var cls='dc-wait';if(d.statut==='cloture_demandee')cls='dc-ok';else if(d.statut!=='non_emis')cls='dc-prog'
+      var date=d.updated_at;return{label:label,cls:cls,date:date?fmt(date):null}
     }
 
     var getAqlInfo = function(aqls,type){
@@ -368,6 +388,12 @@ export default {
         var rvpFab=getRvpInfo(docs,'fabrication')
         var rvpCond=getRvpInfo(docs,'conditionnement')
         var rvpLcq=getRvpInfo(docs,'lcq')
+        var majIfInfo=getDocInfo(docs,'maj_if')
+        var majIcInfo=getDocInfo(docs,'maj_ic')
+        var majNmclOfInfo=getDocInfo(docs,'maj_nmcl_of')
+        var majNmclOcInfo=getDocInfo(docs,'maj_nmcl_oc')
+        var clotOfInfo=getClotureSapInfo(docs,'cloture_sap_of')
+        var clotOcInfo=getClotureSapInfo(docs,'cloture_sap_oc')
         var devOpen=0;for(var j=0;j<devs.length;j++){if(devs[j].statut==='ouverte'||devs[j].statut==='en_cours')devOpen++}
 
         var planLcqRaw = planning ? (planning.date_lcq_revisee || planning.date_lcq_cible) : null
@@ -391,6 +417,12 @@ export default {
           rvp_fab_label:rvpFab.label,rvp_fab_class:rvpFab.cls,rvp_fab_date:rvpFab.date,
           rvp_cond_label:rvpCond.label,rvp_cond_class:rvpCond.cls,rvp_cond_date:rvpCond.date,
           rvp_lcq_label:rvpLcq.label,rvp_lcq_class:rvpLcq.cls,rvp_lcq_date:rvpLcq.date,
+          maj_if_label:majIfInfo.label,maj_if_class:majIfInfo.cls,maj_if_date:majIfInfo.date,
+          maj_ic_label:majIcInfo.label,maj_ic_class:majIcInfo.cls,maj_ic_date:majIcInfo.date,
+          maj_nmcl_of_label:majNmclOfInfo.label,maj_nmcl_of_class:majNmclOfInfo.cls,maj_nmcl_of_date:majNmclOfInfo.date,
+          maj_nmcl_oc_label:majNmclOcInfo.label,maj_nmcl_oc_class:majNmclOcInfo.cls,maj_nmcl_oc_date:majNmclOcInfo.date,
+          clot_of_label:clotOfInfo.label,clot_of_class:clotOfInfo.cls,clot_of_date:clotOfInfo.date,
+          clot_oc_label:clotOcInfo.label,clot_oc_class:clotOcInfo.cls,clot_oc_date:clotOcInfo.date,
           dev_count:devs.length,dev_open:devOpen,dev_label:devs.length>0?(devOpen>0?'Ouverte':'Clôturée'):'—',
           plan_lcq:fmtPlan(planLcqRaw),plan_lcq_raw:planLcqRaw,
           plan_lcq_cible_raw:planning?planning.date_lcq_cible:null,
@@ -440,8 +472,9 @@ export default {
     var inlineMenu = ref(null)
     var FLOW = ['planification','stock','aq','dt','aq_dap','production']
     var ETAPE_LABELS_LONG = {planification:'Mise en circuit',stock:'Valid. Stock',aq:'Valid. AQ',dt:'Autor. DT',aq_dap:'Remise AQ DAP',production:'Accusé récp.'}
-    var SVC_MAP = {'if':'fabrication',ic:'conditionnement',da_pc:'lcq',da_micro:'lcq'}
-    var COL_LABELS2 = {of:'OF',oc:'OC','if':'IF',ic:'IC',da_pc:'DA PC',da_micro:'DA Micro',aql_fab:'AQL Fab',aql_cond:'AQL Cond',dev:'Déviation',rvp_fab:'RVP Fab',rvp_cond:'RVP Cond',rvp_lcq:'RVP LCQ'}
+    var SVC_MAP = {'if':'fabrication',ic:'conditionnement',da_pc:'lcq',da_micro:'lcq',maj_if:'fabrication',maj_ic:'conditionnement',maj_nmcl_of:'planification',maj_nmcl_oc:'planification'}
+    var COL_LABELS2 = {of:'OF',oc:'OC','if':'IF',ic:'IC',da_pc:'DA PC',da_micro:'DA Micro',aql_fab:'AQL Fab',aql_cond:'AQL Cond',dev:'Déviation',rvp_fab:'RVP Fab',rvp_cond:'RVP Cond',rvp_lcq:'RVP LCQ',maj_if:'MàJ IF',maj_ic:'MàJ IC',maj_nmcl_of:'MàJ Nmcl OF',maj_nmcl_oc:'MàJ Nmcl OC',cloture_sap_of:'Clôt. SAP OF',cloture_sap_oc:'Clôt. SAP OC'}
+    var CLOT_SVC = {cloture_sap_of:'fabrication',cloture_sap_oc:'conditionnement'}
 
     var buildInlineActions = function(lot, col) {
       var actions = []
@@ -665,6 +698,113 @@ export default {
             }
           })(rvpDoc, rvpEmetteur)
         }
+
+      } else if (col==='maj_if'||col==='maj_ic'||col==='maj_nmcl_of'||col==='maj_nmcl_oc') {
+        // MàJ documents — même circuit que RVP (declare → emit → verify → approve)
+        var majType = col // type_document in DB
+        var majDoc = null
+        if (lot.docs) { for(var mm=0;mm<lot.docs.length;mm++){if(lot.docs[mm].type_document===majType){majDoc=lot.docs[mm];break}} }
+        if (!majDoc) {
+          ;(function(mt,svc) {
+            if (isAdmin||canPerform('emettre_maj_doc')) {
+              actions.push({label:'Déclarer '+COL_LABELS2[mt], fn: async function(){
+                var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+                await supabase.from('liberation_documents').insert({lot_id:lot.id,type_document:mt,statut:'non_emis',is_applicable:true,is_required:false,service_emetteur:svc,created_at:n,updated_at:n})
+                await supabase.from('lot_events').insert({lot_id:lot.id,event_type:'maj_doc_declare',description:COL_LABELS2[mt]+' déclaré',triggered_by:uid,created_at:n})
+                await createNotification(svc,lot.id,null,'Lot '+lot.numero_lot+' — '+COL_LABELS2[mt]+' à émettre','document_transmis')
+              }})
+            }
+          })(majType, SVC_MAP[majType]||'planification')
+        } else {
+          ;(function(md, mt, svc) {
+            if (md.statut==='non_emis' && (isAdmin||canPerform('emettre_maj_doc'))) {
+              actions.push({label:'Émettre '+COL_LABELS2[mt], fn: async function(){
+                var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+                await supabase.from('liberation_documents').update({statut:'emis',emitted_at:n,emitted_by:uid,updated_at:n}).eq('id',md.id)
+                await supabase.from('document_movements').insert({document_id:md.id,action:'emission',from_service:svc,to_service:'aq',performed_by:uid,performed_at:n})
+                await createNotification('aq',lot.id,md.id,'Lot '+lot.numero_lot+' — '+COL_LABELS2[mt]+' émis','document_transmis')
+              }})
+            }
+            if (md.statut==='emis' && (isAdmin||canPerform('verifier_maj_doc'))) {
+              actions.push({label:'Vérifier AQ → DT', fn: async function(){
+                var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+                await supabase.from('liberation_documents').update({statut:'approuve_aq',updated_at:n}).eq('id',md.id)
+                await supabase.from('document_movements').insert({document_id:md.id,action:'approbation',from_service:'aq',to_service:'dt',performed_by:uid,performed_at:n})
+                await createNotification('dt',lot.id,md.id,'Lot '+lot.numero_lot+' — '+COL_LABELS2[mt]+' vérifié AQ → DT','document_transmis')
+              }})
+            }
+            if (md.statut==='approuve_aq' && (isAdmin||canPerform('approuver_maj_doc'))) {
+              actions.push({label:'Approuver DT', fn: async function(){
+                var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+                await supabase.from('liberation_documents').update({statut:'approuve_dt',approved_at:n,updated_at:n}).eq('id',md.id)
+                await supabase.from('document_movements').insert({document_id:md.id,action:'approbation',from_service:'dt',performed_by:uid,performed_at:n})
+                await createNotification('aq',lot.id,md.id,'Lot '+lot.numero_lot+' — '+COL_LABELS2[mt]+' approuvé DT','document_approuve')
+                if(svc)await createNotification(svc,lot.id,md.id,'Lot '+lot.numero_lot+' — '+COL_LABELS2[mt]+' approuvé DT','document_approuve')
+              }})
+            }
+            if (md.statut==='retour_emetteur' && (isAdmin||canPerform('emettre_maj_doc'))) {
+              actions.push({label:'Rectifier / Réémettre', fn: async function(){
+                var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+                await supabase.from('liberation_documents').update({statut:'emis',emitted_at:n,emitted_by:uid,updated_at:n}).eq('id',md.id)
+                await supabase.from('document_movements').insert({document_id:md.id,action:'rectification',from_service:svc,to_service:'aq',performed_by:uid,performed_at:n})
+                await createNotification('aq',lot.id,md.id,'Lot '+lot.numero_lot+' — '+COL_LABELS2[mt]+' rectifié et réémis','document_transmis')
+              }})
+            }
+            if ((md.statut==='emis'||md.statut==='verification_aq'||md.statut==='approuve_aq') && (isAdmin||canPerform('retourner_document'))) {
+              actions.push({label:'Retourner', fn: async function(){
+                var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+                await supabase.from('liberation_documents').update({statut:'retour_emetteur',updated_at:n}).eq('id',md.id)
+                await supabase.from('document_movements').insert({document_id:md.id,action:'retour',from_service:'aq',to_service:svc,motif_retour:'Retour direct tableau',performed_by:uid,performed_at:n})
+                if(svc)await createNotification(svc,lot.id,md.id,'Lot '+lot.numero_lot+' — '+COL_LABELS2[mt]+' retourné','document_retourne')
+              }})
+            }
+          })(majDoc, majType, SVC_MAP[majType]||'planification')
+        }
+
+      } else if (col==='cloture_sap_of'||col==='cloture_sap_oc') {
+        // Clôture SAP — Fab/Condt émet → Planif valide → Fab/Condt demande clôture
+        var clotType = col // type_document
+        var clotSvc = CLOT_SVC[col]
+        var clotDoc = null
+        if (lot.docs) { for(var cc2=0;cc2<lot.docs.length;cc2++){if(lot.docs[cc2].type_document===clotType){clotDoc=lot.docs[cc2];break}} }
+        if (!clotDoc) {
+          ;(function(ct,cs) {
+            if (isAdmin||canPerform('emettre_cloture_sap')) {
+              actions.push({label:'Déclarer '+COL_LABELS2[ct], fn: async function(){
+                var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+                await supabase.from('liberation_documents').insert({lot_id:lot.id,type_document:ct,statut:'non_emis',is_applicable:true,is_required:false,service_emetteur:cs,created_at:n,updated_at:n})
+                await supabase.from('lot_events').insert({lot_id:lot.id,event_type:'cloture_sap_declare',description:COL_LABELS2[ct]+' déclaré',triggered_by:uid,created_at:n})
+              }})
+            }
+          })(clotType, clotSvc)
+        } else {
+          ;(function(cd, ct, cs) {
+            if (cd.statut==='non_emis' && (isAdmin||canPerform('emettre_cloture_sap'))) {
+              actions.push({label:'Émettre', fn: async function(){
+                var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+                await supabase.from('liberation_documents').update({statut:'emis',emitted_at:n,emitted_by:uid,updated_at:n}).eq('id',cd.id)
+                await supabase.from('document_movements').insert({document_id:cd.id,action:'emission',from_service:cs,to_service:'planification',performed_by:uid,performed_at:n})
+                await createNotification('planification',lot.id,cd.id,'Lot '+lot.numero_lot+' — '+COL_LABELS2[ct]+' émis, en attente validation','document_transmis')
+              }})
+            }
+            if (cd.statut==='emis' && (isAdmin||canPerform('valider_cloture_sap'))) {
+              actions.push({label:'Valider (Planif.)', fn: async function(){
+                var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+                await supabase.from('liberation_documents').update({statut:'valide_planif',updated_at:n}).eq('id',cd.id)
+                await supabase.from('document_movements').insert({document_id:cd.id,action:'validation',from_service:'planification',to_service:cs,performed_by:uid,performed_at:n})
+                await createNotification(cs,lot.id,cd.id,'Lot '+lot.numero_lot+' — '+COL_LABELS2[ct]+' validé, demande de clôture possible','document_transmis')
+              }})
+            }
+            if (cd.statut==='valide_planif' && (isAdmin||canPerform('demander_cloture_sap'))) {
+              actions.push({label:'Demander clôture', fn: async function(){
+                var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+                await supabase.from('liberation_documents').update({statut:'cloture_demandee',updated_at:n}).eq('id',cd.id)
+                await supabase.from('document_movements').insert({document_id:cd.id,action:'cloture',from_service:cs,performed_by:uid,performed_at:n})
+                await createNotification('planification',lot.id,cd.id,'Lot '+lot.numero_lot+' — '+COL_LABELS2[ct]+' clôture demandée','document_approuve')
+              }})
+            }
+          })(clotDoc, clotType, clotSvc)
+        }
       }
       return actions
     }
@@ -796,6 +936,8 @@ export default {
       {key:'if_label',label:'IF',width:10},{key:'ic_label',label:'IC',width:10},
       {key:'dapc_label',label:'DA PC',width:10},{key:'damicro_label',label:'DA Micro',width:10},
       {key:'rvp_fab_label',label:'RVP Fab',width:10},{key:'rvp_cond_label',label:'RVP Cond',width:10},{key:'rvp_lcq_label',label:'RVP LCQ',width:10},
+      {key:'maj_if_label',label:'MàJ IF',width:10},{key:'maj_ic_label',label:'MàJ IC',width:10},{key:'maj_nmcl_of_label',label:'MàJ N.OF',width:10},{key:'maj_nmcl_oc_label',label:'MàJ N.OC',width:10},
+      {key:'clot_of_label',label:'Clôt.OF',width:10},{key:'clot_oc_label',label:'Clôt.OC',width:10},
       {key:'plan_lcq',label:'Lib. LCQ',width:12},{key:'plan_aq',label:'Lib. AQ',width:12},{key:'plan_dt1',label:'Lib. DT1',width:12},{key:'plan_dt2',label:'Lib. DT2',width:12},
       {key:'date_fmt',label:'Entrée',width:12}
     ]
@@ -820,6 +962,12 @@ export default {
       rvp_fab_approuver:'RVP Fab — Approuver',rvp_cond_approuver:'RVP Cond — Approuver',rvp_lcq_approuver:'RVP LCQ — Approuver',
       rvp_fab_retour_emetteur:"RVP Fab — Retourner",rvp_cond_retour_emetteur:"RVP Cond — Retourner",rvp_lcq_retour_emetteur:"RVP LCQ — Retourner",
       rvp_fab_retour_aq:"RVP Fab — DT → AQ",rvp_cond_retour_aq:"RVP Cond — DT → AQ",rvp_lcq_retour_aq:"RVP LCQ — DT → AQ",
+      maj_if_declarer:'MàJ IF — Déclarer',maj_if_emettre:'MàJ IF — Émettre',maj_if_verifier:'MàJ IF — Vérifier',maj_if_approuver:'MàJ IF — Approuver',
+      maj_ic_declarer:'MàJ IC — Déclarer',maj_ic_emettre:'MàJ IC — Émettre',maj_ic_verifier:'MàJ IC — Vérifier',maj_ic_approuver:'MàJ IC — Approuver',
+      maj_nmcl_of_declarer:'MàJ N. OF — Déclarer',maj_nmcl_of_emettre:'MàJ N. OF — Émettre',maj_nmcl_of_verifier:'MàJ N. OF — Vérifier',maj_nmcl_of_approuver:'MàJ N. OF — Approuver',
+      maj_nmcl_oc_declarer:'MàJ N. OC — Déclarer',maj_nmcl_oc_emettre:'MàJ N. OC — Émettre',maj_nmcl_oc_verifier:'MàJ N. OC — Vérifier',maj_nmcl_oc_approuver:'MàJ N. OC — Approuver',
+      clot_of_declarer:'Clôt. OF — Déclarer',clot_of_emettre:'Clôt. OF — Émettre',clot_of_valider:'Clôt. OF — Valider',clot_of_cloture:'Clôt. OF — Clôturer',
+      clot_oc_declarer:'Clôt. OC — Déclarer',clot_oc_emettre:'Clôt. OC — Émettre',clot_oc_valider:'Clôt. OC — Valider',clot_oc_cloture:'Clôt. OC — Clôturer',
       dev_declarer:'Déviation — Déclarer',dev_cloture:'Déviation — Clôturer',
       plan_lcq_cible:'Lib. LCQ — Date cible',plan_lcq:'Lib. LCQ — Date révisée',
       plan_aq_cible:'Lib. AQ — Date cible',plan_aq:'Lib. AQ — Date révisée',
@@ -990,6 +1138,71 @@ export default {
               result.ok++
             } else {result.errors.push(lot.numero_lot+': action déviation inconnue');result.fail++}
 
+          } else if (action.startsWith('maj_')) {
+            // MàJ documents bulk: maj_if_declarer, maj_if_emettre, maj_if_verifier, maj_if_approuver, etc.
+            var majParts=action.match(/^(maj_(?:if|ic|nmcl_of|nmcl_oc))_(\w+)$/)
+            if(!majParts){result.errors.push(lot.numero_lot+': action MàJ inconnue');result.fail++;continue}
+            var majDocType=majParts[1],majOp=majParts[2]
+            var majSvcMap2={maj_if:'fabrication',maj_ic:'conditionnement',maj_nmcl_of:'planification',maj_nmcl_oc:'planification'}
+            var majSvc2=majSvcMap2[majDocType]||'planification'
+            if(majOp==='declarer'){
+              await supabase.from('liberation_documents').insert({lot_id:lotId,type_document:majDocType,statut:'non_emis',is_applicable:true,is_required:false,service_emetteur:majSvc2,created_at:now,updated_at:now})
+              await supabase.from('lot_events').insert({lot_id:lotId,event_type:'maj_doc_declare',description:majDocType.toUpperCase()+' déclaré (masse)',triggered_by:userId,created_at:now})
+              result.ok++
+            } else if(majOp==='emettre'){
+              var majD=null;if(lot.docs){for(var mm2=0;mm2<lot.docs.length;mm2++){if(lot.docs[mm2].type_document===majDocType){majD=lot.docs[mm2];break}}}
+              if(!majD){result.errors.push(lot.numero_lot+': '+majDocType+' non déclaré');result.fail++;continue}
+              await supabase.from('liberation_documents').update({statut:'emis',emitted_at:now,emitted_by:userId,updated_at:now}).eq('id',majD.id)
+              await supabase.from('document_movements').insert({document_id:majD.id,action:'emission',from_service:majSvc2,to_service:'aq',performed_by:userId,performed_at:now})
+              await createNotification('aq',lotId,majD.id,'Lot '+lot.numero_lot+' — '+majDocType.toUpperCase()+' émis','document_transmis')
+              result.ok++
+            } else if(majOp==='verifier'){
+              var majD2=null;if(lot.docs){for(var mm3=0;mm3<lot.docs.length;mm3++){if(lot.docs[mm3].type_document===majDocType){majD2=lot.docs[mm3];break}}}
+              if(!majD2){result.errors.push(lot.numero_lot+': '+majDocType+' non trouvé');result.fail++;continue}
+              await supabase.from('liberation_documents').update({statut:'approuve_aq',updated_at:now}).eq('id',majD2.id)
+              await supabase.from('document_movements').insert({document_id:majD2.id,action:'approbation',from_service:'aq',to_service:'dt',performed_by:userId,performed_at:now})
+              await createNotification('dt',lotId,majD2.id,'Lot '+lot.numero_lot+' — '+majDocType.toUpperCase()+' vérifié AQ → DT','document_transmis')
+              result.ok++
+            } else if(majOp==='approuver'){
+              var majD3=null;if(lot.docs){for(var mm4=0;mm4<lot.docs.length;mm4++){if(lot.docs[mm4].type_document===majDocType){majD3=lot.docs[mm4];break}}}
+              if(!majD3){result.errors.push(lot.numero_lot+': '+majDocType+' non trouvé');result.fail++;continue}
+              await supabase.from('liberation_documents').update({statut:'approuve_dt',approved_at:now,updated_at:now}).eq('id',majD3.id)
+              await supabase.from('document_movements').insert({document_id:majD3.id,action:'approbation',from_service:'dt',performed_by:userId,performed_at:now})
+              await createNotification('aq',lotId,majD3.id,'Lot '+lot.numero_lot+' — '+majDocType.toUpperCase()+' approuvé DT','document_approuve')
+              result.ok++
+            } else {result.errors.push(lot.numero_lot+': action MàJ inconnue');result.fail++}
+
+          } else if (action.startsWith('clot_')) {
+            // Clôture SAP bulk: clot_of_declarer, clot_of_emettre, clot_of_valider, clot_of_cloture
+            var clotParts=action.match(/^clot_(of|oc)_(\w+)$/)
+            if(!clotParts){result.errors.push(lot.numero_lot+': action Clôture inconnue');result.fail++;continue}
+            var clotDocType='cloture_sap_'+clotParts[1],clotOp=clotParts[2]
+            var clotSvc2=clotParts[1]==='of'?'fabrication':'conditionnement'
+            if(clotOp==='declarer'){
+              await supabase.from('liberation_documents').insert({lot_id:lotId,type_document:clotDocType,statut:'non_emis',is_applicable:true,is_required:false,service_emetteur:clotSvc2,created_at:now,updated_at:now})
+              await supabase.from('lot_events').insert({lot_id:lotId,event_type:'cloture_sap_declare',description:clotDocType+' déclaré (masse)',triggered_by:userId,created_at:now})
+              result.ok++
+            } else {
+              var clotD=null;if(lot.docs){for(var cc3=0;cc3<lot.docs.length;cc3++){if(lot.docs[cc3].type_document===clotDocType){clotD=lot.docs[cc3];break}}}
+              if(!clotD){result.errors.push(lot.numero_lot+': '+clotDocType+' non déclaré');result.fail++;continue}
+              if(clotOp==='emettre'){
+                await supabase.from('liberation_documents').update({statut:'emis',emitted_at:now,emitted_by:userId,updated_at:now}).eq('id',clotD.id)
+                await supabase.from('document_movements').insert({document_id:clotD.id,action:'emission',from_service:clotSvc2,to_service:'planification',performed_by:userId,performed_at:now})
+                await createNotification('planification',lotId,clotD.id,'Lot '+lot.numero_lot+' — '+clotDocType+' émis','document_transmis')
+                result.ok++
+              } else if(clotOp==='valider'){
+                await supabase.from('liberation_documents').update({statut:'valide_planif',updated_at:now}).eq('id',clotD.id)
+                await supabase.from('document_movements').insert({document_id:clotD.id,action:'validation',from_service:'planification',to_service:clotSvc2,performed_by:userId,performed_at:now})
+                await createNotification(clotSvc2,lotId,clotD.id,'Lot '+lot.numero_lot+' — '+clotDocType+' validé Planif.','document_transmis')
+                result.ok++
+              } else if(clotOp==='cloture'){
+                await supabase.from('liberation_documents').update({statut:'cloture_demandee',updated_at:now}).eq('id',clotD.id)
+                await supabase.from('document_movements').insert({document_id:clotD.id,action:'cloture',from_service:clotSvc2,performed_by:userId,performed_at:now})
+                await createNotification('planification',lotId,clotD.id,'Lot '+lot.numero_lot+' — '+clotDocType+' clôture demandée','document_approuve')
+                result.ok++
+              } else {result.errors.push(lot.numero_lot+': action Clôture inconnue');result.fail++}
+            }
+
           } else if (action.startsWith('plan_')) {
             var dbField2 = PLAN_DB_FIELD[action]
             if (!dbField2||!bulkDate.value){result.errors.push(lot.numero_lot+': date manquante');result.fail++;continue}
@@ -1026,7 +1239,7 @@ export default {
       isSelected,toggleLot,toggleAll,getLotNum,executeAction,
       actionGroups,userService,
       columnFilters,activeDropdown,ddPos,openDropdown,getColumnValues,setColumnFilter,clearColumnFilters,removeColumnFilter,hasColumnFilters,
-      visibleCols,showColPanel,colDefs,isColVisible,toggleCol,resetCols,
+      visibleCols,showColPanel,colDefs,isColVisible,toggleCol,resetCols,moveColUp,moveColDown,CC,
       inlineMenu,openInlineMenu,executeInline,closeAll,
       datePicker,dpInput,openDatePicker,savePlanning,getPlanClass,
       chargeCount,chargeLoading,loadCharge}
@@ -1045,6 +1258,8 @@ export default {
 .col-panel-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:#999;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #f0f0f0}
 .col-item{display:flex;align-items:center;gap:6px;font-size:12px;color:#333;padding:3px 0;cursor:pointer;white-space:nowrap}
 .col-item input{cursor:pointer;accent-color:#185FA5}
+.col-item-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.col-mv{background:none;border:1px solid #e8e8e8;border-radius:2px;cursor:pointer;font-size:8px;padding:1px 4px;color:#999;line-height:1}.col-mv:hover{color:#185FA5;border-color:#185FA5;background:#E6F1FB}
 .col-reset{margin-top:8px;width:100%;padding:5px;font-size:11px;border:1px solid #ddd;border-radius:3px;background:#fafafa;cursor:pointer;color:#666}.col-reset:hover{background:#f0f0f0}
 .filters{display:flex;gap:4px;padding:8px 0;flex-wrap:wrap}
 .fbtn{display:flex;align-items:center;gap:4px;padding:5px 10px;min-height:32px;font-size:11px;border:1px solid #e8e8e8;border-radius:3px;background:#fff;cursor:pointer;color:#666;font-family:inherit;transition:.15s}
@@ -1052,6 +1267,11 @@ export default {
 .fdot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
 .table-wrap{overflow-x:auto;overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:calc(100vh - 150px)}
 .tb{width:100%;border-collapse:collapse;font-size:11px;white-space:nowrap}.tb th{font-size:9px;text-transform:uppercase;color:#999;font-weight:500;padding:5px 4px;text-align:left;border-bottom:1px solid #e8e8e8;position:sticky;top:0;background:#fff;z-index:1}
+/* Sticky lot column */
+.th-sticky,.td-sticky{position:sticky !important;z-index:2 !important;background:#fff}.th-sticky{z-index:4 !important}
+.th-lot,.td-lot{min-width:80px}
+.row-sel .td-sticky{background:#E6F1FB !important}
+.tb tr:hover .td-sticky{background:#fafafa}
 .sortable{cursor:pointer;user-select:none}.sortable:hover{color:#185FA5}.sort-arrow{font-size:10px;color:#ccc}
 .tb td{padding:6px 4px;border-bottom:1px solid #f5f5f5}.tb tr{cursor:pointer}.tb tr:hover td{background:#fafafa}
 .bold{font-weight:500}.mono{font-family:'SF Mono',monospace;font-size:10px}.dim{color:#999;font-size:10px}

@@ -173,6 +173,43 @@ export async function declareRVP(lotId, rvpType, userId) {
   })
 }
 
+// ═══ MÀJ DOCUMENTS (IF, IC, Nmcl OF, Nmcl OC) ═══
+export async function declareMajDoc(lotId, docType, userId) {
+  var now = new Date().toISOString()
+  var svcMap = { maj_if: 'fabrication', maj_ic: 'conditionnement', maj_nmcl_of: 'planification', maj_nmcl_oc: 'planification' }
+  await supabase.from('liberation_documents').insert({
+    lot_id: lotId, type_document: docType, statut: 'non_emis',
+    is_applicable: true, is_required: false,
+    service_emetteur: svcMap[docType] || 'planification'
+  })
+  var lotRes = await supabase.from('lots').select('numero_lot').eq('id', lotId).single()
+  var lotNum = lotRes.data ? lotRes.data.numero_lot : ''
+  var typeLabel = docType.replace(/_/g, ' ').toUpperCase()
+  await createNotification(svcMap[docType] || 'planification', lotId, null,
+    'Lot ' + lotNum + ' — ' + typeLabel + ' déclaré, à émettre', 'document_transmis')
+  await supabase.from('lot_events').insert({
+    lot_id: lotId, event_type: 'maj_doc_declare',
+    description: typeLabel + ' déclaré', triggered_by: userId, created_at: now
+  })
+}
+
+// ═══ CLÔTURE SAP ═══
+export async function declareClotureSap(lotId, clotType, userId) {
+  var now = new Date().toISOString()
+  var svcMap = { cloture_sap_of: 'fabrication', cloture_sap_oc: 'conditionnement' }
+  await supabase.from('liberation_documents').insert({
+    lot_id: lotId, type_document: clotType, statut: 'non_emis',
+    is_applicable: true, is_required: false,
+    service_emetteur: svcMap[clotType] || 'fabrication'
+  })
+  var lotRes = await supabase.from('lots').select('numero_lot').eq('id', lotId).single()
+  var lotNum = lotRes.data ? lotRes.data.numero_lot : ''
+  await supabase.from('lot_events').insert({
+    lot_id: lotId, event_type: 'cloture_sap_declare',
+    description: clotType + ' déclaré', triggered_by: userId, created_at: now
+  })
+}
+
 // ═══ AQL ═══
 export async function requestAql(lotId, type, userId) {
   var now = new Date().toISOString()

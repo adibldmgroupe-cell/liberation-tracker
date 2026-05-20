@@ -134,6 +134,38 @@
       </div>
     </div>
 
+    <!-- MàJ Documents -->
+    <div class="section"><div class="sh"><span>Mises à jour documentaires</span></div>
+      <div class="action-btns">
+        <button v-if="canPerform('emettre_maj_doc')" class="btn-action btn-teal" @click="doDeclareMajDoc('maj_if')">MàJ IF</button>
+        <button v-if="canPerform('emettre_maj_doc')" class="btn-action btn-teal" @click="doDeclareMajDoc('maj_ic')">MàJ IC</button>
+        <button v-if="canPerform('emettre_maj_doc')" class="btn-action btn-teal" @click="doDeclareMajDoc('maj_nmcl_of')">MàJ Nmcl OF</button>
+        <button v-if="canPerform('emettre_maj_doc')" class="btn-action btn-teal" @click="doDeclareMajDoc('maj_nmcl_oc')">MàJ Nmcl OC</button>
+      </div>
+      <div v-if="!majDocs.length" class="em">Aucune mise à jour documentaire</div>
+      <div class="dg" v-else>
+        <div class="di" v-for="d in majDocs" :key="d.id" @click="$router.push('/lots/'+lot.id+'/documents/'+d.id)">
+          <div class="dind" :class="indClass(d)"></div>
+          <div><div class="dn">{{majDocLabel(d)}}</div><div class="ds" :class="dsClass(d)">{{docStatLabel(d)}}</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Clôture SAP -->
+    <div class="section"><div class="sh"><span>Clôture SAP</span></div>
+      <div class="action-btns">
+        <button v-if="canPerform('emettre_cloture_sap')" class="btn-action btn-slate" @click="doDeclareClotureSap('cloture_sap_of')">Clôt. SAP OF</button>
+        <button v-if="canPerform('emettre_cloture_sap')" class="btn-action btn-slate" @click="doDeclareClotureSap('cloture_sap_oc')">Clôt. SAP OC</button>
+      </div>
+      <div v-if="!clotDocs.length" class="em">Aucune clôture SAP</div>
+      <div class="dg" v-else>
+        <div class="di" v-for="d in clotDocs" :key="d.id" @click="$router.push('/lots/'+lot.id+'/documents/'+d.id)">
+          <div class="dind" :class="clotIndClass(d)"></div>
+          <div><div class="dn">{{clotDocLabel(d)}}</div><div class="ds" :class="clotDsClass(d)">{{clotStatLabel(d)}}</div></div>
+        </div>
+      </div>
+    </div>
+
     <!-- Planification libération -->
     <div class="section"><div class="sh"><span>Planification libération</span><span class="dc" v-if="planSaving">Enregistrement…</span></div>
       <div class="plan-grid">
@@ -198,7 +230,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../supabase'
 import { loadPermissions, canPerform, getPermissionForEtape } from '../services/permissions'
-import { validateOrder, libererLot, declareDeviation, closeDeviation, declareRVP, requestAql, respondAql, isAqlConforme, modifyLot, deleteLot } from '../services/actions'
+import { validateOrder, libererLot, declareDeviation, closeDeviation, declareRVP, declareMajDoc, declareClotureSap, requestAql, respondAql, isAqlConforme, modifyLot, deleteLot } from '../services/actions'
 export default {
   setup() {
     var route = useRoute(), router = useRouter()
@@ -233,8 +265,10 @@ export default {
 
     var ofV = computed(function(){return ofVals.value.length})
     var ocV = computed(function(){return ocVals.value.length})
-    var mainDocs = computed(function(){return docs.value.filter(function(d){return d.type_document!=='rvp'})})
+    var mainDocs = computed(function(){return docs.value.filter(function(d){return d.type_document!=='rvp'&&!d.type_document.startsWith('maj_')&&!d.type_document.startsWith('cloture_sap_')})})
     var rvpDocs = computed(function(){return docs.value.filter(function(d){return d.type_document==='rvp'})})
+    var majDocs = computed(function(){return docs.value.filter(function(d){return d.type_document.startsWith('maj_')})})
+    var clotDocs = computed(function(){return docs.value.filter(function(d){return d.type_document.startsWith('cloture_sap_')})})
     var docsOk = computed(function(){return docs.value.filter(function(d){return d.statut==='approuve_dt'&&d.is_applicable}).length})
     var docsReq = computed(function(){return docs.value.filter(function(d){return d.is_applicable&&d.is_required}).length})
     var devsOpen = computed(function(){return devs.value.filter(function(d){return d.statut==='ouverte'||d.statut==='en_cours'}).length})
@@ -260,6 +294,14 @@ export default {
     var doDeclareDeviation = async function(){await declareDeviation(lot.value.id,devObs.value,userId.value);devObs.value='';showDevForm.value=false;loadLot()}
     var doCloseDeviation = async function(id){await closeDeviation(id,lot.value.id,userId.value);loadLot()}
     var doDeclareRvp = async function(type){await declareRVP(lot.value.id,type,userId.value);loadLot()}
+    var doDeclareMajDoc = async function(type){await declareMajDoc(lot.value.id,type,userId.value);loadLot()}
+    var doDeclareClotureSap = async function(type){await declareClotureSap(lot.value.id,type,userId.value);loadLot()}
+    var majDocLabel = function(d){var map={maj_if:'MàJ IF',maj_ic:'MàJ IC',maj_nmcl_of:'MàJ Nmcl OF',maj_nmcl_oc:'MàJ Nmcl OC'};return map[d.type_document]||d.type_document}
+    var clotDocLabel = function(d){var map={cloture_sap_of:'Clôture SAP OF',cloture_sap_oc:'Clôture SAP OC'};return map[d.type_document]||d.type_document}
+    var clotStatLabels = {non_emis:'Non émis',emis:'Émis',valide_planif:'Validé Planif.',cloture_demandee:'Clôturé'}
+    var clotStatLabel = function(d){return clotStatLabels[d.statut]||d.statut}
+    var clotIndClass = function(d){if(d.statut==='cloture_demandee')return'ind-done';if(d.statut==='non_emis')return'ind-wait';return'ind-prog'}
+    var clotDsClass = function(d){if(d.statut==='cloture_demandee')return'ds-ok';return''}
     var doRequestAql = async function(type){await requestAql(lot.value.id,type,userId.value);loadLot()}
     var doAqlConforme = async function(id){await respondAql(id,'conforme','',userId.value,lot.value.id);loadLot()}
     var doAqlNonConforme = async function(id){var reco=prompt('Recommandations :');await respondAql(id,'non_conforme',reco||'',userId.value,lot.value.id);loadLot()}
@@ -346,7 +388,8 @@ export default {
       showDevForm,devObs,showModify,editNumLot,editCodeProd,prodSuggestions,rvpDocs,mainDocs,
       getVal,pipClass,fmtDt,ofV,ocV,docsOk,docsReq,devsOpen,leadTime,dossierComplete,canValidateStep,
       docTypeLabel,docStatLabel,indClass,dsClass,rvpServiceLabel,isDocBlocked,goBack,
-      doValidate,doLiberer,doDeclareDeviation,doCloseDeviation,doDeclareRvp,doRequestAql,doAqlConforme,doAqlNonConforme,doRelanceAql,isLatestAql,canRelanceAql,canDemanderAql,
+      doValidate,doLiberer,doDeclareDeviation,doCloseDeviation,doDeclareRvp,doDeclareMajDoc,doDeclareClotureSap,doRequestAql,doAqlConforme,doAqlNonConforme,doRelanceAql,isLatestAql,canRelanceAql,canDemanderAql,
+      majDocs,clotDocs,majDocLabel,clotDocLabel,clotStatLabel,clotIndClass,clotDsClass,
       searchProd,selectProd,doModify,confirmDelete,canPerform,
       planning,planEdit,planSaving,savePlanning,
       doSetDaMicroApplicable}
@@ -373,6 +416,8 @@ export default {
 .btn-action{font-size:12px;padding:8px 16px;border-radius:4px;border:none;cursor:pointer;font-weight:500;background:#185FA5;color:#fff}.btn-action:hover{background:#0C447C}
 .btn-orange{background:#BA7517}.btn-orange:hover{background:#8B5A12}
 .btn-violet{background:#5B3CC4}.btn-violet:hover{background:#4A2FA3}
+.btn-teal{background:#0D7C66}.btn-teal:hover{background:#0A6050}
+.btn-slate{background:#475569}.btn-slate:hover{background:#334155}
 .ct{width:100%;border-collapse:collapse;font-size:13px}.ct td{padding:8px;border-bottom:1px solid #f5f5f5}
 .cs{width:30%}.ca{font-weight:500}.cv{width:14%;color:#999;font-size:12px}.cp{width:8%;text-align:center}.cdt{width:22%;text-align:right;font-family:'SF Mono',monospace;font-size:12px;color:#666}.cac{width:26%;text-align:right}
 .cu{font-size:12px;color:#999}
