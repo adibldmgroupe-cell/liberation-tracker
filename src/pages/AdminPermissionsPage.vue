@@ -102,6 +102,22 @@ export default {
         ]
       },
       {
+        label: 'MàJ Documents',
+        actions: [
+          { key: 'emettre_maj_doc', label: 'Émettre une MàJ documentaire' },
+          { key: 'verifier_maj_doc', label: 'Vérifier une MàJ documentaire (AQ)' },
+          { key: 'approuver_maj_doc', label: 'Approuver une MàJ documentaire (DT)' },
+        ]
+      },
+      {
+        label: 'Clôture SAP',
+        actions: [
+          { key: 'emettre_cloture_sap', label: 'Émettre une demande de clôture SAP' },
+          { key: 'valider_cloture_sap', label: 'Valider une clôture SAP (Planification)' },
+          { key: 'demander_cloture_sap', label: 'Demander la clôture SAP' },
+        ]
+      },
+      {
         label: 'Déviations',
         actions: [
           { key: 'declarer_nc', label: 'Déclarer une non-conformité' },
