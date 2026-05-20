@@ -58,13 +58,14 @@ import { useRouter } from 'vue-router'
 import { supabase } from '../supabase'
 import { loadPermissions } from '../services/permissions'
 import { getUnreadCount, getNewNotifications } from '../services/notifications'
+import { checkPlanningAlerts } from '../services/planningAlerts'
 export default {
   setup() {
     var router = useRouter()
     var profile = ref(null), searchQuery = ref(''), suggestions = ref([]), showSug = ref(false)
     var clock = ref(''), unreadCount = ref(0), searchInput = ref(null), mobileMenuOpen = ref(false)
     var toasts = ref([]), lastCheck = ref(new Date().toISOString()), toastId = ref(0)
-    var debounce = null, clockInt = null, notifInt = null
+    var debounce = null, clockInt = null, notifInt = null, planningInt = null
     var serviceLabels = {planification:'Planification',stock:'Stock',aq:'Assurance Qualité',aq_dap:'AQ DAP',dt:'Direction Technique',fabrication:'Fabrication',conditionnement:'Conditionnement',lcq:'Laboratoire CQ',admin:'Administration'}
     var initials = computed(function(){return profile.value?(profile.value.prenom[0]+profile.value.nom[0]).toUpperCase():''})
     var isAdmin = computed(function(){return profile.value && profile.value.service === 'admin'})
@@ -142,10 +143,12 @@ export default {
           await loadPermissions(pRes.data.service)
           unreadCount.value = await getUnreadCount(pRes.data.service, pRes.data.service === 'admin')
           notifInt=setInterval(checkNewNotifs,15000)
+          checkPlanningAlerts()
+          planningInt=setInterval(checkPlanningAlerts, 6*60*60*1000)
         }
       }
     })
-    onUnmounted(function(){clearInterval(clockInt);clearInterval(notifInt)})
+    onUnmounted(function(){clearInterval(clockInt);clearInterval(notifInt);clearInterval(planningInt)})
 
     return {profile,initials,isAdmin,searchQuery,suggestions,showSug,clock,unreadCount,searchInput,
       mobileMenuOpen,toasts,serviceLabels,onSearch,submitSearch,selectSug,hideSug,logout,goToLot}

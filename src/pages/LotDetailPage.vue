@@ -125,6 +125,50 @@
       </div>
     </div>
 
+    <!-- Planification libération -->
+    <div class="section"><div class="sh"><span>Planification libération</span><span class="dc" v-if="planSaving">Enregistrement…</span></div>
+      <div class="plan-grid">
+        <div class="plan-bloc">
+          <div class="plan-titre">🔬 Libération LCQ</div>
+          <div class="plan-row">
+            <label>Date cible</label>
+            <input type="date" v-model="planEdit.date_lcq_cible" class="plan-input" @change="savePlanning('date_lcq_cible')" />
+          </div>
+          <div class="plan-row">
+            <label>Date révisée</label>
+            <input type="date" v-model="planEdit.date_lcq_revisee" class="plan-input" :class="{'plan-revised':planEdit.date_lcq_revisee}" @change="savePlanning('date_lcq_revisee')" />
+          </div>
+        </div>
+        <div class="plan-bloc">
+          <div class="plan-titre">✅ Libération AQ</div>
+          <div class="plan-row">
+            <label>Date cible</label>
+            <input type="date" v-model="planEdit.date_aq_cible" class="plan-input" @change="savePlanning('date_aq_cible')" />
+          </div>
+          <div class="plan-row">
+            <label>Date révisée</label>
+            <input type="date" v-model="planEdit.date_aq_revisee" class="plan-input" :class="{'plan-revised':planEdit.date_aq_revisee}" @change="savePlanning('date_aq_revisee')" />
+          </div>
+        </div>
+        <div class="plan-bloc">
+          <div class="plan-titre">📋 Libération DT — Cible (DT1)</div>
+          <div class="plan-row">
+            <label>Date cible initiale</label>
+            <input type="date" v-model="planEdit.date_dt_cible" class="plan-input" @change="savePlanning('date_dt_cible')" />
+          </div>
+          <div class="plan-note">Date planifiée en début de circuit</div>
+        </div>
+        <div class="plan-bloc">
+          <div class="plan-titre">🔄 Libération DT — Révisée (DT2)</div>
+          <div class="plan-row">
+            <label>Date révisée</label>
+            <input type="date" v-model="planEdit.date_dt_revisee" class="plan-input" :class="{'plan-revised':planEdit.date_dt_revisee}" @change="savePlanning('date_dt_revisee')" />
+          </div>
+          <div class="plan-note">Mise à jour après aléas</div>
+        </div>
+      </div>
+    </div>
+
     <!-- Synthèse -->
     <div class="section" v-if="dossier"><div class="sh"><span>Synthèse libération</span></div>
       <div class="syg">
@@ -154,6 +198,8 @@ export default {
     var showDevForm = ref(false), devObs = ref(''), showModify = ref(false)
     var editNumLot = ref(''), editCodeProd = ref(''), editProductId = ref(null), prodSuggestions = ref([])
     var aqlFabConforme = ref(false), aqlCondConforme = ref(false)
+    var planning = ref(null), planSaving = ref(false)
+    var planEdit = ref({date_lcq_cible:'',date_lcq_revisee:'',date_aq_cible:'',date_aq_revisee:'',date_dt_cible:'',date_dt_revisee:''})
 
     var isAdmin = computed(function(){return userService.value === 'admin'})
     var statusLabels = {vide:'PLANIFIÉ',quarantaine:'QUARANTAINE',sous_investigation:'SOUS INVESTIGATION',accepte:'ACCEPTÉ',refuse:'REFUSÉ'}
@@ -212,6 +258,17 @@ export default {
     var canRelanceAql = function(a){return canPerform('demander_aql_'+(a.type==='fabrication'?'fab':'cond'))}
     var doRelanceAql = async function(a){await requestAql(lot.value.id,a.type,userId.value);loadLot()}
 
+    var savePlanning = async function(field) {
+      planSaving.value = true
+      var val = planEdit.value[field] || null
+      await supabase.from('lot_planning').upsert(
+        { lot_id: lot.value.id, [field]: val, updated_at: new Date().toISOString(), updated_by: userId.value },
+        { onConflict: 'lot_id' }
+      )
+      var planRes=(await supabase.from('lot_planning').select('*').eq('lot_id',lot.value.id).maybeSingle()).data
+      planning.value=planRes; planSaving.value = false
+    }
+
     var searchProd = async function(){
       if(editCodeProd.value.length<2){prodSuggestions.value=[];return}
       var res = await supabase.from('products').select('id,code_article,description').or('code_article.ilike.%'+editCodeProd.value+'%,description.ilike.%'+editCodeProd.value+'%').limit(5)
@@ -242,6 +299,14 @@ export default {
       dossier.value=(await supabase.from('liberation_dossiers').select('*').eq('lot_id',l.id).maybeSingle()).data
       aqlFabConforme.value=await isAqlConforme(l.id,'fabrication')
       aqlCondConforme.value=await isAqlConforme(l.id,'conditionnement')
+      var planRes=(await supabase.from('lot_planning').select('*').eq('lot_id',l.id).maybeSingle()).data
+      planning.value=planRes
+      var toDate=function(d){return d?d.split('T')[0]:''}
+      planEdit.value={
+        date_lcq_cible:toDate(planRes?.date_lcq_cible),date_lcq_revisee:toDate(planRes?.date_lcq_revisee),
+        date_aq_cible:toDate(planRes?.date_aq_cible),date_aq_revisee:toDate(planRes?.date_aq_revisee),
+        date_dt_cible:toDate(planRes?.date_dt_cible),date_dt_revisee:toDate(planRes?.date_dt_revisee),
+      }
     }
 
     onMounted(async function(){
@@ -256,7 +321,8 @@ export default {
       getVal,pipClass,fmtDt,ofV,ocV,docsOk,docsReq,devsOpen,leadTime,dossierComplete,canValidateStep,
       docTypeLabel,docStatLabel,indClass,dsClass,rvpServiceLabel,isDocBlocked,goBack,
       doValidate,doLiberer,doDeclareDeviation,doCloseDeviation,doDeclareRvp,doRequestAql,doAqlConforme,doAqlNonConforme,doRelanceAql,isLatestAql,canRelanceAql,
-      searchProd,selectProd,doModify,confirmDelete,canPerform}
+      searchProd,selectProd,doModify,confirmDelete,canPerform,
+      planning,planEdit,planSaving,savePlanning}
   }
 }
 </script>
@@ -297,6 +363,15 @@ export default {
 .em{font-size:12px;color:#999;padding:12px 0;text-align:center}
 .syg{display:grid;grid-template-columns:1fr 1fr;border:1px solid #e8e8e8}.syc{padding:8px 12px;border-right:1px solid #e8e8e8;border-bottom:1px solid #e8e8e8;display:flex;justify-content:space-between;font-size:13px}.syc:nth-child(2n){border-right:none}.syc span:first-child{color:#666}
 .ok{color:#1D9E75;font-weight:500}.ko{color:#E24B4A;font-weight:500}.na{color:#ccc}
+/* Planning libération */
+.plan-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#e8e8e8;border:1px solid #e8e8e8;margin-top:10px}
+.plan-bloc{background:#fff;padding:12px 14px}
+.plan-titre{font-size:11px;font-weight:600;color:#333;margin-bottom:10px}
+.plan-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:8px}
+.plan-row label{font-size:11px;color:#999;white-space:nowrap;flex-shrink:0}
+.plan-input{padding:4px 8px;border:1px solid #ddd;border-radius:3px;font-size:12px;font-family:inherit;outline:none;width:130px;text-align:right}.plan-input:focus{border-color:#185FA5}
+.plan-revised{border-color:#BA7517 !important;background:#fffbf0}
+.plan-note{font-size:10px;color:#bbb;margin-top:4px}
 .lz{text-align:center;padding:14px 0}.lb{padding:10px 32px;font-size:13px;font-weight:500;background:#185FA5;color:#fff;border:none;border-radius:2px;cursor:pointer}.lb:disabled{opacity:.4;cursor:not-allowed}.lb:hover:not(:disabled){background:#0C447C}
 .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:100}
 .modal{background:#fff;padding:24px;width:400px;border-radius:4px}.modal-title{font-size:16px;font-weight:500;margin-bottom:16px}
@@ -305,6 +380,8 @@ export default {
 .auto-list{border:1px solid #ddd;border-radius:4px;margin-top:2px;max-height:160px;overflow-y:auto}.auto-item{padding:6px 10px;cursor:pointer;font-size:12px}.auto-item:hover{background:#f5f5f5}.auto-code{font-family:'SF Mono',monospace;font-weight:500;color:#185FA5;margin-right:8px}
 .modal-actions{display:flex;gap:8px}
 @media(max-width:768px){
+  .plan-grid{grid-template-columns:1fr}
+  .plan-input{width:120px}
   .ks{grid-template-columns:repeat(3,1fr)}
   .k:nth-child(3){border-right:none}
   .k:nth-child(4),.k:nth-child(5){border-top:1px solid #e8e8e8}
