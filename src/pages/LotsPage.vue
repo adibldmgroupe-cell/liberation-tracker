@@ -683,22 +683,36 @@ export default {
     var chargeCount = ref(null)
     var chargeLoading = ref(false)
 
+    var CHARGE_FIELDS = {
+      plan_lcq_cible: ['date_lcq_cible','date_lcq_revisee'],
+      plan_lcq:       ['date_lcq_cible','date_lcq_revisee'],
+      plan_aq_cible:  ['date_aq_cible','date_aq_revisee'],
+      plan_aq:        ['date_aq_cible','date_aq_revisee'],
+      plan_dt1:       ['date_dt_cible','date_dt_revisee'],
+      plan_dt2:       ['date_dt_cible','date_dt_revisee']
+    }
+
     var loadCharge = async function() {
       if (!datePicker.value || !datePicker.value.value) { chargeCount.value = null; return }
-      var dbField = PLAN_DB_FIELD[datePicker.value.col]
-      if (!dbField) { chargeCount.value = null; return }
+      var fields = CHARGE_FIELDS[datePicker.value.col]
+      if (!fields) { chargeCount.value = null; return }
       chargeLoading.value = true
       var dateStr = datePicker.value.value // 'YYYY-MM-DD'
-      // Calcul du lendemain sans conversion UTC (évite le décalage timezone)
-      var p = dateStr.split('-')
-      var nd = new Date(+p[0], +p[1]-1, +p[2]+1)
-      var nextDayStr = nd.getFullYear()+'-'+String(nd.getMonth()+1).padStart(2,'0')+'-'+String(nd.getDate()).padStart(2,'0')
+      var cibleF = fields[0], reviseeF = fields[1]
+      // Récupérer les deux champs (cible + révisée) de tous les autres lots
       var res = await supabase.from('lot_planning')
-        .select('*', {count:'exact', head:true})
-        .gte(dbField, dateStr)
-        .lt(dbField, nextDayStr)
+        .select('lot_id,' + cibleF + ',' + reviseeF)
         .neq('lot_id', datePicker.value.lotId)
-      chargeCount.value = res.count || 0
+      var count = 0
+      if (res.data) {
+        for (var i = 0; i < res.data.length; i++) {
+          var row = res.data[i]
+          // Date effective = révisée si elle existe, sinon cible
+          var eff = row[reviseeF] || row[cibleF]
+          if (eff && eff.substring(0, 10) === dateStr) count++
+        }
+      }
+      chargeCount.value = count
       chargeLoading.value = false
     }
 
