@@ -530,7 +530,7 @@ export default {
           if (isAdmin || canPerform(aqlPerm)) {
             actions.push({label: hasPending?'Relancer AQL '+aLabel:'Demander AQL '+aLabel, fn: async function(){
               var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
-              await supabase.from('aql_inspections').insert({lot_id:lot.id,type:aType,requested_at:n,requested_by:uid})
+              await supabase.from('aql_inspections').insert({lot_id:lot.id,type:aType,resultat:'en_attente',requested_at:n,requested_by:uid})
               await createNotification('aq',lot.id,null,'Lot '+lot.numero_lot+' — AQL '+aLabel+(hasPending?' relancé':' demandé'),'aql_demande')
             }})
           }
@@ -823,12 +823,12 @@ export default {
             var aqlTypeVal=aqlSvc==='fab'?'fabrication':'conditionnement'
             var aqlSvcLabel=aqlSvc==='fab'?'Fabrication':'Conditionnement'
             if(aqlOp==='demander'||aqlOp==='relancer'){
-              await supabase.from('aql_inspections').insert({lot_id:lotId,type:aqlTypeVal,resultat:null,requested_at:now,requested_by:userId})
+              await supabase.from('aql_inspections').insert({lot_id:lotId,type:aqlTypeVal,resultat:'en_attente',requested_at:now,requested_by:userId})
               await supabase.from('lot_events').insert({lot_id:lotId,event_type:'aql_demande',description:'AQL '+aqlSvcLabel+' — '+(aqlOp==='relancer'?'relancé':'demandé')+' (masse)',triggered_by:userId,created_at:now})
               await createNotification('aq',lotId,null,'Lot '+lot.numero_lot+' — AQL '+aqlSvcLabel+(aqlOp==='relancer'?' relancé':' demandé'),'aql_demande')
               result.ok++
             } else if(aqlOp==='conforme'||aqlOp==='non_conforme'){
-              var aqlRes=await supabase.from('aql_inspections').select('id').eq('lot_id',lotId).eq('type',aqlTypeVal).is('resultat',null).order('requested_at',{ascending:false}).limit(1)
+              var aqlRes=await supabase.from('aql_inspections').select('id').eq('lot_id',lotId).eq('type',aqlTypeVal).or('resultat.is.null,resultat.eq.en_attente').order('requested_at',{ascending:false}).limit(1)
               var latestAql=aqlRes.data&&aqlRes.data[0]
               if(!latestAql){result.errors.push(lot.numero_lot+': pas d\'AQL '+aqlSvcLabel+' en attente');result.fail++;continue}
               await supabase.from('aql_inspections').update({resultat:aqlOp,inspected_at:now,inspected_by:userId}).eq('id',latestAql.id)
@@ -872,8 +872,12 @@ export default {
           } else if (action.startsWith('dev_')) {
             var devOp=action.replace('dev_','')
             if(devOp==='declarer'){
-              await supabase.from('deviations').insert({lot_id:lotId,statut:'ouverte',description:'Déclaration en masse',declared_by:userId,declared_at:now,created_at:now})
-              await supabase.from('lot_events').insert({lot_id:lotId,event_type:'deviation_declaree',description:'Déviation déclarée (masse)',triggered_by:userId,created_at:now})
+              var devCountRes=await supabase.from('deviations').select('*',{count:'exact',head:true})
+              var devNumero='DEV-'+new Date().getFullYear()+'-'+String(((devCountRes.count||0)+1)).padStart(3,'0')
+              await supabase.from('deviations').insert({lot_id:lotId,numero_deviation:devNumero,statut:'ouverte',description:'Déclaration en masse',declared_by:userId,declared_at:now,created_at:now})
+              await supabase.from('liberation_dossiers').update({deviations_closed:false,updated_at:now}).eq('lot_id',lotId)
+              await supabase.from('lot_events').insert({lot_id:lotId,event_type:'deviation_declaree',description:'Déviation '+devNumero+' déclarée (masse)',triggered_by:userId,created_at:now})
+              await createNotification('aq',lotId,null,'Lot '+lot.numero_lot+' — Déviation '+devNumero+' déclarée','deviation_declaree')
               result.ok++
             } else if(devOp==='cloture'){
               var openDevs=await supabase.from('deviations').select('id').eq('lot_id',lotId).in('statut',['ouverte','en_cours'])
