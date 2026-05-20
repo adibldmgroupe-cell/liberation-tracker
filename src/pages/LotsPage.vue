@@ -1268,10 +1268,11 @@ export default {
 .table-wrap{overflow-x:auto;overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:calc(100vh - 150px)}
 .tb{width:100%;border-collapse:collapse;font-size:11px;white-space:nowrap}.tb th{font-size:9px;text-transform:uppercase;color:#999;font-weight:500;padding:5px 4px;text-align:left;border-bottom:1px solid #e8e8e8;position:sticky;top:0;background:#fff;z-index:1}
 /* Sticky lot column */
-.th-sticky,.td-sticky{position:sticky !important;z-index:2 !important;background:#fff}.th-sticky{z-index:4 !important}
-.th-lot,.td-lot{min-width:80px}
+.th-sticky,.td-sticky{position:sticky !important;z-index:2 !important;background:#fff}
+.th-sticky{z-index:4 !important}
+.th-lot,.td-lot{min-width:80px;border-right:2px solid #e8e8e8}
 .row-sel .td-sticky{background:#E6F1FB !important}
-.tb tr:hover .td-sticky{background:#fafafa}
+.tb tr:hover .td-sticky{background:#fafafa !important}
 .sortable{cursor:pointer;user-select:none}.sortable:hover{color:#185FA5}.sort-arrow{font-size:10px;color:#ccc}
 .tb td{padding:6px 4px;border-bottom:1px solid #f5f5f5}.tb tr{cursor:pointer}.tb tr:hover td{background:#fafafa}
 .bold{font-weight:500}.mono{font-family:'SF Mono',monospace;font-size:10px}.dim{color:#999;font-size:10px}
