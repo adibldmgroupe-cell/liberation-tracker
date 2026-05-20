@@ -60,7 +60,9 @@ export function getPermissionForBulkAction(action) {
     rvp_lcq_retour_emetteur:'retourner_document', rvp_fab_retour_aq:'retourner_document',
     rvp_cond_retour_aq:'retourner_document', rvp_lcq_retour_aq:'retourner_document',
     dev_declarer:'declarer_nc', dev_cloture:'cloturer_deviation',
-    plan_lcq:'modifier_planning', plan_aq:'modifier_planning', plan_dt1:'modifier_planning', plan_dt2:'modifier_planning',
+    plan_lcq_cible:'modifier_planning', plan_lcq:'modifier_planning',
+    plan_aq_cible:'modifier_planning',  plan_aq:'modifier_planning',
+    plan_dt1:'modifier_planning', plan_dt2:'modifier_planning',
   }
   return map[action] || null
 }

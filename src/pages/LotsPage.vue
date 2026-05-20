@@ -78,10 +78,10 @@
           <th v-show="isColVisible('rvp_fab')"><div class="th-i"><span class="th-txt">RVP Fab</span><button class="th-f" :class="{'th-f-on':columnFilters['rvp_fab_label']}" @click="openDropdown('rvp_fab_label',$event)">⌄</button></div></th>
           <th v-show="isColVisible('rvp_cond')"><div class="th-i"><span class="th-txt">RVP Cond</span><button class="th-f" :class="{'th-f-on':columnFilters['rvp_cond_label']}" @click="openDropdown('rvp_cond_label',$event)">⌄</button></div></th>
           <th v-show="isColVisible('rvp_lcq')"><div class="th-i"><span class="th-txt">RVP LCQ</span><button class="th-f" :class="{'th-f-on':columnFilters['rvp_lcq_label']}" @click="openDropdown('rvp_lcq_label',$event)">⌄</button></div></th>
-          <th v-show="isColVisible('plan_lcq')"><div class="th-i"><span class="th-txt">Lib. LCQ</span></div></th>
-          <th v-show="isColVisible('plan_aq')"><div class="th-i"><span class="th-txt">Lib. AQ</span></div></th>
-          <th v-show="isColVisible('plan_dt1')"><div class="th-i"><span class="th-txt">Lib. DT1</span></div></th>
-          <th v-show="isColVisible('plan_dt2')"><div class="th-i"><span class="th-txt">Lib. DT2</span></div></th>
+          <th v-show="isColVisible('plan_lcq')"><div class="th-i"><span class="th-txt">Lib. LCQ</span><button class="th-f" :class="{'th-f-on':columnFilters['plan_lcq']}" @click="openDropdown('plan_lcq',$event)">⌄</button></div></th>
+          <th v-show="isColVisible('plan_aq')"><div class="th-i"><span class="th-txt">Lib. AQ</span><button class="th-f" :class="{'th-f-on':columnFilters['plan_aq']}" @click="openDropdown('plan_aq',$event)">⌄</button></div></th>
+          <th v-show="isColVisible('plan_dt1')"><div class="th-i"><span class="th-txt">Lib. DT1</span><button class="th-f" :class="{'th-f-on':columnFilters['plan_dt1']}" @click="openDropdown('plan_dt1',$event)">⌄</button></div></th>
+          <th v-show="isColVisible('plan_dt2')"><div class="th-i"><span class="th-txt">Lib. DT2</span><button class="th-f" :class="{'th-f-on':columnFilters['plan_dt2']}" @click="openDropdown('plan_dt2',$event)">⌄</button></div></th>
           <th v-show="isColVisible('date')"><div class="th-i"><span class="th-txt sortable" @click="sortBy('date_fmt')">{{showDates?'Libération':'Entrée'}} <span class="sort-arrow">{{sortIcon('date_fmt')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['date_fmt']}" @click="openDropdown('date_fmt',$event)">⌄</button></div></th>
         </tr></thead>
         <tbody>
@@ -223,7 +223,7 @@ export default {
       {label:'RVP — Approbation DT',actions:[{value:'rvp_fab_approuver',label:'RVP Fabrication — Approuver DT'},{value:'rvp_cond_approuver',label:'RVP Conditionnement — Approuver DT'},{value:'rvp_lcq_approuver',label:'RVP LCQ — Approuver DT'}]},
       {label:'RVP — Retour',actions:[{value:'rvp_fab_retour_emetteur',label:"RVP Fabrication — Retourner à l'émetteur"},{value:'rvp_cond_retour_emetteur',label:"RVP Conditionnement — Retourner à l'émetteur"},{value:'rvp_lcq_retour_emetteur',label:"RVP LCQ — Retourner à l'émetteur"},{value:'rvp_fab_retour_aq',label:"RVP Fabrication — DT retourne à l'AQ"},{value:'rvp_cond_retour_aq',label:"RVP Conditionnement — DT retourne à l'AQ"},{value:'rvp_lcq_retour_aq',label:"RVP LCQ — DT retourne à l'AQ"}]},
       {label:'Déviation',actions:[{value:'dev_declarer',label:'Déviation — Déclarer'},{value:'dev_cloture',label:'Déviation — Clôturer'}]},
-      {label:'Dates prévisionnelles',actions:[{value:'plan_lcq',label:'Libération LCQ — Date révisée'},{value:'plan_aq',label:'Libération AQ — Date révisée'},{value:'plan_dt1',label:'Libération DT — Date cible'},{value:'plan_dt2',label:'Libération DT — Date révisée'}]},
+      {label:'Dates prévisionnelles',actions:[{value:'plan_lcq_cible',label:'Libération LCQ — Date cible'},{value:'plan_lcq',label:'Libération LCQ — Date révisée'},{value:'plan_aq_cible',label:'Libération AQ — Date cible'},{value:'plan_aq',label:'Libération AQ — Date révisée'},{value:'plan_dt1',label:'Libération DT — Date cible'},{value:'plan_dt2',label:'Libération DT — Date révisée'}]},
     ]
     var actionGroups = computed(function(){
       return actionGroupDefs.map(function(g){
@@ -386,7 +386,9 @@ export default {
           rvp_lcq_label:rvpLcq.label,rvp_lcq_class:rvpLcq.cls,
           dev_count:devs.length,dev_open:devOpen,dev_label:devs.length>0?(devOpen>0?'Ouverte':'Clôturée'):'—',
           plan_lcq:fmtPlan(planLcqRaw),plan_lcq_raw:planLcqRaw,
+          plan_lcq_cible_raw:planning?planning.date_lcq_cible:null,
           plan_aq:fmtPlan(planAqRaw),plan_aq_raw:planAqRaw,
+          plan_aq_cible_raw:planning?planning.date_aq_cible:null,
           plan_dt1:fmtPlan(planDt1Raw),plan_dt1_raw:planDt1Raw,
           plan_dt2:fmtPlan(planDt2Raw),plan_dt2_raw:planDt2Raw,
           of_id:of?of.id:null,oc_id:oc?oc.id:null,docs:docs,aqls_raw:aqls,
@@ -637,16 +639,28 @@ export default {
 
     // ── Date picker planification ──────────────────────────────────────
     var datePicker = ref(null)
-    var PLAN_LABELS = {plan_lcq:'Lib. LCQ (révisée)',plan_aq:'Lib. AQ (révisée)',plan_dt1:'Lib. DT — Date cible',plan_dt2:'Lib. DT — Date révisée'}
-    var PLAN_DB_FIELD = {plan_lcq:'date_lcq_revisee',plan_aq:'date_aq_revisee',plan_dt1:'date_dt_cible',plan_dt2:'date_dt_revisee'}
+    var PLAN_LABELS = {
+      plan_lcq_cible:'Lib. LCQ — Date cible', plan_lcq:'Lib. LCQ — Date révisée',
+      plan_aq_cible:'Lib. AQ — Date cible',   plan_aq:'Lib. AQ — Date révisée',
+      plan_dt1:'Lib. DT — Date cible',         plan_dt2:'Lib. DT — Date révisée'
+    }
+    var PLAN_DB_FIELD = {
+      plan_lcq_cible:'date_lcq_cible', plan_lcq:'date_lcq_revisee',
+      plan_aq_cible:'date_aq_cible',   plan_aq:'date_aq_revisee',
+      plan_dt1:'date_dt_cible',        plan_dt2:'date_dt_revisee'
+    }
 
     var openDatePicker = function(event, lot, col) {
-      var rawVal = lot[col+'_raw'] || ''
+      // Pour LCQ et AQ : saisir la cible d'abord, puis la révisée si cible déjà présente
+      var effectiveCol = col
+      if (col === 'plan_lcq') effectiveCol = lot.plan_lcq_cible_raw ? 'plan_lcq' : 'plan_lcq_cible'
+      if (col === 'plan_aq')  effectiveCol = lot.plan_aq_cible_raw  ? 'plan_aq'  : 'plan_aq_cible'
+      var rawVal = lot[effectiveCol+'_raw'] || lot[col+'_raw'] || ''
       if (typeof rawVal === 'string' && rawVal.length > 10) rawVal = rawVal.split('T')[0]
       var rect = event.currentTarget.getBoundingClientRect()
       var top = rect.bottom + 2, left = rect.left
       if (left + 200 > window.innerWidth) left = window.innerWidth - 210
-      datePicker.value = { lotId: lot.id, col: col, label: PLAN_LABELS[col]||col, top: top, left: left, value: rawVal }
+      datePicker.value = { lotId: lot.id, col: effectiveCol, label: PLAN_LABELS[effectiveCol]||effectiveCol, top: top, left: left, value: rawVal }
     }
 
     var savePlanning = async function() {
@@ -720,7 +734,9 @@ export default {
       rvp_fab_retour_emetteur:"RVP Fab — Retourner",rvp_cond_retour_emetteur:"RVP Cond — Retourner",rvp_lcq_retour_emetteur:"RVP LCQ — Retourner",
       rvp_fab_retour_aq:"RVP Fab — DT → AQ",rvp_cond_retour_aq:"RVP Cond — DT → AQ",rvp_lcq_retour_aq:"RVP LCQ — DT → AQ",
       dev_declarer:'Déviation — Déclarer',dev_cloture:'Déviation — Clôturer',
-      plan_lcq:'Lib. LCQ — Date révisée',plan_aq:'Lib. AQ — Date révisée',plan_dt1:'Lib. DT — Date cible',plan_dt2:'Lib. DT — Date révisée',
+      plan_lcq_cible:'Lib. LCQ — Date cible',plan_lcq:'Lib. LCQ — Date révisée',
+      plan_aq_cible:'Lib. AQ — Date cible',plan_aq:'Lib. AQ — Date révisée',
+      plan_dt1:'Lib. DT — Date cible',plan_dt2:'Lib. DT — Date révisée',
     }
     var actionLabel = computed(function(){return actionLabels[actionType.value]||''})
     var canExecute = computed(function(){
