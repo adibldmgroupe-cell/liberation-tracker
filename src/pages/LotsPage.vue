@@ -354,7 +354,7 @@ export default {
     }
 
     var load = async function() {
-      var query = supabase.from('lots').select('*, products(code_article,description), orders_of(id,statut,etape_circuit,updated_at), orders_oc(id,statut,etape_circuit,updated_at), liberation_documents(id,type_document,statut,is_applicable,service_emetteur,emitted_at,approved_at), deviations(statut), aql_inspections(id,type,resultat,requested_at,inspected_at), lot_planning(date_lcq_cible,date_lcq_revisee,date_aq_cible,date_aq_revisee,date_dt_cible,date_dt_revisee)', {count:'exact'})
+      var query = supabase.from('lots').select('*, products(code_article,description), orders_of(id,statut,etape_circuit,updated_at), orders_oc(id,statut,etape_circuit,updated_at), liberation_documents(id,type_document,statut,is_applicable,service_emetteur,emitted_at,approved_at,updated_at), deviations(statut), aql_inspections(id,type,resultat,requested_at,inspected_at), lot_planning(date_lcq_cible,date_lcq_revisee,date_aq_cible,date_aq_revisee,date_dt_cible,date_dt_revisee)', {count:'exact'})
 
       var q = route.query.q
       if(q){

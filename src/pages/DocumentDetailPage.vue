@@ -7,9 +7,9 @@
     <div class="flow">
       <div class="flow-step" :class="flowClass(1)"><span class="fs-num">1</span><span class="fs-label">Émission</span></div>
       <div class="flow-arrow">→</div>
-      <div class="flow-step" :class="flowClass(2)"><span class="fs-num">2</span><span class="fs-label">Vérif. AQ</span></div>
+      <div class="flow-step" :class="flowClass(2)"><span class="fs-num">2</span><span class="fs-label">{{isClotSap?'Validation Planif.':'Vérif. AQ'}}</span></div>
       <div class="flow-arrow">→</div>
-      <div class="flow-step" :class="flowClass(3)"><span class="fs-num">3</span><span class="fs-label">Approbation DT</span></div>
+      <div class="flow-step" :class="flowClass(3)"><span class="fs-num">3</span><span class="fs-label">{{isClotSap?'Clôture demandée':'Approbation DT'}}</span></div>
     </div>
 
     <!-- DA Micro non applicable : permettre de la déclarer applicable -->
@@ -29,20 +29,26 @@
       <!-- ÉMETTEUR : émettre -->
       <button v-if="doc.statut==='non_emis' && canEmit" class="btn" @click="doAct('emettre')">Émettre le document</button>
 
-      <!-- ÉMETTEUR : rectifier après retour -->
-      <button v-if="doc.statut==='retour_emetteur' && canRectifier" class="btn" @click="doAct('rectifier')">Rectifier et renvoyer à l'AQ</button>
+      <!-- ÉMETTEUR : rectifier après retour (docs standard seulement) -->
+      <button v-if="doc.statut==='retour_emetteur' && canRectifier && !isClotSap" class="btn" @click="doAct('rectifier')">Rectifier et renvoyer à l'AQ</button>
 
-      <!-- AQ : vérifier et transmettre au DT -->
-      <button v-if="(doc.statut==='emis' || doc.statut==='verification_aq') && canVerify" class="btn" @click="doAct('verifier_aq')">Vérifier et transmettre au DT</button>
+      <!-- AQ : vérifier et transmettre au DT (docs standard) -->
+      <button v-if="(doc.statut==='emis' || doc.statut==='verification_aq') && canVerify && !isClotSap" class="btn" @click="doAct('verifier_aq')">Vérifier et transmettre au DT</button>
 
-      <!-- AQ : retourner à l'émetteur -->
-      <button v-if="(doc.statut==='emis' || doc.statut==='verification_aq') && canRetourner" class="btn br" @click="prepareRetour('emetteur')">Retourner à l'émetteur</button>
+      <!-- AQ : retourner à l'émetteur (docs standard) -->
+      <button v-if="(doc.statut==='emis' || doc.statut==='verification_aq') && canRetourner && !isClotSap" class="btn br" @click="prepareRetour('emetteur')">Retourner à l'émetteur</button>
 
-      <!-- DT : approuver -->
-      <button v-if="doc.statut==='approuve_aq' && canApprove" class="btn bg" @click="doAct('approuver_dt')">Approuver (DT)</button>
+      <!-- DT : approuver (docs standard) -->
+      <button v-if="doc.statut==='approuve_aq' && canApprove && !isClotSap" class="btn bg" @click="doAct('approuver_dt')">Approuver (DT)</button>
 
-      <!-- DT : retourner à l'AQ -->
-      <button v-if="doc.statut==='approuve_aq' && canRetourner" class="btn br" @click="prepareRetour('aq')">Retourner à l'AQ</button>
+      <!-- DT : retourner à l'AQ (docs standard) -->
+      <button v-if="doc.statut==='approuve_aq' && canRetourner && !isClotSap" class="btn br" @click="prepareRetour('aq')">Retourner à l'AQ</button>
+
+      <!-- CLÔTURE SAP : Planif valide -->
+      <button v-if="doc.statut==='emis' && canVerify && isClotSap" class="btn bg" @click="doAct('valider_planif')">Valider (Planification)</button>
+
+      <!-- CLÔTURE SAP : Fab/Condt demande clôture -->
+      <button v-if="doc.statut==='valide_planif' && canApprove && isClotSap" class="btn bg" @click="doAct('demander_cloture')">Demander la clôture SAP</button>
     </div>
 
     <div class="rb" v-if="showRetour">
@@ -82,32 +88,45 @@ export default {
   setup() {
     var route = useRoute()
     var doc = ref(null), movements = ref([]), showRetour = ref(false), motif = ref(''), userId = ref(null), retourDest = ref('')
-    var typeLabels = { if:'IF (Instruction de fabrication)', ic:'IC (Instruction de conditionnement)', da_pc:'DA Physico-chimie', da_micro:'DA Microbiologie', rvp:'RVP', deviation:'Déviation', analyse_risque:'Analyse de risque', autorisation_partenaire:'Autorisation partenaire', autre:'Autre' }
+    var typeLabels = { if:'IF (Instruction de fabrication)', ic:'IC (Instruction de conditionnement)', da_pc:'DA Physico-chimie', da_micro:'DA Microbiologie', rvp:'RVP', deviation:'Déviation', analyse_risque:'Analyse de risque', autorisation_partenaire:'Autorisation partenaire', autre:'Autre', maj_if:'MàJ IF', maj_ic:'MàJ IC', maj_nmcl_of:'MàJ Nomenclature OF', maj_nmcl_oc:'MàJ Nomenclature OC', cloture_sap_of:'Clôture SAP OF', cloture_sap_oc:'Clôture SAP OC' }
     var actionLabelsMap = { emission:'Émission', transmission:'Transmission', reception:'Réception', retour:'Retour pour rectification', rectification:'Rectification et renvoi', approbation:'Approbation' }
-    var statusMap = { non_emis:'Non émis', emis:'Émis — en attente AQ', verification_aq:'En cours de vérification AQ', retour_emetteur:'Retourné à l\'émetteur', rectification:'En cours de rectification', approuve_aq:'Vérifié AQ — en attente DT', approbation_dt:'En cours d\'approbation DT', approuve_dt:'Approuvé DT' }
+    var statusMap = { non_emis:'Non émis', emis:'Émis — en attente', verification_aq:'En cours de vérification AQ', retour_emetteur:'Retourné à l\'émetteur', rectification:'En cours de rectification', approuve_aq:'Vérifié AQ — en attente DT', approbation_dt:'En cours d\'approbation DT', approuve_dt:'Approuvé DT', valide_planif:'Validé Planification — en attente clôture', cloture_demandee:'Clôture demandée' }
     var statusLabel = computed(function() { return statusMap[doc.value ? doc.value.statut : ''] || '' })
+    var isClotSap = computed(function(){ return doc.value && doc.value.type_document && doc.value.type_document.startsWith('cloture_sap_') })
+    var isMajDoc = computed(function(){ return doc.value && doc.value.type_document && doc.value.type_document.startsWith('maj_') })
     var spClass = computed(function() {
       var s = doc.value ? doc.value.statut : ''
-      if (s === 'approuve_dt') return 'sp-ok'
+      if (s === 'approuve_dt' || s === 'cloture_demandee') return 'sp-ok'
       if (s === 'retour_emetteur') return 'sp-ret'
       if (s === 'non_emis') return 'sp-wait'
-      if (s === 'approuve_aq') return 'sp-dt'
+      if (s === 'approuve_aq' || s === 'valide_planif') return 'sp-dt'
       return 'sp-prog'
     })
 
     var flowClass = function(step) {
       var s = doc.value ? doc.value.statut : ''
+      var clot = isClotSap.value
       if (step === 1) {
         if (s === 'non_emis') return 'fs-active'
         if (s === 'retour_emetteur') return 'fs-ret'
         return 'fs-done'
       }
       if (step === 2) {
+        if (clot) {
+          if (s === 'emis') return 'fs-active'
+          if (s === 'valide_planif' || s === 'cloture_demandee') return 'fs-done'
+          return 'fs-wait'
+        }
         if (s === 'emis' || s === 'verification_aq') return 'fs-active'
         if (s === 'approuve_aq' || s === 'approbation_dt' || s === 'approuve_dt') return 'fs-done'
         return 'fs-wait'
       }
       if (step === 3) {
+        if (clot) {
+          if (s === 'valide_planif') return 'fs-active'
+          if (s === 'cloture_demandee') return 'fs-done'
+          return 'fs-wait'
+        }
         if (s === 'approuve_aq' || s === 'approbation_dt') return 'fs-active'
         if (s === 'approuve_dt') return 'fs-done'
         return 'fs-wait'
@@ -117,9 +136,27 @@ export default {
 
     var fmtDt = function(d) { return d ? new Date(d).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—' }
     // Permissions selon type de document courant
-    var canEmit = computed(function(){ return doc.value && canPerform('emettre_'+doc.value.type_document) })
-    var canVerify = computed(function(){ return doc.value && canPerform('verifier_'+doc.value.type_document) })
-    var canApprove = computed(function(){ return doc.value && canPerform('approuver_'+doc.value.type_document) })
+    var canEmit = computed(function(){
+      if (!doc.value) return false
+      var t = doc.value.type_document
+      if (t.startsWith('maj_')) return canPerform('emettre_maj_doc')
+      if (t.startsWith('cloture_sap_')) return canPerform('emettre_cloture_sap')
+      return canPerform('emettre_' + t)
+    })
+    var canVerify = computed(function(){
+      if (!doc.value) return false
+      var t = doc.value.type_document
+      if (t.startsWith('maj_')) return canPerform('verifier_maj_doc')
+      if (t.startsWith('cloture_sap_')) return canPerform('valider_cloture_sap')
+      return canPerform('verifier_' + t)
+    })
+    var canApprove = computed(function(){
+      if (!doc.value) return false
+      var t = doc.value.type_document
+      if (t.startsWith('maj_')) return canPerform('approuver_maj_doc')
+      if (t.startsWith('cloture_sap_')) return canPerform('demander_cloture_sap')
+      return canPerform('approuver_' + t)
+    })
     var canRetourner = computed(function(){ return canPerform('retourner_document') })
     var canRectifier = computed(function(){ return canPerform('rectifier_document') })
     var dotClass = function(a) { return a === 'retour' ? 'dot-ret' : a === 'approbation' ? 'dot-ok' : 'dot-prog' }
@@ -142,13 +179,19 @@ export default {
       var now = new Date().toISOString()
       var docId = doc.value.id
       var lotId = parseInt(route.params.lotId)
+      var t = doc.value.type_document
+      var clot = t.startsWith('cloture_sap_')
 
       if (action === 'emettre') {
+        var toSvc = clot ? 'planification' : 'aq'
         await supabase.from('liberation_documents').update({ statut: 'emis', emitted_at: now, emitted_by: userId.value, updated_at: now }).eq('id', docId)
-        await supabase.from('document_movements').insert({ document_id: docId, action: 'emission', from_service: doc.value.service_emetteur, to_service: 'aq', performed_by: userId.value, performed_at: now })
+        await supabase.from('document_movements').insert({ document_id: docId, action: 'emission', from_service: doc.value.service_emetteur, to_service: toSvc, performed_by: userId.value, performed_at: now })
       } else if (action === 'verifier_aq') {
         await supabase.from('liberation_documents').update({ statut: 'approuve_aq', updated_at: now }).eq('id', docId)
         await supabase.from('document_movements').insert({ document_id: docId, action: 'approbation', from_service: 'aq', to_service: 'dt', performed_by: userId.value, performed_at: now })
+      } else if (action === 'valider_planif') {
+        await supabase.from('liberation_documents').update({ statut: 'valide_planif', updated_at: now }).eq('id', docId)
+        await supabase.from('document_movements').insert({ document_id: docId, action: 'validation', from_service: 'planification', to_service: doc.value.service_emetteur, performed_by: userId.value, performed_at: now })
       } else if (action === 'rectifier') {
         await supabase.from('liberation_documents').update({ statut: 'verification_aq', updated_at: now }).eq('id', docId)
         await supabase.from('document_movements').insert({ document_id: docId, action: 'rectification', from_service: doc.value.service_emetteur, to_service: 'aq', performed_by: userId.value, performed_at: now })
@@ -156,28 +199,35 @@ export default {
         await supabase.from('liberation_documents').update({ statut: 'approuve_dt', approved_at: now, updated_at: now }).eq('id', docId)
         await supabase.from('document_movements').insert({ document_id: docId, action: 'approbation', from_service: 'dt', performed_by: userId.value, performed_at: now })
         var fieldMap = { 'if': 'if_approved', ic: 'ic_approved', da_pc: 'da_pc_approved', da_micro: 'da_micro_approved' }
-        var field = fieldMap[doc.value.type_document]
+        var field = fieldMap[t]
         if (field) { await supabase.from('liberation_dossiers').update({ [field]: true, updated_at: now }).eq('lot_id', lotId) }
+      } else if (action === 'demander_cloture') {
+        await supabase.from('liberation_documents').update({ statut: 'cloture_demandee', updated_at: now }).eq('id', docId)
+        await supabase.from('document_movements').insert({ document_id: docId, action: 'cloture', from_service: doc.value.service_emetteur, performed_by: userId.value, performed_at: now })
       }
 
-      await supabase.from('lot_events').insert({ lot_id: lotId, event_type: 'document_' + action, description: doc.value.type_document.toUpperCase() + ' — ' + action, triggered_by: userId.value, created_at: now })
+      await supabase.from('lot_events').insert({ lot_id: lotId, event_type: 'document_' + action, description: t.toUpperCase() + ' — ' + action, triggered_by: userId.value, created_at: now })
 
       // Notifications
       var lotRes = await supabase.from('lots').select('numero_lot').eq('id', lotId).single()
       var lotNum = lotRes.data ? lotRes.data.numero_lot : ''
-      var typeLabel = doc.value.type_document.toUpperCase().replace('_', ' ')
+      var typeLabel = typeLabels[t] || t.toUpperCase().replace(/_/g, ' ')
+      var svc = doc.value.service_emetteur
       if (action === 'emettre') {
-        await createNotification('aq', lotId, doc.value.id, 'Lot ' + lotNum + ' — ' + typeLabel + ' émis, en attente de vérification', 'document_transmis')
+        var notifSvc = clot ? 'planification' : 'aq'
+        await createNotification(notifSvc, lotId, doc.value.id, 'Lot ' + lotNum + ' — ' + typeLabel + ' émis, en attente', 'document_transmis')
       } else if (action === 'verifier_aq') {
-        await createNotification('dt', lotId, doc.value.id, 'Lot ' + lotNum + ' — ' + typeLabel + ' vérifié AQ, en attente d\'approbation DT', 'document_transmis')
+        await createNotification('dt', lotId, doc.value.id, 'Lot ' + lotNum + ' — ' + typeLabel + ' vérifié AQ, en attente approbation DT', 'document_transmis')
+      } else if (action === 'valider_planif') {
+        if (svc) await createNotification(svc, lotId, doc.value.id, 'Lot ' + lotNum + ' — ' + typeLabel + ' validé Planif., demande clôture possible', 'document_transmis')
       } else if (action === 'rectifier') {
         await createNotification('aq', lotId, doc.value.id, 'Lot ' + lotNum + ' — ' + typeLabel + ' rectifié, en attente de vérification', 'document_transmis')
       } else if (action === 'approuver_dt') {
         await createNotification('aq', lotId, doc.value.id, 'Lot ' + lotNum + ' — ' + typeLabel + ' approuvé par le DT', 'document_approuve')
         var svcMap = { fabrication: 'fabrication', conditionnement: 'conditionnement', lcq: 'lcq' }
-        if (svcMap[doc.value.service_emetteur]) {
-          await createNotification(svcMap[doc.value.service_emetteur], lotId, doc.value.id, 'Lot ' + lotNum + ' — ' + typeLabel + ' approuvé par le DT', 'document_approuve')
-        }
+        if (svcMap[svc]) { await createNotification(svcMap[svc], lotId, doc.value.id, 'Lot ' + lotNum + ' — ' + typeLabel + ' approuvé par le DT', 'document_approuve') }
+      } else if (action === 'demander_cloture') {
+        await createNotification('planification', lotId, doc.value.id, 'Lot ' + lotNum + ' — ' + typeLabel + ' : clôture demandée', 'document_approuve')
       }
 
       loadDoc()
@@ -233,7 +283,7 @@ export default {
       loadDoc()
     })
 
-    return { doc, movements, showRetour, motif, retourDest, typeLabels, actionLabelsMap, statusLabel, spClass, flowClass, fmtDt, dotClass, prepareRetour, doAct, doRetour, doSetApplicable, canEmit, canVerify, canApprove, canRetourner, canRectifier }
+    return { doc, movements, showRetour, motif, retourDest, typeLabels, actionLabelsMap, statusLabel, spClass, flowClass, fmtDt, dotClass, prepareRetour, doAct, doRetour, doSetApplicable, canEmit, canVerify, canApprove, canRetourner, canRectifier, isClotSap, isMajDoc }
   }
 }
 </script>
