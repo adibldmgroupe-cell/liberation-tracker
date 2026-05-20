@@ -135,6 +135,7 @@
     </div>
 
     <!-- MàJ Documents -->
+    <div v-if="docErrMsg" class="doc-err">{{docErrMsg}}</div>
     <div class="section"><div class="sh"><span>Mises à jour documentaires</span></div>
       <div class="action-btns">
         <button v-if="canPerform('emettre_maj_doc')" class="btn-action btn-teal" @click="doDeclareMajDoc('maj_if')">MàJ IF</button>
@@ -294,8 +295,17 @@ export default {
     var doDeclareDeviation = async function(){await declareDeviation(lot.value.id,devObs.value,userId.value);devObs.value='';showDevForm.value=false;loadLot()}
     var doCloseDeviation = async function(id){await closeDeviation(id,lot.value.id,userId.value);loadLot()}
     var doDeclareRvp = async function(type){await declareRVP(lot.value.id,type,userId.value);loadLot()}
-    var doDeclareMajDoc = async function(type){await declareMajDoc(lot.value.id,type,userId.value);loadLot()}
-    var doDeclareClotureSap = async function(type){await declareClotureSap(lot.value.id,type,userId.value);loadLot()}
+    var docErrMsg = ref('')
+    var doDeclareMajDoc = async function(type){
+      docErrMsg.value=''
+      try{await declareMajDoc(lot.value.id,type,userId.value);loadLot()}
+      catch(e){docErrMsg.value='Erreur : '+e.message;console.error('declareMajDoc',e)}
+    }
+    var doDeclareClotureSap = async function(type){
+      docErrMsg.value=''
+      try{await declareClotureSap(lot.value.id,type,userId.value);loadLot()}
+      catch(e){docErrMsg.value='Erreur : '+e.message;console.error('declareClotureSap',e)}
+    }
     var majDocLabel = function(d){var map={maj_if:'MàJ IF',maj_ic:'MàJ IC',maj_nmcl_of:'MàJ Nmcl OF',maj_nmcl_oc:'MàJ Nmcl OC'};return map[d.type_document]||d.type_document}
     var clotDocLabel = function(d){var map={cloture_sap_of:'Clôture SAP OF',cloture_sap_oc:'Clôture SAP OC'};return map[d.type_document]||d.type_document}
     var clotStatLabels = {non_emis:'Non émis',emis:'Émis',valide_planif:'Validé Planif.',cloture_demandee:'Clôturé'}
@@ -389,7 +399,7 @@ export default {
       getVal,pipClass,fmtDt,ofV,ocV,docsOk,docsReq,devsOpen,leadTime,dossierComplete,canValidateStep,
       docTypeLabel,docStatLabel,indClass,dsClass,rvpServiceLabel,isDocBlocked,goBack,
       doValidate,doLiberer,doDeclareDeviation,doCloseDeviation,doDeclareRvp,doDeclareMajDoc,doDeclareClotureSap,doRequestAql,doAqlConforme,doAqlNonConforme,doRelanceAql,isLatestAql,canRelanceAql,canDemanderAql,
-      majDocs,clotDocs,majDocLabel,clotDocLabel,clotStatLabel,clotIndClass,clotDsClass,
+      majDocs,clotDocs,majDocLabel,clotDocLabel,clotStatLabel,clotIndClass,clotDsClass,docErrMsg,
       searchProd,selectProd,doModify,confirmDelete,canPerform,
       planning,planEdit,planSaving,savePlanning,
       doSetDaMicroApplicable}
@@ -418,6 +428,7 @@ export default {
 .btn-violet{background:#5B3CC4}.btn-violet:hover{background:#4A2FA3}
 .btn-teal{background:#0D7C66}.btn-teal:hover{background:#0A6050}
 .btn-slate{background:#475569}.btn-slate:hover{background:#334155}
+.doc-err{background:#FCEBEB;color:#A32D2D;font-size:12px;padding:10px 14px;border-radius:4px;margin:8px 0;border:1px solid #f5c6c6}
 .ct{width:100%;border-collapse:collapse;font-size:13px}.ct td{padding:8px;border-bottom:1px solid #f5f5f5}
 .cs{width:30%}.ca{font-weight:500}.cv{width:14%;color:#999;font-size:12px}.cp{width:8%;text-align:center}.cdt{width:22%;text-align:right;font-family:'SF Mono',monospace;font-size:12px;color:#666}.cac{width:26%;text-align:right}
 .cu{font-size:12px;color:#999}

@@ -177,11 +177,12 @@ export async function declareRVP(lotId, rvpType, userId) {
 export async function declareMajDoc(lotId, docType, userId) {
   var now = new Date().toISOString()
   var svcMap = { maj_if: 'fabrication', maj_ic: 'conditionnement', maj_nmcl_of: 'planification', maj_nmcl_oc: 'planification' }
-  await supabase.from('liberation_documents').insert({
+  var res = await supabase.from('liberation_documents').insert({
     lot_id: lotId, type_document: docType, statut: 'non_emis',
     is_applicable: true, is_required: false,
     service_emetteur: svcMap[docType] || 'planification'
   })
+  if (res.error) throw new Error(res.error.message)
   var lotRes = await supabase.from('lots').select('numero_lot').eq('id', lotId).single()
   var lotNum = lotRes.data ? lotRes.data.numero_lot : ''
   var typeLabel = docType.replace(/_/g, ' ').toUpperCase()
@@ -197,11 +198,12 @@ export async function declareMajDoc(lotId, docType, userId) {
 export async function declareClotureSap(lotId, clotType, userId) {
   var now = new Date().toISOString()
   var svcMap = { cloture_sap_of: 'fabrication', cloture_sap_oc: 'conditionnement' }
-  await supabase.from('liberation_documents').insert({
+  var res = await supabase.from('liberation_documents').insert({
     lot_id: lotId, type_document: clotType, statut: 'non_emis',
     is_applicable: true, is_required: false,
     service_emetteur: svcMap[clotType] || 'fabrication'
   })
+  if (res.error) throw new Error(res.error.message)
   var lotRes = await supabase.from('lots').select('numero_lot').eq('id', lotId).single()
   var lotNum = lotRes.data ? lotRes.data.numero_lot : ''
   await supabase.from('lot_events').insert({
