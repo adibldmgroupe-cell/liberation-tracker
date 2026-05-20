@@ -517,6 +517,14 @@ export default {
                 if(SVC_MAP[col3])await createNotification(SVC_MAP[col3],lot.id,d.id,'Lot '+lot.numero_lot+' — '+col3.toUpperCase()+' approuvé DT','document_approuve')
               }})
             }
+            if (d.statut==='retour_emetteur' && (isAdmin||canPerform('emettre_'+col3))) {
+              actions.push({label:'Rectifier / Réémettre', fn: async function(){
+                var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+                await supabase.from('liberation_documents').update({statut:'emis',emitted_at:n,emitted_by:uid,updated_at:n}).eq('id',d.id)
+                await supabase.from('document_movements').insert({document_id:d.id,action:'rectification',from_service:SVC_MAP[col3]||'',to_service:'aq',performed_by:uid,performed_at:n})
+                await createNotification('aq',lot.id,d.id,'Lot '+lot.numero_lot+' — '+col3.toUpperCase().replace('_',' ')+' rectifié et réémis','document_transmis')
+              }})
+            }
             if ((d.statut==='emis'||d.statut==='verification_aq'||d.statut==='approuve_aq') && (isAdmin||canPerform('retourner_document'))) {
               var fromSvc = d.statut==='approuve_aq'||d.statut==='verification_aq' ? 'aq' : (SVC_MAP[col3]||'')
               actions.push({label:'Retourner', fn: async function(){
