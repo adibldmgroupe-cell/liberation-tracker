@@ -61,12 +61,11 @@
     </div>
 
     <div v-if="!filteredLots.length" class="empty">Aucun lot trouvé</div>
-    <div v-else class="table-scroll-x">
-    <div class="table-scroll-y">
+    <div v-else class="table-wrap">
       <table class="tb">
         <thead><tr>
-          <th class="th-chk th-sticky" style="left:0;z-index:3"><input type="checkbox" :checked="allVisibleChecked" @change="toggleAll" /></th>
-          <th class="th-sticky th-lot" style="left:32px;z-index:3"><div class="th-i"><span class="th-txt sortable" @click="sortBy('numero_lot')">N° Lot <span class="sort-arrow">{{sortIcon('numero_lot')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['numero_lot']}" @click="openDropdown('numero_lot',$event)">⌄</button></div></th>
+          <th class="th-chk"><input type="checkbox" :checked="allVisibleChecked" @change="toggleAll" /></th>
+          <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('numero_lot')">N° Lot <span class="sort-arrow">{{sortIcon('numero_lot')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['numero_lot']}" @click="openDropdown('numero_lot',$event)">⌄</button></div></th>
           <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('prod_desc')">Produit <span class="sort-arrow">{{sortIcon('prod_desc')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['prod_desc']}" @click="openDropdown('prod_desc',$event)">⌄</button></div></th>
           <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('statut_label')">Statut <span class="sort-arrow">{{sortIcon('statut_label')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['statut_label']}" @click="openDropdown('statut_label',$event)">⌄</button></div></th>
           <!-- Dynamic columns driven by visibleCols order -->
@@ -79,8 +78,8 @@
         </tr></thead>
         <tbody>
           <tr v-for="l in filteredLots" :key="l.id" :class="{'row-sel':isSelected(l.id)}" @click="goToLot(l.id)">
-            <td class="td-chk td-sticky" style="left:0" @click.stop><input type="checkbox" :value="l.id" v-model="selected" /></td>
-            <td class="mono bold td-sticky td-lot" style="left:32px">{{l.numero_lot}}</td>
+            <td class="td-chk" @click.stop><input type="checkbox" :value="l.id" v-model="selected" /></td>
+            <td class="mono bold">{{l.numero_lot}}</td>
             <td class="td-prod">{{l.prod_desc}}<span class="code">{{l.prod_code}}</span></td>
             <td><span class="sp" :class="l.statut_class">{{l.statut_label}}</span></td>
             <!-- Dynamic columns -->
@@ -105,7 +104,6 @@
           </tr>
         </tbody>
       </table>
-    </div>
     </div>
 
     <!-- Dropdown filtre colonne (position:fixed) -->
@@ -1267,15 +1265,8 @@ export default {
 .fbtn{display:flex;align-items:center;gap:4px;padding:5px 10px;min-height:32px;font-size:11px;border:1px solid #e8e8e8;border-radius:3px;background:#fff;cursor:pointer;color:#666;font-family:inherit;transition:.15s}
 .fbtn:hover{border-color:#ccc}.fbtn.active{border-color:#185FA5;background:#E6F1FB;color:#0C447C}
 .fdot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
-.table-scroll-x{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.table-scroll-y{overflow-y:auto;max-height:calc(100vh - 150px)}
+.table-wrap{overflow-x:auto;overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:calc(100vh - 150px)}
 .tb{width:100%;border-collapse:collapse;font-size:11px;white-space:nowrap}.tb th{font-size:9px;text-transform:uppercase;color:#999;font-weight:500;padding:5px 4px;text-align:left;border-bottom:1px solid #e8e8e8;position:sticky;top:0;background:#fff;z-index:1}
-/* Sticky lot column */
-.th-sticky,.td-sticky{position:sticky !important;z-index:2 !important;background:#fff}
-.th-sticky{z-index:4 !important}
-.th-lot,.td-lot{min-width:80px;border-right:2px solid #e8e8e8}
-.row-sel .td-sticky{background:#E6F1FB !important}
-.tb tr:hover .td-sticky{background:#fafafa !important}
 .sortable{cursor:pointer;user-select:none}.sortable:hover{color:#185FA5}.sort-arrow{font-size:10px;color:#ccc}
 .tb td{padding:6px 4px;border-bottom:1px solid #f5f5f5}.tb tr{cursor:pointer}.tb tr:hover td{background:#fafafa}
 .bold{font-weight:500}.mono{font-family:'SF Mono',monospace;font-size:10px}.dim{color:#999;font-size:10px}
@@ -1368,7 +1359,7 @@ export default {
   .fbtn{min-height:36px;padding:6px 12px;white-space:nowrap}
   .td-prod{max-width:110px}
   .tb td{padding:8px 4px}
-  .table-scroll-y{max-height:calc(100vh - 220px)}
+  .table-wrap{max-height:calc(100vh - 220px)}
   .bulk-sel{min-width:0;width:100%}
   .bulk-bar{flex-direction:column;align-items:stretch}
   .bulk-btn{width:100%;padding:10px;min-height:44px}
