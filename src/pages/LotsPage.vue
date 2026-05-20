@@ -689,9 +689,10 @@ export default {
       if (!dbField) { chargeCount.value = null; return }
       chargeLoading.value = true
       var dateStr = datePicker.value.value // 'YYYY-MM-DD'
-      var nextDay = new Date(dateStr + 'T00:00:00')
-      nextDay.setDate(nextDay.getDate() + 1)
-      var nextDayStr = nextDay.toISOString().split('T')[0]
+      // Calcul du lendemain sans conversion UTC (évite le décalage timezone)
+      var p = dateStr.split('-')
+      var nd = new Date(+p[0], +p[1]-1, +p[2]+1)
+      var nextDayStr = nd.getFullYear()+'-'+String(nd.getMonth()+1).padStart(2,'0')+'-'+String(nd.getDate()).padStart(2,'0')
       var res = await supabase.from('lot_planning')
         .select('*', {count:'exact', head:true})
         .gte(dbField, dateStr)
