@@ -176,20 +176,12 @@
             <label>Date cible</label>
             <input type="date" v-model="planEdit.date_lcq_cible" class="plan-input" @change="savePlanning('date_lcq_cible')" />
           </div>
-          <div class="plan-row">
-            <label>Date révisée</label>
-            <input type="date" v-model="planEdit.date_lcq_revisee" class="plan-input" :class="{'plan-revised':planEdit.date_lcq_revisee}" @change="savePlanning('date_lcq_revisee')" />
-          </div>
         </div>
         <div class="plan-bloc">
           <div class="plan-titre">✅ Libération AQ</div>
           <div class="plan-row">
             <label>Date cible</label>
             <input type="date" v-model="planEdit.date_aq_cible" class="plan-input" @change="savePlanning('date_aq_cible')" />
-          </div>
-          <div class="plan-row">
-            <label>Date révisée</label>
-            <input type="date" v-model="planEdit.date_aq_revisee" class="plan-input" :class="{'plan-revised':planEdit.date_aq_revisee}" @change="savePlanning('date_aq_revisee')" />
           </div>
         </div>
         <div class="plan-bloc">
