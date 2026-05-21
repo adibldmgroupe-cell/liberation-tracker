@@ -210,7 +210,7 @@ export default {
       {label:'MàJ Documents',actions:[{value:'maj_if_declarer',label:'MàJ IF — Déclarer'},{value:'maj_if_emettre',label:'MàJ IF — Émettre'},{value:'maj_if_verifier',label:'MàJ IF — Vérifier AQ'},{value:'maj_if_approuver',label:'MàJ IF — Approuver DT'},{value:'maj_ic_declarer',label:'MàJ IC — Déclarer'},{value:'maj_ic_emettre',label:'MàJ IC — Émettre'},{value:'maj_ic_verifier',label:'MàJ IC — Vérifier AQ'},{value:'maj_ic_approuver',label:'MàJ IC — Approuver DT'},{value:'maj_nmcl_of_declarer',label:'MàJ Nmcl OF — Déclarer'},{value:'maj_nmcl_of_emettre',label:'MàJ Nmcl OF — Émettre'},{value:'maj_nmcl_of_verifier',label:'MàJ Nmcl OF — Vérifier AQ'},{value:'maj_nmcl_of_approuver',label:'MàJ Nmcl OF — Approuver DT'},{value:'maj_nmcl_oc_declarer',label:'MàJ Nmcl OC — Déclarer'},{value:'maj_nmcl_oc_emettre',label:'MàJ Nmcl OC — Émettre'},{value:'maj_nmcl_oc_verifier',label:'MàJ Nmcl OC — Vérifier AQ'},{value:'maj_nmcl_oc_approuver',label:'MàJ Nmcl OC — Approuver DT'}]},
       {label:'Clôture SAP',actions:[{value:'clot_of_emettre',label:'Clôt. SAP OF — Émettre'},{value:'clot_of_valider',label:'Clôt. SAP OF — Valider (Planif.)'},{value:'clot_of_cloture',label:'Clôt. SAP OF — Dem. clôture'},{value:'clot_of_confirmer',label:'Clôt. SAP OF — Confirmer clôture'},{value:'clot_oc_emettre',label:'Clôt. SAP OC — Émettre'},{value:'clot_oc_valider',label:'Clôt. SAP OC — Valider (Planif.)'},{value:'clot_oc_cloture',label:'Clôt. SAP OC — Dem. clôture'},{value:'clot_oc_confirmer',label:'Clôt. SAP OC — Confirmer clôture'}]},
       {label:'Déviation',actions:[{value:'dev_declarer',label:'Déviation — Déclarer'},{value:'dev_cloture',label:'Déviation — Clôturer'}]},
-      {label:'Dates prévisionnelles',actions:[{value:'plan_lcq_cible',label:'Libération LCQ — Date cible'},{value:'plan_lcq',label:'Libération LCQ — Date révisée'},{value:'plan_aq_cible',label:'Libération AQ — Date cible'},{value:'plan_aq',label:'Libération AQ — Date révisée'},{value:'plan_dt1',label:'Libération DT — Date cible'},{value:'plan_dt2',label:'Libération DT — Date révisée'}]},
+      {label:'Dates prévisionnelles',actions:[{value:'plan_lcq',label:'Libération LCQ'},{value:'plan_aq',label:'Libération AQ'},{value:'plan_dt1',label:'Libération DT1'},{value:'plan_dt2',label:'Libération DT2'}]},
     ]
     var actionGroups = computed(function(){
       return actionGroupDefs.map(function(g){
@@ -396,8 +396,8 @@ export default {
         var clotOcInfo=getClotureSapInfo(docs,'cloture_sap_oc')
         var devOpen=0;for(var j=0;j<devs.length;j++){if(devs[j].statut==='ouverte'||devs[j].statut==='en_cours')devOpen++}
 
-        var planLcqRaw = planning ? (planning.date_lcq_revisee || planning.date_lcq_cible) : null
-        var planAqRaw  = planning ? (planning.date_aq_revisee  || planning.date_aq_cible)  : null
+        var planLcqRaw = planning ? planning.date_lcq_cible  : null
+        var planAqRaw  = planning ? planning.date_aq_cible   : null
         var planDt1Raw = planning ? planning.date_dt_cible   : null
         var planDt2Raw = planning ? planning.date_dt_revisee : null
 
@@ -425,9 +425,7 @@ export default {
           clot_oc_label:clotOcInfo.label,clot_oc_class:clotOcInfo.cls,clot_oc_date:clotOcInfo.date,
           dev_count:devs.length,dev_open:devOpen,dev_label:devs.length>0?(devOpen>0?'Ouverte':'Clôturée'):'—',
           plan_lcq:fmtPlan(planLcqRaw),plan_lcq_raw:planLcqRaw,
-          plan_lcq_cible_raw:planning?planning.date_lcq_cible:null,
           plan_aq:fmtPlan(planAqRaw),plan_aq_raw:planAqRaw,
-          plan_aq_cible_raw:planning?planning.date_aq_cible:null,
           plan_dt1:fmtPlan(planDt1Raw),plan_dt1_raw:planDt1Raw,
           plan_dt2:fmtPlan(planDt2Raw),plan_dt2_raw:planDt2Raw,
           of_id:of?of.id:null,oc_id:oc?oc.id:null,docs:docs,aqls_raw:aqls,
@@ -835,27 +833,25 @@ export default {
     // ── Date picker planification ──────────────────────────────────────
     var datePicker = ref(null)
     var PLAN_LABELS = {
-      plan_lcq_cible:'Lib. LCQ — Date cible', plan_lcq:'Lib. LCQ — Date révisée',
-      plan_aq_cible:'Lib. AQ — Date cible',   plan_aq:'Lib. AQ — Date révisée',
-      plan_dt1:'Lib. DT — Date cible',         plan_dt2:'Lib. DT — Date révisée'
+      plan_lcq:'Lib. LCQ',
+      plan_aq:'Lib. AQ',
+      plan_dt1:'Lib. DT1',
+      plan_dt2:'Lib. DT2'
     }
     var PLAN_DB_FIELD = {
-      plan_lcq_cible:'date_lcq_cible', plan_lcq:'date_lcq_revisee',
-      plan_aq_cible:'date_aq_cible',   plan_aq:'date_aq_revisee',
-      plan_dt1:'date_dt_cible',        plan_dt2:'date_dt_revisee'
+      plan_lcq:'date_lcq_cible',
+      plan_aq:'date_aq_cible',
+      plan_dt1:'date_dt_cible',
+      plan_dt2:'date_dt_revisee'
     }
 
     var openDatePicker = function(event, lot, col) {
-      // Pour LCQ et AQ : saisir la cible d'abord, puis la révisée si cible déjà présente
-      var effectiveCol = col
-      if (col === 'plan_lcq') effectiveCol = lot.plan_lcq_cible_raw ? 'plan_lcq' : 'plan_lcq_cible'
-      if (col === 'plan_aq')  effectiveCol = lot.plan_aq_cible_raw  ? 'plan_aq'  : 'plan_aq_cible'
-      var rawVal = lot[effectiveCol+'_raw'] || lot[col+'_raw'] || ''
+      var rawVal = lot[col+'_raw'] || ''
       if (typeof rawVal === 'string' && rawVal.length > 10) rawVal = rawVal.split('T')[0]
       var rect = event.currentTarget.getBoundingClientRect()
       var top = rect.bottom + 2, left = rect.left
       if (left + 200 > window.innerWidth) left = window.innerWidth - 210
-      datePicker.value = { lotId: lot.id, col: effectiveCol, label: PLAN_LABELS[effectiveCol]||effectiveCol, top: top, left: left, value: rawVal }
+      datePicker.value = { lotId: lot.id, col: col, label: PLAN_LABELS[col]||col, top: top, left: left, value: rawVal }
       chargeCount.value = null
       if (rawVal) loadCharge()
     }
@@ -863,28 +859,18 @@ export default {
     var chargeCount = ref(null)
     var chargeLoading = ref(false)
 
-    var CHARGE_FIELDS = {
-      plan_lcq_cible: ['date_lcq_cible','date_lcq_revisee'],
-      plan_lcq:       ['date_lcq_cible','date_lcq_revisee'],
-      plan_aq_cible:  ['date_aq_cible','date_aq_revisee'],
-      plan_aq:        ['date_aq_cible','date_aq_revisee'],
-      plan_dt1:       ['date_dt_cible','date_dt_revisee'],
-      plan_dt2:       ['date_dt_cible','date_dt_revisee']
-    }
-
-    var loadCharge = async function() {
+var loadCharge = async function() {
       if (!datePicker.value || !datePicker.value.value) { chargeCount.value = null; return }
-      var fields = CHARGE_FIELDS[datePicker.value.col]
-      if (!fields) { chargeCount.value = null; return }
+      var dbField = PLAN_DB_FIELD[datePicker.value.col]
+      if (!dbField) { chargeCount.value = null; return }
       chargeLoading.value = true
       var dateStr = datePicker.value.value // 'YYYY-MM-DD'
-      var cibleF = fields[0], reviseeF = fields[1]
-      // Comptage côté serveur : date effective = révisée si elle existe, sinon cible
-      // Indépendant des filtres/recherche actifs côté client, sans limite de 1000 lignes
+      // Comptage côté serveur sur le champ exact en cours d'édition
+      // Indépendant des filtres/recherche actifs côté client, sans limite de lignes
       var res = await supabase.from('lot_planning')
         .select('lot_id', { count: 'exact', head: true })
         .neq('lot_id', datePicker.value.lotId)
-        .or(reviseeF + '.eq.' + dateStr + ',and(' + reviseeF + '.is.null,' + cibleF + '.eq.' + dateStr + ')')
+        .eq(dbField, dateStr)
       chargeCount.value = res.count || 0
       chargeLoading.value = false
     }
@@ -969,9 +955,7 @@ export default {
       clot_of_declarer:'Clôt. OF — Déclarer',clot_of_emettre:'Clôt. OF — Dem. validation',clot_of_valider:'Clôt. OF — Valider (Planif.)',clot_of_cloture:'Clôt. OF — Dem. clôture',clot_of_confirmer:'Clôt. OF — Confirmer clôture',
       clot_oc_declarer:'Clôt. OC — Déclarer',clot_oc_emettre:'Clôt. OC — Dem. validation',clot_oc_valider:'Clôt. OC — Valider (Planif.)',clot_oc_cloture:'Clôt. OC — Dem. clôture',clot_oc_confirmer:'Clôt. OC — Confirmer clôture',
       dev_declarer:'Déviation — Déclarer',dev_cloture:'Déviation — Clôturer',
-      plan_lcq_cible:'Lib. LCQ — Date cible',plan_lcq:'Lib. LCQ — Date révisée',
-      plan_aq_cible:'Lib. AQ — Date cible',plan_aq:'Lib. AQ — Date révisée',
-      plan_dt1:'Lib. DT — Date cible',plan_dt2:'Lib. DT — Date révisée',
+      plan_lcq:'Lib. LCQ',plan_aq:'Lib. AQ',plan_dt1:'Lib. DT1',plan_dt2:'Lib. DT2',
     }
     var actionLabel = computed(function(){return actionLabels[actionType.value]||''})
     var canExecute = computed(function(){

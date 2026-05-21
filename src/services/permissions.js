@@ -75,8 +75,7 @@ export function getPermissionForBulkAction(action) {
     clot_oc_emettre:'emettre_cloture_sap_oc',
     clot_oc_valider:'valider_cloture_sap_oc', clot_oc_cloture:'demander_cloture_sap_oc', clot_oc_confirmer:'confirmer_cloture_sap_oc',
     // Planning
-    plan_lcq_cible:'modifier_planning', plan_lcq:'modifier_planning',
-    plan_aq_cible:'modifier_planning',  plan_aq:'modifier_planning',
+    plan_lcq:'modifier_planning', plan_aq:'modifier_planning',
     plan_dt1:'modifier_planning', plan_dt2:'modifier_planning',
   }
   return map[action] || null
