@@ -131,6 +131,12 @@ export default {
         ]
       },
       {
+        label: 'Dates prévisionnelles',
+        actions: [
+          { key: 'modifier_planning', label: 'Modifier les dates prévisionnelles (LCQ, AQ, DT1, DT2)' },
+        ]
+      },
+      {
         label: 'Déviations',
         actions: [
           { key: 'declarer_nc', label: 'Déclarer une non-conformité' },
