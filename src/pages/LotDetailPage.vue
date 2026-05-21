@@ -335,6 +335,17 @@ export default {
         { lot_id: lot.value.id, [field]: val, updated_at: new Date().toISOString(), updated_by: userId.value },
         { onConflict: 'lot_id' }
       )
+      var fieldToCol = {date_lcq_cible:'plan_lcq', date_aq_cible:'plan_aq', date_dt_cible:'plan_dt1', date_dt_revisee:'plan_dt2'}
+      var colKey = fieldToCol[field] || field
+      var u = await supabase.auth.getUser()
+      var userEmail = u.data.user?.email || userId.value
+      await supabase.from('lot_events').insert({
+        lot_id: lot.value.id,
+        event_type: 'planning_updated',
+        description: colKey + '|' + (val || 'supprimé') + '|' + userEmail,
+        triggered_by: userId.value,
+        created_at: new Date().toISOString()
+      })
       var planRes=(await supabase.from('lot_planning').select('*').eq('lot_id',lot.value.id).maybeSingle()).data
       planning.value=planRes; planSaving.value = false
     }

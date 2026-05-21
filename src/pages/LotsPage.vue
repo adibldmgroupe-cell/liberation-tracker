@@ -130,6 +130,16 @@
           📅 {{chargeCount}} autre{{chargeCount>1?'s':''}} lot{{chargeCount>1?'s':''}} prévu{{chargeCount>1?'s':''}} ce jour
         </span>
       </div>
+      <!-- Historique des modifications -->
+      <div class="dp-history">
+        <div class="dp-hist-title">Historique</div>
+        <div v-if="planHistLoading" class="dp-hist-loading">⟳ Chargement…</div>
+        <div v-else-if="!planHistory.length" class="dp-hist-empty">Aucune modification enregistrée</div>
+        <div v-for="h in planHistory" :key="h.at" class="dp-hist-row">
+          <span class="dp-hist-val">{{h.date}}</span>
+          <span class="dp-hist-meta">{{h.user}} — {{h.at}}</span>
+        </div>
+      </div>
       <div class="dp-actions">
         <button class="dp-ok" @click="savePlanning">✓ Valider</button>
         <button class="dp-cancel" @click="datePicker=null">✕</button>
@@ -853,11 +863,36 @@ export default {
       if (left + 200 > window.innerWidth) left = window.innerWidth - 210
       datePicker.value = { lotId: lot.id, col: col, label: PLAN_LABELS[col]||col, top: top, left: left, value: rawVal }
       chargeCount.value = null
+      planHistory.value = []
       if (rawVal) loadCharge()
+      loadPlanHistory(lot.id, col)
     }
 
     var chargeCount = ref(null)
     var chargeLoading = ref(false)
+    var planHistory = ref([])
+    var planHistLoading = ref(false)
+
+    var loadPlanHistory = async function(lotId, col) {
+      planHistLoading.value = true
+      var res = await supabase.from('lot_events')
+        .select('description, created_at')
+        .eq('lot_id', lotId)
+        .eq('event_type', 'planning_updated')
+        .ilike('description', col + '|%')
+        .order('created_at', { ascending: false })
+        .limit(8)
+      planHistory.value = (res.data || []).map(function(e) {
+        var parts = e.description.split('|')
+        var d = new Date(e.created_at)
+        return {
+          date: parts[1] || '—',
+          user: parts[2] || '—',
+          at: d.toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric'}) + ' ' + d.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})
+        }
+      })
+      planHistLoading.value = false
+    }
 
 var loadCharge = async function() {
       if (!datePicker.value || !datePicker.value.value) { chargeCount.value = null; return }
@@ -879,14 +914,26 @@ var loadCharge = async function() {
       if (!datePicker.value) return
       var u = await supabase.auth.getUser()
       var uid = u.data.user.id
-      var dbField = PLAN_DB_FIELD[datePicker.value.col]
+      var userEmail = u.data.user.email || uid
+      var col = datePicker.value.col
+      var dbField = PLAN_DB_FIELD[col]
       if (!dbField) { datePicker.value = null; return }
+      var newDate = datePicker.value.value || null
+      var lotId = datePicker.value.lotId
       await supabase.from('lot_planning').upsert(
-        { lot_id: datePicker.value.lotId, [dbField]: datePicker.value.value || null, updated_at: new Date().toISOString(), updated_by: uid },
+        { lot_id: lotId, [dbField]: newDate, updated_at: new Date().toISOString(), updated_by: uid },
         { onConflict: 'lot_id' }
       )
+      await supabase.from('lot_events').insert({
+        lot_id: lotId,
+        event_type: 'planning_updated',
+        description: col + '|' + (newDate || 'supprimé') + '|' + userEmail,
+        triggered_by: uid,
+        created_at: new Date().toISOString()
+      })
       datePicker.value = null
       chargeCount.value = null
+      planHistory.value = []
       await load()
     }
     // ──────────────────────────────────────────────────────────────────
@@ -1236,7 +1283,8 @@ var loadCharge = async function() {
       visibleCols,showColPanel,colDefs,isColVisible,toggleCol,resetCols,moveColUp,moveColDown,CC,
       inlineMenu,openInlineMenu,executeInline,closeAll,
       datePicker,dpInput,openDatePicker,savePlanning,getPlanClass,
-      chargeCount,chargeLoading,loadCharge}
+      chargeCount,chargeLoading,loadCharge,
+      planHistory,planHistLoading}
   }
 }
 </script>
@@ -1315,6 +1363,13 @@ var loadCharge = async function() {
 .charge-low{color:#185FA5;font-weight:500}
 .charge-med{color:#FFA94D;font-weight:600}
 .charge-high{color:#E24B4A;font-weight:700}
+.dp-history{margin:8px 0 2px;border-top:1px solid #f0f0f0;padding-top:7px}
+.dp-hist-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#bbb;margin-bottom:5px}
+.dp-hist-loading{font-size:11px;color:#999}
+.dp-hist-empty{font-size:11px;color:#ccc;font-style:italic}
+.dp-hist-row{margin-bottom:4px;padding:4px 6px;background:#fafafa;border-radius:3px;border:1px solid #f0f0f0}
+.dp-hist-val{display:block;font-size:12px;font-weight:600;color:#185FA5;font-family:'SF Mono',monospace}
+.dp-hist-meta{display:block;font-size:10px;color:#999;margin-top:1px}
 .dp-actions{display:flex;gap:6px;margin-top:8px}
 .dp-ok{flex:1;padding:6px;background:#185FA5;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px;font-weight:500}.dp-ok:hover{background:#0C447C}
 .dp-cancel{padding:6px 10px;background:#f5f5f5;color:#666;border:none;border-radius:3px;cursor:pointer;font-size:12px}
