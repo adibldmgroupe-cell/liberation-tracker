@@ -5,8 +5,7 @@
       <div class="sidebar-logo"><span class="logo-text">LDM</span><span class="logo-sub">Libération PF</span></div>
       <nav class="sidebar-nav">
         <router-link to="/dashboard" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">◻</span>Dashboard</router-link>
-        <router-link to="/products" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">▤</span>Produits</router-link>
-        <router-link to="/lots" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">▥</span>Lots</router-link>
+<router-link to="/lots" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">▥</span>Lots</router-link>
         <router-link to="/planifier" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">+</span>Planifier</router-link>
 <router-link to="/import" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">↑</span>Import Excel</router-link>
         <router-link to="/notifications" class="nav-item" active-class="active" @click="mobileMenuOpen=false">
