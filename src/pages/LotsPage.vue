@@ -919,10 +919,11 @@ export default {
     }
 
     var saveDevField = async function(dev) {
-      await supabase.from('deviations').update({
+      var res = await supabase.from('deviations').update({
         numero_dn: dev.editNumeroDn || null,
         description: dev.editObs || ''
       }).eq('id', dev.id)
+      if (res.error) { alert('Erreur sauvegarde : ' + res.error.message); return }
       // Mettre à jour l'objet local du popup
       dev.numero_dn = dev.editNumeroDn
       dev.description = dev.editObs
@@ -938,7 +939,8 @@ export default {
 
     var closeDevInPopup = async function(devId) {
       var u = await supabase.auth.getUser(); var uid = u.data.user.id; var n = new Date().toISOString()
-      await supabase.from('deviations').update({statut:'cloturee',closed_at:n,closed_by:uid,updated_at:n}).eq('id', devId)
+      var res = await supabase.from('deviations').update({statut:'cloturee', closed_at:n, closed_by:uid}).eq('id', devId)
+      if (res.error) { alert('Erreur clôture : ' + res.error.message); return }
       devPopup.value = null
       await load()
     }
@@ -946,7 +948,7 @@ export default {
     var confirmDevPopup = async function() {
       if (!devPopup.value) return
       var u = await supabase.auth.getUser(); var uid = u.data.user.id; var n = new Date().toISOString()
-      await supabase.from('deviations').insert({
+      var insRes = await supabase.from('deviations').insert({
         lot_id: devPopup.value.lotId, type: 'deviation', statut: 'ouverte',
         description: devPopup.value.obs || '',
         bloquante: devPopup.value.bloquante || false,
@@ -954,6 +956,7 @@ export default {
         declared_service: userService.value || null,
         declared_by: uid, declared_at: n
       })
+      if (insRes.error) { alert('Erreur déclaration : ' + insRes.error.message); return }
       await supabase.from('liberation_dossiers').update({deviations_closed:false,updated_at:n}).eq('lot_id',devPopup.value.lotId)
       await supabase.from('lot_events').insert({lot_id:devPopup.value.lotId,event_type:'deviation_declaree',description:'Déviation déclarée'+(devPopup.value.bloquante?' (BLOQUANTE)':''),triggered_by:uid,created_at:n})
       await createNotification('aq',devPopup.value.lotId,null,'Lot '+devPopup.value.lotNum+' — Déviation déclarée'+(devPopup.value.bloquante?' (BLOQUANTE)':''),'deviation_declaree')
