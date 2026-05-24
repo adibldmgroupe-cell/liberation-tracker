@@ -297,6 +297,21 @@ export default {
       {label:'Clôture SAP',actions:[{value:'clot_of_emettre',label:'Clôt. SAP OF — Émettre'},{value:'clot_of_valider',label:'Clôt. SAP OF — Valider (Planif.)'},{value:'clot_of_cloture',label:'Clôt. SAP OF — Dem. clôture'},{value:'clot_of_confirmer',label:'Clôt. SAP OF — Confirmer clôture'},{value:'clot_oc_emettre',label:'Clôt. SAP OC — Émettre'},{value:'clot_oc_valider',label:'Clôt. SAP OC — Valider (Planif.)'},{value:'clot_oc_cloture',label:'Clôt. SAP OC — Dem. clôture'},{value:'clot_oc_confirmer',label:'Clôt. SAP OC — Confirmer clôture'}]},
       {label:'Déviation',actions:[{value:'dev_declarer',label:'Déviation — Déclarer'},{value:'dev_cloture',label:'Déviation — Clôturer'}]},
       {label:'Dates prévisionnelles',actions:[{value:'plan_lcq',label:'Libération LCQ'},{value:'plan_aq',label:'Libération AQ'},{value:'plan_dt1',label:'Libération DT1'},{value:'plan_dt2',label:'Libération DT2'}]},
+      {label:'Accusés de réception',actions:[
+        {value:'ar_circuit_of',label:'AR — Circuit OF (intermédiaire)'},
+        {value:'ar_circuit_oc',label:'AR — Circuit OC (intermédiaire)'},
+        {value:'ar_doc_if',label:'AR — Document IF'},
+        {value:'ar_doc_ic',label:'AR — Document IC'},
+        {value:'ar_doc_da_pc',label:'AR — Document DA PC'},
+        {value:'ar_doc_da_micro',label:'AR — Document DA Micro'},
+        {value:'ar_doc_rvp_fab',label:'AR — RVP Fabrication'},
+        {value:'ar_doc_rvp_cond',label:'AR — RVP Conditionnement'},
+        {value:'ar_doc_rvp_lcq',label:'AR — RVP LCQ'},
+        {value:'ar_aql_fab_demande',label:'AR — Demande AQL Fabrication'},
+        {value:'ar_aql_cond_demande',label:'AR — Demande AQL Conditionnement'},
+        {value:'ar_aql_fab_resultat',label:'AR — Résultat AQL Fabrication'},
+        {value:'ar_aql_cond_resultat',label:'AR — Résultat AQL Conditionnement'},
+      ]},
     ]
     var actionGroups = computed(function(){
       return actionGroupDefs.map(function(g){
@@ -401,21 +416,23 @@ export default {
 
     var getDocInfo = function(docs,type){
       var d=null;if(docs){for(var i=0;i<docs.length;i++){if(docs[i].type_document===type){d=docs[i];break}}}
-      if(!d)return{label:'—',cls:'dc-na',date:null}
-      if(!d.is_applicable)return{label:'N/A',cls:'dc-na',date:null}
+      if(!d)return{label:'—',cls:'dc-na',date:null,pendingAr:null,docId:null}
+      if(!d.is_applicable)return{label:'N/A',cls:'dc-na',date:null,pendingAr:null,docId:d.id}
+      if(d.pending_ar_service)return{label:'⏳ '+(SVC_SHORT[d.pending_ar_service]||d.pending_ar_service),cls:'dc-prog',date:null,pendingAr:d.pending_ar_service,docId:d.id}
       var emitter=DOC_SVC_SHORT[type]||'—'
       var label=docLocation(d.statut,emitter)
       var cls='dc-wait';if(d.statut==='approuve_dt')cls='dc-ok';else if(d.statut==='retour_emetteur')cls='dc-ret';else if(d.statut!=='non_emis')cls='dc-prog'
-      var date=d.approved_at||d.emitted_at;return{label:label,cls:cls,date:date?fmt(date):null}
+      var date=d.approved_at||d.emitted_at;return{label:label,cls:cls,date:date?fmt(date):null,pendingAr:null,docId:d.id}
     }
 
     var getRvpInfo = function(docs,emetteur){
       var d=null;if(docs){for(var i=0;i<docs.length;i++){if(docs[i].type_document==='rvp'&&docs[i].service_emetteur===emetteur){d=docs[i];break}}}
-      if(!d)return{label:'—',cls:'dc-na',date:null}
+      if(!d)return{label:'—',cls:'dc-na',date:null,pendingAr:null,docId:null}
+      if(d.pending_ar_service)return{label:'⏳ '+(SVC_SHORT[d.pending_ar_service]||d.pending_ar_service),cls:'dc-prog',date:null,pendingAr:d.pending_ar_service,docId:d.id}
       var emitter=SVC_SHORT[emetteur]||emetteur
       var label=docLocation(d.statut,emitter)
       var cls='dc-wait';if(d.statut==='approuve_dt')cls='dc-ok';else if(d.statut==='retour_emetteur')cls='dc-ret';else if(d.statut!=='non_emis')cls='dc-prog'
-      var date=d.approved_at||d.emitted_at;return{label:label,cls:cls,date:date?fmt(date):null}
+      var date=d.approved_at||d.emitted_at;return{label:label,cls:cls,date:date?fmt(date):null,pendingAr:null,docId:d.id}
     }
 
     var getClotureSapInfo = function(docs,type){
@@ -434,20 +451,23 @@ export default {
     }
 
     var getAqlInfo = function(aqls,type){
-      if(!aqls||!aqls.length)return{label:'—',cls:'dc-na',date:null}
+      if(!aqls||!aqls.length)return{label:'—',cls:'dc-na',date:null,reqArPending:false,resArPending:false,aqlId:null}
       var latest=null;for(var i=0;i<aqls.length;i++){if(aqls[i].type===type){if(!latest||new Date(aqls[i].requested_at||0)>new Date(latest.requested_at||0))latest=aqls[i]}}
-      if(!latest)return{label:'—',cls:'dc-na',date:null}
-      if(latest.resultat==='conforme')return{label:'✓ Conf.',cls:'dc-ok',date:latest.inspected_at?fmt(latest.inspected_at):null}
-      if(latest.resultat==='non_conforme')return{label:'✗ N.C.',cls:'dc-ret',date:latest.inspected_at?fmt(latest.inspected_at):null}
-      return{label:'AQ',cls:'dc-prog',date:latest.requested_at?fmt(latest.requested_at):null}
+      if(!latest)return{label:'—',cls:'dc-na',date:null,reqArPending:false,resArPending:false,aqlId:null}
+      if(latest.request_ar_pending)return{label:'⏳ AQ',cls:'dc-prog',date:null,reqArPending:true,resArPending:false,aqlId:latest.id}
+      if(latest.result_ar_pending)return{label:'⏳ Résultat',cls:'dc-prog',date:null,reqArPending:false,resArPending:true,aqlId:latest.id}
+      if(latest.resultat==='conforme')return{label:'✓ Conf.',cls:'dc-ok',date:latest.inspected_at?fmt(latest.inspected_at):null,reqArPending:false,resArPending:false,aqlId:latest.id}
+      if(latest.resultat==='non_conforme')return{label:'✗ N.C.',cls:'dc-ret',date:latest.inspected_at?fmt(latest.inspected_at):null,reqArPending:false,resArPending:false,aqlId:latest.id}
+      return{label:'AQ',cls:'dc-prog',date:latest.requested_at?fmt(latest.requested_at):null,reqArPending:false,resArPending:false,aqlId:latest.id}
     }
 
     var getOfOcInfo = function(order,statutSap){
       var inStock=statutSap==='quarantaine'||statutSap==='sous_investigation'||statutSap==='accepte'||statutSap==='refuse'
-      if(inStock)return{label:'Terminé',done:true,date:null}
-      if(!order)return{label:'—',done:false,date:null}
-      if(order.statut==='termine')return{label:'Terminé',done:true,date:order.updated_at?fmt(order.updated_at):null}
-      return{label:etapeLabels[order.etape_circuit]||order.etape_circuit||'—',done:false,date:order.updated_at?fmt(order.updated_at):null}
+      if(inStock)return{label:'Terminé',done:true,date:null,pendingAr:null}
+      if(!order)return{label:'—',done:false,date:null,pendingAr:null}
+      if(order.statut==='termine')return{label:'Terminé',done:true,date:order.updated_at?fmt(order.updated_at):null,pendingAr:null}
+      if(order.pending_ar_service)return{label:'⏳ '+(SVC_SHORT[order.pending_ar_service]||order.pending_ar_service),done:false,date:null,pendingAr:order.pending_ar_service}
+      return{label:etapeLabels[order.etape_circuit]||order.etape_circuit||'—',done:false,date:order.updated_at?fmt(order.updated_at):null,pendingAr:null}
     }
 
     var getPlanClass = function(lot, type) {
@@ -463,7 +483,7 @@ export default {
     }
 
     var load = async function() {
-      var query = supabase.from('lots').select('*, products(code_article,description), orders_of(id,statut,etape_circuit,updated_at), orders_oc(id,statut,etape_circuit,updated_at), liberation_documents(id,type_document,statut,is_applicable,service_emetteur,emitted_at,approved_at,updated_at), deviations(id,statut,bloquante,numero_dn,description,declared_at,declared_service,profiles!declared_by(prenom,nom)), aql_inspections(id,type,resultat,requested_at,inspected_at), lot_planning(date_lcq_cible,date_lcq_revisee,date_aq_cible,date_aq_revisee,date_dt_cible,date_dt_revisee)', {count:'exact'})
+      var query = supabase.from('lots').select('*, products(code_article,description), orders_of(id,statut,etape_circuit,updated_at,pending_ar_service), orders_oc(id,statut,etape_circuit,updated_at,pending_ar_service), liberation_documents(id,type_document,statut,is_applicable,service_emetteur,emitted_at,approved_at,updated_at,pending_ar_service), deviations(id,statut,bloquante,numero_dn,description,declared_at,declared_service,profiles!declared_by(prenom,nom)), aql_inspections(id,type,resultat,requested_at,inspected_at,request_ar_pending,result_ar_pending), lot_planning(date_lcq_cible,date_lcq_revisee,date_aq_cible,date_aq_revisee,date_dt_cible,date_dt_revisee)', {count:'exact'})
 
       var q = route.query.q
       if(q){
@@ -521,17 +541,17 @@ export default {
           statut_label:statutInfo.label,statut_class:statutInfo.cls,statut_filter:statutInfo.filter,
           date_fmt:fmt(l.date_enregistrement),date_lib:l.date_liberation?fmt(l.date_liberation):null,
           prod_desc:l.products?l.products.description:'',prod_code:l.products?l.products.code_article:'',
-          of_label:ofInfo.label,of_done:ofInfo.done,of_date:ofInfo.date,
-          oc_label:ocInfo.label,oc_done:ocInfo.done,oc_date:ocInfo.date,
-          if_label:ifInfo.label,if_class:ifInfo.cls,if_date:ifInfo.date,
-          ic_label:icInfo.label,ic_class:icInfo.cls,ic_date:icInfo.date,
-          dapc_label:dapcInfo.label,dapc_class:dapcInfo.cls,dapc_date:dapcInfo.date,
-          damicro_label:damicroInfo.label,damicro_class:damicroInfo.cls,damicro_date:damicroInfo.date,
-          aql_fab_label:aqlFab.label,aql_fab_class:aqlFab.cls,aql_fab_date:aqlFab.date,
-          aql_cond_label:aqlCond.label,aql_cond_class:aqlCond.cls,aql_cond_date:aqlCond.date,
-          rvp_fab_label:rvpFab.label,rvp_fab_class:rvpFab.cls,rvp_fab_date:rvpFab.date,
-          rvp_cond_label:rvpCond.label,rvp_cond_class:rvpCond.cls,rvp_cond_date:rvpCond.date,
-          rvp_lcq_label:rvpLcq.label,rvp_lcq_class:rvpLcq.cls,rvp_lcq_date:rvpLcq.date,
+          of_label:ofInfo.label,of_done:ofInfo.done,of_date:ofInfo.date,of_pending_ar:ofInfo.pendingAr,
+          oc_label:ocInfo.label,oc_done:ocInfo.done,oc_date:ocInfo.date,oc_pending_ar:ocInfo.pendingAr,
+          if_label:ifInfo.label,if_class:ifInfo.cls,if_date:ifInfo.date,if_pending_ar:ifInfo.pendingAr,if_doc_id:ifInfo.docId,
+          ic_label:icInfo.label,ic_class:icInfo.cls,ic_date:icInfo.date,ic_pending_ar:icInfo.pendingAr,ic_doc_id:icInfo.docId,
+          dapc_label:dapcInfo.label,dapc_class:dapcInfo.cls,dapc_date:dapcInfo.date,dapc_pending_ar:dapcInfo.pendingAr,dapc_doc_id:dapcInfo.docId,
+          damicro_label:damicroInfo.label,damicro_class:damicroInfo.cls,damicro_date:damicroInfo.date,damicro_pending_ar:damicroInfo.pendingAr,damicro_doc_id:damicroInfo.docId,
+          aql_fab_label:aqlFab.label,aql_fab_class:aqlFab.cls,aql_fab_date:aqlFab.date,aql_fab_req_ar:aqlFab.reqArPending,aql_fab_res_ar:aqlFab.resArPending,aql_fab_id:aqlFab.aqlId,
+          aql_cond_label:aqlCond.label,aql_cond_class:aqlCond.cls,aql_cond_date:aqlCond.date,aql_cond_req_ar:aqlCond.reqArPending,aql_cond_res_ar:aqlCond.resArPending,aql_cond_id:aqlCond.aqlId,
+          rvp_fab_label:rvpFab.label,rvp_fab_class:rvpFab.cls,rvp_fab_date:rvpFab.date,rvp_fab_pending_ar:rvpFab.pendingAr,rvp_fab_doc_id:rvpFab.docId,
+          rvp_cond_label:rvpCond.label,rvp_cond_class:rvpCond.cls,rvp_cond_date:rvpCond.date,rvp_cond_pending_ar:rvpCond.pendingAr,rvp_cond_doc_id:rvpCond.docId,
+          rvp_lcq_label:rvpLcq.label,rvp_lcq_class:rvpLcq.cls,rvp_lcq_date:rvpLcq.date,rvp_lcq_pending_ar:rvpLcq.pendingAr,rvp_lcq_doc_id:rvpLcq.docId,
           maj_if_label:majIfInfo.label,maj_if_class:majIfInfo.cls,maj_if_date:majIfInfo.date,
           maj_ic_label:majIcInfo.label,maj_ic_class:majIcInfo.cls,maj_ic_date:majIcInfo.date,
           maj_nmcl_of_label:majNmclOfInfo.label,maj_nmcl_of_class:majNmclOfInfo.cls,maj_nmcl_of_date:majNmclOfInfo.date,
@@ -596,26 +616,49 @@ export default {
       if (col === 'of' || col === 'oc') {
         var etape = col === 'of' ? lot.of_etape : lot.oc_etape
         var orderId = col === 'of' ? lot.of_id : lot.oc_id
-        if (etape && orderId && (col==='of'?lot.of_statut:lot.oc_statut) !== 'termine') {
-          var permKey = getPermissionForEtape(etape, col)
-          if (isAdmin || (permKey && canPerform(permKey))) {
-            var flowIdx = FLOW.indexOf(etape)
-            var nextEtape = flowIdx < FLOW.length-1 ? FLOW[flowIdx+1] : null
-            ;(function(e, oid, col2, next) {
-              actions.push({
-                label: 'Valider — ' + (ETAPE_LABELS_LONG[e]||e),
-                fn: async function() {
-                  var u = await supabase.auth.getUser(); var uid = u.data.user.id; var n = new Date().toISOString()
-                  var tbl = col2==='of'?'orders_of':'orders_oc'
-                  var nextLabel = next?(etapeLabels[next]||next):'Terminé'
-                  await supabase.from('order_validations').insert({order_type:col2,order_id:oid,etape:e,action:'valide',validated_by:uid,validated_at:n})
-                  await supabase.from(tbl).update({statut:next?'en_circuit':'termine',etape_circuit:next||e,updated_at:n}).eq('id',oid)
-                  await supabase.from('lots').update({statut_operationnel:col2.toUpperCase()+' — '+nextLabel,updated_at:n}).eq('id',lot.id)
-                  var notifSvc = next==='stock'?'stock':next==='aq'?'aq':next==='dt'?'dt':next==='aq_dap'?'aq_dap':next==='production'?(col2==='of'?'fabrication':'conditionnement'):'planification'
-                  await createNotification(notifSvc,lot.id,null,'Lot '+lot.numero_lot+' — Circuit '+col2.toUpperCase()+' : '+(ETAPE_LABELS_LONG[e]||e)+' validé','circuit_avance')
-                }
-              })
-            })(etape, orderId, col, nextEtape)
+        var pendingArCircuit = col === 'of' ? lot.of_pending_ar : lot.oc_pending_ar
+        var orderStatut = col === 'of' ? lot.of_statut : lot.oc_statut
+        if (etape && orderId && orderStatut !== 'termine') {
+          // AR en attente : montrer le bouton AR si c'est le bon service
+          if (pendingArCircuit) {
+            if (isAdmin || (pendingArCircuit === userService.value && canPerform('accuser_reception_circuit'))) {
+              ;(function(oid, col2, arSvc) {
+                actions.push({
+                  label: '✅ Accuser réception — ' + (SVC_SHORT[arSvc]||arSvc),
+                  fn: async function() {
+                    var u = await supabase.auth.getUser(); var uid = u.data.user.id; var n = new Date().toISOString()
+                    var tbl = col2==='of'?'orders_of':'orders_oc'
+                    var res = await supabase.from(tbl).update({pending_ar_service:null,updated_at:n}).eq('id',oid)
+                    if (res.error) { alert('Erreur AR : '+res.error.message); return }
+                    await supabase.from('lot_events').insert({lot_id:lot.id,event_type:'ar_circuit',description:'Circuit '+col2.toUpperCase()+' — Accusé réception',triggered_by:uid,created_at:n})
+                  }
+                })
+              })(orderId, col, pendingArCircuit)
+            }
+          } else {
+            // Pas d'AR en attente → bouton Valider normal
+            var permKey = getPermissionForEtape(etape, col)
+            if (isAdmin || (permKey && canPerform(permKey))) {
+              var flowIdx = FLOW.indexOf(etape)
+              var nextEtape = flowIdx < FLOW.length-1 ? FLOW[flowIdx+1] : null
+              ;(function(e, oid, col2, next) {
+                actions.push({
+                  label: 'Valider — ' + (ETAPE_LABELS_LONG[e]||e),
+                  fn: async function() {
+                    var u = await supabase.auth.getUser(); var uid = u.data.user.id; var n = new Date().toISOString()
+                    var tbl = col2==='of'?'orders_of':'orders_oc'
+                    var nextLabel = next?(etapeLabels[next]||next):'Terminé'
+                    var AR_NEXT = {planification:'stock', stock:'aq', aq:'dt', dt:'aq_dap'}
+                    var arSvc = AR_NEXT[e] || null
+                    await supabase.from('order_validations').insert({order_type:col2,order_id:oid,etape:e,action:'valide',validated_by:uid,validated_at:n})
+                    await supabase.from(tbl).update({statut:next?'en_circuit':'termine',etape_circuit:next||e,pending_ar_service:arSvc,updated_at:n}).eq('id',oid)
+                    await supabase.from('lots').update({statut_operationnel:col2.toUpperCase()+' — '+nextLabel,updated_at:n}).eq('id',lot.id)
+                    var notifSvc = next==='stock'?'stock':next==='aq'?'aq':next==='dt'?'dt':next==='aq_dap'?'aq_dap':next==='production'?(col2==='of'?'fabrication':'conditionnement'):'planification'
+                    await createNotification(notifSvc,lot.id,null,'Lot '+lot.numero_lot+' — Circuit '+col2.toUpperCase()+' : '+(ETAPE_LABELS_LONG[e]||e)+' validé','circuit_avance')
+                  }
+                })
+              })(etape, orderId, col, nextEtape)
+            }
           }
         }
 
@@ -635,13 +678,25 @@ export default {
                   await createNotification('lcq',lot.id,d.id,'Lot '+lot.numero_lot+' — DA Microbiologie déclarée applicable','da_micro_applicable')
                 }})
               }
-              return // ne pas afficher les autres actions tant que non applicable
+              return
             }
-            if (!d.is_applicable) return // doc non applicable, pas d'action
+            if (!d.is_applicable) return
+            // AR en attente : montrer AR uniquement
+            if (d.pending_ar_service) {
+              if (isAdmin || (d.pending_ar_service === userService.value && canPerform('accuser_reception_document'))) {
+                actions.push({label:'✅ Accuser réception — '+(SVC_SHORT[d.pending_ar_service]||d.pending_ar_service), fn: async function(){
+                  var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+                  var res=await supabase.from('liberation_documents').update({pending_ar_service:null,updated_at:n}).eq('id',d.id)
+                  if(res.error){alert('Erreur AR : '+res.error.message);return}
+                  await supabase.from('lot_events').insert({lot_id:lot.id,event_type:'ar_document',description:col3.toUpperCase()+' — Accusé réception',triggered_by:uid,created_at:n})
+                }})
+              }
+              return // bloquer les autres actions tant que AR pas fait
+            }
             if (d.statut==='non_emis' && (isAdmin||canPerform('emettre_'+col3))) {
               actions.push({label:'Émettre '+col3.toUpperCase().replace('_',' '), fn: async function(){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
-                await supabase.from('liberation_documents').update({statut:'emis',emitted_at:n,emitted_by:uid,updated_at:n}).eq('id',d.id)
+                await supabase.from('liberation_documents').update({statut:'emis',emitted_at:n,emitted_by:uid,pending_ar_service:'aq',updated_at:n}).eq('id',d.id)
                 await supabase.from('document_movements').insert({document_id:d.id,action:'emission',from_service:SVC_MAP[col3]||'',to_service:'aq',performed_by:uid,performed_at:n})
                 await createNotification('aq',lot.id,d.id,'Lot '+lot.numero_lot+' — '+col3.toUpperCase()+' émis','document_transmis')
               }})
@@ -649,7 +704,7 @@ export default {
             if (d.statut==='emis' && (isAdmin||canPerform('verifier_'+col3))) {
               actions.push({label:'Vérifier AQ → DT', fn: async function(){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
-                await supabase.from('liberation_documents').update({statut:'approuve_aq',updated_at:n}).eq('id',d.id)
+                await supabase.from('liberation_documents').update({statut:'approuve_aq',pending_ar_service:'dt',updated_at:n}).eq('id',d.id)
                 await supabase.from('document_movements').insert({document_id:d.id,action:'approbation',from_service:'aq',to_service:'dt',performed_by:uid,performed_at:n})
                 await createNotification('dt',lot.id,d.id,'Lot '+lot.numero_lot+' — '+col3.toUpperCase()+' vérifié AQ → DT','document_transmis')
               }})
@@ -657,7 +712,7 @@ export default {
             if (d.statut==='approuve_aq' && (isAdmin||canPerform('approuver_'+col3))) {
               actions.push({label:'Approuver DT', fn: async function(){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
-                await supabase.from('liberation_documents').update({statut:'approuve_dt',approved_at:n,updated_at:n}).eq('id',d.id)
+                await supabase.from('liberation_documents').update({statut:'approuve_dt',approved_at:n,pending_ar_service:null,updated_at:n}).eq('id',d.id)
                 await supabase.from('document_movements').insert({document_id:d.id,action:'approbation',from_service:'dt',performed_by:uid,performed_at:n})
                 await createNotification('aq',lot.id,d.id,'Lot '+lot.numero_lot+' — '+col3.toUpperCase()+' approuvé DT','document_approuve')
                 if(SVC_MAP[col3])await createNotification(SVC_MAP[col3],lot.id,d.id,'Lot '+lot.numero_lot+' — '+col3.toUpperCase()+' approuvé DT','document_approuve')
@@ -666,16 +721,17 @@ export default {
             if (d.statut==='retour_emetteur' && (isAdmin||canPerform('emettre_'+col3))) {
               actions.push({label:'Rectifier / Réémettre', fn: async function(){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
-                await supabase.from('liberation_documents').update({statut:'emis',emitted_at:n,emitted_by:uid,updated_at:n}).eq('id',d.id)
+                await supabase.from('liberation_documents').update({statut:'emis',emitted_at:n,emitted_by:uid,pending_ar_service:'aq',updated_at:n}).eq('id',d.id)
                 await supabase.from('document_movements').insert({document_id:d.id,action:'rectification',from_service:SVC_MAP[col3]||'',to_service:'aq',performed_by:uid,performed_at:n})
                 await createNotification('aq',lot.id,d.id,'Lot '+lot.numero_lot+' — '+col3.toUpperCase().replace('_',' ')+' rectifié et réémis','document_transmis')
               }})
             }
             if ((d.statut==='emis'||d.statut==='verification_aq'||d.statut==='approuve_aq') && (isAdmin||canPerform('retourner_document'))) {
               var fromSvc = d.statut==='approuve_aq'||d.statut==='verification_aq' ? 'aq' : (SVC_MAP[col3]||'')
+              var retourArSvc = SVC_MAP[col3] || null
               actions.push({label:'Retourner', fn: async function(){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
-                await supabase.from('liberation_documents').update({statut:'retour_emetteur',updated_at:n}).eq('id',d.id)
+                await supabase.from('liberation_documents').update({statut:'retour_emetteur',pending_ar_service:retourArSvc,updated_at:n}).eq('id',d.id)
                 await supabase.from('document_movements').insert({document_id:d.id,action:'retour',from_service:fromSvc,to_service:SVC_MAP[col3]||'',motif_retour:'Retour direct tableau',performed_by:uid,performed_at:n})
                 if(SVC_MAP[col3])await createNotification(SVC_MAP[col3],lot.id,d.id,'Lot '+lot.numero_lot+' — '+col3.toUpperCase()+' retourné pour rectification','document_retourne')
               }})
@@ -687,17 +743,44 @@ export default {
         var aqlType2 = col==='aql_fab'?'fabrication':'conditionnement'
         var aqlPerm = col==='aql_fab'?'demander_aql_fab':'demander_aql_cond'
         var aqlLabel = col==='aql_fab'?'Fabrication':'Conditionnement'
+        var reqArFlag = col==='aql_fab'?lot.aql_fab_req_ar:lot.aql_cond_req_ar
+        var resArFlag = col==='aql_fab'?lot.aql_fab_res_ar:lot.aql_cond_res_ar
+        var aqlIdFlag = col==='aql_fab'?lot.aql_fab_id:lot.aql_cond_id
         // Trouver le dernier AQL de ce type
         var typeAqls = (lot.aqls_raw||[]).filter(function(a){return a.type===aqlType2})
         var latestAql2 = null
         for (var ka=0;ka<typeAqls.length;ka++){if(!latestAql2||new Date(typeAqls[ka].requested_at||0)>new Date(latestAql2.requested_at||0))latestAql2=typeAqls[ka]}
-        ;(function(aType, aLabel, latest) {
+        ;(function(aType, aLabel, latest, reqAr, resAr, aqlId) {
+          // AR demande AQL (AQ/LCQ accuse réception de la demande)
+          if (reqAr && aqlId) {
+            if (isAdmin || (['aq','lcq'].indexOf(userService.value)>=0 && canPerform('accuser_reception_aql_demande'))) {
+              actions.push({label:'✅ Accuser réception demande AQL '+aLabel, fn: async function(){
+                var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+                var res=await supabase.from('aql_inspections').update({request_ar_pending:false}).eq('id',aqlId)
+                if(res.error){alert('Erreur AR : '+res.error.message);return}
+                await supabase.from('lot_events').insert({lot_id:lot.id,event_type:'ar_aql_demande',description:'AQL '+aLabel+' — Accusé réception demande',triggered_by:uid,created_at:n})
+              }})
+            }
+            return // bloquer autres actions tant que AR demande pas fait
+          }
+          // AR résultat AQL (Fab/Cond accuse réception du résultat)
+          if (resAr && aqlId) {
+            if (isAdmin || (['fabrication','conditionnement'].indexOf(userService.value)>=0 && canPerform('accuser_reception_aql_resultat'))) {
+              actions.push({label:'✅ Accuser réception résultat AQL '+aLabel, fn: async function(){
+                var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+                var res=await supabase.from('aql_inspections').update({result_ar_pending:false}).eq('id',aqlId)
+                if(res.error){alert('Erreur AR : '+res.error.message);return}
+                await supabase.from('lot_events').insert({lot_id:lot.id,event_type:'ar_aql_resultat',description:'AQL '+aLabel+' — Accusé réception résultat',triggered_by:uid,created_at:n})
+              }})
+            }
+            return
+          }
           if (!latest) {
             // Aucun AQL → Demander
             if (isAdmin||canPerform(aqlPerm)) {
               actions.push({label:'Demander AQL '+aLabel, fn: async function(){
                 var u=await supabase.auth.getUser();var n=new Date().toISOString()
-                await supabase.from('aql_inspections').insert({lot_id:lot.id,type:aType,resultat:'en_attente',requested_at:n})
+                await supabase.from('aql_inspections').insert({lot_id:lot.id,type:aType,resultat:'en_attente',requested_at:n,request_ar_pending:true})
                 await createNotification('aq',lot.id,null,'Lot '+lot.numero_lot+' — AQL '+aLabel+' demandé','aql_demande')
               }})
             }
@@ -706,12 +789,12 @@ export default {
             if (isAdmin||canPerform('realiser_aql')) {
               actions.push({label:'AQL Conforme', fn: async function(){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
-                await supabase.from('aql_inspections').update({resultat:'conforme',inspected_at:n,inspected_by:uid}).eq('id',latest.id)
+                await supabase.from('aql_inspections').update({resultat:'conforme',inspected_at:n,inspected_by:uid,request_ar_pending:false,result_ar_pending:true}).eq('id',latest.id)
                 await createNotification('planification',lot.id,null,'Lot '+lot.numero_lot+' — AQL '+aLabel+' : conforme','aql_resultat')
               }})
               actions.push({label:'AQL Non conforme', fn: async function(){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
-                await supabase.from('aql_inspections').update({resultat:'non_conforme',inspected_at:n,inspected_by:uid}).eq('id',latest.id)
+                await supabase.from('aql_inspections').update({resultat:'non_conforme',inspected_at:n,inspected_by:uid,request_ar_pending:false,result_ar_pending:true}).eq('id',latest.id)
                 await createNotification('planification',lot.id,null,'Lot '+lot.numero_lot+' — AQL '+aLabel+' : non conforme','aql_resultat')
               }})
             }
@@ -720,13 +803,13 @@ export default {
             if (isAdmin||canPerform(aqlPerm)) {
               actions.push({label:'Relancer AQL '+aLabel, fn: async function(){
                 var u=await supabase.auth.getUser();var n=new Date().toISOString()
-                await supabase.from('aql_inspections').insert({lot_id:lot.id,type:aType,resultat:'en_attente',requested_at:n})
+                await supabase.from('aql_inspections').insert({lot_id:lot.id,type:aType,resultat:'en_attente',requested_at:n,request_ar_pending:true})
                 await createNotification('aq',lot.id,null,'Lot '+lot.numero_lot+' — AQL '+aLabel+' relancé','aql_demande')
               }})
             }
           }
           // Conforme → aucune action
-        })(aqlType2, aqlLabel, latestAql2)
+        })(aqlType2, aqlLabel, latestAql2, reqArFlag, resArFlag, aqlIdFlag)
 
       } else if (col==='rvp_fab'||col==='rvp_cond'||col==='rvp_lcq') {
         var rvpSvcMap2 = {rvp_fab:'fabrication',rvp_cond:'conditionnement',rvp_lcq:'lcq'}
@@ -748,10 +831,22 @@ export default {
           })(rvpEmetteur)
         } else if (rvpDoc) {
           ;(function(rd, re) {
+            // AR en attente pour RVP
+            if (rd.pending_ar_service) {
+              if (isAdmin || (rd.pending_ar_service === userService.value && canPerform('accuser_reception_document'))) {
+                actions.push({label:'✅ Accuser réception — '+(SVC_SHORT[rd.pending_ar_service]||rd.pending_ar_service), fn: async function(){
+                  var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+                  var res=await supabase.from('liberation_documents').update({pending_ar_service:null,updated_at:n}).eq('id',rd.id)
+                  if(res.error){alert('Erreur AR : '+res.error.message);return}
+                  await supabase.from('lot_events').insert({lot_id:lot.id,event_type:'ar_document',description:'RVP '+re+' — Accusé réception',triggered_by:uid,created_at:n})
+                }})
+              }
+              return
+            }
             if (rd.statut==='non_emis' && (isAdmin||canPerform('emettre_rvp'))) {
               actions.push({label:'Émettre RVP '+re, fn: async function(){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
-                await supabase.from('liberation_documents').update({statut:'emis',emitted_at:n,emitted_by:uid,updated_at:n}).eq('id',rd.id)
+                await supabase.from('liberation_documents').update({statut:'emis',emitted_at:n,emitted_by:uid,pending_ar_service:'aq',updated_at:n}).eq('id',rd.id)
                 await supabase.from('document_movements').insert({document_id:rd.id,action:'emission',from_service:re,to_service:'aq',performed_by:uid,performed_at:n})
                 await createNotification('aq',lot.id,rd.id,'Lot '+lot.numero_lot+' — RVP '+re+' émis','document_transmis')
               }})
@@ -759,7 +854,7 @@ export default {
             if (rd.statut==='emis' && (isAdmin||canPerform('verifier_rvp'))) {
               actions.push({label:'Vérifier AQ → DT', fn: async function(){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
-                await supabase.from('liberation_documents').update({statut:'approuve_aq',updated_at:n}).eq('id',rd.id)
+                await supabase.from('liberation_documents').update({statut:'approuve_aq',pending_ar_service:'dt',updated_at:n}).eq('id',rd.id)
                 await supabase.from('document_movements').insert({document_id:rd.id,action:'approbation',from_service:'aq',to_service:'dt',performed_by:uid,performed_at:n})
                 await createNotification('dt',lot.id,rd.id,'Lot '+lot.numero_lot+' — RVP '+re+' vérifié AQ → DT','document_transmis')
               }})
@@ -767,7 +862,7 @@ export default {
             if (rd.statut==='approuve_aq' && (isAdmin||canPerform('approuver_rvp'))) {
               actions.push({label:'Approuver DT', fn: async function(){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
-                await supabase.from('liberation_documents').update({statut:'approuve_dt',approved_at:n,updated_at:n}).eq('id',rd.id)
+                await supabase.from('liberation_documents').update({statut:'approuve_dt',approved_at:n,pending_ar_service:null,updated_at:n}).eq('id',rd.id)
                 await supabase.from('document_movements').insert({document_id:rd.id,action:'approbation',from_service:'dt',performed_by:uid,performed_at:n})
                 await createNotification('aq',lot.id,rd.id,'Lot '+lot.numero_lot+' — RVP '+re+' approuvé DT','document_approuve')
                 await createNotification(re,lot.id,rd.id,'Lot '+lot.numero_lot+' — RVP '+re+' approuvé DT','document_approuve')
@@ -776,7 +871,7 @@ export default {
             if (rd.statut==='retour_emetteur' && (isAdmin||canPerform('emettre_rvp'))) {
               actions.push({label:'Rectifier / Réémettre RVP '+re, fn: async function(){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
-                await supabase.from('liberation_documents').update({statut:'emis',emitted_at:n,emitted_by:uid,updated_at:n}).eq('id',rd.id)
+                await supabase.from('liberation_documents').update({statut:'emis',emitted_at:n,emitted_by:uid,pending_ar_service:'aq',updated_at:n}).eq('id',rd.id)
                 await supabase.from('document_movements').insert({document_id:rd.id,action:'rectification',from_service:re,to_service:'aq',performed_by:uid,performed_at:n})
                 await createNotification('aq',lot.id,rd.id,'Lot '+lot.numero_lot+' — RVP '+re+' rectifié et réémis','document_transmis')
               }})
@@ -785,7 +880,7 @@ export default {
               var rvpFromSvc = rd.statut==='approuve_aq'||rd.statut==='verification_aq' ? 'aq' : re
               actions.push({label:'Retourner RVP', fn: async function(){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
-                await supabase.from('liberation_documents').update({statut:'retour_emetteur',updated_at:n}).eq('id',rd.id)
+                await supabase.from('liberation_documents').update({statut:'retour_emetteur',pending_ar_service:re,updated_at:n}).eq('id',rd.id)
                 await supabase.from('document_movements').insert({document_id:rd.id,action:'retour',from_service:rvpFromSvc,to_service:re,motif_retour:'Retour direct tableau',performed_by:uid,performed_at:n})
                 await createNotification(re,lot.id,rd.id,'Lot '+lot.numero_lot+' — RVP '+re+' retourné pour rectification','document_retourne')
               }})
@@ -1238,6 +1333,11 @@ var loadCharge = async function() {
       clot_oc_declarer:'Clôt. OC — Déclarer',clot_oc_emettre:'Clôt. OC — Dem. validation',clot_oc_valider:'Clôt. OC — Valider (Planif.)',clot_oc_cloture:'Clôt. OC — Dem. clôture',clot_oc_confirmer:'Clôt. OC — Confirmer clôture',
       dev_declarer:'Déviation — Déclarer',dev_cloture:'Déviation — Clôturer',
       plan_lcq:'Lib. LCQ',plan_aq:'Lib. AQ',plan_dt1:'Lib. DT1',plan_dt2:'Lib. DT2',
+      ar_circuit_of:'AR — Circuit OF',ar_circuit_oc:'AR — Circuit OC',
+      ar_doc_if:'AR — IF',ar_doc_ic:'AR — IC',ar_doc_da_pc:'AR — DA PC',ar_doc_da_micro:'AR — DA Micro',
+      ar_doc_rvp_fab:'AR — RVP Fab',ar_doc_rvp_cond:'AR — RVP Cond',ar_doc_rvp_lcq:'AR — RVP LCQ',
+      ar_aql_fab_demande:'AR — Dem. AQL Fab',ar_aql_cond_demande:'AR — Dem. AQL Cond',
+      ar_aql_fab_resultat:'AR — Rés. AQL Fab',ar_aql_cond_resultat:'AR — Rés. AQL Cond',
     }
     var actionLabel = computed(function(){return actionLabels[actionType.value]||''})
     var canExecute = computed(function(){
@@ -1281,8 +1381,10 @@ var loadCharge = async function() {
             if(!orderId){result.errors.push(lot.numero_lot+': pas d\'ordre '+orderType.toUpperCase());result.fail++;continue}
             var idx2=flow.indexOf(etape),nextEtape=idx2<flow.length-1?flow[idx2+1]:null
             var tbl=orderType==='of'?'orders_of':'orders_oc'
+            var AR_NEXT_BULK={planification:'stock',stock:'aq',aq:'dt',dt:'aq_dap'}
+            var bulkArSvc=AR_NEXT_BULK[etape]||null
             await supabase.from('order_validations').insert({order_type:orderType,order_id:orderId,etape:etape,action:'valide',validated_by:userId,validated_at:now})
-            await supabase.from(tbl).update({statut:nextEtape?'en_circuit':'termine',etape_circuit:nextEtape||etape,updated_at:now}).eq('id',orderId)
+            await supabase.from(tbl).update({statut:nextEtape?'en_circuit':'termine',etape_circuit:nextEtape||etape,pending_ar_service:bulkArSvc,updated_at:now}).eq('id',orderId)
             var nextLabel=nextEtape?(etapeLabels[nextEtape]||nextEtape):'Terminé'
             await supabase.from('lots').update({statut_operationnel:orderType.toUpperCase()+' — '+nextLabel,updated_at:now}).eq('id',lotId)
             await supabase.from('lot_events').insert({lot_id:lotId,event_type:'validation_'+orderType,description:'Circuit '+orderType.toUpperCase()+' — '+etape+' validé (masse)',triggered_by:userId,created_at:now})
@@ -1301,30 +1403,30 @@ var loadCharge = async function() {
             if(isRetourAQ)docType=docAction.replace('_retour_aq','')
             var doc2=null;if(lot.docs){for(var j=0;j<lot.docs.length;j++){if(lot.docs[j].type_document===docType){doc2=lot.docs[j];break}}}
             if(!doc2){result.errors.push(lot.numero_lot+': document '+docType+' non trouvé');result.fail++;continue}
+            var bulkSvcMap={'if':'fabrication',ic:'conditionnement',da_pc:'lcq',da_micro:'lcq'}
             if(isApprouver){
-              await supabase.from('liberation_documents').update({statut:'approuve_dt',approved_at:now,updated_at:now}).eq('id',doc2.id)
+              await supabase.from('liberation_documents').update({statut:'approuve_dt',approved_at:now,pending_ar_service:null,updated_at:now}).eq('id',doc2.id)
               var fldMap={'if':'if_approved',ic:'ic_approved',da_pc:'da_pc_approved',da_micro:'da_micro_approved'}
               var fld=fldMap[docType];if(fld)await supabase.from('liberation_dossiers').update({[fld]:true,updated_at:now}).eq('lot_id',lotId)
               await supabase.from('document_movements').insert({document_id:doc2.id,action:'approbation',from_service:'dt',performed_by:userId,performed_at:now})
             } else if(isVerifier){
-              await supabase.from('liberation_documents').update({statut:'approuve_aq',updated_at:now}).eq('id',doc2.id)
+              await supabase.from('liberation_documents').update({statut:'approuve_aq',pending_ar_service:'dt',updated_at:now}).eq('id',doc2.id)
               await supabase.from('document_movements').insert({document_id:doc2.id,action:'approbation',from_service:'aq',to_service:'dt',performed_by:userId,performed_at:now})
             } else if(isRetourEmetteur){
-              var svcMap2={'if':'fabrication',ic:'conditionnement',da_pc:'lcq',da_micro:'lcq'}
-              await supabase.from('liberation_documents').update({statut:'retour_emetteur',updated_at:now}).eq('id',doc2.id)
-              await supabase.from('document_movements').insert({document_id:doc2.id,action:'retour',from_service:'aq',to_service:svcMap2[docType]||'',motif_retour:'Retour en masse',performed_by:userId,performed_at:now})
+              var retSvc=bulkSvcMap[docType]||''
+              await supabase.from('liberation_documents').update({statut:'retour_emetteur',pending_ar_service:retSvc||null,updated_at:now}).eq('id',doc2.id)
+              await supabase.from('document_movements').insert({document_id:doc2.id,action:'retour',from_service:'aq',to_service:retSvc,motif_retour:'Retour en masse',performed_by:userId,performed_at:now})
             } else if(isRetourAQ){
-              await supabase.from('liberation_documents').update({statut:'verification_aq',updated_at:now}).eq('id',doc2.id)
+              await supabase.from('liberation_documents').update({statut:'verification_aq',pending_ar_service:'aq',updated_at:now}).eq('id',doc2.id)
               await supabase.from('document_movements').insert({document_id:doc2.id,action:'retour',from_service:'dt',to_service:'aq',motif_retour:'Retour DT en masse',performed_by:userId,performed_at:now})
             } else {
               if(docType==='da_micro'){
-                await supabase.from('liberation_documents').update({statut:'emis',emitted_at:now,emitted_by:userId,is_applicable:true,is_required:true,updated_at:now}).eq('id',doc2.id)
+                await supabase.from('liberation_documents').update({statut:'emis',emitted_at:now,emitted_by:userId,is_applicable:true,is_required:true,pending_ar_service:'aq',updated_at:now}).eq('id',doc2.id)
                 await supabase.from('liberation_dossiers').update({da_micro_applicable:true,updated_at:now}).eq('lot_id',lotId)
               } else {
-                await supabase.from('liberation_documents').update({statut:'emis',emitted_at:now,emitted_by:userId,updated_at:now}).eq('id',doc2.id)
+                await supabase.from('liberation_documents').update({statut:'emis',emitted_at:now,emitted_by:userId,pending_ar_service:'aq',updated_at:now}).eq('id',doc2.id)
               }
-              var svcMap3={'if':'fabrication',ic:'conditionnement',da_pc:'lcq',da_micro:'lcq'}
-              await supabase.from('document_movements').insert({document_id:doc2.id,action:'emission',from_service:svcMap3[docType]||'',to_service:'aq',performed_by:userId,performed_at:now})
+              await supabase.from('document_movements').insert({document_id:doc2.id,action:'emission',from_service:bulkSvcMap[docType]||'',to_service:'aq',performed_by:userId,performed_at:now})
             }
             await supabase.from('lot_events').insert({lot_id:lotId,event_type:'document_masse',description:docType.toUpperCase()+' — '+docAction+' (masse)',triggered_by:userId,created_at:now})
             var typeLabel=docType.toUpperCase().replace('_',' ')
@@ -1340,7 +1442,7 @@ var loadCharge = async function() {
             var aqlTypeVal=aqlSvc==='fab'?'fabrication':'conditionnement'
             var aqlSvcLabel=aqlSvc==='fab'?'Fabrication':'Conditionnement'
             if(aqlOp==='demander'||aqlOp==='relancer'){
-              await supabase.from('aql_inspections').insert({lot_id:lotId,type:aqlTypeVal,resultat:'en_attente',requested_at:now})
+              await supabase.from('aql_inspections').insert({lot_id:lotId,type:aqlTypeVal,resultat:'en_attente',requested_at:now,request_ar_pending:true})
               await supabase.from('lot_events').insert({lot_id:lotId,event_type:'aql_demande',description:'AQL '+aqlSvcLabel+' — '+(aqlOp==='relancer'?'relancé':'demandé')+' (masse)',triggered_by:userId,created_at:now})
               await createNotification('aq',lotId,null,'Lot '+lot.numero_lot+' — AQL '+aqlSvcLabel+(aqlOp==='relancer'?' relancé':' demandé'),'aql_demande')
               result.ok++
@@ -1348,7 +1450,7 @@ var loadCharge = async function() {
               var aqlRes=await supabase.from('aql_inspections').select('id').eq('lot_id',lotId).eq('type',aqlTypeVal).or('resultat.is.null,resultat.eq.en_attente').order('requested_at',{ascending:false}).limit(1)
               var latestAql=aqlRes.data&&aqlRes.data[0]
               if(!latestAql){result.errors.push(lot.numero_lot+': pas d\'AQL '+aqlSvcLabel+' en attente');result.fail++;continue}
-              await supabase.from('aql_inspections').update({resultat:aqlOp,inspected_at:now,inspected_by:userId}).eq('id',latestAql.id)
+              await supabase.from('aql_inspections').update({resultat:aqlOp,inspected_at:now,inspected_by:userId,request_ar_pending:false,result_ar_pending:true}).eq('id',latestAql.id)
               await supabase.from('lot_events').insert({lot_id:lotId,event_type:'aql_resultat',description:'AQL '+aqlSvcLabel+' — '+aqlOp.replace('_',' ')+' (masse)',triggered_by:userId,created_at:now})
               await createNotification('planification',lotId,null,'Lot '+lot.numero_lot+' — AQL '+aqlSvcLabel+' : '+aqlOp.replace('_',' '),'aql_resultat')
               result.ok++
@@ -1362,24 +1464,24 @@ var loadCharge = async function() {
             if(lot.docs){for(var jj2=0;jj2<lot.docs.length;jj2++){if(lot.docs[jj2].type_document==='rvp'&&lot.docs[jj2].service_emetteur===rvpEmetteur2){rvpDoc2=lot.docs[jj2];break}}}
             if(!rvpDoc2){result.errors.push(lot.numero_lot+': RVP '+rvpEmetteur2+' non trouvé');result.fail++;continue}
             if(rvpOp==='emettre'){
-              await supabase.from('liberation_documents').update({statut:'emis',emitted_at:now,emitted_by:userId,updated_at:now}).eq('id',rvpDoc2.id)
+              await supabase.from('liberation_documents').update({statut:'emis',emitted_at:now,emitted_by:userId,pending_ar_service:'aq',updated_at:now}).eq('id',rvpDoc2.id)
               await supabase.from('document_movements').insert({document_id:rvpDoc2.id,action:'emission',from_service:rvpEmetteur2,to_service:'aq',performed_by:userId,performed_at:now})
               await createNotification('aq',lotId,rvpDoc2.id,'Lot '+lot.numero_lot+' — RVP '+rvpEmetteur2+' émis','document_transmis')
             } else if(rvpOp==='verifier'){
-              await supabase.from('liberation_documents').update({statut:'approuve_aq',updated_at:now}).eq('id',rvpDoc2.id)
+              await supabase.from('liberation_documents').update({statut:'approuve_aq',pending_ar_service:'dt',updated_at:now}).eq('id',rvpDoc2.id)
               await supabase.from('document_movements').insert({document_id:rvpDoc2.id,action:'approbation',from_service:'aq',to_service:'dt',performed_by:userId,performed_at:now})
               await createNotification('dt',lotId,rvpDoc2.id,'Lot '+lot.numero_lot+' — RVP '+rvpEmetteur2+' vérifié','document_transmis')
             } else if(rvpOp==='approuver'){
-              await supabase.from('liberation_documents').update({statut:'approuve_dt',approved_at:now,updated_at:now}).eq('id',rvpDoc2.id)
+              await supabase.from('liberation_documents').update({statut:'approuve_dt',approved_at:now,pending_ar_service:null,updated_at:now}).eq('id',rvpDoc2.id)
               await supabase.from('document_movements').insert({document_id:rvpDoc2.id,action:'approbation',from_service:'dt',performed_by:userId,performed_at:now})
               await createNotification('aq',lotId,rvpDoc2.id,'Lot '+lot.numero_lot+' — RVP '+rvpEmetteur2+' approuvé DT','document_approuve')
               await createNotification(rvpEmetteur2,lotId,rvpDoc2.id,'Lot '+lot.numero_lot+' — RVP '+rvpEmetteur2+' approuvé DT','document_approuve')
             } else if(rvpOp==='retour_emetteur'){
-              await supabase.from('liberation_documents').update({statut:'retour_emetteur',updated_at:now}).eq('id',rvpDoc2.id)
+              await supabase.from('liberation_documents').update({statut:'retour_emetteur',pending_ar_service:rvpEmetteur2||null,updated_at:now}).eq('id',rvpDoc2.id)
               await supabase.from('document_movements').insert({document_id:rvpDoc2.id,action:'retour',from_service:'aq',to_service:rvpEmetteur2,motif_retour:'Retour en masse',performed_by:userId,performed_at:now})
               await createNotification(rvpEmetteur2,lotId,rvpDoc2.id,'Lot '+lot.numero_lot+' — RVP '+rvpEmetteur2+' retourné','document_retourne')
             } else if(rvpOp==='retour_aq'){
-              await supabase.from('liberation_documents').update({statut:'verification_aq',updated_at:now}).eq('id',rvpDoc2.id)
+              await supabase.from('liberation_documents').update({statut:'verification_aq',pending_ar_service:'aq',updated_at:now}).eq('id',rvpDoc2.id)
               await supabase.from('document_movements').insert({document_id:rvpDoc2.id,action:'retour',from_service:'dt',to_service:'aq',motif_retour:'Retour DT en masse',performed_by:userId,performed_at:now})
               await createNotification('aq',lotId,rvpDoc2.id,'Lot '+lot.numero_lot+' — RVP '+rvpEmetteur2+' retourné par DT','document_retourne')
             } else {result.errors.push(lot.numero_lot+': action RVP inconnue');result.fail++;continue}
@@ -1477,6 +1579,54 @@ var loadCharge = async function() {
                 result.ok++
               } else {result.errors.push(lot.numero_lot+': action Clôture inconnue');result.fail++}
             }
+
+          } else if (action.startsWith('ar_')) {
+            // Accusés de réception en masse
+            if(action==='ar_circuit_of'||action==='ar_circuit_oc'){
+              var arOType=action==='ar_circuit_of'?'of':'oc'
+              var arOId=arOType==='of'?lot.of_id:lot.oc_id
+              var arTbl=arOType==='of'?'orders_of':'orders_oc'
+              if(!arOId){result.errors.push(lot.numero_lot+': pas d\'ordre '+arOType.toUpperCase());result.fail++;continue}
+              var arORes=await supabase.from(arTbl).update({pending_ar_service:null,updated_at:now}).eq('id',arOId)
+              if(arORes.error){result.errors.push(lot.numero_lot+': '+arORes.error.message);result.fail++;continue}
+              await supabase.from('lot_events').insert({lot_id:lotId,event_type:'ar_circuit',description:'AR circuit '+arOType.toUpperCase()+' (masse)',triggered_by:userId,created_at:now})
+              result.ok++
+            } else if(action.startsWith('ar_doc_')){
+              var arDocTypeMap={ar_doc_if:'if',ar_doc_ic:'ic',ar_doc_da_pc:'da_pc',ar_doc_da_micro:'da_micro',ar_doc_rvp_fab:'rvp',ar_doc_rvp_cond:'rvp',ar_doc_rvp_lcq:'rvp'}
+              var arDocType=arDocTypeMap[action]||null
+              if(!arDocType){result.errors.push(lot.numero_lot+': type doc AR inconnu');result.fail++;continue}
+              var arDoc=null
+              if(action==='ar_doc_rvp_fab'||action==='ar_doc_rvp_cond'||action==='ar_doc_rvp_lcq'){
+                var arRvpSvcMap={ar_doc_rvp_fab:'fabrication',ar_doc_rvp_cond:'conditionnement',ar_doc_rvp_lcq:'lcq'}
+                var arRvpSvc=arRvpSvcMap[action]
+                if(lot.docs){for(var arj=0;arj<lot.docs.length;arj++){if(lot.docs[arj].type_document==='rvp'&&lot.docs[arj].service_emetteur===arRvpSvc){arDoc=lot.docs[arj];break}}}
+              } else {
+                if(lot.docs){for(var arj2=0;arj2<lot.docs.length;arj2++){if(lot.docs[arj2].type_document===arDocType){arDoc=lot.docs[arj2];break}}}
+              }
+              if(!arDoc){result.errors.push(lot.numero_lot+': document '+arDocType+' non trouvé');result.fail++;continue}
+              var arDocRes=await supabase.from('liberation_documents').update({pending_ar_service:null,updated_at:now}).eq('id',arDoc.id)
+              if(arDocRes.error){result.errors.push(lot.numero_lot+': '+arDocRes.error.message);result.fail++;continue}
+              await supabase.from('lot_events').insert({lot_id:lotId,event_type:'ar_document',description:'AR '+arDocType.toUpperCase()+' (masse)',triggered_by:userId,created_at:now})
+              result.ok++
+            } else if(action==='ar_aql_fab_demande'||action==='ar_aql_cond_demande'){
+              var arAqlType=action==='ar_aql_fab_demande'?'fabrication':'conditionnement'
+              var arAqlR=await supabase.from('aql_inspections').select('id').eq('lot_id',lotId).eq('type',arAqlType).eq('request_ar_pending',true).order('requested_at',{ascending:false}).limit(1)
+              var arAqlRow=arAqlR.data&&arAqlR.data[0]
+              if(!arAqlRow){result.errors.push(lot.numero_lot+': pas de demande AQL en attente AR');result.fail++;continue}
+              var arAqlRes=await supabase.from('aql_inspections').update({request_ar_pending:false,updated_at:now}).eq('id',arAqlRow.id)
+              if(arAqlRes.error){result.errors.push(lot.numero_lot+': '+arAqlRes.error.message);result.fail++;continue}
+              await supabase.from('lot_events').insert({lot_id:lotId,event_type:'ar_aql_demande',description:'AR demande AQL '+arAqlType+' (masse)',triggered_by:userId,created_at:now})
+              result.ok++
+            } else if(action==='ar_aql_fab_resultat'||action==='ar_aql_cond_resultat'){
+              var arAqlResType=action==='ar_aql_fab_resultat'?'fabrication':'conditionnement'
+              var arAqlR2=await supabase.from('aql_inspections').select('id').eq('lot_id',lotId).eq('type',arAqlResType).eq('result_ar_pending',true).order('requested_at',{ascending:false}).limit(1)
+              var arAqlRow2=arAqlR2.data&&arAqlR2.data[0]
+              if(!arAqlRow2){result.errors.push(lot.numero_lot+': pas de résultat AQL en attente AR');result.fail++;continue}
+              var arAqlRes2=await supabase.from('aql_inspections').update({result_ar_pending:false,updated_at:now}).eq('id',arAqlRow2.id)
+              if(arAqlRes2.error){result.errors.push(lot.numero_lot+': '+arAqlRes2.error.message);result.fail++;continue}
+              await supabase.from('lot_events').insert({lot_id:lotId,event_type:'ar_aql_resultat',description:'AR résultat AQL '+arAqlResType+' (masse)',triggered_by:userId,created_at:now})
+              result.ok++
+            } else {result.errors.push(lot.numero_lot+': action AR inconnue');result.fail++}
 
           } else if (action.startsWith('plan_')) {
             var dbField2 = PLAN_DB_FIELD[action]

@@ -30,32 +30,41 @@
     </div>
 
     <div class="actions" v-if="doc.is_applicable">
-      <!-- ÉMETTEUR : émettre -->
-      <button v-if="doc.statut==='non_emis' && canEmit" class="btn" @click="doAct('emettre')">Émettre le document</button>
+      <!-- AR en attente pour le service courant -->
+      <template v-if="doc.pending_ar_service && !isClotSap && !isMajDoc">
+        <span class="ar-pending">⏳ En attente AR — {{doc.pending_ar_service}}</span>
+        <button v-if="canAR" class="btn bg" @click="doAR">✓ Accuser réception</button>
+      </template>
 
-      <!-- ÉMETTEUR : rectifier après retour (docs standard seulement) -->
-      <button v-if="doc.statut==='retour_emetteur' && canRectifier && !isClotSap" class="btn" @click="doAct('rectifier')">Rectifier et renvoyer à l'AQ</button>
+      <!-- Actions normales — bloquées si AR en attente pour ce service -->
+      <template v-if="!doc.pending_ar_service || isClotSap || isMajDoc">
+        <!-- ÉMETTEUR : émettre -->
+        <button v-if="doc.statut==='non_emis' && canEmit" class="btn" @click="doAct('emettre')">Émettre le document</button>
 
-      <!-- AQ : vérifier et transmettre au DT (docs standard) -->
-      <button v-if="(doc.statut==='emis' || doc.statut==='verification_aq') && canVerify && !isClotSap" class="btn" @click="doAct('verifier_aq')">Vérifier et transmettre au DT</button>
+        <!-- ÉMETTEUR : rectifier après retour (docs standard seulement) -->
+        <button v-if="doc.statut==='retour_emetteur' && canRectifier && !isClotSap" class="btn" @click="doAct('rectifier')">Rectifier et renvoyer à l'AQ</button>
 
-      <!-- AQ : retourner à l'émetteur (docs standard) -->
-      <button v-if="(doc.statut==='emis' || doc.statut==='verification_aq') && canRetourner && !isClotSap" class="btn br" @click="prepareRetour('emetteur')">Retourner à l'émetteur</button>
+        <!-- AQ : vérifier et transmettre au DT (docs standard) -->
+        <button v-if="(doc.statut==='emis' || doc.statut==='verification_aq') && canVerify && !isClotSap" class="btn" @click="doAct('verifier_aq')">Vérifier et transmettre au DT</button>
 
-      <!-- DT : approuver (docs standard) -->
-      <button v-if="doc.statut==='approuve_aq' && canApprove && !isClotSap" class="btn bg" @click="doAct('approuver_dt')">Approuver (DT)</button>
+        <!-- AQ : retourner à l'émetteur (docs standard) -->
+        <button v-if="(doc.statut==='emis' || doc.statut==='verification_aq') && canRetourner && !isClotSap" class="btn br" @click="prepareRetour('emetteur')">Retourner à l'émetteur</button>
 
-      <!-- DT : retourner à l'AQ (docs standard) -->
-      <button v-if="doc.statut==='approuve_aq' && canRetourner && !isClotSap" class="btn br" @click="prepareRetour('aq')">Retourner à l'AQ</button>
+        <!-- DT : approuver (docs standard) -->
+        <button v-if="doc.statut==='approuve_aq' && canApprove && !isClotSap" class="btn bg" @click="doAct('approuver_dt')">Approuver (DT)</button>
 
-      <!-- CLÔTURE SAP : Planif valide -->
-      <button v-if="doc.statut==='emis' && canVerify && isClotSap" class="btn bg" @click="doAct('valider_planif')">Valider (Planification)</button>
+        <!-- DT : retourner à l'AQ (docs standard) -->
+        <button v-if="doc.statut==='approuve_aq' && canRetourner && !isClotSap" class="btn br" @click="prepareRetour('aq')">Retourner à l'AQ</button>
 
-      <!-- CLÔTURE SAP : Fab/Condt demande clôture -->
-      <button v-if="doc.statut==='valide_planif' && canApprove && isClotSap" class="btn bg" @click="doAct('demander_cloture')">Demander la clôture SAP</button>
+        <!-- CLÔTURE SAP : Planif valide -->
+        <button v-if="doc.statut==='emis' && canVerify && isClotSap" class="btn bg" @click="doAct('valider_planif')">Valider (Planification)</button>
 
-      <!-- CLÔTURE SAP : Planification confirme la clôture finale -->
-      <button v-if="doc.statut==='cloture_demandee' && canConfirmClot && isClotSap" class="btn bg" @click="doAct('cloturer')">Confirmer la clôture SAP</button>
+        <!-- CLÔTURE SAP : Fab/Condt demande clôture -->
+        <button v-if="doc.statut==='valide_planif' && canApprove && isClotSap" class="btn bg" @click="doAct('demander_cloture')">Demander la clôture SAP</button>
+
+        <!-- CLÔTURE SAP : Planification confirme la clôture finale -->
+        <button v-if="doc.statut==='cloture_demandee' && canConfirmClot && isClotSap" class="btn bg" @click="doAct('cloturer')">Confirmer la clôture SAP</button>
+      </template>
     </div>
 
     <div class="rb" v-if="showRetour">
@@ -94,7 +103,7 @@ import { createNotification } from '../services/notifications'
 export default {
   setup() {
     var route = useRoute()
-    var doc = ref(null), movements = ref([]), showRetour = ref(false), motif = ref(''), userId = ref(null), retourDest = ref('')
+    var doc = ref(null), movements = ref([]), showRetour = ref(false), motif = ref(''), userId = ref(null), retourDest = ref(''), userService = ref('')
     var typeLabels = { if:'IF (Instruction de fabrication)', ic:'IC (Instruction de conditionnement)', da_pc:'DA Physico-chimie', da_micro:'DA Microbiologie', rvp:'RVP', deviation:'Déviation', analyse_risque:'Analyse de risque', autorisation_partenaire:'Autorisation partenaire', autre:'Autre', maj_if:'MàJ IF', maj_ic:'MàJ IC', maj_nmcl_of:'MàJ Nomenclature OF', maj_nmcl_oc:'MàJ Nomenclature OC', cloture_sap_of:'Clôture SAP OF', cloture_sap_oc:'Clôture SAP OC' }
     var actionLabelsMap = { emission:'Émission', transmission:'Transmission', reception:'Réception', retour:'Retour pour rectification', rectification:'Rectification et renvoi', approbation:'Approbation', validation:'Validation Planification', cloture:'Demande de clôture', cloture_confirmee:'Clôture confirmée' }
     var statusMap = { non_emis:'Non émis', emis:'Émis — en attente', verification_aq:'En cours de vérification AQ', retour_emetteur:'Retourné à l\'émetteur', rectification:'En cours de rectification', approuve_aq:'Vérifié AQ — en attente DT', approbation_dt:'En cours d\'approbation DT', approuve_dt:'Approuvé DT', valide_planif:'Validé Planif. — en attente demande clôture', cloture_demandee:'Clôture demandée — en attente confirmation', cloture:'Clôturé' }
@@ -212,19 +221,20 @@ export default {
 
       if (action === 'emettre') {
         var toSvc = clot ? 'planification' : 'aq'
-        await supabase.from('liberation_documents').update({ statut: 'emis', emitted_at: now, emitted_by: userId.value, updated_at: now }).eq('id', docId)
+        var arSvcEmit = clot ? null : 'aq'
+        await supabase.from('liberation_documents').update({ statut: 'emis', emitted_at: now, emitted_by: userId.value, pending_ar_service: arSvcEmit, updated_at: now }).eq('id', docId)
         await supabase.from('document_movements').insert({ document_id: docId, action: 'emission', from_service: doc.value.service_emetteur, to_service: toSvc, performed_by: userId.value, performed_at: now })
       } else if (action === 'verifier_aq') {
-        await supabase.from('liberation_documents').update({ statut: 'approuve_aq', updated_at: now }).eq('id', docId)
+        await supabase.from('liberation_documents').update({ statut: 'approuve_aq', pending_ar_service: 'dt', updated_at: now }).eq('id', docId)
         await supabase.from('document_movements').insert({ document_id: docId, action: 'approbation', from_service: 'aq', to_service: 'dt', performed_by: userId.value, performed_at: now })
       } else if (action === 'valider_planif') {
         await supabase.from('liberation_documents').update({ statut: 'valide_planif', updated_at: now }).eq('id', docId)
         await supabase.from('document_movements').insert({ document_id: docId, action: 'validation', from_service: 'planification', to_service: doc.value.service_emetteur, performed_by: userId.value, performed_at: now })
       } else if (action === 'rectifier') {
-        await supabase.from('liberation_documents').update({ statut: 'verification_aq', updated_at: now }).eq('id', docId)
+        await supabase.from('liberation_documents').update({ statut: 'verification_aq', pending_ar_service: 'aq', updated_at: now }).eq('id', docId)
         await supabase.from('document_movements').insert({ document_id: docId, action: 'rectification', from_service: doc.value.service_emetteur, to_service: 'aq', performed_by: userId.value, performed_at: now })
       } else if (action === 'approuver_dt') {
-        await supabase.from('liberation_documents').update({ statut: 'approuve_dt', approved_at: now, updated_at: now }).eq('id', docId)
+        await supabase.from('liberation_documents').update({ statut: 'approuve_dt', approved_at: now, pending_ar_service: null, updated_at: now }).eq('id', docId)
         await supabase.from('document_movements').insert({ document_id: docId, action: 'approbation', from_service: 'dt', performed_by: userId.value, performed_at: now })
         var fieldMap = { 'if': 'if_approved', ic: 'ic_approved', da_pc: 'da_pc_approved', da_micro: 'da_micro_approved' }
         var field = fieldMap[t]
@@ -273,11 +283,11 @@ export default {
 
       if (retourDest.value === 'emetteur') {
         // AQ retourne à l'émetteur
-        await supabase.from('liberation_documents').update({ statut: 'retour_emetteur', updated_at: now }).eq('id', docId)
+        await supabase.from('liberation_documents').update({ statut: 'retour_emetteur', pending_ar_service: doc.value.service_emetteur || null, updated_at: now }).eq('id', docId)
         await supabase.from('document_movements').insert({ document_id: docId, action: 'retour', from_service: 'aq', to_service: doc.value.service_emetteur, motif_retour: motif.value, performed_by: userId.value, performed_at: now })
       } else if (retourDest.value === 'aq') {
         // DT retourne à l'AQ
-        await supabase.from('liberation_documents').update({ statut: 'verification_aq', updated_at: now }).eq('id', docId)
+        await supabase.from('liberation_documents').update({ statut: 'verification_aq', pending_ar_service: 'aq', updated_at: now }).eq('id', docId)
         await supabase.from('document_movements').insert({ document_id: docId, action: 'retour', from_service: 'dt', to_service: 'aq', motif_retour: motif.value, performed_by: userId.value, performed_at: now })
       }
 
@@ -301,6 +311,22 @@ export default {
       loadDoc()
     }
 
+    var doAR = async function() {
+      var now = new Date().toISOString()
+      var docId = doc.value.id
+      var lotId = parseInt(route.params.lotId)
+      var res = await supabase.from('liberation_documents').update({ pending_ar_service: null, updated_at: now }).eq('id', docId)
+      if (res.error) { alert('Erreur AR : ' + res.error.message); return }
+      await supabase.from('lot_events').insert({ lot_id: lotId, event_type: 'ar_document', description: doc.value.type_document.toUpperCase() + ' — accusé de réception', triggered_by: userId.value, created_at: now })
+      loadDoc()
+    }
+
+    var canAR = computed(function() {
+      if (!doc.value || !doc.value.pending_ar_service) return false
+      if (isClotSap.value || isMajDoc.value) return false
+      return doc.value.pending_ar_service === userService.value && canPerform('accuser_reception_document')
+    })
+
     var loadDoc = async function() {
       var res = await supabase.from('liberation_documents').select('*').eq('id', route.params.docId).single()
       doc.value = res.data
@@ -312,11 +338,11 @@ export default {
       var userRes = await supabase.auth.getUser()
       userId.value = userRes.data.user.id
       var profileRes = await supabase.from('profiles').select('service').eq('id', userRes.data.user.id).single()
-      if (profileRes.data) await loadPermissions(profileRes.data.service)
+      if (profileRes.data) { userService.value = profileRes.data.service; await loadPermissions(profileRes.data.service) }
       loadDoc()
     })
 
-    return { doc, movements, showRetour, motif, retourDest, typeLabels, actionLabelsMap, statusLabel, spClass, flowClass, fmtDt, dotClass, prepareRetour, doAct, doRetour, doSetApplicable, canEmit, canVerify, canApprove, canRetourner, canRectifier, isClotSap, isMajDoc }
+    return { doc, movements, showRetour, motif, retourDest, userService, typeLabels, actionLabelsMap, statusLabel, spClass, flowClass, fmtDt, dotClass, prepareRetour, doAct, doRetour, doSetApplicable, doAR, canAR, canEmit, canVerify, canApprove, canConfirmClot, canRetourner, canRectifier, isClotSap, isMajDoc }
   }
 }
 </script>
@@ -339,7 +365,8 @@ export default {
 .na-bloc{display:flex;align-items:flex-start;gap:12px;padding:16px;border:1px solid #ddd;border-radius:4px;margin:12px 0;background:#fafafa}
 .na-info{background:#f5f5f5}.na-icon{font-size:28px;flex-shrink:0}.na-msg{flex:1;font-size:13px;line-height:1.5;color:#555}.na-msg strong{color:#333}
 .na-bloc .btn{margin-top:10px;white-space:nowrap;flex-shrink:0}
-.actions{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap}.btn{font-size:12px;padding:8px 18px;border-radius:2px;border:none;cursor:pointer;font-weight:500;background:#185FA5;color:#fff;min-height:40px}.btn:hover{opacity:.9}.br{background:#E24B4A}.bg{background:#1D9E75}.bc2{background:#f5f5f5;color:#666}
+.ar-pending{font-size:12px;color:#BA7517;font-weight:500;align-self:center}
+.actions{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;align-items:center}.btn{font-size:12px;padding:8px 18px;border-radius:2px;border:none;cursor:pointer;font-weight:500;background:#185FA5;color:#fff;min-height:40px}.btn:hover{opacity:.9}.br{background:#E24B4A}.bg{background:#1D9E75}.bc2{background:#f5f5f5;color:#666}
 .rb{border:1px solid #E24B4A;padding:14px;margin:12px 0;border-radius:2px}.rb label{font-size:12px;font-weight:500;display:block;margin-bottom:6px}.rb textarea{width:100%;border:1px solid #ddd;padding:8px;font-size:13px;box-sizing:border-box;resize:vertical;font-family:inherit}.ra{display:flex;gap:8px;margin-top:8px}
 .section{margin-top:20px}.sh{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:#999;padding-bottom:6px;border-bottom:1px solid #e8e8e8}
 .tl{padding:12px 0 0 20px;position:relative}.ti{position:relative;padding-bottom:20px;padding-left:16px}.ti:last-child{padding-bottom:0}

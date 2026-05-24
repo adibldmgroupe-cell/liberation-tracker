@@ -14,9 +14,16 @@ export async function validateOrder(orderType, orderId, etape, userId, lotId) {
   var next = idx < flow.length - 1 ? flow[idx + 1] : null
   var table = orderType === 'of' ? 'orders_of' : 'orders_oc'
 
+  // AR intermédiaire : après étapes 1-4 (planif/stock/aq/dt), le service suivant doit AR
+  // Étape 5 (aq_dap) → pas de pending_ar : l'étape 6 "production" EST l'AR final
+  var AR_NEXT_SVC = {planification:'stock', stock:'aq', aq:'dt', dt:'aq_dap'}
+  var pendingArSvc = AR_NEXT_SVC[etape] || null
+
   await supabase.from(table).update({
     statut: next ? 'en_circuit' : 'termine',
-    etape_circuit: next || etape, updated_at: now
+    etape_circuit: next || etape,
+    pending_ar_service: pendingArSvc,
+    updated_at: now
   }).eq('id', orderId)
 
   var etapeLabels = { planification:'Planification', stock:'Stock', aq:'AQ', dt:'DT', aq_dap:'AQ DAP', production:'Réception Production' }
@@ -64,6 +71,10 @@ export async function documentAction(docId, action, userId, lotId, docType, serv
   var docUpdate = { statut: statutMap[action], updated_at: now }
   if (action === 'emettre') { docUpdate.emitted_at = now; docUpdate.emitted_by = userId }
   if (action === 'approuver_dt') { docUpdate.approved_at = now }
+
+  // pending_ar_service : indique le service qui doit accuser réception du document
+  var AR_SVC_DOC = {emettre:'aq', verifier_aq:'dt', retourner_aq:'aq', rectifier:'aq', approuver_dt:null}
+  docUpdate.pending_ar_service = (action === 'retourner') ? (serviceEmetteur || null) : (AR_SVC_DOC[action] !== undefined ? AR_SVC_DOC[action] : null)
 
   if (action === 'emettre' && docType === 'da_micro') {
     docUpdate.is_applicable = true; docUpdate.is_required = true
@@ -224,7 +235,7 @@ export async function declareClotureSap(lotId, clotType, userId) {
 // ═══ AQL ═══
 export async function requestAql(lotId, type, userId) {
   var now = new Date().toISOString()
-  await supabase.from('aql_inspections').insert({ lot_id: lotId, type: type, resultat: 'en_attente', requested_at: now })
+  await supabase.from('aql_inspections').insert({ lot_id: lotId, type: type, resultat: 'en_attente', requested_at: now, request_ar_pending: true })
   var lotRes = await supabase.from('lots').select('numero_lot').eq('id', lotId).single()
   var lotNum = lotRes.data ? lotRes.data.numero_lot : ''
   await createNotification('aq', lotId, null, 'Lot ' + lotNum + ' — Demande AQL ' + type, 'aql_demande')
@@ -236,7 +247,8 @@ export async function requestAql(lotId, type, userId) {
 export async function respondAql(aqlId, resultat, recommandations, userId, lotId) {
   var now = new Date().toISOString()
   await supabase.from('aql_inspections').update({
-    resultat: resultat, avis_aq: recommandations, inspected_by: userId, inspected_at: now
+    resultat: resultat, avis_aq: recommandations, inspected_by: userId, inspected_at: now,
+    request_ar_pending: false, result_ar_pending: true
   }).eq('id', aqlId)
 
   var typeRes = await supabase.from('aql_inspections').select('type').eq('id', aqlId).single()
@@ -291,4 +303,38 @@ export async function deleteLot(lotId) {
 
 export async function deleteLots(lotIds) {
   await supabase.from('lots').delete().in('id', lotIds)
+}
+
+// ═══ ACCUSÉS DE RÉCEPTION ═══
+export async function acknowledgeOrderStep(orderId, orderType, userId, lotId) {
+  var now = new Date().toISOString()
+  var table = orderType === 'of' ? 'orders_of' : 'orders_oc'
+  var res = await supabase.from(table).update({ pending_ar_service: null, updated_at: now }).eq('id', orderId)
+  if (res.error) return res.error
+  await supabase.from('lot_events').insert({ lot_id: lotId, event_type: 'ar_circuit', description: 'Circuit ' + orderType.toUpperCase() + ' — Accusé réception', triggered_by: userId, created_at: now })
+  return null
+}
+
+export async function acknowledgeDocument(docId, userId, lotId, docType) {
+  var now = new Date().toISOString()
+  var res = await supabase.from('liberation_documents').update({ pending_ar_service: null, updated_at: now }).eq('id', docId)
+  if (res.error) return res.error
+  await supabase.from('lot_events').insert({ lot_id: lotId, event_type: 'ar_document', description: (docType || '').toUpperCase().replace(/_/g,' ') + ' — Accusé réception', triggered_by: userId, created_at: now })
+  return null
+}
+
+export async function acknowledgeAqlRequest(aqlId, userId, lotId) {
+  var now = new Date().toISOString()
+  var res = await supabase.from('aql_inspections').update({ request_ar_pending: false }).eq('id', aqlId)
+  if (res.error) return res.error
+  await supabase.from('lot_events').insert({ lot_id: lotId, event_type: 'ar_aql_demande', description: 'AQL — Accusé réception demande', triggered_by: userId, created_at: now })
+  return null
+}
+
+export async function acknowledgeAqlResult(aqlId, userId, lotId) {
+  var now = new Date().toISOString()
+  var res = await supabase.from('aql_inspections').update({ result_ar_pending: false }).eq('id', aqlId)
+  if (res.error) return res.error
+  await supabase.from('lot_events').insert({ lot_id: lotId, event_type: 'ar_aql_resultat', description: 'AQL — Accusé réception résultat', triggered_by: userId, created_at: now })
+  return null
 }

@@ -52,7 +52,9 @@
         </template>
       </div>
       <div class="circ-act">
-        <button v-if="of.statut!=='termine' && canValidateStep('of',of.etape_circuit)" class="btn bg" @click="doValidate('of',of.id,of.etape_circuit)">
+        <span v-if="of.pending_ar_service" class="circ-ar-pending">⏳ {{SVC_LABELS[of.pending_ar_service]||of.pending_ar_service}}</span>
+        <button v-if="of.pending_ar_service && of.pending_ar_service===userService && canPerform('accuser_reception_circuit')" class="btn bg" @click="doAcknowledgeOrderAR('of',of.id)">✓ Accuser réception</button>
+        <button v-else-if="of.statut!=='termine' && !of.pending_ar_service && canValidateStep('of',of.etape_circuit)" class="btn bg" @click="doValidate('of',of.id,of.etape_circuit)">
           Valider — {{circuitSteps.find(function(e){return e.key===of.etape_circuit})?.label}}
         </button>
         <span v-else-if="of.statut==='termine'" class="circ-done">✓ Circuit OF terminé</span>
@@ -80,7 +82,9 @@
         </template>
       </div>
       <div class="circ-act">
-        <button v-if="oc.statut!=='termine' && canValidateStep('oc',oc.etape_circuit)" class="btn bg" @click="doValidate('oc',oc.id,oc.etape_circuit)">
+        <span v-if="oc.pending_ar_service" class="circ-ar-pending">⏳ {{SVC_LABELS[oc.pending_ar_service]||oc.pending_ar_service}}</span>
+        <button v-if="oc.pending_ar_service && oc.pending_ar_service===userService && canPerform('accuser_reception_circuit')" class="btn bg" @click="doAcknowledgeOrderAR('oc',oc.id)">✓ Accuser réception</button>
+        <button v-else-if="oc.statut!=='termine' && !oc.pending_ar_service && canValidateStep('oc',oc.etape_circuit)" class="btn bg" @click="doValidate('oc',oc.id,oc.etape_circuit)">
           Valider — {{circuitSteps.find(function(e){return e.key===oc.etape_circuit})?.label}}
         </button>
         <span v-else-if="oc.statut==='termine'" class="circ-done">✓ Circuit OC terminé</span>
@@ -107,8 +111,10 @@
         <td><span class="sp2" :class="a.resultat==='conforme'?'sp2-ok':a.resultat==='non_conforme'?'sp2-ko':'sp2-wait'">{{a.resultat==='en_attente'?'En attente':a.resultat==='conforme'?'Conforme':'Non conforme'}}</span></td>
         <td class="cdt">{{fmtDt(a.inspected_at||a.requested_at)}}</td>
         <td class="cac">
-          <button v-if="a.resultat==='en_attente' && canPerform('realiser_aql')" class="btn bg" @click="doAqlConforme(a.id)">Conforme</button>
-          <button v-if="a.resultat==='en_attente' && canPerform('realiser_aql')" class="btn br" @click="doAqlNonConforme(a.id)">Non conforme</button>
+          <button v-if="a.request_ar_pending && ['aq','lcq'].includes(userService) && canPerform('accuser_reception_aql_demande')" class="btn bg" @click="doAcknowledgeAqlRequest(a.id)">✓ AR Demande</button>
+          <button v-if="a.result_ar_pending && ['fabrication','conditionnement'].includes(userService) && canPerform('accuser_reception_aql_resultat')" class="btn bg" @click="doAcknowledgeAqlResult(a.id)">✓ AR Résultat</button>
+          <button v-if="a.resultat==='en_attente' && !a.request_ar_pending && canPerform('realiser_aql')" class="btn bg" @click="doAqlConforme(a.id)">Conforme</button>
+          <button v-if="a.resultat==='en_attente' && !a.request_ar_pending && canPerform('realiser_aql')" class="btn br" @click="doAqlNonConforme(a.id)">Non conforme</button>
           <button v-if="a.resultat==='non_conforme' && isLatestAql(a) && canRelanceAql(a)" class="btn" @click="doRelanceAql(a)">Relancer AQL</button>
         </td>
       </tr></table>
@@ -397,6 +403,29 @@ export default {
     var isLatestAql = function(a){var sameType=aqls.value.filter(function(x){return x.type===a.type});return sameType.length>0&&sameType[0].id===a.id}
     var canRelanceAql = function(a){return canPerform('demander_aql_'+(a.type==='fabrication'?'fab':'cond'))}
     var doRelanceAql = async function(a){await requestAql(lot.value.id,a.type,userId.value);loadLot()}
+
+    var doAcknowledgeOrderAR = async function(orderType, orderId) {
+      var now = new Date().toISOString()
+      var tbl = orderType==='of'?'orders_of':'orders_oc'
+      var res = await supabase.from(tbl).update({pending_ar_service:null,updated_at:now}).eq('id',orderId)
+      if(res.error){alert('Erreur AR : '+res.error.message);return}
+      await supabase.from('lot_events').insert({lot_id:lot.value.id,event_type:'ar_circuit',description:'AR circuit '+orderType.toUpperCase(),triggered_by:userId.value,created_at:now})
+      loadLot()
+    }
+    var doAcknowledgeAqlRequest = async function(aqlId) {
+      var now = new Date().toISOString()
+      var res = await supabase.from('aql_inspections').update({request_ar_pending:false,updated_at:now}).eq('id',aqlId)
+      if(res.error){alert('Erreur AR demande AQL : '+res.error.message);return}
+      await supabase.from('lot_events').insert({lot_id:lot.value.id,event_type:'ar_aql_demande',description:'AR demande AQL',triggered_by:userId.value,created_at:now})
+      loadLot()
+    }
+    var doAcknowledgeAqlResult = async function(aqlId) {
+      var now = new Date().toISOString()
+      var res = await supabase.from('aql_inspections').update({result_ar_pending:false,updated_at:now}).eq('id',aqlId)
+      if(res.error){alert('Erreur AR résultat AQL : '+res.error.message);return}
+      await supabase.from('lot_events').insert({lot_id:lot.value.id,event_type:'ar_aql_resultat',description:'AR résultat AQL',triggered_by:userId.value,created_at:now})
+      loadLot()
+    }
     // Masquer "Demander AQL" si le dernier AQL de ce type est en attente ou non_conforme (relancer via bouton per-ligne)
     var canDemanderAql = function(type) {
       var sameType = aqls.value.filter(function(x){return x.type===type})
@@ -507,7 +536,9 @@ export default {
       showDevForm,devObs,devBloquante,devNumeroDn,showModify,editNumLot,editCodeProd,prodSuggestions,rvpDocs,mainDocs,
       getVal,pipClass,stepIndClass,circuitFlowClass,fmtDt,ofV,ocV,docsOk,docsReq,devsOpen,leadTime,dossierComplete,canValidateStep,
       docTypeLabel,docStatLabel,indClass,dsClass,rvpServiceLabel,isDocBlocked,goBack,
+      userService,
       doValidate,doLiberer,doDeclareDeviation,doCloseDeviation,doDeclareRvp,doDeclareMajDoc,doDeclareClotureSap,doRequestAql,doAqlConforme,doAqlNonConforme,doRelanceAql,isLatestAql,canRelanceAql,canDemanderAql,
+      doAcknowledgeOrderAR,doAcknowledgeAqlRequest,doAcknowledgeAqlResult,
       majDocs,clotDocs,majDocLabel,clotDocLabel,clotStatLabel,clotIndClass,clotDsClass,docErrMsg,
       searchProd,selectProd,doModify,confirmDelete,canPerform,
       planning,planEdit,planSaving,savePlanning,
@@ -595,6 +626,7 @@ export default {
 .fs-wait{background:#fafafa}.fs-wait .fs-num{background:#e8e8e8;color:#999}.fs-wait .fs-label{color:#999}
 .circ-act{margin:10px 0;display:flex;align-items:center;gap:10px}
 .circ-done{font-size:12px;color:#1D9E75;font-weight:500}
+.circ-ar-pending{font-size:12px;color:#BA7517;font-weight:500;margin-right:8px}
 .circ-hist{margin-top:10px;border-top:1px solid #f0f0f0;padding-top:8px;display:flex;flex-direction:column;gap:2px}
 .circ-hist-row{display:flex;align-items:center;gap:8px;font-size:11px;padding:3px 0;border-bottom:1px solid #f8f8f8}
 .circ-hist-dot{width:6px;height:6px;border-radius:50%;background:#1D9E75;flex-shrink:0}

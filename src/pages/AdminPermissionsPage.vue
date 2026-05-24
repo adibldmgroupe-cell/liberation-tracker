@@ -154,6 +154,15 @@ export default {
         ]
       },
       {
+        label: 'Accusés de réception',
+        actions: [
+          { key: 'accuser_reception_circuit', label: 'Accuser réception circuit OF/OC (étapes intermédiaires)' },
+          { key: 'accuser_reception_document', label: 'Accuser réception document (IF, IC, DA, RVP)' },
+          { key: 'accuser_reception_aql_demande', label: 'Accuser réception demande AQL (AQ / LCQ)' },
+          { key: 'accuser_reception_aql_resultat', label: 'Accuser réception résultat AQL (Fabrication / Conditionnement)' },
+        ]
+      },
+      {
         label: 'Administration',
         actions: [
           { key: 'modifier_lot', label: 'Modifier un lot' },

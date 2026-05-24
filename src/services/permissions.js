@@ -77,6 +77,13 @@ export function getPermissionForBulkAction(action) {
     // Planning
     plan_lcq:'modifier_planning', plan_aq:'modifier_planning',
     plan_dt1:'modifier_planning', plan_dt2:'modifier_planning',
+    // Accusés de réception
+    ar_circuit_of:'accuser_reception_circuit', ar_circuit_oc:'accuser_reception_circuit',
+    ar_doc_if:'accuser_reception_document', ar_doc_ic:'accuser_reception_document',
+    ar_doc_da_pc:'accuser_reception_document', ar_doc_da_micro:'accuser_reception_document',
+    ar_doc_rvp_fab:'accuser_reception_document', ar_doc_rvp_cond:'accuser_reception_document', ar_doc_rvp_lcq:'accuser_reception_document',
+    ar_aql_fab_demande:'accuser_reception_aql_demande', ar_aql_cond_demande:'accuser_reception_aql_demande',
+    ar_aql_fab_resultat:'accuser_reception_aql_resultat', ar_aql_cond_resultat:'accuser_reception_aql_resultat',
   }
   return map[action] || null
 }
