@@ -125,7 +125,6 @@ export default {
         var daqRes = await supabase.from('liberation_documents')
           .select('id,type_document,statut,lot_id')
           .in('statut',['emis','verification_aq'])
-          .in('type_document',['if','ic','da_pc','da_micro','rvp','maj_if','maj_ic','maj_nmcl_of','maj_nmcl_oc'])
           .eq('is_applicable',true).limit(500)
         docRaw = daqRes.data||[]
         var daqMap = await getLotsMap(docRaw.map(function(d){return d.lot_id}))
@@ -138,7 +137,6 @@ export default {
         var ddtRes = await supabase.from('liberation_documents')
           .select('id,type_document,statut,lot_id')
           .eq('statut','approuve_aq')
-          .in('type_document',['if','ic','da_pc','da_micro','rvp','maj_if','maj_ic','maj_nmcl_of','maj_nmcl_oc'])
           .eq('is_applicable',true).limit(500)
         docRaw = ddtRes.data||[]
         var ddtMap = await getLotsMap(docRaw.map(function(d){return d.lot_id}))
