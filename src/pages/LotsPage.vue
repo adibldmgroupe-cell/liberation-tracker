@@ -726,14 +726,23 @@ export default {
                 await createNotification('aq',lot.id,d.id,'Lot '+lot.numero_lot+' — '+col3.toUpperCase().replace('_',' ')+' rectifié et réémis','document_transmis')
               }})
             }
-            if ((d.statut==='emis'||d.statut==='verification_aq'||d.statut==='approuve_aq') && (isAdmin||canPerform('retourner_document'))) {
-              var fromSvc = d.statut==='approuve_aq'||d.statut==='verification_aq' ? 'aq' : (SVC_MAP[col3]||'')
-              var retourArSvc = SVC_MAP[col3] || null
-              actions.push({label:'Retourner', fn: async function(){
+            // AQ retourne à l'émetteur (document émis ou en vérification AQ)
+            if ((d.statut==='emis'||d.statut==='verification_aq') && (isAdmin||canPerform('retourner_document'))) {
+              var emSvc = SVC_MAP[col3] || null
+              actions.push({label:'Retourner à l\'émetteur', fn: async function(){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
-                await supabase.from('liberation_documents').update({statut:'retour_emetteur',pending_ar_service:retourArSvc,updated_at:n}).eq('id',d.id)
-                await supabase.from('document_movements').insert({document_id:d.id,action:'retour',from_service:fromSvc,to_service:SVC_MAP[col3]||'',motif_retour:'Retour direct tableau',performed_by:uid,performed_at:n})
-                if(SVC_MAP[col3])await createNotification(SVC_MAP[col3],lot.id,d.id,'Lot '+lot.numero_lot+' — '+col3.toUpperCase()+' retourné pour rectification','document_retourne')
+                await supabase.from('liberation_documents').update({statut:'retour_emetteur',pending_ar_service:emSvc,updated_at:n}).eq('id',d.id)
+                await supabase.from('document_movements').insert({document_id:d.id,action:'retour',from_service:'aq',to_service:emSvc,motif_retour:'Retour direct tableau',performed_by:uid,performed_at:n})
+                if(emSvc)await createNotification(emSvc,lot.id,d.id,'Lot '+lot.numero_lot+' — '+col3.toUpperCase()+' retourné pour rectification','document_retourne')
+              }})
+            }
+            // DT retourne à l'AQ (document approuvé AQ, en attente DT)
+            if (d.statut==='approuve_aq' && (isAdmin||canPerform('retourner_document'))) {
+              actions.push({label:'Retourner à l\'AQ (DT)', fn: async function(){
+                var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+                await supabase.from('liberation_documents').update({statut:'verification_aq',pending_ar_service:'aq',updated_at:n}).eq('id',d.id)
+                await supabase.from('document_movements').insert({document_id:d.id,action:'retour',from_service:'dt',to_service:'aq',motif_retour:'Retour DT tableau',performed_by:uid,performed_at:n})
+                await createNotification('aq',lot.id,d.id,'Lot '+lot.numero_lot+' — '+col3.toUpperCase()+' retourné par DT','document_retourne')
               }})
             }
           })(doc, col)
@@ -876,13 +885,22 @@ export default {
                 await createNotification('aq',lot.id,rd.id,'Lot '+lot.numero_lot+' — RVP '+re+' rectifié et réémis','document_transmis')
               }})
             }
-            if ((rd.statut==='emis'||rd.statut==='verification_aq'||rd.statut==='approuve_aq') && (isAdmin||canPerform('retourner_document'))) {
-              var rvpFromSvc = rd.statut==='approuve_aq'||rd.statut==='verification_aq' ? 'aq' : re
-              actions.push({label:'Retourner RVP', fn: async function(){
+            // AQ retourne à l'émetteur RVP
+            if ((rd.statut==='emis'||rd.statut==='verification_aq') && (isAdmin||canPerform('retourner_document'))) {
+              actions.push({label:'Retourner RVP à l\'émetteur', fn: async function(){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
                 await supabase.from('liberation_documents').update({statut:'retour_emetteur',pending_ar_service:re,updated_at:n}).eq('id',rd.id)
-                await supabase.from('document_movements').insert({document_id:rd.id,action:'retour',from_service:rvpFromSvc,to_service:re,motif_retour:'Retour direct tableau',performed_by:uid,performed_at:n})
+                await supabase.from('document_movements').insert({document_id:rd.id,action:'retour',from_service:'aq',to_service:re,motif_retour:'Retour direct tableau',performed_by:uid,performed_at:n})
                 await createNotification(re,lot.id,rd.id,'Lot '+lot.numero_lot+' — RVP '+re+' retourné pour rectification','document_retourne')
+              }})
+            }
+            // DT retourne à l'AQ
+            if (rd.statut==='approuve_aq' && (isAdmin||canPerform('retourner_document'))) {
+              actions.push({label:'Retourner RVP à l\'AQ (DT)', fn: async function(){
+                var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+                await supabase.from('liberation_documents').update({statut:'verification_aq',pending_ar_service:'aq',updated_at:n}).eq('id',rd.id)
+                await supabase.from('document_movements').insert({document_id:rd.id,action:'retour',from_service:'dt',to_service:'aq',motif_retour:'Retour DT tableau',performed_by:uid,performed_at:n})
+                await createNotification('aq',lot.id,rd.id,'Lot '+lot.numero_lot+' — RVP '+re+' retourné par DT','document_retourne')
               }})
             }
           })(rvpDoc, rvpEmetteur)
