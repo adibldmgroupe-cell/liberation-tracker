@@ -84,7 +84,7 @@
           </template>
         </tr></thead>
         <tbody>
-          <tr v-for="l in filteredLots" :key="l.id" :class="{'row-sel':isSelected(l.id)}" @click="goToLot(l.id)">
+          <tr v-for="l in filteredLots" :key="l.id" :class="{'row-sel':isSelected(l.id),'row-bloquante':l.dev_has_bloquante}" @click="goToLot(l.id)">
             <td class="td-chk" @click.stop><input type="checkbox" :value="l.id" v-model="selected" /></td>
             <td class="mono bold">{{l.numero_lot}}</td>
             <td class="td-prod">{{l.prod_desc}}<span class="code">{{l.prod_code}}</span></td>
@@ -101,8 +101,9 @@
                 <span v-else class="plan-empty">＋</span>
               </td>
               <!-- Déviation -->
-              <td v-else-if="CC[ck].r==='dev'" class="td-action" @click.stop="openInlineMenu($event,l,'dev')">
-                <span v-if="l.dev_count>0" class="dev-badge" :class="l.dev_open>0?'dev-open':'dev-closed'">{{l.dev_open>0?'Ouverte':'Clôturée'}}</span>
+              <td v-else-if="CC[ck].r==='dev'" class="td-action" @click.stop="openDevPopup($event,l)">
+                <span v-if="l.dev_open>0" class="dev-badge dev-open">{{l.dev_open}} DN</span>
+                <span v-else-if="l.dev_count>0" class="dev-badge dev-closed">Clôturée</span>
                 <span v-else class="dim">—</span>
               </td>
               <!-- Date -->
@@ -153,18 +154,42 @@
       </div>
     </div>
 
-    <!-- Popup déclaration déviation inline -->
+    <!-- Popup déviation -->
     <div v-if="devPopup" class="dev-pop" :style="{top:devPopup.top+'px',left:devPopup.left+'px'}" @click.stop>
-      <div class="dev-pop-title">Déclarer déviation — {{devPopup.lotNum}}</div>
-      <input type="text" v-model="devPopup.numeroDn" placeholder="N° DN (optionnel)" class="dev-pop-in" />
-      <textarea v-model="devPopup.obs" rows="2" placeholder="Observation (optionnel)" class="dev-pop-ta"></textarea>
-      <button class="dev-pop-tog" :class="devPopup.bloquante?'dev-pop-bl-on':'dev-pop-bl-off'" @click.stop="devPopup.bloquante=!devPopup.bloquante">
-        {{devPopup.bloquante?'BLOQUANTE':'Non bloquante'}}
-      </button>
-      <div class="dev-pop-actions">
-        <button class="dp-ok" @click="confirmDevPopup">✓ Confirmer</button>
-        <button class="dp-cancel" @click="devPopup=null">✕</button>
+      <div class="dev-pop-header">
+        <span class="dev-pop-title">Déviations — {{devPopup.lotNum}}</span>
+        <button class="dev-pop-x" @click="devPopup=null">✕</button>
       </div>
+      <!-- Résumé -->
+      <div class="dev-pop-summary">
+        <span class="dev-sum-bl">{{devPopup.devBloquanteOpen}} bloquante{{devPopup.devBloquanteOpen!==1?'s':''}}</span>
+        <span class="dev-sum-nb">{{devPopup.devNonBloquanteOpen}} non bloquante{{devPopup.devNonBloquanteOpen!==1?'s':''}}</span>
+        <span class="dev-sum-cl">{{devPopup.devClosed}} clôturée{{devPopup.devClosed!==1?'s':''}}</span>
+      </div>
+      <!-- Liste déviations existantes -->
+      <div v-if="devPopup.devList.length" class="dev-pop-list">
+        <div v-for="d in devPopup.devList" :key="d.id" class="dev-pop-item">
+          <div class="dev-pop-item-top">
+            <span class="dev-badge-sm" :class="d.bloquante?'dev-bl-on':'dev-bl-off'">{{d.bloquante?'BLQ':'NBL'}}</span>
+            <span class="dev-pop-dn">{{d.numero_dn||'—'}}</span>
+            <span class="dev-pop-stat" :class="d.statut==='cloturee'?'dev-stat-cl':'dev-stat-op'">{{d.statut==='cloturee'?'Clôturée':'Ouverte'}}</span>
+            <button v-if="(d.statut==='ouverte'||d.statut==='en_cours')&&(userService==='admin'||canPerform('cloturer_deviation'))" class="dev-close-btn" @click="closeDevInPopup(d.id)">Clôturer</button>
+          </div>
+          <div v-if="d.description" class="dev-pop-desc">{{d.description}}</div>
+        </div>
+      </div>
+      <!-- Formulaire nouvelle déviation -->
+      <template v-if="userService==='admin'||canPerform('declarer_nc')">
+        <div class="dev-pop-sep">Nouvelle déviation</div>
+        <input type="text" v-model="devPopup.numeroDn" placeholder="N° DN (optionnel)" class="dev-pop-in" />
+        <textarea v-model="devPopup.obs" rows="2" placeholder="Observation (optionnel)" class="dev-pop-ta"></textarea>
+        <button class="dev-pop-tog" :class="devPopup.bloquante?'dev-pop-bl-on':'dev-pop-bl-off'" @click.stop="devPopup.bloquante=!devPopup.bloquante">
+          {{devPopup.bloquante?'BLOQUANTE':'Non bloquante'}}
+        </button>
+        <div class="dev-pop-actions">
+          <button class="dp-ok" @click="confirmDevPopup">✓ Déclarer</button>
+        </div>
+      </template>
     </div>
 
     <!-- Modal confirmation action en masse -->
@@ -387,7 +412,7 @@ export default {
     }
 
     var load = async function() {
-      var query = supabase.from('lots').select('*, products(code_article,description), orders_of(id,statut,etape_circuit,updated_at), orders_oc(id,statut,etape_circuit,updated_at), liberation_documents(id,type_document,statut,is_applicable,service_emetteur,emitted_at,approved_at,updated_at), deviations(statut), aql_inspections(id,type,resultat,requested_at,inspected_at), lot_planning(date_lcq_cible,date_lcq_revisee,date_aq_cible,date_aq_revisee,date_dt_cible,date_dt_revisee)', {count:'exact'})
+      var query = supabase.from('lots').select('*, products(code_article,description), orders_of(id,statut,etape_circuit,updated_at), orders_oc(id,statut,etape_circuit,updated_at), liberation_documents(id,type_document,statut,is_applicable,service_emetteur,emitted_at,approved_at,updated_at), deviations(id,statut,bloquante,numero_dn,description), aql_inspections(id,type,resultat,requested_at,inspected_at), lot_planning(date_lcq_cible,date_lcq_revisee,date_aq_cible,date_aq_revisee,date_dt_cible,date_dt_revisee)', {count:'exact'})
 
       var q = route.query.q
       if(q){
@@ -427,7 +452,13 @@ export default {
         var majNmclOcInfo=getDocInfo(docs,'maj_nmcl_oc')
         var clotOfInfo=getClotureSapInfo(docs,'cloture_sap_of')
         var clotOcInfo=getClotureSapInfo(docs,'cloture_sap_oc')
-        var devOpen=0;for(var j=0;j<devs.length;j++){if(devs[j].statut==='ouverte'||devs[j].statut==='en_cours')devOpen++}
+        var devOpen=0,devBloquanteOpen=0,devNonBloquanteOpen=0,devClosed=0
+        for(var j=0;j<devs.length;j++){
+          var dv=devs[j]
+          if(dv.statut==='ouverte'||dv.statut==='en_cours'){devOpen++;if(dv.bloquante)devBloquanteOpen++;else devNonBloquanteOpen++}
+          else if(dv.statut==='cloturee')devClosed++
+        }
+        var devHasBloquante=devBloquanteOpen>0
 
         var planLcqRaw = planning ? planning.date_lcq_cible  : null
         var planAqRaw  = planning ? planning.date_aq_cible   : null
@@ -456,7 +487,7 @@ export default {
           maj_nmcl_oc_label:majNmclOcInfo.label,maj_nmcl_oc_class:majNmclOcInfo.cls,maj_nmcl_oc_date:majNmclOcInfo.date,
           clot_of_label:clotOfInfo.label,clot_of_class:clotOfInfo.cls,clot_of_date:clotOfInfo.date,
           clot_oc_label:clotOcInfo.label,clot_oc_class:clotOcInfo.cls,clot_oc_date:clotOcInfo.date,
-          dev_count:devs.length,dev_open:devOpen,dev_label:devs.length>0?(devOpen>0?'Ouverte':'Clôturée'):'—',
+          dev_count:devs.length,dev_open:devOpen,dev_bloquante_open:devBloquanteOpen,dev_non_bloquante_open:devNonBloquanteOpen,dev_closed:devClosed,dev_has_bloquante:devHasBloquante,dev_list:devs,
           plan_lcq:fmtPlan(planLcqRaw),plan_lcq_raw:planLcqRaw,
           plan_aq:fmtPlan(planAqRaw),plan_aq_raw:planAqRaw,
           plan_dt1:fmtPlan(planDt1Raw),plan_dt1_raw:planDt1Raw,
@@ -645,22 +676,6 @@ export default {
           }
           // Conforme → aucune action
         })(aqlType2, aqlLabel, latestAql2)
-
-      } else if (col==='dev') {
-        if (isAdmin||canPerform('declarer_nc')) {
-          actions.push({label:'Déclarer déviation', noReload:true, fn: function(){
-            var rect = {bottom: (inlineMenu.value ? inlineMenu.value.top + 30 : 200), left: (inlineMenu.value ? inlineMenu.value.left : 400)}
-            var top = rect.bottom + 4, left = rect.left
-            if (left + 260 > window.innerWidth) left = window.innerWidth - 270
-            devPopup.value = {lotId:lot.id, lotNum:lot.numero_lot, top:top, left:left, bloquante:false, numeroDn:'', obs:''}
-          }})
-        }
-        if (lot.dev_open>0 && (isAdmin||canPerform('cloturer_deviation'))) {
-          actions.push({label:'Clôturer déviations', fn: async function(){
-            var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
-            await supabase.from('deviations').update({statut:'cloturee',closed_at:n,closed_by:uid,updated_at:n}).eq('lot_id',lot.id).in('statut',['ouverte','en_cours'])
-          }})
-        }
 
       } else if (col==='rvp_fab'||col==='rvp_cond'||col==='rvp_lcq') {
         var rvpSvcMap2 = {rvp_fab:'fabrication',rvp_cond:'conditionnement',rvp_lcq:'lcq'}
@@ -857,6 +872,27 @@ export default {
       inlineMenu.value = null
       await action.fn()
       if (!action.noReload) await load()
+    }
+
+    var openDevPopup = function(event, lot) {
+      var rect = event.currentTarget.getBoundingClientRect()
+      var top = rect.bottom + 2, left = rect.left
+      if (left + 310 > window.innerWidth) left = window.innerWidth - 320
+      devPopup.value = {
+        lotId: lot.id, lotNum: lot.numero_lot, top: top, left: left,
+        bloquante: false, numeroDn: '', obs: '',
+        devList: lot.dev_list || [],
+        devBloquanteOpen: lot.dev_bloquante_open || 0,
+        devNonBloquanteOpen: lot.dev_non_bloquante_open || 0,
+        devClosed: lot.dev_closed || 0
+      }
+    }
+
+    var closeDevInPopup = async function(devId) {
+      var u = await supabase.auth.getUser(); var uid = u.data.user.id; var n = new Date().toISOString()
+      await supabase.from('deviations').update({statut:'cloturee',closed_at:n,closed_by:uid,updated_at:n}).eq('id', devId)
+      devPopup.value = null
+      await load()
     }
 
     var confirmDevPopup = async function() {
@@ -1318,7 +1354,8 @@ var loadCharge = async function() {
       actionGroups,userService,
       columnFilters,activeDropdown,ddPos,openDropdown,getColumnValues,setColumnFilter,clearColumnFilters,removeColumnFilter,hasColumnFilters,
       visibleCols,showColPanel,colDefs,isColVisible,toggleCol,resetCols,moveColUp,moveColDown,CC,
-      inlineMenu,openInlineMenu,executeInline,closeAll,devPopup,confirmDevPopup,
+      inlineMenu,openInlineMenu,executeInline,closeAll,
+      devPopup,openDevPopup,confirmDevPopup,closeDevInPopup,canPerform,
       bulkDevBloquante,bulkDevNumeroDn,bulkDevObs,
       datePicker,dpInput,openDatePicker,savePlanning,getPlanClass,
       chargeCount,chargeLoading,loadCharge,
@@ -1411,9 +1448,30 @@ var loadCharge = async function() {
 .dp-actions{display:flex;gap:6px;margin-top:8px}
 .dp-ok{flex:1;padding:6px;background:#185FA5;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px;font-weight:500}.dp-ok:hover{background:#0C447C}
 .dp-cancel{padding:6px 10px;background:#f5f5f5;color:#666;border:none;border-radius:3px;cursor:pointer;font-size:12px}
-/* Popup déviation inline */
-.dev-pop{position:fixed;background:#fff;border:1px solid #ddd;border-radius:4px;box-shadow:0 6px 20px rgba(0,0,0,.15);z-index:400;padding:12px;min-width:260px;display:flex;flex-direction:column;gap:8px}
+/* Ligne lot bloquante */
+.row-bloquante td{background:#FFF5F5!important}
+.row-bloquante:hover td{background:#FDEAEA!important}
+/* Popup déviation */
+.dev-pop{position:fixed;background:#fff;border:1px solid #ddd;border-radius:4px;box-shadow:0 6px 20px rgba(0,0,0,.15);z-index:400;padding:12px;min-width:300px;max-width:360px;max-height:80vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+.dev-pop-header{display:flex;align-items:center;justify-content:space-between}
 .dev-pop-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#999}
+.dev-pop-x{background:none;border:none;cursor:pointer;color:#bbb;font-size:14px;padding:0}
+.dev-pop-summary{display:flex;gap:6px;flex-wrap:wrap}
+.dev-sum-bl{font-size:11px;padding:2px 8px;border-radius:10px;background:#FCEBEB;color:#A32D2D;font-weight:600}
+.dev-sum-nb{font-size:11px;padding:2px 8px;border-radius:10px;background:#f5f5f5;color:#666;font-weight:500}
+.dev-sum-cl{font-size:11px;padding:2px 8px;border-radius:10px;background:#EAF3DE;color:#3B6D11;font-weight:500}
+.dev-pop-list{display:flex;flex-direction:column;gap:4px;border-top:1px solid #f0f0f0;padding-top:6px}
+.dev-pop-item{background:#fafafa;border:1px solid #f0f0f0;border-radius:3px;padding:6px 8px}
+.dev-pop-item-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.dev-badge-sm{font-size:9px;padding:1px 5px;border-radius:2px;font-weight:700}
+.dev-bl-on{background:#FCEBEB;color:#A32D2D}.dev-bl-off{background:#f0f0f0;color:#999}
+.dev-pop-dn{font-size:12px;font-weight:600;font-family:'SF Mono',monospace;flex:1}
+.dev-pop-stat{font-size:10px;padding:1px 6px;border-radius:10px;font-weight:500}
+.dev-stat-op{background:#FCEBEB;color:#A32D2D}.dev-stat-cl{background:#EAF3DE;color:#3B6D11}
+.dev-close-btn{font-size:10px;padding:2px 8px;border:1px solid #ddd;border-radius:3px;background:#fff;cursor:pointer;color:#666;margin-left:auto}
+.dev-close-btn:hover{background:#FCEBEB;color:#A32D2D;border-color:#f5c6c6}
+.dev-pop-desc{font-size:11px;color:#999;margin-top:3px;word-break:break-word}
+.dev-pop-sep{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#bbb;border-top:1px solid #f0f0f0;padding-top:8px;margin-top:2px}
 .dev-pop-in{width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:3px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box}
 .dev-pop-ta{width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:3px;font-size:13px;font-family:inherit;resize:vertical;outline:none;box-sizing:border-box}
 .dev-pop-tog{padding:5px 14px;border:none;border-radius:10px;cursor:pointer;font-size:11px;font-weight:600;align-self:flex-start}
