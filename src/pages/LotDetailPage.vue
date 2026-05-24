@@ -40,39 +40,57 @@
     </div>
 
     <!-- Circuit OF -->
-    <div class="section" v-if="of"><div class="sh"><span>Circuit OF</span></div>
-      <div class="dg">
-        <div class="di di-step" v-for="e in circuitSteps" :key="'of-'+e.key">
-          <div class="dind" :class="stepIndClass('of',e.key)"></div>
-          <div class="di-body">
-            <div class="dn" :class="{'dn-active':of.etape_circuit===e.key}">{{e.label}}</div>
-            <div class="ds">{{e.service}}</div>
-            <div class="ds ds-ok di-val" v-if="getVal('of',e.key)">
-              <span>{{getVal('of',e.key).user}}</span>
-              <span class="di-date">{{fmtDt(getVal('of',e.key).validated_at)}}</span>
-            </div>
-            <button v-else-if="of.etape_circuit===e.key && canValidateStep('of',e.key)" class="btn-step" @click.stop="doValidate('of',of.id,e.key)">Valider</button>
-            <div class="ds di-pending" v-else-if="of.etape_circuit!==e.key && !getVal('of',e.key)">En attente</div>
+    <div class="section" v-if="of">
+      <div class="sh"><span>Circuit OF</span></div>
+      <div class="flow flow-6">
+        <template v-for="(e,idx) in circuitSteps" :key="'of-'+e.key">
+          <div class="flow-step" :class="circuitFlowClass('of',e.key)">
+            <span class="fs-num">{{idx+1}}</span>
+            <span class="fs-label">{{e.label}}</span>
           </div>
+          <div class="flow-arrow" v-if="idx<circuitSteps.length-1">→</div>
+        </template>
+      </div>
+      <div class="circ-act">
+        <button v-if="of.statut!=='termine' && canValidateStep('of',of.etape_circuit)" class="btn bg" @click="doValidate('of',of.id,of.etape_circuit)">
+          Valider — {{circuitSteps.find(function(e){return e.key===of.etape_circuit})?.label}}
+        </button>
+        <span v-else-if="of.statut==='termine'" class="circ-done">✓ Circuit OF terminé</span>
+      </div>
+      <div class="circ-hist" v-if="ofVals.length">
+        <div class="circ-hist-row" v-for="v in ofVals" :key="v.etape">
+          <span class="circ-hist-dot"></span>
+          <span class="circ-hist-step">{{circuitSteps.find(function(e){return e.key===v.etape})?.label||v.etape}}</span>
+          <span class="circ-hist-who">{{v.user}}</span>
+          <span class="circ-hist-at">{{fmtDt(v.validated_at)}}</span>
         </div>
       </div>
     </div>
 
     <!-- Circuit OC -->
-    <div class="section" v-if="oc"><div class="sh"><span>Circuit OC</span></div>
-      <div class="dg">
-        <div class="di di-step" v-for="e in circuitSteps" :key="'oc-'+e.key">
-          <div class="dind" :class="stepIndClass('oc',e.key)"></div>
-          <div class="di-body">
-            <div class="dn" :class="{'dn-active':oc.etape_circuit===e.key}">{{e.label}}</div>
-            <div class="ds">{{e.service}}</div>
-            <div class="ds ds-ok di-val" v-if="getVal('oc',e.key)">
-              <span>{{getVal('oc',e.key).user}}</span>
-              <span class="di-date">{{fmtDt(getVal('oc',e.key).validated_at)}}</span>
-            </div>
-            <button v-else-if="oc.etape_circuit===e.key && canValidateStep('oc',e.key)" class="btn-step" @click.stop="doValidate('oc',oc.id,e.key)">Valider</button>
-            <div class="ds di-pending" v-else-if="oc.etape_circuit!==e.key && !getVal('oc',e.key)">En attente</div>
+    <div class="section" v-if="oc">
+      <div class="sh"><span>Circuit OC</span></div>
+      <div class="flow flow-6">
+        <template v-for="(e,idx) in circuitSteps" :key="'oc-'+e.key">
+          <div class="flow-step" :class="circuitFlowClass('oc',e.key)">
+            <span class="fs-num">{{idx+1}}</span>
+            <span class="fs-label">{{e.label}}</span>
           </div>
+          <div class="flow-arrow" v-if="idx<circuitSteps.length-1">→</div>
+        </template>
+      </div>
+      <div class="circ-act">
+        <button v-if="oc.statut!=='termine' && canValidateStep('oc',oc.etape_circuit)" class="btn bg" @click="doValidate('oc',oc.id,oc.etape_circuit)">
+          Valider — {{circuitSteps.find(function(e){return e.key===oc.etape_circuit})?.label}}
+        </button>
+        <span v-else-if="oc.statut==='termine'" class="circ-done">✓ Circuit OC terminé</span>
+      </div>
+      <div class="circ-hist" v-if="ocVals.length">
+        <div class="circ-hist-row" v-for="v in ocVals" :key="v.etape">
+          <span class="circ-hist-dot"></span>
+          <span class="circ-hist-step">{{circuitSteps.find(function(e){return e.key===v.etape})?.label||v.etape}}</span>
+          <span class="circ-hist-who">{{v.user}}</span>
+          <span class="circ-hist-at">{{fmtDt(v.validated_at)}}</span>
         </div>
       </div>
     </div>
@@ -315,6 +333,14 @@ export default {
       var o=type==='of'?of.value:oc.value
       return o&&o.etape_circuit===etape?'ind-prog':'ind-wait'
     }
+    var circuitFlowClass = function(type,etape){
+      var order = type==='of'?of.value:oc.value
+      if(!order) return 'fs-wait'
+      if(order.statut==='termine') return 'fs-done'
+      if(getVal(type,etape)) return 'fs-done'
+      if(order.etape_circuit===etape) return 'fs-active'
+      return 'fs-wait'
+    }
     var fmtDt = function(d){return d?new Date(d).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):''}
 
     var ofV = computed(function(){return ofVals.value.length})
@@ -479,7 +505,7 @@ export default {
 
     return{lot,prod,of,oc,ofVals,ocVals,docs,devs,aqls,dossier,statusLabels,circuitSteps,isAdmin,
       showDevForm,devObs,devBloquante,devNumeroDn,showModify,editNumLot,editCodeProd,prodSuggestions,rvpDocs,mainDocs,
-      getVal,pipClass,stepIndClass,fmtDt,ofV,ocV,docsOk,docsReq,devsOpen,leadTime,dossierComplete,canValidateStep,
+      getVal,pipClass,stepIndClass,circuitFlowClass,fmtDt,ofV,ocV,docsOk,docsReq,devsOpen,leadTime,dossierComplete,canValidateStep,
       docTypeLabel,docStatLabel,indClass,dsClass,rvpServiceLabel,isDocBlocked,goBack,
       doValidate,doLiberer,doDeclareDeviation,doCloseDeviation,doDeclareRvp,doDeclareMajDoc,doDeclareClotureSap,doRequestAql,doAqlConforme,doAqlNonConforme,doRelanceAql,isLatestAql,canRelanceAql,canDemanderAql,
       majDocs,clotDocs,majDocLabel,clotDocLabel,clotStatLabel,clotIndClass,clotDsClass,docErrMsg,
@@ -557,6 +583,24 @@ export default {
 .dev-save-btn{align-self:flex-start;font-size:11px;padding:4px 12px;border:1px solid #185FA5;border-radius:3px;background:#E6F1FB;color:#0C447C;cursor:pointer;font-family:inherit}.dev-save-btn:hover{background:#d0e3f5}
 .dim{color:#999;font-size:12px}.mono{font-family:'SF Mono',monospace;font-size:12px}
 .em{font-size:12px;color:#999;padding:12px 0;text-align:center}
+/* Stepper circuit OF/OC */
+.flow{display:flex;align-items:center;gap:0;margin:12px 0;border:1px solid #e8e8e8;border-radius:2px;overflow:hidden;flex-wrap:nowrap}
+.flow-6 .flow-step{padding:8px 4px}
+.flow-step{flex:1;padding:10px 12px;text-align:center;display:flex;align-items:center;justify-content:center;gap:5px;min-height:44px}
+.flow-arrow{padding:0 2px;color:#ccc;font-size:12px;flex-shrink:0}
+.fs-num{width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0}
+.fs-label{font-size:11px;line-height:1.3}
+.fs-done{background:#EAF3DE}.fs-done .fs-num{background:#1D9E75;color:#fff}.fs-done .fs-label{color:#3B6D11}
+.fs-active{background:#E6F1FB}.fs-active .fs-num{background:#185FA5;color:#fff}.fs-active .fs-label{color:#0C447C;font-weight:500}
+.fs-wait{background:#fafafa}.fs-wait .fs-num{background:#e8e8e8;color:#999}.fs-wait .fs-label{color:#999}
+.circ-act{margin:10px 0;display:flex;align-items:center;gap:10px}
+.circ-done{font-size:12px;color:#1D9E75;font-weight:500}
+.circ-hist{margin-top:10px;border-top:1px solid #f0f0f0;padding-top:8px;display:flex;flex-direction:column;gap:2px}
+.circ-hist-row{display:flex;align-items:center;gap:8px;font-size:11px;padding:3px 0;border-bottom:1px solid #f8f8f8}
+.circ-hist-dot{width:6px;height:6px;border-radius:50%;background:#1D9E75;flex-shrink:0}
+.circ-hist-step{font-weight:500;color:#333;flex:1}
+.circ-hist-who{color:#999}
+.circ-hist-at{font-family:'SF Mono',monospace;font-size:10px;color:#bbb}
 /* Cartes circuit OF/OC harmonisées avec documents */
 .di-step{cursor:default}
 .di-body{flex:1;min-width:0}
