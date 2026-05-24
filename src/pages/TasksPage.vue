@@ -21,6 +21,16 @@
       </div>
     </div>
 
+    <!-- Barre de recherche -->
+    <div v-if="!loading && totalCount>0" class="tp-search-bar">
+      <span class="tp-search-icon">🔍</span>
+      <input v-model="searchQuery" class="tp-search-inp" type="text" placeholder="Rechercher par numéro de lot ou désignation…" autocomplete="off" />
+      <span v-if="searchQuery.trim()" class="tp-search-count">
+        {{searchResultCount}} résultat{{searchResultCount!==1?'s':''}}
+      </span>
+      <button v-if="searchQuery" class="tp-search-clear" @click="searchQuery=''">✕</button>
+    </div>
+
     <div v-if="loading" class="tp-loading">⟳ Chargement…</div>
 
     <div v-else-if="!loading && totalCount===0" class="tp-empty">
@@ -29,7 +39,7 @@
     </div>
 
     <div v-else class="tp-cats">
-      <div v-for="cat in categories" :key="cat.id" v-show="cat.items.length" class="tp-cat">
+      <div v-for="cat in categories" :key="cat.id" v-show="isCatVisible(cat)" class="tp-cat">
 
         <!-- En-tête catégorie -->
         <div class="tp-cat-hd" @click="cat.open=!cat.open">
@@ -47,15 +57,26 @@
             <span class="tp-tbl-h2">Action</span>
             <span class="tp-tbl-h3">Lots</span>
           </div>
-          <div v-for="grp in cat.groups" :key="grp.typeKey" class="tp-grp">
+          <div v-for="grp in visibleGroups(cat)" :key="grp.typeKey" class="tp-grp">
             <div class="tp-grp-hd" @click.stop="grp.open=!grp.open">
               <span class="tp-doc-type-tag">{{grp.typeLabel}}</span>
               <span class="tp-grp-action">{{grp.action}}</span>
-              <span class="tp-grp-badge">{{grp.docs.length}} lot{{grp.docs.length>1?'s':''}}</span>
+              <span class="tp-grp-badge">{{getDocsForGroup(grp).length}} lot{{getDocsForGroup(grp).length>1?'s':''}}</span>
               <span class="tp-grp-chev">{{grp.open?'▲':'▼'}}</span>
             </div>
             <div v-if="grp.open" class="tp-grp-body">
-              <template v-for="d in grp.docs" :key="d.key">
+              <!-- En-tête tri colonnes -->
+              <div class="tp-grp-sort-hd">
+                <span class="tp-sort-col tp-sort-lot" @click.stop="toggleSort(grp,'lotNum')">
+                  N° Lot <span class="tp-sort-icon">{{sortIcon(grp,'lotNum')}}</span>
+                </span>
+                <span class="tp-sort-col tp-sort-desc" @click.stop="toggleSort(grp,'prodDesc')">
+                  Désignation <span class="tp-sort-icon">{{sortIcon(grp,'prodDesc')}}</span>
+                </span>
+                <span class="tp-sort-col tp-sort-since">Depuis</span>
+                <span class="tp-sort-col tp-sort-acts">Actions</span>
+              </div>
+              <template v-for="d in getDocsForGroup(grp)" :key="d.key">
                 <!-- Motif retour inline -->
                 <div v-if="d.showReturnInput" class="tp-return-row">
                   <span class="tp-lot-mono">{{d.lotNum}}</span>
@@ -81,9 +102,9 @@
           </div>
         </div>
 
-        <!-- Autres catégories -->
+        <!-- Autres catégories (flat) -->
         <div v-else-if="cat.open" class="tp-cat-list">
-          <div v-for="item in cat.items" :key="item.key" class="tp-item">
+          <div v-for="item in getItemsForCat(cat)" :key="item.key" class="tp-item">
             <div class="tp-item-main" @click="$router.push('/lots/'+item.lotId)">
               <span class="tp-item-lot">{{item.lotNum}}</span>
               <span v-if="item.urgent" class="tp-item-bl">⚠ BLQ</span>
@@ -109,7 +130,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { supabase } from '../supabase'
 import { canPerform, loadPermissions, getPermissionForEtape } from '../services/permissions'
 import { createNotification } from '../services/notifications'
@@ -120,6 +141,7 @@ export default {
     var selectedSvc = ref('')
     var loading = ref(true)
     var categories = ref([])
+    var searchQuery = ref('')
 
     var SVC_LABELS = {planification:'Planification',stock:'Stock',aq:'Assurance Qualité',aq_dap:'AQ DAP',dt:'Direction Technique',fabrication:'Fabrication',conditionnement:'Conditionnement',lcq:'Laboratoire CQ',admin:'Administration'}
     var SVC_LABELS_ALL = {aq:'Assurance Qualité',dt:'Direction Technique',planification:'Planification',stock:'Stock',fabrication:'Fabrication',conditionnement:'Conditionnement',lcq:'Laboratoire CQ',aq_dap:'AQ DAP'}
@@ -133,8 +155,125 @@ export default {
     var svcLabel = computed(function(){ return SVC_LABELS[selectedSvc.value] || selectedSvc.value })
     var totalCount = computed(function(){ return categories.value.reduce(function(s,c){ return s+c.items.length },0) })
 
-    var makeCat = function(id,icon,title,urgent) {
+    // ── RECHERCHE ────────────────────────────────────────────────────────
+
+    var matchesSearch = function(lotNum, prodDesc) {
+      var q = searchQuery.value.trim().toLowerCase()
+      if (!q) return true
+      return (lotNum||'').toLowerCase().indexOf(q) >= 0 || (prodDesc||'').toLowerCase().indexOf(q) >= 0
+    }
+
+    var searchResultCount = computed(function() {
+      var q = searchQuery.value.trim().toLowerCase()
+      if (!q) return 0
+      var count = 0
+      categories.value.forEach(function(cat) {
+        if (cat.groups) {
+          cat.groups.forEach(function(grp) {
+            grp.docs.forEach(function(d) {
+              if ((d.lotNum||'').toLowerCase().indexOf(q)>=0 || (d.prodDesc||'').toLowerCase().indexOf(q)>=0) count++
+            })
+          })
+        } else {
+          cat.items.forEach(function(item) {
+            if ((item.lotNum||'').toLowerCase().indexOf(q)>=0 || (item.prodDesc||'').toLowerCase().indexOf(q)>=0) count++
+          })
+        }
+      })
+      return count
+    })
+
+    // Ouvre automatiquement les groupes qui ont des résultats quand on tape
+    watch(searchQuery, function(q) {
+      if (!q) return
+      var lq = q.trim().toLowerCase()
+      categories.value.forEach(function(cat) {
+        if (!cat.groups) return
+        cat.groups.forEach(function(grp) {
+          var hasMatch = grp.docs.some(function(d) {
+            return (d.lotNum||'').toLowerCase().indexOf(lq)>=0 || (d.prodDesc||'').toLowerCase().indexOf(lq)>=0
+          })
+          if (hasMatch) grp.open = true
+        })
+      })
+    })
+
+    var isCatVisible = function(cat) {
+      var q = searchQuery.value.trim().toLowerCase()
+      if (!q) return cat.items.length > 0
+      if (cat.groups) {
+        return cat.groups.some(function(grp) {
+          return grp.docs.some(function(d) {
+            return (d.lotNum||'').toLowerCase().indexOf(q)>=0 || (d.prodDesc||'').toLowerCase().indexOf(q)>=0
+          })
+        })
+      }
+      return cat.items.some(function(item) {
+        return (item.lotNum||'').toLowerCase().indexOf(q)>=0 || (item.prodDesc||'').toLowerCase().indexOf(q)>=0
+      })
+    }
+
+    var visibleGroups = function(cat) {
+      if (!cat.groups) return []
+      var q = searchQuery.value.trim().toLowerCase()
+      if (!q) return cat.groups
+      return cat.groups.filter(function(grp) {
+        return grp.docs.some(function(d) {
+          return (d.lotNum||'').toLowerCase().indexOf(q)>=0 || (d.prodDesc||'').toLowerCase().indexOf(q)>=0
+        })
+      })
+    }
+
+    var getItemsForCat = function(cat) {
+      var q = searchQuery.value.trim().toLowerCase()
+      if (!q) return cat.items
+      return cat.items.filter(function(item) {
+        return (item.lotNum||'').toLowerCase().indexOf(q)>=0 || (item.prodDesc||'').toLowerCase().indexOf(q)>=0
+      })
+    }
+
+    // ── TRI ──────────────────────────────────────────────────────────────
+
+    var toggleSort = function(grp, key) {
+      if (grp.sortKey === key) {
+        grp.sortDir = grp.sortDir === 'asc' ? 'desc' : 'asc'
+      } else {
+        grp.sortKey = key
+        grp.sortDir = 'asc'
+      }
+    }
+
+    var sortIcon = function(grp, key) {
+      if (grp.sortKey !== key) return '↕'
+      return grp.sortDir === 'asc' ? '↑' : '↓'
+    }
+
+    var getDocsForGroup = function(grp) {
+      var q = searchQuery.value.trim().toLowerCase()
+      var docs = q ? grp.docs.filter(function(d) {
+        return (d.lotNum||'').toLowerCase().indexOf(q)>=0 || (d.prodDesc||'').toLowerCase().indexOf(q)>=0
+      }) : grp.docs.slice()
+      if (grp.sortKey) {
+        var sk = grp.sortKey
+        var sd = grp.sortDir
+        docs = docs.slice().sort(function(a, b) {
+          var va = (sk === 'lotNum' ? a.lotNum : a.prodDesc) || ''
+          var vb = (sk === 'lotNum' ? b.lotNum : b.prodDesc) || ''
+          var cmp = va.localeCompare(vb, 'fr', {sensitivity:'base'})
+          return sd === 'desc' ? -cmp : cmp
+        })
+      }
+      return docs
+    }
+
+    // ── HELPERS ──────────────────────────────────────────────────────────
+
+    var makeCat = function(id, icon, title, urgent) {
       return {id:id,icon:icon,title:title,urgent:urgent||false,open:true,items:[]}
+    }
+
+    var makeGrp = function(typeKey, typeLabel, action) {
+      return {typeKey:typeKey,typeLabel:typeLabel,action:action,open:false,docs:[],sortKey:null,sortDir:'asc'}
     }
 
     var fmtSince = function(dateStr) {
@@ -169,18 +308,18 @@ export default {
       return map
     }
 
-    // ── ACTIONS ─────────────────────────────────────────────────────────
+    // ── ACTIONS ──────────────────────────────────────────────────────────
 
     var removeDocItem = function(d, grp, cat) {
       var di = grp.docs.indexOf(d); if(di>=0) grp.docs.splice(di,1)
       var fi = cat.items.findIndex(function(i){return i.key===d.key}); if(fi>=0) cat.items.splice(fi,1)
       if (grp.docs.length===0) { var gi=cat.groups.indexOf(grp); if(gi>=0) cat.groups.splice(gi,1) }
     }
+
     var removeCatItem = function(item, cat) {
       var idx = cat.items.indexOf(item); if(idx>=0) cat.items.splice(idx,1)
     }
 
-    // Après AR doc : ajoute le doc instantanément dans "Documents à traiter"
     var addToDocsCatAfterAr = function(arItem) {
       var svc = selectedSvc.value
       var isAdm = userService.value === 'admin'
@@ -206,14 +345,15 @@ export default {
       var docCatObj = categories.value.find(function(c){ return c.id==='docs' })
       if (docCatObj) {
         var grp = docCatObj.groups.find(function(g){ return g.typeKey===typeKey })
-        if (!grp) { grp={typeKey:typeKey,typeLabel:typeLabel,action:action,open:true,docs:[]}; docCatObj.groups.push(grp) }
+        if (!grp) { grp=makeGrp(typeKey,typeLabel,action); grp.open=true; docCatObj.groups.push(grp) }
         grp.docs.push(newDoc)
         docCatObj.items.push({key:'doc_'+arItem.docId,lotId:arItem.lotId,lotNum:arItem.lotNum})
       } else {
+        var g2 = makeGrp(typeKey,typeLabel,action); g2.open=true; g2.docs=[newDoc]
         var newCat = {id:'docs',icon:'📄',title:'Documents à traiter',urgent:false,open:true,
           items:[{key:'doc_'+arItem.docId,lotId:arItem.lotId,lotNum:arItem.lotNum}],
-          groups:[{typeKey:typeKey,typeLabel:typeLabel,action:action,open:true,docs:[newDoc]}]}
-        categories.value.splice(1, 0, newCat) // insérer après circuits
+          groups:[g2]}
+        categories.value.splice(1, 0, newCat)
       }
     }
 
@@ -316,13 +456,14 @@ export default {
 
     var load = async function() {
       loading.value = true
+      searchQuery.value = ''
       var cats = []
       var svc = selectedSvc.value
       if (!svc) { loading.value = false; return }
       await loadPermissions(userService.value)
       var isAdm = userService.value === 'admin'
 
-      // ── 1. CIRCUITS ────────────────────────────────────────────────
+      // ── 1. CIRCUITS ───────────────────────────────────────────────────
       var circEtapeMap = {planification:'planification',stock:'stock',aq:'aq',dt:'dt',aq_dap:'aq_dap'}
       var circEtape = circEtapeMap[svc]
       if (circEtape || svc==='fabrication' || svc==='conditionnement') {
@@ -362,7 +503,7 @@ export default {
         if (circCat.items.length) cats.push(circCat)
       }
 
-      // ── 2. DOCUMENTS (groupés par type) ────────────────────────────
+      // ── 2. DOCUMENTS (groupés par type_document) ──────────────────────
       var docCat = {id:'docs',icon:'📄',title:'Documents à traiter',urgent:false,open:true,items:[],groups:[]}
       var docRaw = []
       if (svc==='aq') {
@@ -381,7 +522,7 @@ export default {
           var canAct=isAdm||canPerform('verifier_'+typeKey)
           var canReturn=isAdm||canPerform('retourner_document')
           docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||''})
-          if(!grpMap[typeKey]) grpMap[typeKey]={typeKey:typeKey,typeLabel:typeLabel,action:lbl,open:false,docs:[]}
+          if(!grpMap[typeKey]) grpMap[typeKey]=makeGrp(typeKey,typeLabel,lbl)
           grpMap[typeKey].docs.push({key:'doc_'+d.id,docId:d.id,typeDocument:typeKey,statut:d.statut,
             lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',
             action:lbl,actionClass:actCls,sinceText:since?since.text:null,sinceClass:since?since.cls:'',
@@ -404,7 +545,7 @@ export default {
           var canAct=isAdm||canPerform('approuver_'+typeKey)
           var canReturn=isAdm||canPerform('retourner_document')
           docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||''})
-          if(!grpMapDt[typeKey]) grpMapDt[typeKey]={typeKey:typeKey,typeLabel:typeLabel,action:'Approuver DT',open:false,docs:[]}
+          if(!grpMapDt[typeKey]) grpMapDt[typeKey]=makeGrp(typeKey,typeLabel,'Approuver DT')
           grpMapDt[typeKey].docs.push({key:'doc_'+d.id,docId:d.id,typeDocument:typeKey,statut:d.statut,
             lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',
             action:'Approuver DT',actionClass:'act-purple',sinceText:since?since.text:null,sinceClass:since?since.cls:'',
@@ -426,7 +567,7 @@ export default {
           var typeKey=d.type_document||'autre'; var typeLabel=DOC_TYPE_LABELS[typeKey]||typeKey
           var canAct=isAdm||canPerform('emettre_'+typeKey)
           docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||''})
-          if(!grpMapEmt[typeKey]) grpMapEmt[typeKey]={typeKey:typeKey,typeLabel:typeLabel,action:'Rectifier et réémettre',open:false,docs:[]}
+          if(!grpMapEmt[typeKey]) grpMapEmt[typeKey]=makeGrp(typeKey,typeLabel,'Rectifier et réémettre')
           grpMapEmt[typeKey].docs.push({key:'doc_'+d.id,docId:d.id,typeDocument:typeKey,statut:'retour_emetteur',
             lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',
             action:'Rectifier et réémettre',actionClass:'act-red',sinceText:since?since.text:null,sinceClass:since?since.cls:'',
@@ -437,7 +578,7 @@ export default {
       }
       if (docCat.items.length) cats.push(docCat)
 
-      // ── 3. ACCUSÉS DE RÉCEPTION ────────────────────────────────────
+      // ── 3. ACCUSÉS DE RÉCEPTION ───────────────────────────────────────
       var arCat = makeCat('ar','✅','Accusés de réception à confirmer')
       var arCanDoc = isAdm || canPerform('accuser_reception_document')
       var arCanCirc = isAdm || canPerform('accuser_reception_circuit')
@@ -502,7 +643,7 @@ export default {
       }
       if (arCat.items.length) cats.push(arCat)
 
-      // ── 4. AQL À RÉALISER ──────────────────────────────────────────
+      // ── 4. AQL À RÉALISER ─────────────────────────────────────────────
       if (svc==='fabrication'||svc==='conditionnement') {
         var aqlCat = makeCat('aql','🔬','Inspections AQL à réaliser')
         var aqlTypeVal = svc==='fabrication'?'fabrication':'conditionnement'
@@ -519,7 +660,7 @@ export default {
         if (aqlCat.items.length) cats.push(aqlCat)
       }
 
-      // ── 5. DÉVIATIONS BLOQUANTES ───────────────────────────────────
+      // ── 5. DÉVIATIONS BLOQUANTES ──────────────────────────────────────
       if (svc==='aq'||svc==='dt'||svc==='admin') {
         var devCat = makeCat('dev','⚠','Déviations bloquantes ouvertes',true)
         var devR = await supabase.from('deviations').select('id,lot_id,numero_dn').eq('bloquante',true).in('statut',['ouverte','en_cours']).order('declared_at',{ascending:false}).limit(200)
@@ -548,7 +689,12 @@ export default {
       } else { loading.value = false }
     })
 
-    return {svcLabel,isAdmin,selectedSvc,totalCount,loading,categories,load,SVC_LABELS_ALL,doDocAction,doDocReturn,doItemAction,doAqlSaisir}
+    return {
+      svcLabel, isAdmin, selectedSvc, totalCount, loading, categories, load, SVC_LABELS_ALL,
+      searchQuery, searchResultCount, isCatVisible, visibleGroups, getItemsForCat, getDocsForGroup,
+      toggleSort, sortIcon,
+      doDocAction, doDocReturn, doItemAction, doAqlSaisir
+    }
   }
 }
 </script>
@@ -557,7 +703,7 @@ export default {
 .tp{max-width:960px;margin:0 auto;padding:4px 0 40px}
 
 /* Header */
-.tp-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+.tp-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px}
 .tp-hd-left{display:flex;align-items:center;gap:14px}
 .tp-hd-icon{font-size:28px}
 .tp-h1{font-size:20px;font-weight:700;color:#111}
@@ -568,6 +714,14 @@ export default {
 .tp-total-ok{background:#EAF3DE;color:#3B6D11}
 .tp-refresh{padding:6px 14px;font-size:12px;font-family:inherit;border:1px solid #ddd;border-radius:4px;background:#fff;cursor:pointer;color:#555;transition:.15s}.tp-refresh:hover{background:#f5f5f5;border-color:#bbb}.tp-refresh:disabled{opacity:.5;cursor:default}
 .tp-svc-sel{padding:6px 10px;font-size:12px;font-family:inherit;border:1px solid #ddd;border-radius:4px;background:#fff;color:#333;cursor:pointer;outline:none}
+
+/* Barre de recherche */
+.tp-search-bar{display:flex;align-items:center;gap:8px;margin-bottom:16px;background:#fff;border:1px solid #ddd;border-radius:6px;padding:8px 14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.tp-search-icon{font-size:15px;color:#aaa;flex-shrink:0}
+.tp-search-inp{flex:1;border:none;outline:none;font-size:13px;font-family:inherit;color:#333;background:transparent;min-width:0}
+.tp-search-inp::placeholder{color:#c0c0c0}
+.tp-search-count{font-size:11px;font-weight:600;color:#185FA5;background:#E6F1FB;padding:2px 10px;border-radius:10px;white-space:nowrap;flex-shrink:0}
+.tp-search-clear{border:none;background:none;cursor:pointer;color:#bbb;font-size:14px;padding:0 2px;line-height:1;flex-shrink:0}.tp-search-clear:hover{color:#555}
 
 /* Loading / empty */
 .tp-loading{text-align:center;color:#999;font-size:14px;padding:48px;font-style:italic}
@@ -601,10 +755,20 @@ export default {
 .tp-grp-badge{font-size:10px;font-weight:600;color:#185FA5;background:#E6F1FB;padding:1px 7px;border-radius:8px;white-space:nowrap;flex-shrink:0}
 .tp-grp-chev{font-size:10px;color:#bbb;flex-shrink:0}
 
-/* Doc items (inside groups) */
+/* En-tête tri colonnes */
 .tp-grp-body{background:#fafcff;border-top:1px solid #eef3fb}
-.tp-doc-item{display:flex;align-items:center;padding:7px 16px 7px 16px;border-bottom:1px solid #f0f0f0;gap:8px}.tp-doc-item:last-child{border-bottom:none}.tp-doc-item:hover{background:#f0f6ff}
-.tp-lot-mono{font-family:'SF Mono','Fira Code',monospace;font-size:10px;font-weight:500;white-space:nowrap;flex-shrink:0;cursor:pointer;color:#0C447C}
+.tp-grp-sort-hd{display:flex;align-items:center;gap:8px;padding:5px 16px;background:#f0f4fb;border-bottom:1px solid #e4ecf8}
+.tp-sort-col{font-size:10px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.3px;display:flex;align-items:center;gap:3px;user-select:none;padding:2px 0}
+.tp-sort-col.tp-sort-lot,.tp-sort-col.tp-sort-desc{cursor:pointer;transition:.1s}.tp-sort-col.tp-sort-lot:hover,.tp-sort-col.tp-sort-desc:hover{color:#185FA5}
+.tp-sort-lot{width:110px;flex-shrink:0}
+.tp-sort-desc{flex:1}
+.tp-sort-since{width:90px;flex-shrink:0;cursor:default}
+.tp-sort-acts{width:120px;flex-shrink:0;cursor:default}
+.tp-sort-icon{font-size:10px}
+
+/* Doc items (inside groups) */
+.tp-doc-item{display:flex;align-items:center;padding:7px 16px;border-bottom:1px solid #f0f0f0;gap:8px}.tp-doc-item:last-child{border-bottom:none}.tp-doc-item:hover{background:#f0f6ff}
+.tp-lot-mono{font-family:'SF Mono','Fira Code',monospace;font-size:10px;font-weight:500;white-space:nowrap;flex-shrink:0;cursor:pointer;color:#0C447C;width:110px}
 .tp-act-badge{font-size:9px;padding:2px 5px;border-radius:2px;font-weight:500;white-space:nowrap;flex-shrink:0}
 .act-blue{background:#E6F1FB;color:#185FA5}
 .act-orange{background:#FEF5E7;color:#A0620D}
@@ -623,6 +787,7 @@ export default {
 .tp-do-ok{border-color:#1D9E75;background:#EAF3DE;color:#1D9E75}.tp-do-ok:hover{background:#1D9E75;color:#fff}
 .tp-do-nok{border-color:#A32D2D;background:#FCEBEB;color:#A32D2D}.tp-do-nok:hover{background:#A32D2D;color:#fff}
 .tp-do-ret{border-color:#A0620D;background:#FEF5E7;color:#A0620D}.tp-do-ret:hover{background:#A0620D;color:#fff}
+
 /* Motif retour inline */
 .tp-return-row{display:flex;align-items:center;gap:8px;padding:8px 16px;background:#FEF5E7;border-bottom:1px solid #f0e0c0;flex-wrap:wrap}
 .tp-return-label{font-size:11px;font-weight:600;color:#A0620D;white-space:nowrap;flex-shrink:0}
