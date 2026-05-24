@@ -55,16 +55,28 @@
               <span class="tp-grp-chev">{{grp.open?'▲':'▼'}}</span>
             </div>
             <div v-if="grp.open" class="tp-grp-body">
-              <div v-for="d in grp.docs" :key="d.key" class="tp-doc-item">
-                <span class="tp-lot-mono" @click="$router.push('/lots/'+d.lotId)">{{d.lotNum}}</span>
-                <span class="tp-act-badge" :class="d.actionClass">{{d.action}}</span>
-                <span class="tp-prod-desc">{{d.prodDesc}}<span class="tp-prod-code">{{d.prodCode}}</span></span>
-                <span v-if="d.sinceText" class="tp-doc-since" :class="d.sinceClass">{{d.sinceText}}</span>
-                <button v-if="d.canAct" class="tp-do-btn" :disabled="d.acting" @click.stop="doDocAction(d,grp,cat)">
-                  {{d.acting?'…':d.btnLabel}}
-                </button>
-                <span class="tp-item-arr" @click="$router.push('/lots/'+d.lotId)">→</span>
-              </div>
+              <template v-for="d in grp.docs" :key="d.key">
+                <!-- Motif retour inline -->
+                <div v-if="d.showReturnInput" class="tp-return-row">
+                  <span class="tp-lot-mono">{{d.lotNum}}</span>
+                  <span class="tp-return-label">↩ {{d.returnLabel}} — motif :</span>
+                  <textarea v-model="d.returnMotif" class="tp-return-motif" placeholder="Motif (optionnel)…" rows="1"></textarea>
+                  <button class="tp-do-btn tp-do-nok" :disabled="d.acting" @click.stop="doDocReturn(d,grp,cat)">{{d.acting?'…':'Confirmer'}}</button>
+                  <button class="tp-btn-cancel" @click.stop="d.showReturnInput=false;d.returnMotif=''">Annuler</button>
+                </div>
+                <!-- Ligne normale -->
+                <div v-else class="tp-doc-item">
+                  <span class="tp-lot-mono" @click="$router.push('/lots/'+d.lotId)">{{d.lotNum}}</span>
+                  <span class="tp-act-badge" :class="d.actionClass">{{d.action}}</span>
+                  <span class="tp-prod-desc">{{d.prodDesc}}<span class="tp-prod-code">{{d.prodCode}}</span></span>
+                  <span v-if="d.sinceText" class="tp-doc-since" :class="d.sinceClass">{{d.sinceText}}</span>
+                  <div class="tp-doc-btns">
+                    <button v-if="d.canAct" class="tp-do-btn" :disabled="d.acting" @click.stop="doDocAction(d,grp,cat)">{{d.acting?'…':d.btnLabel}}</button>
+                    <button v-if="d.canReturn" class="tp-do-btn tp-do-ret" :disabled="d.acting" @click.stop="d.showReturnInput=true">{{d.returnBtnLabel}}</button>
+                  </div>
+                  <span class="tp-item-arr" @click="$router.push('/lots/'+d.lotId)">→</span>
+                </div>
+              </template>
             </div>
           </div>
         </div>
@@ -166,6 +178,27 @@ export default {
     }
     var removeCatItem = function(item, cat) {
       var idx = cat.items.indexOf(item); if(idx>=0) cat.items.splice(idx,1)
+    }
+
+    var doDocReturn = async function(d, grp, cat) {
+      d.acting = true
+      var u = await supabase.auth.getUser(); var uid = u.data.user.id; var n = new Date().toISOString()
+      var motif = (d.returnMotif||'').trim() || null
+      var svc = selectedSvc.value
+      var res
+      if (svc==='aq') {
+        var emSvc = SVC_MAP[d.typeDocument] || null
+        res = await supabase.from('liberation_documents').update({statut:'retour_emetteur',pending_ar_service:emSvc,updated_at:n}).eq('id',d.docId)
+        if (res.error) { alert('Erreur : '+res.error.message); d.acting=false; return }
+        await supabase.from('document_movements').insert({document_id:d.docId,action:'retour',from_service:'aq',to_service:emSvc,motif_retour:motif,performed_by:uid,performed_at:n})
+        if (emSvc) await createNotification(emSvc,d.lotId,d.docId,'Lot '+d.lotNum+' — '+d.typeDocument.toUpperCase()+' retourné pour rectification','document_retourne')
+      } else if (svc==='dt') {
+        res = await supabase.from('liberation_documents').update({statut:'verification_aq',pending_ar_service:'aq',updated_at:n}).eq('id',d.docId)
+        if (res.error) { alert('Erreur : '+res.error.message); d.acting=false; return }
+        await supabase.from('document_movements').insert({document_id:d.docId,action:'retour',from_service:'dt',to_service:'aq',motif_retour:motif,performed_by:uid,performed_at:n})
+        await createNotification('aq',d.lotId,d.docId,'Lot '+d.lotNum+' — '+d.typeDocument.toUpperCase()+' retourné par DT','document_retourne')
+      }
+      removeDocItem(d, grp, cat)
     }
 
     var doDocAction = async function(d, grp, cat) {
@@ -306,12 +339,15 @@ export default {
           var typeKey=d.type_document||'autre'; var typeLabel=DOC_TYPE_LABELS[typeKey]||typeKey
           var actCls=d.statut==='verification_aq'?'act-orange':'act-blue'
           var canAct=isAdm||canPerform('verifier_'+typeKey)
+          var canReturn=isAdm||canPerform('retourner_document')
           docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||''})
           if(!grpMap[typeKey]) grpMap[typeKey]={typeKey:typeKey,typeLabel:typeLabel,action:lbl,open:false,docs:[]}
           grpMap[typeKey].docs.push({key:'doc_'+d.id,docId:d.id,typeDocument:typeKey,statut:d.statut,
             lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',
             action:lbl,actionClass:actCls,sinceText:since?since.text:null,sinceClass:since?since.cls:'',
-            canAct:canAct,btnLabel:'✓ Valider',acting:false})
+            canAct:canAct,btnLabel:'✓ Valider',
+            canReturn:canReturn,returnBtnLabel:'↩ Retourner',returnLabel:'Retourner à l\'émetteur',
+            showReturnInput:false,returnMotif:'',acting:false})
         })
         docCat.groups = Object.values(grpMap)
       } else if (svc==='dt') {
@@ -326,12 +362,15 @@ export default {
           var since=fmtSince(d.updated_at)
           var typeKey=d.type_document||'autre'; var typeLabel=DOC_TYPE_LABELS[typeKey]||typeKey
           var canAct=isAdm||canPerform('approuver_'+typeKey)
+          var canReturn=isAdm||canPerform('retourner_document')
           docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||''})
           if(!grpMapDt[typeKey]) grpMapDt[typeKey]={typeKey:typeKey,typeLabel:typeLabel,action:'Approuver DT',open:false,docs:[]}
           grpMapDt[typeKey].docs.push({key:'doc_'+d.id,docId:d.id,typeDocument:typeKey,statut:d.statut,
             lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',
             action:'Approuver DT',actionClass:'act-purple',sinceText:since?since.text:null,sinceClass:since?since.cls:'',
-            canAct:canAct,btnLabel:'✓ Approuver',acting:false})
+            canAct:canAct,btnLabel:'✓ Approuver',
+            canReturn:canReturn,returnBtnLabel:'↩ Retour AQ',returnLabel:'Retourner à l\'AQ',
+            showReturnInput:false,returnMotif:'',acting:false})
         })
         docCat.groups = Object.values(grpMapDt)
       } else {
@@ -351,7 +390,8 @@ export default {
           grpMapEmt[typeKey].docs.push({key:'doc_'+d.id,docId:d.id,typeDocument:typeKey,statut:'retour_emetteur',
             lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',
             action:'Rectifier et réémettre',actionClass:'act-red',sinceText:since?since.text:null,sinceClass:since?since.cls:'',
-            canAct:canAct,btnLabel:'↑ Réémettre',acting:false})
+            canAct:canAct,btnLabel:'↑ Réémettre',canReturn:false,
+            showReturnInput:false,returnMotif:'',acting:false})
         })
         docCat.groups = Object.values(grpMapEmt)
       }
@@ -468,7 +508,7 @@ export default {
       } else { loading.value = false }
     })
 
-    return {svcLabel,isAdmin,selectedSvc,totalCount,loading,categories,load,SVC_LABELS_ALL,doDocAction,doItemAction,doAqlSaisir}
+    return {svcLabel,isAdmin,selectedSvc,totalCount,loading,categories,load,SVC_LABELS_ALL,doDocAction,doDocReturn,doItemAction,doAqlSaisir}
   }
 }
 </script>
@@ -538,9 +578,16 @@ export default {
 .since-red{background:#FCEBEB;color:#A32D2D}
 
 /* Action buttons */
+.tp-doc-btns{display:flex;gap:4px;flex-shrink:0}
 .tp-do-btn{padding:3px 10px;font-size:11px;font-weight:600;font-family:inherit;border-radius:3px;border:1px solid #185FA5;background:#E6F1FB;color:#185FA5;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:.1s}.tp-do-btn:hover{background:#185FA5;color:#fff}.tp-do-btn:disabled{opacity:.5;cursor:default}
 .tp-do-ok{border-color:#1D9E75;background:#EAF3DE;color:#1D9E75}.tp-do-ok:hover{background:#1D9E75;color:#fff}
 .tp-do-nok{border-color:#A32D2D;background:#FCEBEB;color:#A32D2D}.tp-do-nok:hover{background:#A32D2D;color:#fff}
+.tp-do-ret{border-color:#A0620D;background:#FEF5E7;color:#A0620D}.tp-do-ret:hover{background:#A0620D;color:#fff}
+/* Motif retour inline */
+.tp-return-row{display:flex;align-items:center;gap:8px;padding:8px 16px;background:#FEF5E7;border-bottom:1px solid #f0e0c0;flex-wrap:wrap}
+.tp-return-label{font-size:11px;font-weight:600;color:#A0620D;white-space:nowrap;flex-shrink:0}
+.tp-return-motif{flex:1;min-width:160px;font-size:11px;font-family:inherit;border:1px solid #E89C3A;border-radius:3px;padding:4px 8px;resize:none;outline:none;background:#fff}
+.tp-btn-cancel{padding:3px 8px;font-size:11px;font-family:inherit;border:1px solid #ccc;border-radius:3px;background:#fff;color:#666;cursor:pointer}.tp-btn-cancel:hover{background:#f5f5f5}
 
 /* Items plats (autres cats) */
 .tp-item{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid #f8f8f8;gap:12px}.tp-item:last-child{border-bottom:none}.tp-item:hover{background:#f5f9ff}
