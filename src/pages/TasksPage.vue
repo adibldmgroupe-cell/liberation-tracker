@@ -180,6 +180,43 @@ export default {
       var idx = cat.items.indexOf(item); if(idx>=0) cat.items.splice(idx,1)
     }
 
+    // Après AR doc : ajoute le doc instantanément dans "Documents à traiter"
+    var addToDocsCatAfterAr = function(arItem) {
+      var svc = selectedSvc.value
+      var isAdm = userService.value === 'admin'
+      var typeKey = arItem.typeDocument
+      var typeLabel = DOC_TYPE_LABELS[typeKey] || typeKey
+      var action, actionClass, btnLabel, statut, canReturn, returnBtnLabel, returnLabel
+      if (svc==='aq') {
+        action='Vérifier AQ → DT'; actionClass='act-blue'; btnLabel='✓ Valider'; statut='emis'
+        canReturn=isAdm||canPerform('retourner_document'); returnBtnLabel='↩ Retourner'; returnLabel='Retourner à l\'émetteur'
+      } else if (svc==='dt') {
+        action='Approuver DT'; actionClass='act-purple'; btnLabel='✓ Approuver'; statut='approuve_aq'
+        canReturn=isAdm||canPerform('retourner_document'); returnBtnLabel='↩ Retour AQ'; returnLabel='Retourner à l\'AQ'
+      } else {
+        action='Rectifier et réémettre'; actionClass='act-red'; btnLabel='↑ Réémettre'; statut='retour_emetteur'
+        canReturn=false
+      }
+      var canAct = svc==='aq'?(isAdm||canPerform('verifier_'+typeKey)):svc==='dt'?(isAdm||canPerform('approuver_'+typeKey)):(isAdm||canPerform('emettre_'+typeKey))
+      var newDoc = {key:'doc_'+arItem.docId,docId:arItem.docId,typeDocument:typeKey,statut:statut,
+        lotId:arItem.lotId,lotNum:arItem.lotNum,prodDesc:arItem.prodDesc,prodCode:arItem.prodCode||'',
+        action:action,actionClass:actionClass,sinceText:null,sinceClass:'',
+        canAct:canAct,btnLabel:btnLabel,canReturn:canReturn||false,
+        returnBtnLabel:returnBtnLabel,returnLabel:returnLabel,showReturnInput:false,returnMotif:'',acting:false}
+      var docCatObj = categories.value.find(function(c){ return c.id==='docs' })
+      if (docCatObj) {
+        var grp = docCatObj.groups.find(function(g){ return g.typeKey===typeKey })
+        if (!grp) { grp={typeKey:typeKey,typeLabel:typeLabel,action:action,open:true,docs:[]}; docCatObj.groups.push(grp) }
+        grp.docs.push(newDoc)
+        docCatObj.items.push({key:'doc_'+arItem.docId,lotId:arItem.lotId,lotNum:arItem.lotNum})
+      } else {
+        var newCat = {id:'docs',icon:'📄',title:'Documents à traiter',urgent:false,open:true,
+          items:[{key:'doc_'+arItem.docId,lotId:arItem.lotId,lotNum:arItem.lotNum}],
+          groups:[{typeKey:typeKey,typeLabel:typeLabel,action:action,open:true,docs:[newDoc]}]}
+        categories.value.splice(1, 0, newCat) // insérer après circuits
+      }
+    }
+
     var doDocReturn = async function(d, grp, cat) {
       d.acting = true
       var u = await supabase.auth.getUser(); var uid = u.data.user.id; var n = new Date().toISOString()
@@ -234,6 +271,9 @@ export default {
         res = await supabase.from('liberation_documents').update({pending_ar_service:null,updated_at:n}).eq('id',item.docId)
         if (res.error) { alert('Erreur : '+res.error.message); item.acting=false; return }
         await supabase.from('lot_events').insert({lot_id:item.lotId,event_type:'ar_document',description:(DOC_TYPE_LABELS[item.typeDocument]||item.typeDocument||'DOC')+' — Accusé réception',triggered_by:uid,created_at:n})
+        removeCatItem(item, cat)
+        addToDocsCatAfterAr(item)
+        return
       } else if (item.arType==='circuit') {
         res = await supabase.from(item.orderTable).update({pending_ar_service:null,updated_at:n}).eq('id',item.orderId)
         if (res.error) { alert('Erreur : '+res.error.message); item.acting=false; return }
@@ -328,7 +368,7 @@ export default {
       if (svc==='aq') {
         var daqRes = await supabase.from('liberation_documents')
           .select('id,type_document,statut,lot_id,updated_at')
-          .in('statut',['emis','verification_aq']).eq('is_applicable',true).limit(500)
+          .in('statut',['emis','verification_aq']).eq('is_applicable',true).is('pending_ar_service',null).limit(500)
         docRaw = daqRes.data||[]
         var daqMap = await getLotsMap(docRaw.map(function(d){return d.lot_id}))
         var grpMap = {}
@@ -353,7 +393,7 @@ export default {
       } else if (svc==='dt') {
         var ddtRes = await supabase.from('liberation_documents')
           .select('id,type_document,statut,lot_id,updated_at')
-          .eq('statut','approuve_aq').eq('is_applicable',true).limit(500)
+          .eq('statut','approuve_aq').eq('is_applicable',true).is('pending_ar_service',null).limit(500)
         docRaw = ddtRes.data||[]
         var ddtMap = await getLotsMap(docRaw.map(function(d){return d.lot_id}))
         var grpMapDt = {}
@@ -376,7 +416,7 @@ export default {
       } else {
         var dEmtRes = await supabase.from('liberation_documents')
           .select('id,type_document,lot_id,updated_at')
-          .eq('statut','retour_emetteur').eq('service_emetteur',svc).eq('is_applicable',true).limit(500)
+          .eq('statut','retour_emetteur').eq('service_emetteur',svc).eq('is_applicable',true).is('pending_ar_service',null).limit(500)
         docRaw = dEmtRes.data||[]
         var dEmtMap = await getLotsMap(docRaw.map(function(d){return d.lot_id}))
         var grpMapEmt = {}
@@ -406,7 +446,7 @@ export default {
       var arDocMap = await getLotsMap((arDocR.data||[]).map(function(d){return d.lot_id}))
       ;(arDocR.data||[]).forEach(function(d){
         var l=arDocMap[d.lot_id]; if(!l) return
-        arCat.items.push({key:'ar_doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,
+        arCat.items.push({key:'ar_doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',
           action:(DOC_TYPE_LABELS[d.type_document]||d.type_document)+' — Accuser réception',
           canAct:arCanDoc,btnLabel:'✅ AR',acting:false,
           arType:'doc',docId:d.id,typeDocument:d.type_document})
