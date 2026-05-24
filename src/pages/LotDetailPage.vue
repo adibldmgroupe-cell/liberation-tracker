@@ -173,6 +173,7 @@
           <div class="dev-card-top">
             <span class="dev-badge-bl" :class="d.bloquante?'dev-bl-on':'dev-bl-off'">{{d.bloquante?'BLOQUANTE':'Non bloquante'}}</span>
             <span class="sp2" :class="d.statut==='ouverte'?'sp2-ko':'sp2-ok'">{{d.statut==='ouverte'?'Ouverte':'Clôturée'}}</span>
+            <button v-if="!d.bloquante&&(d.statut==='ouverte'||d.statut==='en_cours')&&canPerform('declarer_nc')" class="btn-sm dev-bl-mark-btn" @click="doMarkBloquante(d.id)">⚠ Marquer bloquante</button>
             <button v-if="(d.statut==='ouverte'||d.statut==='en_cours') && canPerform('cloturer_deviation')" class="btn-sm dev-cl-btn" @click="doCloseDeviation(d.id)">Clôturer</button>
           </div>
           <!-- Ligne 2 : service déclarant / nom / date -->
@@ -379,6 +380,11 @@ export default {
     var doLiberer = async function(){await libererLot(lot.value.id,userId.value);loadLot()}
     var doDeclareDeviation = async function(){await declareDeviation(lot.value.id,devObs.value,devBloquante.value,devNumeroDn.value,userId.value,userService.value);devObs.value='';devNumeroDn.value='';devBloquante.value=false;showDevForm.value=false;loadLot()}
     var doCloseDeviation = async function(id){await closeDeviation(id,lot.value.id,userId.value);loadLot()}
+    var doMarkBloquante = async function(id){
+      await supabase.from('deviations').update({bloquante:true}).eq('id',id)
+      await supabase.from('lot_events').insert({lot_id:lot.value.id,event_type:'deviation_bloquante',description:'Déviation marquée bloquante',triggered_by:userId.value,created_at:new Date().toISOString()})
+      loadLot()
+    }
     var doDeclareRvp = async function(type){await declareRVP(lot.value.id,type,userId.value);loadLot()}
     var docErrMsg = ref('')
     var doDeclareMajDoc = async function(type){
@@ -537,7 +543,7 @@ export default {
       getVal,pipClass,stepIndClass,circuitFlowClass,fmtDt,ofV,ocV,docsOk,docsReq,devsOpen,leadTime,dossierComplete,canValidateStep,
       docTypeLabel,docStatLabel,indClass,dsClass,rvpServiceLabel,isDocBlocked,goBack,
       userService,
-      doValidate,doLiberer,doDeclareDeviation,doCloseDeviation,doDeclareRvp,doDeclareMajDoc,doDeclareClotureSap,doRequestAql,doAqlConforme,doAqlNonConforme,doRelanceAql,isLatestAql,canRelanceAql,canDemanderAql,
+      doValidate,doLiberer,doDeclareDeviation,doCloseDeviation,doMarkBloquante,doDeclareRvp,doDeclareMajDoc,doDeclareClotureSap,doRequestAql,doAqlConforme,doAqlNonConforme,doRelanceAql,isLatestAql,canRelanceAql,canDemanderAql,
       doAcknowledgeOrderAR,doAcknowledgeAqlRequest,doAcknowledgeAqlResult,
       majDocs,clotDocs,majDocLabel,clotDocLabel,clotStatLabel,clotIndClass,clotDsClass,docErrMsg,
       searchProd,selectProd,doModify,confirmDelete,canPerform,
@@ -604,6 +610,7 @@ export default {
 .dev-list{display:flex;flex-direction:column;gap:8px;margin-top:8px}
 .dev-card{border:1px solid #f0f0f0;border-radius:4px;padding:10px 12px;background:#fafafa}
 .dev-card-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dev-bl-mark-btn{background:#FEF5E7;color:#A0620D;border-color:#E89C3A !important}.dev-bl-mark-btn:hover{background:#FDEBD0 !important;color:#7D4E0A !important}
 .dev-cl-btn{margin-left:auto}
 .dev-card-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px;padding-top:6px;border-top:1px solid #f0f0f0}
 .dev-meta-svc{font-size:10px;background:#E6F1FB;color:#0C447C;padding:1px 7px;border-radius:10px;font-weight:600;white-space:nowrap}

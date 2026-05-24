@@ -192,29 +192,35 @@
         <span class="dev-sum-nb">{{devPopup.devNonBloquanteOpen}} non bloquante{{devPopup.devNonBloquanteOpen!==1?'s':''}}</span>
         <span class="dev-sum-cl">{{devPopup.devClosed}} clôturée{{devPopup.devClosed!==1?'s':''}}</span>
       </div>
-      <!-- Liste déviations existantes -->
+      <!-- Liste déviations existantes — accordéon -->
       <div v-if="devPopup.devList.length" class="dev-pop-list">
-        <div v-for="d in devPopup.devList" :key="d.id" class="dev-pop-item">
-          <!-- En-tête : badges + statut + clôturer -->
-          <div class="dev-pop-item-top">
+        <div v-for="(d,di) in devPopup.devList" :key="d.id" class="dev-pop-acc">
+          <!-- Ligne cliquable -->
+          <div class="dev-pop-acc-hd" @click.stop="devPopup.expandedId===d.id?devPopup.expandedId=null:devPopup.expandedId=d.id">
             <span class="dev-badge-sm" :class="d.bloquante?'dev-bl-on':'dev-bl-off'">{{d.bloquante?'BLQ':'NBL'}}</span>
             <span class="dev-pop-stat" :class="d.statut==='cloturee'?'dev-stat-cl':'dev-stat-op'">{{d.statut==='cloturee'?'Clôturée':'Ouverte'}}</span>
-            <button v-if="(d.statut==='ouverte'||d.statut==='en_cours')&&(userService==='admin'||canPerform('cloturer_deviation'))" class="dev-close-btn" @click="closeDevInPopup(d.id)">Clôturer</button>
+            <span class="dev-pop-acc-num">{{d.numero_dn||('Dév. '+(di+1))}}</span>
+            <span class="dev-pop-acc-date">{{fmtDevDate(d.declared_at)}}</span>
+            <span class="dev-pop-acc-chev">{{devPopup.expandedId===d.id?'▲':'▼'}}</span>
           </div>
-          <!-- Infos déclarant -->
-          <div class="dev-pop-meta">
-            <span class="dev-pop-svc">{{SVC_LABELS[d.declared_service]||d.declared_service||'—'}}</span>
-            <span class="dev-pop-who">{{d.declarer_nom||'—'}}</span>
-            <span class="dev-pop-when">{{fmtDevDate(d.declared_at)}}</span>
+          <!-- Détail dépliable -->
+          <div v-if="devPopup.expandedId===d.id" class="dev-pop-acc-body">
+            <div class="dev-pop-meta">
+              <span class="dev-pop-svc">{{SVC_LABELS[d.declared_service]||d.declared_service||'—'}}</span>
+              <span class="dev-pop-who">{{d.declarer_nom||'—'}}</span>
+            </div>
+            <div class="dev-pop-edit-row">
+              <input v-model="d.editNumeroDn" placeholder="N° DN" class="dev-pop-in-sm" />
+            </div>
+            <div class="dev-pop-edit-row">
+              <textarea v-model="d.editObs" rows="2" placeholder="Observation" class="dev-pop-ta-sm"></textarea>
+            </div>
+            <div class="dev-pop-acc-actions">
+              <button class="dev-save-btn" @click="saveDevField(d)">💾 Sauvegarder</button>
+              <button v-if="!d.bloquante&&(d.statut==='ouverte'||d.statut==='en_cours')&&(userService==='admin'||canPerform('declarer_nc'))" class="dev-bl-btn" @click="markBloquanteInPopup(d.id)">⚠ Marquer bloquante</button>
+              <button v-if="(d.statut==='ouverte'||d.statut==='en_cours')&&(userService==='admin'||canPerform('cloturer_deviation'))" class="dev-close-btn" @click="closeDevInPopup(d.id)">Clôturer</button>
+            </div>
           </div>
-          <!-- Champs éditables -->
-          <div class="dev-pop-edit-row">
-            <input v-model="d.editNumeroDn" placeholder="N° DN" class="dev-pop-in-sm" />
-          </div>
-          <div class="dev-pop-edit-row">
-            <textarea v-model="d.editObs" rows="2" placeholder="Observation" class="dev-pop-ta-sm"></textarea>
-          </div>
-          <button class="dev-save-btn" @click="saveDevField(d)">💾 Sauvegarder</button>
         </div>
       </div>
       <!-- Formulaire nouvelle déviation -->
@@ -306,7 +312,7 @@ export default {
       {label:'RVP — Retour',actions:[{value:'rvp_fab_retour_emetteur',label:"RVP Fabrication — Retourner à l'émetteur"},{value:'rvp_cond_retour_emetteur',label:"RVP Conditionnement — Retourner à l'émetteur"},{value:'rvp_lcq_retour_emetteur',label:"RVP LCQ — Retourner à l'émetteur"},{value:'rvp_fab_retour_aq',label:"RVP Fabrication — DT retourne à l'AQ"},{value:'rvp_cond_retour_aq',label:"RVP Conditionnement — DT retourne à l'AQ"},{value:'rvp_lcq_retour_aq',label:"RVP LCQ — DT retourne à l'AQ"}]},
       {label:'MàJ Documents',actions:[{value:'maj_if_declarer',label:'MàJ IF — Déclarer'},{value:'maj_if_emettre',label:'MàJ IF — Émettre'},{value:'maj_if_verifier',label:'MàJ IF — Vérifier AQ'},{value:'maj_if_approuver',label:'MàJ IF — Approuver DT'},{value:'maj_ic_declarer',label:'MàJ IC — Déclarer'},{value:'maj_ic_emettre',label:'MàJ IC — Émettre'},{value:'maj_ic_verifier',label:'MàJ IC — Vérifier AQ'},{value:'maj_ic_approuver',label:'MàJ IC — Approuver DT'},{value:'maj_nmcl_of_declarer',label:'MàJ Nmcl OF — Déclarer'},{value:'maj_nmcl_of_emettre',label:'MàJ Nmcl OF — Émettre'},{value:'maj_nmcl_of_verifier',label:'MàJ Nmcl OF — Vérifier AQ'},{value:'maj_nmcl_of_approuver',label:'MàJ Nmcl OF — Approuver DT'},{value:'maj_nmcl_oc_declarer',label:'MàJ Nmcl OC — Déclarer'},{value:'maj_nmcl_oc_emettre',label:'MàJ Nmcl OC — Émettre'},{value:'maj_nmcl_oc_verifier',label:'MàJ Nmcl OC — Vérifier AQ'},{value:'maj_nmcl_oc_approuver',label:'MàJ Nmcl OC — Approuver DT'}]},
       {label:'Clôture SAP',actions:[{value:'clot_of_emettre',label:'Clôt. SAP OF — Émettre'},{value:'clot_of_valider',label:'Clôt. SAP OF — Valider (Planif.)'},{value:'clot_of_cloture',label:'Clôt. SAP OF — Dem. clôture'},{value:'clot_of_confirmer',label:'Clôt. SAP OF — Confirmer clôture'},{value:'clot_oc_emettre',label:'Clôt. SAP OC — Émettre'},{value:'clot_oc_valider',label:'Clôt. SAP OC — Valider (Planif.)'},{value:'clot_oc_cloture',label:'Clôt. SAP OC — Dem. clôture'},{value:'clot_oc_confirmer',label:'Clôt. SAP OC — Confirmer clôture'}]},
-      {label:'Déviation',actions:[{value:'dev_declarer',label:'Déviation — Déclarer'},{value:'dev_cloture',label:'Déviation — Clôturer'}]},
+      {label:'Déviation',actions:[{value:'dev_declarer',label:'Déviation — Déclarer'},{value:'dev_bloquer',label:'Déviation — Marquer bloquante'},{value:'dev_cloture',label:'Déviation — Clôturer'}]},
       {label:'Dates prévisionnelles',actions:[{value:'plan_lcq',label:'Libération LCQ'},{value:'plan_aq',label:'Libération AQ'},{value:'plan_dt1',label:'Libération DT1'},{value:'plan_dt2',label:'Libération DT2'}]},
       {label:'Accusés de réception',actions:[
         {value:'ar_circuit_of',label:'AR — Circuit OF (intermédiaire)'},
@@ -1208,7 +1214,8 @@ export default {
         }),
         devBloquanteOpen: lot.dev_bloquante_open || 0,
         devNonBloquanteOpen: lot.dev_non_bloquante_open || 0,
-        devClosed: lot.dev_closed || 0
+        devClosed: lot.dev_closed || 0,
+        expandedId: null
       }
     }
 
@@ -1227,6 +1234,24 @@ export default {
         if (cachedLot && cachedLot.dev_list) {
           var cachedDev = cachedLot.dev_list.find(function(x){ return x.id === dev.id })
           if (cachedDev) { cachedDev.numero_dn = dev.editNumeroDn; cachedDev.description = dev.editObs }
+        }
+      }
+    }
+
+    var markBloquanteInPopup = async function(devId) {
+      var res = await supabase.from('deviations').update({bloquante: true}).eq('id', devId)
+      if (res.error) { alert('Erreur : ' + res.error.message); return }
+      if (devPopup.value) {
+        var d = devPopup.value.devList.find(function(x){ return x.id === devId })
+        if (d) {
+          d.bloquante = true
+          devPopup.value.devNonBloquanteOpen = Math.max(0, devPopup.value.devNonBloquanteOpen - 1)
+          devPopup.value.devBloquanteOpen = devPopup.value.devBloquanteOpen + 1
+        }
+        var cachedLot = lots.value.find(function(l){ return l.id === devPopup.value.lotId })
+        if (cachedLot && cachedLot.dev_list) {
+          var cachedDev = cachedLot.dev_list.find(function(x){ return x.id === devId })
+          if (cachedDev) cachedDev.bloquante = true
         }
       }
     }
@@ -1420,7 +1445,7 @@ var loadCharge = async function() {
       maj_nmcl_oc_declarer:'MàJ N. OC — Déclarer',maj_nmcl_oc_emettre:'MàJ N. OC — Émettre',maj_nmcl_oc_verifier:'MàJ N. OC — Vérifier',maj_nmcl_oc_approuver:'MàJ N. OC — Approuver',
       clot_of_declarer:'Clôt. OF — Déclarer',clot_of_emettre:'Clôt. OF — Dem. validation',clot_of_valider:'Clôt. OF — Valider (Planif.)',clot_of_cloture:'Clôt. OF — Dem. clôture',clot_of_confirmer:'Clôt. OF — Confirmer clôture',
       clot_oc_declarer:'Clôt. OC — Déclarer',clot_oc_emettre:'Clôt. OC — Dem. validation',clot_oc_valider:'Clôt. OC — Valider (Planif.)',clot_oc_cloture:'Clôt. OC — Dem. clôture',clot_oc_confirmer:'Clôt. OC — Confirmer clôture',
-      dev_declarer:'Déviation — Déclarer',dev_cloture:'Déviation — Clôturer',
+      dev_declarer:'Déviation — Déclarer',dev_bloquer:'Déviation — Marquer bloquante',dev_cloture:'Déviation — Clôturer',
       plan_lcq:'Lib. LCQ',plan_aq:'Lib. AQ',plan_dt1:'Lib. DT1',plan_dt2:'Lib. DT2',
       ar_circuit_of:'AR — Circuit OF',ar_circuit_oc:'AR — Circuit OC',
       ar_doc_if:'AR — IF',ar_doc_ic:'AR — IC',ar_doc_da_pc:'AR — DA PC',ar_doc_da_micro:'AR — DA Micro',
@@ -1585,6 +1610,12 @@ var loadCharge = async function() {
               await supabase.from('liberation_dossiers').update({deviations_closed:false,updated_at:now}).eq('lot_id',lotId)
               await supabase.from('lot_events').insert({lot_id:lotId,event_type:'deviation_declaree',description:'Déviation déclarée (masse)'+(isBl?' (BLOQUANTE)':''),triggered_by:userId,created_at:now})
               await createNotification('aq',lotId,null,'Lot '+lot.numero_lot+' — Déviation déclarée'+(isBl?' (BLOQUANTE)':''),'deviation_declaree')
+              result.ok++
+            } else if(devOp==='bloquer'){
+              var openNblDevs=await supabase.from('deviations').select('id').eq('lot_id',lotId).in('statut',['ouverte','en_cours']).eq('bloquante',false)
+              if(!openNblDevs.data||!openNblDevs.data.length){result.errors.push(lot.numero_lot+': aucune déviation non bloquante ouverte');result.fail++;continue}
+              for(var kb=0;kb<openNblDevs.data.length;kb++){await supabase.from('deviations').update({bloquante:true,updated_at:now}).eq('id',openNblDevs.data[kb].id)}
+              await supabase.from('lot_events').insert({lot_id:lotId,event_type:'deviation_bloquante',description:openNblDevs.data.length+' déviation(s) marquée(s) bloquante (masse)',triggered_by:userId,created_at:now})
               result.ok++
             } else if(devOp==='cloture'){
               var openDevs=await supabase.from('deviations').select('id').eq('lot_id',lotId).in('statut',['ouverte','en_cours'])
@@ -1755,7 +1786,7 @@ var loadCharge = async function() {
       columnFilters,activeDropdown,ddPos,openDropdown,getColumnValues,setColumnFilter,clearColumnFilters,removeColumnFilter,hasColumnFilters,
       visibleCols,showColPanel,colDefs,isColVisible,toggleCol,resetCols,moveColUp,moveColDown,CC,
       inlineMenu,openInlineMenu,executeInline,confirmInlineMotif,toggleInlineHistory,closeAll,
-      devPopup,openDevPopup,confirmDevPopup,closeDevInPopup,saveDevField,canPerform,SVC_LABELS,fmtDevDate,
+      devPopup,openDevPopup,confirmDevPopup,closeDevInPopup,saveDevField,markBloquanteInPopup,canPerform,SVC_LABELS,fmtDevDate,
       bulkDevBloquante,bulkDevNumeroDn,bulkDevObs,
       datePicker,dpInput,openDatePicker,savePlanning,getPlanClass,
       chargeCount,chargeLoading,loadCharge,
@@ -1875,9 +1906,15 @@ var loadCharge = async function() {
 .dev-sum-bl{font-size:11px;padding:2px 8px;border-radius:10px;background:#FCEBEB;color:#A32D2D;font-weight:600}
 .dev-sum-nb{font-size:11px;padding:2px 8px;border-radius:10px;background:#f5f5f5;color:#666;font-weight:500}
 .dev-sum-cl{font-size:11px;padding:2px 8px;border-radius:10px;background:#EAF3DE;color:#3B6D11;font-weight:500}
-.dev-pop-list{display:flex;flex-direction:column;gap:4px;border-top:1px solid #f0f0f0;padding-top:6px}
-.dev-pop-item{background:#fafafa;border:1px solid #f0f0f0;border-radius:3px;padding:6px 8px}
-.dev-pop-item-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.dev-pop-list{display:flex;flex-direction:column;gap:3px;border-top:1px solid #f0f0f0;padding-top:6px}
+.dev-pop-acc{border:1px solid #f0f0f0;border-radius:3px;overflow:hidden;background:#fff}
+.dev-pop-acc-hd{display:flex;align-items:center;gap:5px;padding:5px 8px;cursor:pointer;background:#fafafa;user-select:none;transition:.1s}.dev-pop-acc-hd:hover{background:#f0f4ff}
+.dev-pop-acc-num{font-size:11px;font-weight:600;font-family:'SF Mono',monospace;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#333}
+.dev-pop-acc-date{font-size:9px;font-family:'SF Mono',monospace;color:#bbb;white-space:nowrap}
+.dev-pop-acc-chev{font-size:9px;color:#bbb;margin-left:2px}
+.dev-pop-acc-body{padding:6px 8px;border-top:1px solid #f0f0f0;background:#fff}
+.dev-pop-acc-actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
+.dev-bl-btn{font-size:10px;padding:2px 8px;border:1px solid #E89C3A;border-radius:3px;background:#FEF5E7;color:#A0620D;cursor:pointer;font-family:inherit}.dev-bl-btn:hover{background:#FDEBD0;color:#7D4E0A}
 .dev-badge-sm{font-size:9px;padding:1px 5px;border-radius:2px;font-weight:700}
 .dev-bl-on{background:#FCEBEB;color:#A32D2D}.dev-bl-off{background:#f0f0f0;color:#999}
 .dev-pop-dn{font-size:12px;font-weight:600;font-family:'SF Mono',monospace;flex:1}
