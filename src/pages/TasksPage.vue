@@ -53,11 +53,9 @@
             </div>
             <div v-if="grp.open" class="tp-grp-body">
               <div v-for="d in grp.docs" :key="d.key" class="tp-doc-item" @click="$router.push('/lots/'+d.lotId)">
-                <div class="tp-doc-left">
-                  <span class="tp-item-lot">{{d.lotNum}}</span>
-                  <span class="tp-doc-action-lbl">{{d.action}}</span>
-                  <span class="tp-doc-prod">{{d.prodDesc}}</span>
-                </div>
+                <span class="tp-lot-mono">{{d.lotNum}}</span>
+                <span class="tp-act-badge" :class="d.actionClass">{{d.action}}</span>
+                <span class="tp-prod-desc">{{d.prodDesc}}<span class="tp-prod-code">{{d.prodCode}}</span></span>
                 <span v-if="d.sinceText" class="tp-doc-since" :class="d.sinceClass">{{d.sinceText}}</span>
               </div>
             </div>
@@ -190,8 +188,9 @@ export default {
           var since=fmtSince(d.updated_at)
           var typeKey=d.type_document||'autre'; var typeLabel=DOC_TYPE_LABELS[typeKey]||typeKey
           docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,action:typeLabel+' — '+lbl})
+          var actCls=d.statut==='verification_aq'?'act-orange':'act-blue'
           if(!grpMap[typeKey]) grpMap[typeKey]={typeKey:typeKey,typeLabel:typeLabel,action:lbl,open:false,docs:[]}
-          grpMap[typeKey].docs.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,action:lbl,sinceText:since?since.text:null,sinceClass:since?since.cls:''})
+          grpMap[typeKey].docs.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',action:lbl,actionClass:actCls,sinceText:since?since.text:null,sinceClass:since?since.cls:''})
         })
         docCat.groups = Object.values(grpMap)
       } else if (svc==='dt') {
@@ -208,7 +207,7 @@ export default {
           var typeKey=d.type_document||'autre'; var typeLabel=DOC_TYPE_LABELS[typeKey]||typeKey
           docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,action:typeLabel+' — Approuver DT'})
           if(!grpMapDt[typeKey]) grpMapDt[typeKey]={typeKey:typeKey,typeLabel:typeLabel,action:'Approuver DT',open:false,docs:[]}
-          grpMapDt[typeKey].docs.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,action:'Approuver DT',sinceText:since?since.text:null,sinceClass:since?since.cls:''})
+          grpMapDt[typeKey].docs.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',action:'Approuver DT',actionClass:'act-purple',sinceText:since?since.text:null,sinceClass:since?since.cls:''})
         })
         docCat.groups = Object.values(grpMapDt)
       } else {
@@ -226,7 +225,7 @@ export default {
           var typeKey=d.type_document||'autre'; var typeLabel=DOC_TYPE_LABELS[typeKey]||typeKey
           docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,action:typeLabel+' — Rectifier et réémettre'})
           if(!grpMapEmt[typeKey]) grpMapEmt[typeKey]={typeKey:typeKey,typeLabel:typeLabel,action:'Rectifier et réémettre',open:false,docs:[]}
-          grpMapEmt[typeKey].docs.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,action:'Rectifier et réémettre',sinceText:since?since.text:null,sinceClass:since?since.cls:''})
+          grpMapEmt[typeKey].docs.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',action:'Rectifier et réémettre',actionClass:'act-red',sinceText:since?since.text:null,sinceClass:since?since.cls:''})
         })
         docCat.groups = Object.values(grpMapEmt)
       }
@@ -358,11 +357,15 @@ export default {
 .tp-grp-badge{font-size:10px;font-weight:600;color:#185FA5;background:#E6F1FB;padding:1px 7px;border-radius:8px;white-space:nowrap;flex-shrink:0}
 .tp-grp-chev{font-size:10px;color:#bbb;flex-shrink:0}
 .tp-grp-body{background:#fafcff;border-top:1px solid #eef3fb}
-.tp-doc-item{display:flex;align-items:center;justify-content:space-between;padding:8px 16px 8px 28px;border-bottom:1px solid #f5f5f5;cursor:pointer;gap:12px;transition:.1s}.tp-doc-item:last-child{border-bottom:none}.tp-doc-item:hover{background:#f0f6ff}
-.tp-doc-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
-.tp-doc-type-tag{font-size:12px;font-weight:700;color:#0C447C;background:#E6F1FB;padding:2px 8px;border-radius:3px;white-space:nowrap;flex-shrink:0}
-.tp-doc-action-lbl{font-size:11px;font-weight:600;color:#185FA5;white-space:nowrap;flex-shrink:0}
-.tp-doc-prod{font-size:12px;color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.tp-doc-item{display:flex;align-items:center;padding:7px 16px 7px 28px;border-bottom:1px solid #f0f0f0;cursor:pointer;gap:10px;transition:.1s}.tp-doc-item:last-child{border-bottom:none}.tp-doc-item:hover{background:#f0f6ff}
+.tp-lot-mono{font-family:'SF Mono','Fira Code',monospace;font-size:10px;font-weight:500;white-space:nowrap;flex-shrink:0}
+.tp-act-badge{font-size:9px;padding:2px 5px;border-radius:2px;font-weight:500;white-space:nowrap;flex-shrink:0}
+.act-blue{background:#E6F1FB;color:#185FA5}
+.act-orange{background:#FEF5E7;color:#A0620D}
+.act-purple{background:#F0EBF8;color:#6B3FA0}
+.act-red{background:#FCEBEB;color:#A32D2D}
+.tp-prod-desc{font-size:11px;color:#444;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.tp-prod-code{font-size:9px;color:#999;font-family:'SF Mono',monospace;margin-left:3px}
 .tp-doc-since{font-size:11px;font-weight:600;white-space:nowrap;flex-shrink:0;padding:1px 7px;border-radius:8px}
 .since-ok{background:#EAF3DE;color:#3B6D11}
 .since-orange{background:#FEF5E7;color:#A0620D}
