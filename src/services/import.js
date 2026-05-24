@@ -364,13 +364,13 @@ export async function importFromGoogleSheets(url, onProgress) {
   if (onProgress) onProgress(50)
 
   var now = new Date().toISOString()
-  var toUpsert = []   // lots existants à mettre à jour
-  var toInsert = []   // nouveaux lots à créer
 
+  // ── 6. Upsert unique pour tous les lots (nouveaux + existants) ────────
+  var allLotData = []
   parsed.forEach(function(p) {
     var productId = prodMap[p.codeArticle]
     if (!productId) { stats.errors.push('Produit introuvable : ' + p.codeArticle); return }
-    var lotData = {
+    allLotData.push({
       numero_lot: p.numLot, product_id: productId,
       num_document_sap: p.numDocSap,
       quantite: p.quantite, statut_sap: p.statutSap,
@@ -379,34 +379,23 @@ export async function importFromGoogleSheets(url, onProgress) {
       prix_vente: p.prixVente, ppa: p.ppa,
       quantite_par_colis: p.qteColis, shp: p.shp,
       synced_from_excel_at: now, updated_at: now,
-    }
-    var existing = lotMap[p.numLot]
-    if (existing) {
-      toUpsert.push(Object.assign({ id: existing.id }, lotData))
-      stats.updated++
-    } else {
-      toInsert.push(lotData)
-    }
+    })
   })
+  if (onProgress) onProgress(65)
 
-  // ── 6. Mise à jour en 1 batch ────────────────────────────────────────
-  if (toUpsert.length) {
-    var upsertRes = await supabase.from('lots').upsert(toUpsert, { onConflict: 'id' })
-    if (upsertRes.error) stats.errors.push('Mise à jour lots : ' + upsertRes.error.message)
+  var upsertRes = await supabase.from('lots').upsert(allLotData, { onConflict: 'numero_lot' }).select('id,numero_lot,statut_sap')
+  if (upsertRes.error) {
+    stats.errors.push('Sync lots : ' + upsertRes.error.message)
+    return stats
   }
-  if (onProgress) onProgress(70)
+  if (onProgress) onProgress(75)
 
-  // ── 7. Insertion nouveaux lots en 1 batch ────────────────────────────
+  // Distinguer créés vs mis à jour via lotMap
   var newLotRows = []
-  if (toInsert.length) {
-    var insLotsRes = await supabase.from('lots').insert(toInsert).select('id,statut_sap')
-    if (insLotsRes.error) {
-      stats.errors.push('Insertion lots : ' + insLotsRes.error.message)
-    } else {
-      newLotRows = insLotsRes.data || []
-      stats.created += newLotRows.length
-    }
-  }
+  ;(upsertRes.data||[]).forEach(function(l) {
+    if (lotMap[l.numero_lot]) { stats.updated++ }
+    else { newLotRows.push(l); stats.created++ }
+  })
   if (onProgress) onProgress(80)
 
   // ── 8. Init documents pour les nouveaux lots (séquentiel, peu nombreux) ──
