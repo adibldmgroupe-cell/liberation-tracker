@@ -923,8 +923,17 @@ export default {
         numero_dn: dev.editNumeroDn || null,
         description: dev.editObs || ''
       }).eq('id', dev.id)
+      // Mettre à jour l'objet local du popup
       dev.numero_dn = dev.editNumeroDn
       dev.description = dev.editObs
+      // Mettre à jour le cache lots pour que le popup reste cohérent si rouvert
+      if (devPopup.value) {
+        var cachedLot = lots.value.find(function(l){ return l.id === devPopup.value.lotId })
+        if (cachedLot && cachedLot.dev_list) {
+          var cachedDev = cachedLot.dev_list.find(function(x){ return x.id === dev.id })
+          if (cachedDev) { cachedDev.numero_dn = dev.editNumeroDn; cachedDev.description = dev.editObs }
+        }
+      }
     }
 
     var closeDevInPopup = async function(devId) {
