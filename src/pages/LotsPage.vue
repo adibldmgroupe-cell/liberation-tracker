@@ -1055,49 +1055,84 @@ export default {
       inlineMenu.value.historyData = []
       var rows = []
 
+      // Helper : convertit un lot_event en ligne d'historique
+      var mapEv = function(e) {
+        return {label:e.description||e.event_type, who:e.profiles?e.profiles.prenom+' '+e.profiles.nom:'—', at:fmtHistDate(e.created_at), _ts:e.created_at}
+      }
+
       if (col === 'of' || col === 'oc') {
         var orderId = col === 'of' ? lot.of_id : lot.oc_id
         if (orderId) {
           var r = await supabase.from('order_validations')
             .select('etape,validated_at,profiles(prenom,nom)')
             .eq('order_type', col).eq('order_id', orderId)
-            .order('validated_at', {ascending:false}).limit(15)
+            .order('validated_at', {ascending:false}).limit(20)
           var el = {planification:'Mise en circuit',stock:'Valid. Stock',aq:'Valid. AQ',dt:'Autor. DT',aq_dap:'Remise AQ DAP',production:'Accusé récp.'}
           rows = (r.data||[]).map(function(v){
-            return {label:el[v.etape]||v.etape, who:v.profiles?v.profiles.prenom+' '+v.profiles.nom:'—', at:fmtHistDate(v.validated_at)}
+            return {label:el[v.etape]||v.etape, who:v.profiles?v.profiles.prenom+' '+v.profiles.nom:'—', at:fmtHistDate(v.validated_at), _ts:v.validated_at}
           })
         }
+        // Accusés de réception circuit
+        var arCirc = await supabase.from('lot_events')
+          .select('description,created_at,profiles!triggered_by(prenom,nom)')
+          .eq('lot_id', lot.id).eq('event_type', 'ar_circuit')
+          .ilike('description', '%'+col.toUpperCase()+'%')
+          .order('created_at', {ascending:false}).limit(10)
+        rows = rows.concat((arCirc.data||[]).map(mapEv))
 
       } else if (col === 'aql_fab' || col === 'aql_cond') {
         var aqlType = col === 'aql_fab' ? 'fabrication' : 'conditionnement'
+        // Demandes et résultats AQL
         var r2 = await supabase.from('aql_inspections')
           .select('resultat,requested_at,inspected_at,profiles!inspected_by(prenom,nom)')
           .eq('lot_id', lot.id).eq('type', aqlType)
           .order('requested_at', {ascending:false}).limit(10)
         rows = (r2.data||[]).map(function(a){
-          var lbl = a.resultat==='conforme'?'Conforme':a.resultat==='non_conforme'?'Non conforme':'Demandé'
-          return {label:lbl, who:a.profiles?a.profiles.prenom+' '+a.profiles.nom:'—', at:fmtHistDate(a.inspected_at||a.requested_at)}
+          var lbl = a.resultat==='conforme'?'AQL Conforme':a.resultat==='non_conforme'?'AQL Non conforme':'Demande AQL'
+          var ts = a.inspected_at||a.requested_at
+          return {label:lbl, who:a.profiles?a.profiles.prenom+' '+a.profiles.nom:'—', at:fmtHistDate(ts), _ts:ts}
         })
+        // AR demande / résultat + événements lot_events AQL
+        var arAql = await supabase.from('lot_events')
+          .select('description,created_at,profiles!triggered_by(prenom,nom)')
+          .eq('lot_id', lot.id)
+          .in('event_type', ['ar_aql_demande','ar_aql_resultat','aql_demande','aql_resultat'])
+          .ilike('description', '%'+aqlType+'%')
+          .order('created_at', {ascending:false}).limit(15)
+        rows = rows.concat((arAql.data||[]).map(mapEv))
 
       } else if (DOC_COLS.indexOf(col) >= 0) {
-        var doc = null
+        var docObj = null
         if (col.startsWith('rvp_')) {
-          doc = (lot.docs||[]).find(function(d){return d.type_document==='rvp'&&d.service_emetteur===RVP_SVC[col]})
+          docObj = (lot.docs||[]).find(function(d){return d.type_document==='rvp'&&d.service_emetteur===RVP_SVC[col]})
         } else {
-          doc = (lot.docs||[]).find(function(d){return d.type_document===col})
+          docObj = (lot.docs||[]).find(function(d){return d.type_document===col})
         }
-        if (doc) {
+        if (docObj) {
+          // Mouvements documentaires (flux principal)
           var r3 = await supabase.from('document_movements')
-            .select('action,from_service,to_service,performed_at,profiles(prenom,nom)')
-            .eq('document_id', doc.id)
-            .order('performed_at', {ascending:false}).limit(15)
+            .select('action,from_service,to_service,motif_retour,performed_at,profiles(prenom,nom)')
+            .eq('document_id', docObj.id)
+            .order('performed_at', {ascending:false}).limit(20)
           rows = (r3.data||[]).map(function(m){
             var svc = m.to_service ? (m.from_service||'')+'→'+(m.to_service||'') : (m.from_service||'')
-            return {label:(DOC_ACT_LABELS[m.action]||m.action)+(svc?' ('+svc+')':''), who:m.profiles?m.profiles.prenom+' '+m.profiles.nom:'—', at:fmtHistDate(m.performed_at)}
+            var lbl = (DOC_ACT_LABELS[m.action]||m.action)+(svc?' ('+svc+')':'')
+            if(m.motif_retour)lbl+=' — '+m.motif_retour
+            return {label:lbl, who:m.profiles?m.profiles.prenom+' '+m.profiles.nom:'—', at:fmtHistDate(m.performed_at), _ts:m.performed_at}
           })
         }
+        // AR document depuis lot_events
+        var arDocKey = col.startsWith('rvp_') ? 'RVP '+(RVP_SVC[col]||'') : col.toUpperCase().replace(/_/g,' ')
+        var arDoc = await supabase.from('lot_events')
+          .select('description,created_at,profiles!triggered_by(prenom,nom)')
+          .eq('lot_id', lot.id).eq('event_type', 'ar_document')
+          .ilike('description', '%'+arDocKey+'%')
+          .order('created_at', {ascending:false}).limit(10)
+        rows = rows.concat((arDoc.data||[]).map(mapEv))
       }
 
+      // Trier par date décroissante
+      rows.sort(function(a,b){ return (a._ts||'') > (b._ts||'') ? -1 : 1 })
       inlineMenu.value.historyData = rows
       inlineMenu.value.historyLoading = false
     }
