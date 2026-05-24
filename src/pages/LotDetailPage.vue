@@ -41,26 +41,40 @@
 
     <!-- Circuit OF -->
     <div class="section" v-if="of"><div class="sh"><span>Circuit OF</span></div>
-      <table class="ct"><tr v-for="e in circuitSteps" :key="'of-'+e.key">
-        <td class="cs" :class="{'ca':of.etape_circuit===e.key}">{{e.label}}</td><td class="cv">{{e.service}}</td>
-        <td class="cp"><span class="pip" :class="pipClass('of',e.key)"></span></td>
-        <td class="cdt">{{getVal('of',e.key)?fmtDt(getVal('of',e.key).validated_at):''}}</td>
-        <td class="cac"><span v-if="getVal('of',e.key)" class="cu">{{getVal('of',e.key).user}}</span>
-          <button v-else-if="of.etape_circuit===e.key && canValidateStep('of',e.key)" class="btn" @click="doValidate('of',of.id,e.key)">Valider</button>
-          <button v-else class="btn bd" disabled>Valider</button></td>
-      </tr></table>
+      <div class="dg">
+        <div class="di di-step" v-for="e in circuitSteps" :key="'of-'+e.key">
+          <div class="dind" :class="stepIndClass('of',e.key)"></div>
+          <div class="di-body">
+            <div class="dn" :class="{'dn-active':of.etape_circuit===e.key}">{{e.label}}</div>
+            <div class="ds">{{e.service}}</div>
+            <div class="ds ds-ok di-val" v-if="getVal('of',e.key)">
+              <span>{{getVal('of',e.key).user}}</span>
+              <span class="di-date">{{fmtDt(getVal('of',e.key).validated_at)}}</span>
+            </div>
+            <button v-else-if="of.etape_circuit===e.key && canValidateStep('of',e.key)" class="btn-step" @click.stop="doValidate('of',of.id,e.key)">Valider</button>
+            <div class="ds di-pending" v-else-if="of.etape_circuit!==e.key && !getVal('of',e.key)">En attente</div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Circuit OC -->
     <div class="section" v-if="oc"><div class="sh"><span>Circuit OC</span></div>
-      <table class="ct"><tr v-for="e in circuitSteps" :key="'oc-'+e.key">
-        <td class="cs" :class="{'ca':oc.etape_circuit===e.key}">{{e.label}}</td><td class="cv">{{e.service}}</td>
-        <td class="cp"><span class="pip" :class="pipClass('oc',e.key)"></span></td>
-        <td class="cdt">{{getVal('oc',e.key)?fmtDt(getVal('oc',e.key).validated_at):''}}</td>
-        <td class="cac"><span v-if="getVal('oc',e.key)" class="cu">{{getVal('oc',e.key).user}}</span>
-          <button v-else-if="oc.etape_circuit===e.key && canValidateStep('oc',e.key)" class="btn" @click="doValidate('oc',oc.id,e.key)">Valider</button>
-          <button v-else class="btn bd" disabled>Valider</button></td>
-      </tr></table>
+      <div class="dg">
+        <div class="di di-step" v-for="e in circuitSteps" :key="'oc-'+e.key">
+          <div class="dind" :class="stepIndClass('oc',e.key)"></div>
+          <div class="di-body">
+            <div class="dn" :class="{'dn-active':oc.etape_circuit===e.key}">{{e.label}}</div>
+            <div class="ds">{{e.service}}</div>
+            <div class="ds ds-ok di-val" v-if="getVal('oc',e.key)">
+              <span>{{getVal('oc',e.key).user}}</span>
+              <span class="di-date">{{fmtDt(getVal('oc',e.key).validated_at)}}</span>
+            </div>
+            <button v-else-if="oc.etape_circuit===e.key && canValidateStep('oc',e.key)" class="btn-step" @click.stop="doValidate('oc',oc.id,e.key)">Valider</button>
+            <div class="ds di-pending" v-else-if="oc.etape_circuit!==e.key && !getVal('oc',e.key)">En attente</div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- AQL -->
@@ -296,6 +310,11 @@ export default {
 
     var getVal = function(type,etape){return (type==='of'?ofVals:ocVals).value.find(function(v){return v.etape===etape})}
     var pipClass = function(type,etape){if(getVal(type,etape))return'pip-done';var o=type==='of'?of.value:oc.value;return o&&o.etape_circuit===etape?'pip-active':'pip-wait'}
+    var stepIndClass = function(type,etape){
+      if(getVal(type,etape)) return 'ind-done'
+      var o=type==='of'?of.value:oc.value
+      return o&&o.etape_circuit===etape?'ind-prog':'ind-wait'
+    }
     var fmtDt = function(d){return d?new Date(d).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):''}
 
     var ofV = computed(function(){return ofVals.value.length})
@@ -460,7 +479,7 @@ export default {
 
     return{lot,prod,of,oc,ofVals,ocVals,docs,devs,aqls,dossier,statusLabels,circuitSteps,isAdmin,
       showDevForm,devObs,devBloquante,devNumeroDn,showModify,editNumLot,editCodeProd,prodSuggestions,rvpDocs,mainDocs,
-      getVal,pipClass,fmtDt,ofV,ocV,docsOk,docsReq,devsOpen,leadTime,dossierComplete,canValidateStep,
+      getVal,pipClass,stepIndClass,fmtDt,ofV,ocV,docsOk,docsReq,devsOpen,leadTime,dossierComplete,canValidateStep,
       docTypeLabel,docStatLabel,indClass,dsClass,rvpServiceLabel,isDocBlocked,goBack,
       doValidate,doLiberer,doDeclareDeviation,doCloseDeviation,doDeclareRvp,doDeclareMajDoc,doDeclareClotureSap,doRequestAql,doAqlConforme,doAqlNonConforme,doRelanceAql,isLatestAql,canRelanceAql,canDemanderAql,
       majDocs,clotDocs,majDocLabel,clotDocLabel,clotStatLabel,clotIndClass,clotDsClass,docErrMsg,
@@ -538,6 +557,14 @@ export default {
 .dev-save-btn{align-self:flex-start;font-size:11px;padding:4px 12px;border:1px solid #185FA5;border-radius:3px;background:#E6F1FB;color:#0C447C;cursor:pointer;font-family:inherit}.dev-save-btn:hover{background:#d0e3f5}
 .dim{color:#999;font-size:12px}.mono{font-family:'SF Mono',monospace;font-size:12px}
 .em{font-size:12px;color:#999;padding:12px 0;text-align:center}
+/* Cartes circuit OF/OC harmonisées avec documents */
+.di-step{cursor:default}
+.di-body{flex:1;min-width:0}
+.dn-active{color:#185FA5;font-weight:600}
+.di-val{display:flex;justify-content:space-between;align-items:center;margin-top:3px;flex-wrap:wrap;gap:4px}
+.di-date{font-family:'SF Mono',monospace;font-size:10px;color:#bbb}
+.di-pending{color:#ccc !important;font-style:italic}
+.btn-step{font-size:11px;padding:3px 12px;border:1px solid #185FA5;border-radius:3px;background:#E6F1FB;color:#0C447C;cursor:pointer;margin-top:4px;font-family:inherit}.btn-step:hover{background:#d0e3f5}
 .syg{display:grid;grid-template-columns:1fr 1fr;border:1px solid #e8e8e8}.syc{padding:8px 12px;border-right:1px solid #e8e8e8;border-bottom:1px solid #e8e8e8;display:flex;justify-content:space-between;font-size:13px}.syc:nth-child(2n){border-right:none}.syc span:first-child{color:#666}
 .ok{color:#1D9E75;font-weight:500}.ko{color:#E24B4A;font-weight:500}.na{color:#ccc}
 /* Planning libération */
