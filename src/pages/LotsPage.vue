@@ -371,22 +371,30 @@ export default {
     }
     var ALL_COLS = ['of','oc','aql_fab','aql_cond','if','ic','da_pc','da_micro','dev','rvp_fab','rvp_cond','rvp_lcq','maj_if','maj_ic','maj_nmcl_of','maj_nmcl_oc','cloture_sap_of','cloture_sap_oc','plan_lcq','plan_aq','plan_dt1','plan_dt2','date']
     var COL_LABELS = {};ALL_COLS.forEach(function(k){COL_LABELS[k]=CC[k].l})
-    var savedCols = null
-    try { savedCols = JSON.parse(localStorage.getItem('lots_vis_cols')) } catch(e) {}
-    // Merge new columns not in saved list
-    if (savedCols) { ALL_COLS.forEach(function(k){ if(savedCols.indexOf(k)<0) savedCols.push(k) }) }
-    var visibleCols = ref(savedCols || ALL_COLS.slice())
+    // ── Colonnes : ordre (colOrder) + visibilité (hiddenCols) séparés ──
+    var savedOrder = null, savedHidden = []
+    try { savedOrder = JSON.parse(localStorage.getItem('lots_col_order')) } catch(e) {}
+    // compat ancien format : lots_vis_cols ne contenait que les colonnes visibles
+    if (!savedOrder) { try { savedOrder = JSON.parse(localStorage.getItem('lots_vis_cols')) } catch(e) {} }
+    try { savedHidden = JSON.parse(localStorage.getItem('lots_hidden_cols')) || [] } catch(e) {}
+    // Ajouter les nouvelles colonnes absentes de l'ordre sauvegardé
+    if (savedOrder) { ALL_COLS.forEach(function(k){ if(savedOrder.indexOf(k)<0) savedOrder.push(k) }) }
+    var colOrder = ref(savedOrder || ALL_COLS.slice())
+    var hiddenCols = ref(savedHidden)
+    // tableCols = ce qui est affiché dans le tableau (order - hidden)
+    var tableCols = computed(function(){return colOrder.value.filter(function(k){return hiddenCols.value.indexOf(k)<0})})
     var showColPanel = ref(false)
-    var colDefs = computed(function(){return visibleCols.value.map(function(k){return{key:k,label:CC[k].l}})})
-    var isColVisible = function(col){ return visibleCols.value.indexOf(col) >= 0 }
+    // colDefs = TOUTES les colonnes dans l'ordre (pour le panneau)
+    var colDefs = computed(function(){return colOrder.value.map(function(k){return{key:k,label:CC[k].l}})})
+    var isColVisible = function(col){ return hiddenCols.value.indexOf(col) < 0 }
     var toggleCol = function(col){
-      var idx = visibleCols.value.indexOf(col)
-      if(idx>=0) visibleCols.value.splice(idx,1); else visibleCols.value.push(col)
-      try { localStorage.setItem('lots_vis_cols', JSON.stringify(visibleCols.value)) } catch(e) {}
+      var idx = hiddenCols.value.indexOf(col)
+      if(idx>=0) hiddenCols.value.splice(idx,1); else hiddenCols.value.push(col)
+      try { localStorage.setItem('lots_col_order',JSON.stringify(colOrder.value)); localStorage.setItem('lots_hidden_cols',JSON.stringify(hiddenCols.value)) } catch(e) {}
     }
-    var resetCols = function(){ visibleCols.value = ALL_COLS.slice(); try{localStorage.removeItem('lots_vis_cols')}catch(e){} }
-    var moveColUp = function(col){var i=visibleCols.value.indexOf(col);if(i>0){var a=visibleCols.value.slice();var t=a[i];a[i]=a[i-1];a[i-1]=t;visibleCols.value=a;try{localStorage.setItem('lots_vis_cols',JSON.stringify(a))}catch(e){}}}
-    var moveColDown = function(col){var i=visibleCols.value.indexOf(col);if(i>=0&&i<visibleCols.value.length-1){var a=visibleCols.value.slice();var t=a[i];a[i]=a[i+1];a[i+1]=t;visibleCols.value=a;try{localStorage.setItem('lots_vis_cols',JSON.stringify(a))}catch(e){}}}
+    var resetCols = function(){ colOrder.value=ALL_COLS.slice(); hiddenCols.value=[]; try{localStorage.removeItem('lots_col_order');localStorage.removeItem('lots_hidden_cols');localStorage.removeItem('lots_vis_cols')}catch(e){} }
+    var moveColUp = function(col){var i=colOrder.value.indexOf(col);if(i>0){var a=colOrder.value.slice();var t=a[i];a[i]=a[i-1];a[i-1]=t;colOrder.value=a;try{localStorage.setItem('lots_col_order',JSON.stringify(a))}catch(e){}}}
+    var moveColDown = function(col){var i=colOrder.value.indexOf(col);if(i>=0&&i<colOrder.value.length-1){var a=colOrder.value.slice();var t=a[i];a[i]=a[i+1];a[i+1]=t;colOrder.value=a;try{localStorage.setItem('lots_col_order',JSON.stringify(a))}catch(e){}}}
 
     // ── Drag & drop colonnes ───────────────────────────────────────────
     var colDragIdx = ref(null)
@@ -399,11 +407,11 @@ export default {
     var onColDrop = function(targetIdx) {
       var fromIdx = colDragIdx.value
       if (fromIdx === null || fromIdx === targetIdx) { colDragIdx.value = null; colDragOverIdx.value = null; return }
-      var a = visibleCols.value.slice()
+      var a = colOrder.value.slice()
       var moved = a.splice(fromIdx, 1)[0]
       a.splice(targetIdx, 0, moved)
-      visibleCols.value = a
-      try { localStorage.setItem('lots_vis_cols', JSON.stringify(a)) } catch(e) {}
+      colOrder.value = a
+      try { localStorage.setItem('lots_col_order', JSON.stringify(a)) } catch(e) {}
       colDragIdx.value = null
       colDragOverIdx.value = null
     }
@@ -1810,7 +1818,7 @@ var loadCharge = async function() {
       isSelected,toggleLot,toggleAll,getLotNum,executeAction,
       actionGroups,userService,
       columnFilters,activeDropdown,ddPos,openDropdown,getColumnValues,setColumnFilter,clearColumnFilters,removeColumnFilter,hasColumnFilters,
-      visibleCols,showColPanel,colDefs,isColVisible,toggleCol,resetCols,moveColUp,moveColDown,CC,
+      visibleCols:tableCols,showColPanel,colDefs,isColVisible,toggleCol,resetCols,moveColUp,moveColDown,CC,
       colDragIdx,colDragOverIdx,onColDragStart,onColDragOver,onColDrop,onColDragEnd,
       inlineMenu,openInlineMenu,executeInline,confirmInlineMotif,toggleInlineHistory,closeAll,
       devPopup,openDevPopup,confirmDevPopup,closeDevInPopup,saveDevField,markBloquanteInPopup,canPerform,SVC_LABELS,fmtDevDate,
