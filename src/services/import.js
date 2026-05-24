@@ -281,29 +281,61 @@ export async function importFromGoogleSheets(url, onProgress) {
   rows[0].forEach(function(h, i) { headers[norm(h)] = i })
   var dataRows = rows.slice(1)
 
-  // ── 3. Extraire toutes les données en mémoire ─────────────────────────
-  var parsed = []
+  // ── 3. Extraire + fusionner les mouvements SAP par numero_lot ────────────
+  // Règles de fusion :
+  //   quantite          → somme de toutes les lignes
+  //   date_enregistrement, date_declaration → la plus ancienne
+  //   date_liberation   → la plus récente
+  //   num_document_sap  → le premier (document le plus ancien)
+  //   statut, DDF, DDP, prix, PPA, qte_colis, SHP → dernière ligne
+  var parsedMap = {}
   dataRows.forEach(function(row) {
     var getVal = makeCsvGetVal(row, headers)
     var codeArticle = clean(getVal('code_article'))
     var numLot = clean(getVal('N_lot'))
     if (!codeArticle || !numLot) { stats.skipped++; return }
-    parsed.push({
-      codeArticle: codeArticle, numLot: numLot,
-      description: clean(getVal('description')) || codeArticle,
-      numDocSap: clean(getVal('Num_document')) || null,
-      quantite: parseQuantite(getVal('quantite')),
-      statutSap: mapStatut(clean(getVal('Statut_Lot'))),
-      dateEnr: parseDate(getVal('date_enregistrement')),
-      dateDecl: parseDate(getVal('Date_Declaration')),
-      dateLib: parseDate(getVal('Date_liberation')),
-      ddf: parseDate(getVal('DDF')), ddp: parseDate(getVal('DDP')),
-      prixVente: parseNum(getVal('prix_vente')),
-      ppa: parseNum(getVal('PPA')),
-      qteColis: parseInt(clean(getVal('quantite_par_colis'))) || null,
-      shp: parseNum(getVal('SHP')),
-    })
+
+    var dateEnr  = parseDate(getVal('date_enregistrement'))
+    var dateDecl = parseDate(getVal('Date_Declaration'))
+    var dateLib  = parseDate(getVal('Date_liberation'))
+    var qte      = parseQuantite(getVal('quantite'))
+
+    if (parsedMap[numLot]) {
+      var ex = parsedMap[numLot]
+      // Somme des quantités (mouvements SAP)
+      ex.quantite += qte
+      // Date enregistrement : la plus ancienne
+      if (dateEnr  && (!ex.dateEnr  || dateEnr  < ex.dateEnr))  ex.dateEnr  = dateEnr
+      // Date déclaration : la plus ancienne
+      if (dateDecl && (!ex.dateDecl || dateDecl < ex.dateDecl)) ex.dateDecl = dateDecl
+      // Date libération : la plus récente
+      if (dateLib  && (!ex.dateLib  || dateLib  > ex.dateLib))  ex.dateLib  = dateLib
+      // num_document_sap : on garde le premier (ne pas écraser)
+      // Autres champs : valeurs de la ligne courante (plus récente)
+      ex.statutSap = mapStatut(clean(getVal('Statut_Lot')))
+      ex.ddf       = parseDate(getVal('DDF'))
+      ex.ddp       = parseDate(getVal('DDP'))
+      ex.prixVente = parseNum(getVal('prix_vente'))
+      ex.ppa       = parseNum(getVal('PPA'))
+      ex.qteColis  = parseInt(clean(getVal('quantite_par_colis'))) || null
+      ex.shp       = parseNum(getVal('SHP'))
+    } else {
+      parsedMap[numLot] = {
+        codeArticle: codeArticle, numLot: numLot,
+        description: clean(getVal('description')) || codeArticle,
+        numDocSap:   clean(getVal('Num_document')) || null,
+        quantite:    qte,
+        statutSap:   mapStatut(clean(getVal('Statut_Lot'))),
+        dateEnr: dateEnr, dateDecl: dateDecl, dateLib: dateLib,
+        ddf: parseDate(getVal('DDF')), ddp: parseDate(getVal('DDP')),
+        prixVente: parseNum(getVal('prix_vente')),
+        ppa:       parseNum(getVal('PPA')),
+        qteColis:  parseInt(clean(getVal('quantite_par_colis'))) || null,
+        shp:       parseNum(getVal('SHP')),
+      }
+    }
   })
+  var parsed = Object.values(parsedMap)
   if (onProgress) onProgress(25)
 
   // ── 4. Produits : 1 requête pour tous ────────────────────────────────
