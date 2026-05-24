@@ -80,9 +80,21 @@ export default {
     var getLotsMap = async function(lotIds) {
       var uniq = lotIds.filter(function(id,i,a){ return id!=null && a.indexOf(id)===i })
       if (!uniq.length) return {}
-      var res = await supabase.from('lots').select('id,numero_lot,prod_desc,prod_code').in('id',uniq)
+      var res = await supabase.from('lots').select('id,numero_lot,product_id').in('id',uniq)
       var map = {}
       ;(res.data||[]).forEach(function(l){ map[l.id]=l })
+      // Récupérer les descriptions produits via product_id
+      var prodIds = (res.data||[]).map(function(l){return l.product_id}).filter(function(id,i,a){return id!=null&&a.indexOf(id)===i})
+      if (prodIds.length) {
+        var pRes = await supabase.from('products').select('id,code_article,description').in('id',prodIds)
+        var pMap = {}
+        ;(pRes.data||[]).forEach(function(p){ pMap[p.id]=p })
+        Object.keys(map).forEach(function(lid){
+          var l=map[lid]; var p=pMap[l.product_id]
+          l.prod_desc = p ? (p.description||p.code_article) : ''
+          l.prod_code = p ? p.code_article : ''
+        })
+      }
       return map
     }
 
