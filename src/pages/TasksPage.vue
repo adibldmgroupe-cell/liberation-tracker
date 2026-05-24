@@ -76,40 +76,43 @@ export default {
       return {id:id,icon:icon,title:title,urgent:urgent||false,open:true,items:[]}
     }
 
+    // Helper : résout un tableau de lot_id → map {id: {id,numero_lot,prod_desc,prod_code}}
+    var getLotsMap = async function(lotIds) {
+      var uniq = lotIds.filter(function(id,i,a){ return id!=null && a.indexOf(id)===i })
+      if (!uniq.length) return {}
+      var res = await supabase.from('lots').select('id,numero_lot,prod_desc,prod_code').in('id',uniq)
+      var map = {}
+      ;(res.data||[]).forEach(function(l){ map[l.id]=l })
+      return map
+    }
+
     var load = async function() {
       loading.value = true
       var cats = []
       var svc = userService.value
       if (!svc) { loading.value = false; return }
 
-      var isAdmin = svc === 'aq' // admin sees all? No, keep per-service
-
       // ── 1. CIRCUITS À VALIDER ──────────────────────────────────────
       var circEtapeMap = {planification:'planification',stock:'stock',aq:'aq',dt:'dt',aq_dap:'aq_dap'}
       var circEtape = circEtapeMap[svc]
       if (circEtape || svc==='fabrication' || svc==='conditionnement') {
         var circCat = makeCat('circuits','🔄','Circuits à valider / réceptionner')
-        // OF
-        var ofQ = supabase.from('orders_of').select('id,lot_id,etape_circuit,lots!inner(id,numero_lot,prod_desc,prod_code)').eq('statut','en_circuit')
-        if (svc==='fabrication') ofQ = ofQ.eq('etape_circuit','production')
-        else if (circEtape) ofQ = ofQ.eq('etape_circuit',circEtape)
-        else ofQ = null
-        if (ofQ) {
-          var ofRes = await ofQ
+        var ofEtape = svc==='fabrication' ? 'production' : circEtape
+        var ocEtape = svc==='conditionnement' ? 'production' : (svc==='fabrication' ? null : circEtape)
+        if (ofEtape) {
+          var ofRes = await supabase.from('orders_of').select('id,lot_id,etape_circuit').eq('statut','en_circuit').eq('etape_circuit',ofEtape).limit(200)
+          var ofMap = await getLotsMap((ofRes.data||[]).map(function(o){return o.lot_id}))
           ;(ofRes.data||[]).forEach(function(o){
-            circCat.items.push({key:'of_'+o.id,lotId:o.lots.id,lotNum:o.lots.numero_lot,prodDesc:o.lots.prod_desc||o.lots.prod_code,action:'Circuit OF — '+(o.etape_circuit||'')})
+            var l=ofMap[o.lot_id]; if(!l) return
+            circCat.items.push({key:'of_'+o.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,action:'Circuit OF — étape : '+(o.etape_circuit||'')})
           })
         }
-        // OC
-        var ocQ = supabase.from('orders_oc').select('id,lot_id,etape_circuit,lots!inner(id,numero_lot,prod_desc,prod_code)').eq('statut','en_circuit')
-        if (svc==='conditionnement') ocQ = ocQ.eq('etape_circuit','production')
-        else if (svc==='fabrication') ocQ = null
-        else if (circEtape) ocQ = ocQ.eq('etape_circuit',circEtape)
-        else ocQ = null
-        if (ocQ) {
-          var ocRes = await ocQ
+        if (ocEtape) {
+          var ocRes = await supabase.from('orders_oc').select('id,lot_id,etape_circuit').eq('statut','en_circuit').eq('etape_circuit',ocEtape).limit(200)
+          var ocMap = await getLotsMap((ocRes.data||[]).map(function(o){return o.lot_id}))
           ;(ocRes.data||[]).forEach(function(o){
-            circCat.items.push({key:'oc_'+o.id,lotId:o.lots.id,lotNum:o.lots.numero_lot,prodDesc:o.lots.prod_desc||o.lots.prod_code,action:'Circuit OC — '+(o.etape_circuit||'')})
+            var l=ocMap[o.lot_id]; if(!l) return
+            circCat.items.push({key:'oc_'+o.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,action:'Circuit OC — étape : '+(o.etape_circuit||'')})
           })
         }
         if (circCat.items.length) cats.push(circCat)
@@ -117,81 +120,82 @@ export default {
 
       // ── 2. DOCUMENTS À TRAITER ─────────────────────────────────────
       var docCat = makeCat('docs','📄','Documents à traiter')
+      var docRaw = []
       if (svc==='aq') {
-        // AQ : vérifier les docs émis ou en vérification
         var daqRes = await supabase.from('liberation_documents')
-          .select('id,type_document,statut,lot_id,lots!inner(id,numero_lot,prod_desc,prod_code)')
+          .select('id,type_document,statut,lot_id')
           .in('statut',['emis','verification_aq'])
           .in('type_document',['if','ic','da_pc','da_micro','rvp','maj_if','maj_ic','maj_nmcl_of','maj_nmcl_oc'])
-          .eq('is_applicable',true)
-        ;(daqRes.data||[]).forEach(function(d){
-          var lbl = d.statut==='verification_aq'?'Vérifier (retour DT)':'Vérifier AQ → DT'
-          docCat.items.push({key:'doc_'+d.id,lotId:d.lots.id,lotNum:d.lots.numero_lot,prodDesc:d.lots.prod_desc||d.lots.prod_code,action:(DOC_TYPE_LABELS[d.type_document]||d.type_document)+' — '+lbl})
+          .eq('is_applicable',true).limit(500)
+        docRaw = daqRes.data||[]
+        var daqMap = await getLotsMap(docRaw.map(function(d){return d.lot_id}))
+        docRaw.forEach(function(d){
+          var l=daqMap[d.lot_id]; if(!l) return
+          var lbl=d.statut==='verification_aq'?'Vérifier (retour DT)':'Vérifier AQ → DT'
+          docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,action:(DOC_TYPE_LABELS[d.type_document]||d.type_document)+' — '+lbl})
         })
       } else if (svc==='dt') {
-        // DT : approuver les docs vérifiés AQ
         var ddtRes = await supabase.from('liberation_documents')
-          .select('id,type_document,statut,lot_id,lots!inner(id,numero_lot,prod_desc,prod_code)')
+          .select('id,type_document,statut,lot_id')
           .eq('statut','approuve_aq')
           .in('type_document',['if','ic','da_pc','da_micro','rvp','maj_if','maj_ic','maj_nmcl_of','maj_nmcl_oc'])
-          .eq('is_applicable',true)
-        ;(ddtRes.data||[]).forEach(function(d){
-          docCat.items.push({key:'doc_'+d.id,lotId:d.lots.id,lotNum:d.lots.numero_lot,prodDesc:d.lots.prod_desc||d.lots.prod_code,action:(DOC_TYPE_LABELS[d.type_document]||d.type_document)+' — Approuver DT'})
+          .eq('is_applicable',true).limit(500)
+        docRaw = ddtRes.data||[]
+        var ddtMap = await getLotsMap(docRaw.map(function(d){return d.lot_id}))
+        docRaw.forEach(function(d){
+          var l=ddtMap[d.lot_id]; if(!l) return
+          docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,action:(DOC_TYPE_LABELS[d.type_document]||d.type_document)+' — Approuver DT'})
         })
       } else {
-        // Émetteurs : rectifier les docs retournés
         var dEmtRes = await supabase.from('liberation_documents')
-          .select('id,type_document,statut,service_emetteur,lot_id,lots!inner(id,numero_lot,prod_desc,prod_code)')
+          .select('id,type_document,lot_id')
           .eq('statut','retour_emetteur')
           .eq('service_emetteur',svc)
-          .eq('is_applicable',true)
-        ;(dEmtRes.data||[]).forEach(function(d){
-          docCat.items.push({key:'doc_'+d.id,lotId:d.lots.id,lotNum:d.lots.numero_lot,prodDesc:d.lots.prod_desc||d.lots.prod_code,action:(DOC_TYPE_LABELS[d.type_document]||d.type_document)+' — Rectifier et réémettre'})
+          .eq('is_applicable',true).limit(500)
+        docRaw = dEmtRes.data||[]
+        var dEmtMap = await getLotsMap(docRaw.map(function(d){return d.lot_id}))
+        docRaw.forEach(function(d){
+          var l=dEmtMap[d.lot_id]; if(!l) return
+          docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,action:(DOC_TYPE_LABELS[d.type_document]||d.type_document)+' — Rectifier et réémettre'})
         })
       }
       if (docCat.items.length) cats.push(docCat)
 
       // ── 3. ACCUSÉS DE RÉCEPTION ────────────────────────────────────
       var arCat = makeCat('ar','✅','Accusés de réception à confirmer')
-      // AR sur documents
-      var arDocRes = await supabase.from('liberation_documents')
-        .select('id,type_document,lot_id,lots!inner(id,numero_lot,prod_desc,prod_code)')
-        .eq('pending_ar_service',svc)
-      ;(arDocRes.data||[]).forEach(function(d){
-        arCat.items.push({key:'ar_doc_'+d.id,lotId:d.lots.id,lotNum:d.lots.numero_lot,prodDesc:d.lots.prod_desc||d.lots.prod_code,action:(DOC_TYPE_LABELS[d.type_document]||d.type_document)+' — Accuser réception'})
+      var arDocR = await supabase.from('liberation_documents').select('id,type_document,lot_id').eq('pending_ar_service',svc).limit(200)
+      var arDocMap = await getLotsMap((arDocR.data||[]).map(function(d){return d.lot_id}))
+      ;(arDocR.data||[]).forEach(function(d){
+        var l=arDocMap[d.lot_id]; if(!l) return
+        arCat.items.push({key:'ar_doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,action:(DOC_TYPE_LABELS[d.type_document]||d.type_document)+' — Accuser réception'})
       })
-      // AR sur circuit OF
-      var arOfRes = await supabase.from('orders_of')
-        .select('id,lot_id,etape_circuit,lots!inner(id,numero_lot,prod_desc,prod_code)')
-        .eq('pending_ar_service',svc)
-      ;(arOfRes.data||[]).forEach(function(o){
-        arCat.items.push({key:'ar_of_'+o.id,lotId:o.lots.id,lotNum:o.lots.numero_lot,prodDesc:o.lots.prod_desc||o.lots.prod_code,action:'Circuit OF — Accuser réception ('+o.etape_circuit+')'})
+      var arOfR = await supabase.from('orders_of').select('id,lot_id,etape_circuit').eq('pending_ar_service',svc).limit(200)
+      var arOfMap = await getLotsMap((arOfR.data||[]).map(function(o){return o.lot_id}))
+      ;(arOfR.data||[]).forEach(function(o){
+        var l=arOfMap[o.lot_id]; if(!l) return
+        arCat.items.push({key:'ar_of_'+o.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,action:'Circuit OF — AR ('+o.etape_circuit+')'})
       })
-      // AR sur circuit OC
-      var arOcRes = await supabase.from('orders_oc')
-        .select('id,lot_id,etape_circuit,lots!inner(id,numero_lot,prod_desc,prod_code)')
-        .eq('pending_ar_service',svc)
-      ;(arOcRes.data||[]).forEach(function(o){
-        arCat.items.push({key:'ar_oc_'+o.id,lotId:o.lots.id,lotNum:o.lots.numero_lot,prodDesc:o.lots.prod_desc||o.lots.prod_code,action:'Circuit OC — Accuser réception ('+o.etape_circuit+')'})
+      var arOcR = await supabase.from('orders_oc').select('id,lot_id,etape_circuit').eq('pending_ar_service',svc).limit(200)
+      var arOcMap = await getLotsMap((arOcR.data||[]).map(function(o){return o.lot_id}))
+      ;(arOcR.data||[]).forEach(function(o){
+        var l=arOcMap[o.lot_id]; if(!l) return
+        arCat.items.push({key:'ar_oc_'+o.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,action:'Circuit OC — AR ('+o.etape_circuit+')'})
       })
-      // AR AQL demande (AQ/LCQ confirment réception de la demande)
       if (svc==='aq'||svc==='lcq') {
-        var arAqlDemRes = await supabase.from('aql_inspections')
-          .select('id,type,lot_id,lots!inner(id,numero_lot,prod_desc,prod_code)')
-          .eq('request_ar_pending',true)
-        ;(arAqlDemRes.data||[]).forEach(function(a){
-          arCat.items.push({key:'ar_aql_dem_'+a.id,lotId:a.lots.id,lotNum:a.lots.numero_lot,prodDesc:a.lots.prod_desc||a.lots.prod_code,action:'AQL '+a.type+' — AR demande inspection'})
+        var arAqlDR = await supabase.from('aql_inspections').select('id,type,lot_id').eq('request_ar_pending',true).limit(200)
+        var arAqlDMap = await getLotsMap((arAqlDR.data||[]).map(function(a){return a.lot_id}))
+        ;(arAqlDR.data||[]).forEach(function(a){
+          var l=arAqlDMap[a.lot_id]; if(!l) return
+          arCat.items.push({key:'ar_aql_d_'+a.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,action:'AQL '+a.type+' — AR demande'})
         })
       }
-      // AR AQL résultat (Fabrication/Conditionnement reçoivent le résultat)
       if (svc==='fabrication'||svc==='conditionnement') {
-        var aqlTypeForSvc = svc==='fabrication'?'fabrication':'conditionnement'
-        var arAqlResRes = await supabase.from('aql_inspections')
-          .select('id,type,resultat,lot_id,lots!inner(id,numero_lot,prod_desc,prod_code)')
-          .eq('result_ar_pending',true)
-          .eq('type',aqlTypeForSvc)
-        ;(arAqlResRes.data||[]).forEach(function(a){
-          arCat.items.push({key:'ar_aql_res_'+a.id,lotId:a.lots.id,lotNum:a.lots.numero_lot,prodDesc:a.lots.prod_desc||a.lots.prod_code,action:'AQL '+a.type+' — AR résultat ('+a.resultat+')'})
+        var aqlTypeSvc = svc==='fabrication'?'fabrication':'conditionnement'
+        var arAqlRR = await supabase.from('aql_inspections').select('id,type,resultat,lot_id').eq('result_ar_pending',true).eq('type',aqlTypeSvc).limit(200)
+        var arAqlRMap = await getLotsMap((arAqlRR.data||[]).map(function(a){return a.lot_id}))
+        ;(arAqlRR.data||[]).forEach(function(a){
+          var l=arAqlRMap[a.lot_id]; if(!l) return
+          arCat.items.push({key:'ar_aql_r_'+a.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,action:'AQL '+a.type+' — AR résultat ('+a.resultat+')'})
         })
       }
       if (arCat.items.length) cats.push(arCat)
@@ -200,13 +204,11 @@ export default {
       if (svc==='fabrication'||svc==='conditionnement') {
         var aqlCat = makeCat('aql','🔬','Inspections AQL à réaliser')
         var aqlTypeVal = svc==='fabrication'?'fabrication':'conditionnement'
-        var aqlRes = await supabase.from('aql_inspections')
-          .select('id,type,requested_at,lot_id,lots!inner(id,numero_lot,prod_desc,prod_code)')
-          .eq('type',aqlTypeVal)
-          .eq('resultat','en_attente')
-          .order('requested_at',{ascending:true})
-        ;(aqlRes.data||[]).forEach(function(a){
-          aqlCat.items.push({key:'aql_'+a.id,lotId:a.lots.id,lotNum:a.lots.numero_lot,prodDesc:a.lots.prod_desc||a.lots.prod_code,action:'AQL '+a.type+' — Résultat à saisir'})
+        var aqlR = await supabase.from('aql_inspections').select('id,type,lot_id').eq('type',aqlTypeVal).eq('resultat','en_attente').order('requested_at',{ascending:true}).limit(200)
+        var aqlMap = await getLotsMap((aqlR.data||[]).map(function(a){return a.lot_id}))
+        ;(aqlR.data||[]).forEach(function(a){
+          var l=aqlMap[a.lot_id]; if(!l) return
+          aqlCat.items.push({key:'aql_'+a.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,action:'AQL '+a.type+' — Résultat à saisir'})
         })
         if (aqlCat.items.length) cats.push(aqlCat)
       }
@@ -214,13 +216,11 @@ export default {
       // ── 5. DÉVIATIONS BLOQUANTES ───────────────────────────────────
       if (svc==='aq'||svc==='dt'||svc==='admin') {
         var devCat = makeCat('dev','⚠','Déviations bloquantes ouvertes',true)
-        var devRes = await supabase.from('deviations')
-          .select('id,lot_id,numero_dn,description,lots!inner(id,numero_lot,prod_desc,prod_code)')
-          .eq('bloquante',true)
-          .in('statut',['ouverte','en_cours'])
-          .order('declared_at',{ascending:false})
-        ;(devRes.data||[]).forEach(function(d){
-          devCat.items.push({key:'dev_'+d.id,lotId:d.lots.id,lotNum:d.lots.numero_lot,prodDesc:d.lots.prod_desc||d.lots.prod_code,action:'Déviation bloquante'+(d.numero_dn?' ('+d.numero_dn+')':''),urgent:true})
+        var devR = await supabase.from('deviations').select('id,lot_id,numero_dn').eq('bloquante',true).in('statut',['ouverte','en_cours']).order('declared_at',{ascending:false}).limit(200)
+        var devMap = await getLotsMap((devR.data||[]).map(function(d){return d.lot_id}))
+        ;(devR.data||[]).forEach(function(d){
+          var l=devMap[d.lot_id]; if(!l) return
+          devCat.items.push({key:'dev_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,action:'Déviation bloquante'+(d.numero_dn?' ('+d.numero_dn+')':''),urgent:true})
         })
         if (devCat.items.length) cats.push(devCat)
       }
