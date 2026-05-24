@@ -259,79 +259,139 @@ function makeCsvGetVal(row, headers) {
   }
 }
 
-async function processCSVRow(row, headers, stats) {
-  var getVal = makeCsvGetVal(row, headers)
-  var codeArticle = clean(getVal('code_article'))
-  var numLot = clean(getVal('N_lot'))
-  if (!codeArticle || !numLot) { stats.skipped++; return }
-
-  var product = await upsertProduct(codeArticle, clean(getVal('description')) || codeArticle, getVal)
-  var statutSap = mapStatut(clean(getVal('Statut_Lot')))
-  var now = new Date().toISOString()
-  var lotData = {
-    numero_lot: numLot, product_id: product.id,
-    num_document_sap: clean(getVal('Num_document')) || null,
-    quantite: parseQuantite(getVal('quantite')), statut_sap: statutSap,
-    date_enregistrement: parseDate(getVal('date_enregistrement')),
-    date_declaration: parseDate(getVal('Date_Declaration')),
-    date_liberation: parseDate(getVal('Date_liberation')),
-    ddf: parseDate(getVal('DDF')), ddp: parseDate(getVal('DDP')),
-    prix_vente: parseNum(getVal('prix_vente')),
-    ppa: parseNum(getVal('PPA')),
-    quantite_par_colis: parseInt(clean(getVal('quantite_par_colis'))) || null,
-    shp: parseNum(getVal('SHP')),
-    synced_from_excel_at: now,
-  }
-
-  var existing = await supabase.from('lots').select('id,statut_sap').eq('numero_lot', numLot).maybeSingle()
-  if (existing.data) {
-    await supabase.from('lots').update({
-      quantite: lotData.quantite, statut_sap: lotData.statut_sap,
-      date_enregistrement: lotData.date_enregistrement, date_declaration: lotData.date_declaration,
-      date_liberation: lotData.date_liberation, ddf: lotData.ddf, ddp: lotData.ddp,
-      prix_vente: lotData.prix_vente, ppa: lotData.ppa,
-      quantite_par_colis: lotData.quantite_par_colis, shp: lotData.shp,
-      synced_from_excel_at: now, updated_at: now,
-    }).eq('id', existing.data.id)
-    if (statutSap !== 'vide') {
-      await supabase.from('orders_of').update({ statut: 'termine', etape_circuit: 'production' }).eq('lot_id', existing.data.id)
-      await supabase.from('orders_oc').update({ statut: 'termine', etape_circuit: 'production' }).eq('lot_id', existing.data.id)
-    }
-    stats.updated++
-  } else {
-    var newLot = await supabase.from('lots').insert(lotData).select('id').single()
-    if (newLot.error) throw newLot.error
-    await initLotDocuments(newLot.data.id)
-    if (statutSap !== 'vide') {
-      await supabase.from('orders_of').update({ statut: 'termine', etape_circuit: 'production' }).eq('lot_id', newLot.data.id)
-      await supabase.from('orders_oc').update({ statut: 'termine', etape_circuit: 'production' }).eq('lot_id', newLot.data.id)
-    }
-    stats.created++
-  }
-}
-
 export async function importFromGoogleSheets(url, onProgress) {
   var stats = { created: 0, updated: 0, skipped: 0, errors: [], type: 'Google Sheets' }
+  if (onProgress) onProgress(5)
+
+  // ── 1. Fetch CSV ──────────────────────────────────────────────────────
   var text
   try {
-    var res = await fetch(url)
-    if (!res.ok) throw new Error('HTTP ' + res.status)
-    text = await res.text()
+    var fetchRes = await fetch(url)
+    if (!fetchRes.ok) throw new Error('HTTP ' + fetchRes.status)
+    text = await fetchRes.text()
   } catch(e) {
     return Object.assign(stats, { errors: ['Impossible de lire l\'URL Google Sheets : ' + e.message] })
   }
+  if (onProgress) onProgress(15)
+
+  // ── 2. Parse CSV ──────────────────────────────────────────────────────
   var rows = parseCSV(text)
   if (!rows.length) return Object.assign(stats, { errors: ['Fichier vide'] })
-  var headerRow = rows[0]
   var headers = {}
-  headerRow.forEach(function(h, i) { headers[norm(h)] = i })
+  rows[0].forEach(function(h, i) { headers[norm(h)] = i })
   var dataRows = rows.slice(1)
-  var total = dataRows.length
-  for (var i = 0; i < dataRows.length; i++) {
-    try { await processCSVRow(dataRows[i], headers, stats) }
-    catch(e) { stats.errors.push('Ligne ' + (i+2) + ' : ' + e.message) }
-    if (onProgress) onProgress(Math.round(((i+1) / total) * 100))
+
+  // ── 3. Extraire toutes les données en mémoire ─────────────────────────
+  var parsed = []
+  dataRows.forEach(function(row) {
+    var getVal = makeCsvGetVal(row, headers)
+    var codeArticle = clean(getVal('code_article'))
+    var numLot = clean(getVal('N_lot'))
+    if (!codeArticle || !numLot) { stats.skipped++; return }
+    parsed.push({
+      codeArticle: codeArticle, numLot: numLot,
+      description: clean(getVal('description')) || codeArticle,
+      numDocSap: clean(getVal('Num_document')) || null,
+      quantite: parseQuantite(getVal('quantite')),
+      statutSap: mapStatut(clean(getVal('Statut_Lot'))),
+      dateEnr: parseDate(getVal('date_enregistrement')),
+      dateDecl: parseDate(getVal('Date_Declaration')),
+      dateLib: parseDate(getVal('Date_liberation')),
+      ddf: parseDate(getVal('DDF')), ddp: parseDate(getVal('DDP')),
+      prixVente: parseNum(getVal('prix_vente')),
+      ppa: parseNum(getVal('PPA')),
+      qteColis: parseInt(clean(getVal('quantite_par_colis'))) || null,
+      shp: parseNum(getVal('SHP')),
+    })
+  })
+  if (onProgress) onProgress(25)
+
+  // ── 4. Produits : 1 requête pour tous ────────────────────────────────
+  var allCodes = parsed.map(function(p){ return p.codeArticle }).filter(function(c,i,a){ return a.indexOf(c)===i })
+  var existingProdsRes = await supabase.from('products').select('id,code_article').in('code_article', allCodes)
+  var prodMap = {}
+  ;(existingProdsRes.data||[]).forEach(function(p){ prodMap[p.code_article] = p.id })
+
+  // Insérer les produits manquants en 1 batch
+  var newProdsData = allCodes.filter(function(c){ return !prodMap[c] }).map(function(c) {
+    var item = parsed.find(function(p){ return p.codeArticle === c })
+    return { code_article: c, description: item.description, is_semi_solide: isSemiSolide(item.description) }
+  })
+  if (newProdsData.length) {
+    var insProdsRes = await supabase.from('products').insert(newProdsData).select('id,code_article')
+    ;(insProdsRes.data||[]).forEach(function(p){ prodMap[p.code_article] = p.id })
+    if (insProdsRes.error) stats.errors.push('Produits : ' + insProdsRes.error.message)
   }
+  if (onProgress) onProgress(40)
+
+  // ── 5. Lots : 1 requête pour tous ────────────────────────────────────
+  var allNumLots = parsed.map(function(p){ return p.numLot })
+  var existingLotsRes = await supabase.from('lots').select('id,numero_lot,statut_sap').in('numero_lot', allNumLots)
+  var lotMap = {}
+  ;(existingLotsRes.data||[]).forEach(function(l){ lotMap[l.numero_lot] = l })
+  if (onProgress) onProgress(50)
+
+  var now = new Date().toISOString()
+  var toUpsert = []   // lots existants à mettre à jour
+  var toInsert = []   // nouveaux lots à créer
+
+  parsed.forEach(function(p) {
+    var productId = prodMap[p.codeArticle]
+    if (!productId) { stats.errors.push('Produit introuvable : ' + p.codeArticle); return }
+    var lotData = {
+      numero_lot: p.numLot, product_id: productId,
+      num_document_sap: p.numDocSap,
+      quantite: p.quantite, statut_sap: p.statutSap,
+      date_enregistrement: p.dateEnr, date_declaration: p.dateDecl,
+      date_liberation: p.dateLib, ddf: p.ddf, ddp: p.ddp,
+      prix_vente: p.prixVente, ppa: p.ppa,
+      quantite_par_colis: p.qteColis, shp: p.shp,
+      synced_from_excel_at: now, updated_at: now,
+    }
+    var existing = lotMap[p.numLot]
+    if (existing) {
+      toUpsert.push(Object.assign({ id: existing.id }, lotData))
+      stats.updated++
+    } else {
+      toInsert.push(lotData)
+    }
+  })
+
+  // ── 6. Mise à jour en 1 batch ────────────────────────────────────────
+  if (toUpsert.length) {
+    var upsertRes = await supabase.from('lots').upsert(toUpsert, { onConflict: 'id' })
+    if (upsertRes.error) stats.errors.push('Mise à jour lots : ' + upsertRes.error.message)
+  }
+  if (onProgress) onProgress(70)
+
+  // ── 7. Insertion nouveaux lots en 1 batch ────────────────────────────
+  var newLotRows = []
+  if (toInsert.length) {
+    var insLotsRes = await supabase.from('lots').insert(toInsert).select('id,statut_sap')
+    if (insLotsRes.error) {
+      stats.errors.push('Insertion lots : ' + insLotsRes.error.message)
+    } else {
+      newLotRows = insLotsRes.data || []
+      stats.created += newLotRows.length
+    }
+  }
+  if (onProgress) onProgress(80)
+
+  // ── 8. Init documents pour les nouveaux lots (séquentiel, peu nombreux) ──
+  for (var i = 0; i < newLotRows.length; i++) {
+    await initLotDocuments(newLotRows[i].id)
+  }
+  if (onProgress) onProgress(90)
+
+  // ── 9. OF/OC : 2 requêtes batch ─────────────────────────────────────
+  var idsAvecStatut = toUpsert.filter(function(l){ return l.statut_sap !== 'vide' }).map(function(l){ return l.id })
+    .concat(newLotRows.filter(function(l){ return l.statut_sap !== 'vide' }).map(function(l){ return l.id }))
+  if (idsAvecStatut.length) {
+    await supabase.from('orders_of').update({ statut: 'termine', etape_circuit: 'production' }).in('lot_id', idsAvecStatut)
+    await supabase.from('orders_oc').update({ statut: 'termine', etape_circuit: 'production' }).in('lot_id', idsAvecStatut)
+  }
+  if (onProgress) onProgress(100)
+
   return stats
 }
 
