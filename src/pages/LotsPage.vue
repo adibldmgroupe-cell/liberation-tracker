@@ -701,7 +701,7 @@ export default {
                 await createNotification('aq',lot.id,d.id,'Lot '+lot.numero_lot+' — '+col3.toUpperCase()+' émis','document_transmis')
               }})
             }
-            if (d.statut==='emis' && (isAdmin||canPerform('verifier_'+col3))) {
+            if ((d.statut==='emis'||d.statut==='verification_aq') && (isAdmin||canPerform('verifier_'+col3))) {
               actions.push({label:'Vérifier AQ → DT', fn: async function(){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
                 await supabase.from('liberation_documents').update({statut:'approuve_aq',pending_ar_service:'dt',updated_at:n}).eq('id',d.id)
@@ -860,7 +860,7 @@ export default {
                 await createNotification('aq',lot.id,rd.id,'Lot '+lot.numero_lot+' — RVP '+re+' émis','document_transmis')
               }})
             }
-            if (rd.statut==='emis' && (isAdmin||canPerform('verifier_rvp'))) {
+            if ((rd.statut==='emis'||rd.statut==='verification_aq') && (isAdmin||canPerform('verifier_rvp'))) {
               actions.push({label:'Vérifier AQ → DT', fn: async function(){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
                 await supabase.from('liberation_documents').update({statut:'approuve_aq',pending_ar_service:'dt',updated_at:n}).eq('id',rd.id)
@@ -934,7 +934,7 @@ export default {
                 await createNotification('aq',lot.id,md.id,'Lot '+lot.numero_lot+' — '+COL_LABELS2[mt]+' émis','document_transmis')
               }})
             }
-            if (md.statut==='emis' && (isAdmin||canPerform('verifier_maj_doc'))) {
+            if ((md.statut==='emis'||md.statut==='verification_aq') && (isAdmin||canPerform('verifier_maj_doc'))) {
               actions.push({label:'Vérifier AQ → DT', fn: async function(){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
                 await supabase.from('liberation_documents').update({statut:'approuve_aq',updated_at:n}).eq('id',md.id)
@@ -959,12 +959,22 @@ export default {
                 await createNotification('aq',lot.id,md.id,'Lot '+lot.numero_lot+' — '+COL_LABELS2[mt]+' rectifié et réémis','document_transmis')
               }})
             }
-            if ((md.statut==='emis'||md.statut==='verification_aq'||md.statut==='approuve_aq') && (isAdmin||canPerform('retourner_document'))) {
-              actions.push({label:'Retourner', fn: async function(){
+            // AQ retourne à l'émetteur
+            if ((md.statut==='emis'||md.statut==='verification_aq') && (isAdmin||canPerform('retourner_document'))) {
+              actions.push({label:'Retourner à l\'émetteur', fn: async function(){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
                 await supabase.from('liberation_documents').update({statut:'retour_emetteur',updated_at:n}).eq('id',md.id)
                 await supabase.from('document_movements').insert({document_id:md.id,action:'retour',from_service:'aq',to_service:svc,motif_retour:'Retour direct tableau',performed_by:uid,performed_at:n})
                 if(svc)await createNotification(svc,lot.id,md.id,'Lot '+lot.numero_lot+' — '+COL_LABELS2[mt]+' retourné','document_retourne')
+              }})
+            }
+            // DT retourne à l'AQ
+            if (md.statut==='approuve_aq' && (isAdmin||canPerform('retourner_document'))) {
+              actions.push({label:'Retourner à l\'AQ (DT)', fn: async function(){
+                var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+                await supabase.from('liberation_documents').update({statut:'verification_aq',updated_at:n}).eq('id',md.id)
+                await supabase.from('document_movements').insert({document_id:md.id,action:'retour',from_service:'dt',to_service:'aq',motif_retour:'Retour DT tableau',performed_by:uid,performed_at:n})
+                await createNotification('aq',lot.id,md.id,'Lot '+lot.numero_lot+' — '+COL_LABELS2[mt]+' retourné par DT','document_retourne')
               }})
             }
           })(majDoc, majType, SVC_MAP[majType]||'planification', majEmitPerm)
