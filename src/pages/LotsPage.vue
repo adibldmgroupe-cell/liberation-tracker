@@ -123,23 +123,34 @@
     <!-- Menu inline actions (position:fixed) -->
     <div v-if="inlineMenu" class="inline-menu" :style="{top:inlineMenu.top+'px',left:inlineMenu.left+'px'}" @click.stop>
       <div class="inline-menu-title">{{inlineMenu.colLabel}}</div>
-      <button v-for="(act,idx) in inlineMenu.actions" :key="idx" class="inline-act" @click="executeInline(act)">{{act.label}}</button>
-      <div v-if="!inlineMenu.actions.length" class="inline-empty">Aucune action disponible</div>
-      <!-- Audit trail -->
-      <button class="inline-hist-toggle" @click.stop="toggleInlineHistory">
-        {{inlineMenu.historyOpen ? '▲ Masquer l\'historique' : '▼ Voir l\'historique'}}
-      </button>
-      <div v-if="inlineMenu.historyOpen" class="inline-hist">
-        <div v-if="inlineMenu.historyLoading" class="inline-hist-empty">⟳ Chargement…</div>
-        <div v-else-if="!inlineMenu.historyData.length" class="inline-hist-empty">Aucun historique enregistré</div>
-        <div v-for="(h,i) in inlineMenu.historyData" :key="i" class="inline-hist-row">
-          <span class="inline-hist-label">{{h.label}}</span>
-          <div class="inline-hist-sub">
-            <span class="inline-hist-who">{{h.who}}</span>
-            <span class="inline-hist-at">{{h.at}}</span>
+      <!-- Confirmation motif pour les actions de retour -->
+      <template v-if="inlineMenu.pendingAction">
+        <div class="inline-motif-title">{{inlineMenu.pendingAction.label}}</div>
+        <textarea v-model="inlineMenu.motifText" class="inline-motif-input" placeholder="Motif du retour (optionnel)…" rows="3"></textarea>
+        <div class="inline-motif-btns">
+          <button class="inline-motif-confirm" @click="confirmInlineMotif">✓ Confirmer</button>
+          <button class="inline-motif-cancel" @click="inlineMenu.pendingAction=null">✕ Annuler</button>
+        </div>
+      </template>
+      <template v-else>
+        <button v-for="(act,idx) in inlineMenu.actions" :key="idx" class="inline-act" @click="executeInline(act)">{{act.label}}</button>
+        <div v-if="!inlineMenu.actions.length" class="inline-empty">Aucune action disponible</div>
+        <!-- Audit trail -->
+        <button class="inline-hist-toggle" @click.stop="toggleInlineHistory">
+          {{inlineMenu.historyOpen ? '▲ Masquer l\'historique' : '▼ Voir l\'historique'}}
+        </button>
+        <div v-if="inlineMenu.historyOpen" class="inline-hist">
+          <div v-if="inlineMenu.historyLoading" class="inline-hist-empty">⟳ Chargement…</div>
+          <div v-else-if="!inlineMenu.historyData.length" class="inline-hist-empty">Aucun historique enregistré</div>
+          <div v-for="(h,i) in inlineMenu.historyData" :key="i" class="inline-hist-row">
+            <span class="inline-hist-label">{{h.label}}</span>
+            <div class="inline-hist-sub">
+              <span class="inline-hist-who">{{h.who}}</span>
+              <span class="inline-hist-at">{{h.at}}</span>
+            </div>
           </div>
         </div>
-      </div>
+      </template>
     </div>
 
     <!-- Date picker inline planification (position:fixed) -->
@@ -729,19 +740,19 @@ export default {
             // AQ retourne à l'émetteur (document émis ou en vérification AQ)
             if ((d.statut==='emis'||d.statut==='verification_aq') && (isAdmin||canPerform('retourner_document'))) {
               var emSvc = SVC_MAP[col3] || null
-              actions.push({label:'Retourner à l\'émetteur', fn: async function(){
+              actions.push({label:'Retourner à l\'émetteur', needsMotif:true, fn: async function(motif){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
                 await supabase.from('liberation_documents').update({statut:'retour_emetteur',pending_ar_service:emSvc,updated_at:n}).eq('id',d.id)
-                await supabase.from('document_movements').insert({document_id:d.id,action:'retour',from_service:'aq',to_service:emSvc,motif_retour:null,performed_by:uid,performed_at:n})
+                await supabase.from('document_movements').insert({document_id:d.id,action:'retour',from_service:'aq',to_service:emSvc,motif_retour:motif,performed_by:uid,performed_at:n})
                 if(emSvc)await createNotification(emSvc,lot.id,d.id,'Lot '+lot.numero_lot+' — '+col3.toUpperCase()+' retourné pour rectification','document_retourne')
               }})
             }
             // DT retourne à l'AQ (document approuvé AQ, en attente DT)
             if (d.statut==='approuve_aq' && (isAdmin||canPerform('retourner_document'))) {
-              actions.push({label:'Retourner à l\'AQ (DT)', fn: async function(){
+              actions.push({label:'Retourner à l\'AQ (DT)', needsMotif:true, fn: async function(motif){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
                 await supabase.from('liberation_documents').update({statut:'verification_aq',pending_ar_service:'aq',updated_at:n}).eq('id',d.id)
-                await supabase.from('document_movements').insert({document_id:d.id,action:'retour',from_service:'dt',to_service:'aq',motif_retour:null,performed_by:uid,performed_at:n})
+                await supabase.from('document_movements').insert({document_id:d.id,action:'retour',from_service:'dt',to_service:'aq',motif_retour:motif,performed_by:uid,performed_at:n})
                 await createNotification('aq',lot.id,d.id,'Lot '+lot.numero_lot+' — '+col3.toUpperCase()+' retourné par DT','document_retourne')
               }})
             }
@@ -887,19 +898,19 @@ export default {
             }
             // AQ retourne à l'émetteur RVP
             if ((rd.statut==='emis'||rd.statut==='verification_aq') && (isAdmin||canPerform('retourner_document'))) {
-              actions.push({label:'Retourner RVP à l\'émetteur', fn: async function(){
+              actions.push({label:'Retourner RVP à l\'émetteur', needsMotif:true, fn: async function(motif){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
                 await supabase.from('liberation_documents').update({statut:'retour_emetteur',pending_ar_service:re,updated_at:n}).eq('id',rd.id)
-                await supabase.from('document_movements').insert({document_id:rd.id,action:'retour',from_service:'aq',to_service:re,motif_retour:null,performed_by:uid,performed_at:n})
+                await supabase.from('document_movements').insert({document_id:rd.id,action:'retour',from_service:'aq',to_service:re,motif_retour:motif,performed_by:uid,performed_at:n})
                 await createNotification(re,lot.id,rd.id,'Lot '+lot.numero_lot+' — RVP '+re+' retourné pour rectification','document_retourne')
               }})
             }
             // DT retourne à l'AQ
             if (rd.statut==='approuve_aq' && (isAdmin||canPerform('retourner_document'))) {
-              actions.push({label:'Retourner RVP à l\'AQ (DT)', fn: async function(){
+              actions.push({label:'Retourner RVP à l\'AQ (DT)', needsMotif:true, fn: async function(motif){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
                 await supabase.from('liberation_documents').update({statut:'verification_aq',pending_ar_service:'aq',updated_at:n}).eq('id',rd.id)
-                await supabase.from('document_movements').insert({document_id:rd.id,action:'retour',from_service:'dt',to_service:'aq',motif_retour:null,performed_by:uid,performed_at:n})
+                await supabase.from('document_movements').insert({document_id:rd.id,action:'retour',from_service:'dt',to_service:'aq',motif_retour:motif,performed_by:uid,performed_at:n})
                 await createNotification('aq',lot.id,rd.id,'Lot '+lot.numero_lot+' — RVP '+re+' retourné par DT','document_retourne')
               }})
             }
@@ -961,19 +972,19 @@ export default {
             }
             // AQ retourne à l'émetteur
             if ((md.statut==='emis'||md.statut==='verification_aq') && (isAdmin||canPerform('retourner_document'))) {
-              actions.push({label:'Retourner à l\'émetteur', fn: async function(){
+              actions.push({label:'Retourner à l\'émetteur', needsMotif:true, fn: async function(motif){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
                 await supabase.from('liberation_documents').update({statut:'retour_emetteur',updated_at:n}).eq('id',md.id)
-                await supabase.from('document_movements').insert({document_id:md.id,action:'retour',from_service:'aq',to_service:svc,motif_retour:null,performed_by:uid,performed_at:n})
+                await supabase.from('document_movements').insert({document_id:md.id,action:'retour',from_service:'aq',to_service:svc,motif_retour:motif,performed_by:uid,performed_at:n})
                 if(svc)await createNotification(svc,lot.id,md.id,'Lot '+lot.numero_lot+' — '+COL_LABELS2[mt]+' retourné','document_retourne')
               }})
             }
             // DT retourne à l'AQ
             if (md.statut==='approuve_aq' && (isAdmin||canPerform('retourner_document'))) {
-              actions.push({label:'Retourner à l\'AQ (DT)', fn: async function(){
+              actions.push({label:'Retourner à l\'AQ (DT)', needsMotif:true, fn: async function(motif){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
                 await supabase.from('liberation_documents').update({statut:'verification_aq',updated_at:n}).eq('id',md.id)
-                await supabase.from('document_movements').insert({document_id:md.id,action:'retour',from_service:'dt',to_service:'aq',motif_retour:null,performed_by:uid,performed_at:n})
+                await supabase.from('document_movements').insert({document_id:md.id,action:'retour',from_service:'dt',to_service:'aq',motif_retour:motif,performed_by:uid,performed_at:n})
                 await createNotification('aq',lot.id,md.id,'Lot '+lot.numero_lot+' — '+COL_LABELS2[mt]+' retourné par DT','document_retourne')
               }})
             }
@@ -1039,12 +1050,27 @@ export default {
       var top = rect.bottom + 2, left = rect.left
       if (left + 240 > window.innerWidth) left = window.innerWidth - 250
       inlineMenu.value = { top: top, left: left, colLabel: COL_LABELS2[col]||col, actions: actions,
-        lotRef: lot, colRef: col, historyOpen: false, historyData: [], historyLoading: false }
+        lotRef: lot, colRef: col, historyOpen: false, historyData: [], historyLoading: false,
+        pendingAction: null, motifText: '' }
     }
 
     var executeInline = async function(action) {
+      if (action.needsMotif) {
+        inlineMenu.value.pendingAction = action
+        inlineMenu.value.motifText = ''
+        return
+      }
       inlineMenu.value = null
-      await action.fn()
+      await action.fn(null)
+      if (!action.noReload) await load()
+    }
+
+    var confirmInlineMotif = async function() {
+      if (!inlineMenu.value || !inlineMenu.value.pendingAction) return
+      var action = inlineMenu.value.pendingAction
+      var motif = (inlineMenu.value.motifText || '').trim() || null
+      inlineMenu.value = null
+      await action.fn(motif)
       if (!action.noReload) await load()
     }
 
@@ -1728,7 +1754,7 @@ var loadCharge = async function() {
       actionGroups,userService,
       columnFilters,activeDropdown,ddPos,openDropdown,getColumnValues,setColumnFilter,clearColumnFilters,removeColumnFilter,hasColumnFilters,
       visibleCols,showColPanel,colDefs,isColVisible,toggleCol,resetCols,moveColUp,moveColDown,CC,
-      inlineMenu,openInlineMenu,executeInline,toggleInlineHistory,closeAll,
+      inlineMenu,openInlineMenu,executeInline,confirmInlineMotif,toggleInlineHistory,closeAll,
       devPopup,openDevPopup,confirmDevPopup,closeDevInPopup,saveDevField,canPerform,SVC_LABELS,fmtDevDate,
       bulkDevBloquante,bulkDevNumeroDn,bulkDevObs,
       datePicker,dpInput,openDatePicker,savePlanning,getPlanClass,
@@ -1811,6 +1837,12 @@ var loadCharge = async function() {
 .inline-hist-sub{display:flex;justify-content:space-between;align-items:center;margin-top:1px}
 .inline-hist-who{font-size:10px;color:#888}
 .inline-hist-at{font-size:9px;font-family:'SF Mono',monospace;color:#bbb}
+.inline-motif-title{font-size:11px;font-weight:600;color:#0C447C;padding:8px 12px 6px;border-bottom:1px solid #f0f0f0}
+.inline-motif-input{display:block;width:calc(100% - 24px);box-sizing:border-box;padding:6px 8px;font-size:11px;font-family:inherit;border:1px solid #ddd;border-radius:3px;resize:vertical;outline:none;margin:8px 12px 6px;background:#fafcff;min-height:56px}
+.inline-motif-input:focus{border-color:#185FA5}
+.inline-motif-btns{display:flex;gap:6px;padding:0 12px 10px}
+.inline-motif-confirm{flex:1;padding:5px 0;font-size:11px;font-weight:600;font-family:inherit;background:#185FA5;color:#fff;border:none;border-radius:3px;cursor:pointer;transition:.15s}.inline-motif-confirm:hover{background:#0C447C}
+.inline-motif-cancel{flex:1;padding:5px 0;font-size:11px;font-family:inherit;background:#f5f5f5;color:#666;border:1px solid #ddd;border-radius:3px;cursor:pointer;transition:.15s}.inline-motif-cancel:hover{background:#eee}
 /* Date picker popup */
 .date-picker-pop{position:fixed;background:#fff;border:1px solid #ddd;border-radius:4px;box-shadow:0 6px 20px rgba(0,0,0,.15);z-index:400;padding:12px;min-width:200px}
 .dp-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:#999;margin-bottom:8px}
