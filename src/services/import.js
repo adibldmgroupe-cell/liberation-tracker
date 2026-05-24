@@ -398,15 +398,24 @@ export async function importFromGoogleSheets(url, onProgress) {
   })
   if (onProgress) onProgress(80)
 
-  // ── 8. Init documents pour les nouveaux lots (séquentiel, peu nombreux) ──
-  for (var i = 0; i < newLotRows.length; i++) {
-    await initLotDocuments(newLotRows[i].id)
+  // ── 8. Init documents uniquement pour les lots vraiment nouveaux ──────
+  // Vérification batch : quels lots n'ont pas encore de documents ?
+  if (newLotRows.length) {
+    var newIds = newLotRows.map(function(l){ return l.id })
+    var existDocsRes = await supabase.from('liberation_documents').select('lot_id').in('lot_id', newIds)
+    var hasDocMap = {}
+    ;(existDocsRes.data||[]).forEach(function(d){ hasDocMap[d.lot_id] = true })
+    for (var i = 0; i < newLotRows.length; i++) {
+      if (!hasDocMap[newLotRows[i].id]) {
+        await initLotDocuments(newLotRows[i].id)
+      }
+    }
   }
   if (onProgress) onProgress(90)
 
   // ── 9. OF/OC : 2 requêtes batch ─────────────────────────────────────
-  var idsAvecStatut = toUpsert.filter(function(l){ return l.statut_sap !== 'vide' }).map(function(l){ return l.id })
-    .concat(newLotRows.filter(function(l){ return l.statut_sap !== 'vide' }).map(function(l){ return l.id }))
+  var allUpsertedIds = (upsertRes.data||[]).map(function(l){ return l.id })
+  var idsAvecStatut = (upsertRes.data||[]).filter(function(l){ return l.statut_sap !== 'vide' }).map(function(l){ return l.id })
   if (idsAvecStatut.length) {
     await supabase.from('orders_of').update({ statut: 'termine', etape_circuit: 'production' }).in('lot_id', idsAvecStatut)
     await supabase.from('orders_oc').update({ statut: 'termine', etape_circuit: 'production' }).in('lot_id', idsAvecStatut)
