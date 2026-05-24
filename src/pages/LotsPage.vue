@@ -732,7 +732,7 @@ export default {
               actions.push({label:'Retourner à l\'émetteur', fn: async function(){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
                 await supabase.from('liberation_documents').update({statut:'retour_emetteur',pending_ar_service:emSvc,updated_at:n}).eq('id',d.id)
-                await supabase.from('document_movements').insert({document_id:d.id,action:'retour',from_service:'aq',to_service:emSvc,motif_retour:'Retour direct tableau',performed_by:uid,performed_at:n})
+                await supabase.from('document_movements').insert({document_id:d.id,action:'retour',from_service:'aq',to_service:emSvc,motif_retour:null,performed_by:uid,performed_at:n})
                 if(emSvc)await createNotification(emSvc,lot.id,d.id,'Lot '+lot.numero_lot+' — '+col3.toUpperCase()+' retourné pour rectification','document_retourne')
               }})
             }
@@ -741,7 +741,7 @@ export default {
               actions.push({label:'Retourner à l\'AQ (DT)', fn: async function(){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
                 await supabase.from('liberation_documents').update({statut:'verification_aq',pending_ar_service:'aq',updated_at:n}).eq('id',d.id)
-                await supabase.from('document_movements').insert({document_id:d.id,action:'retour',from_service:'dt',to_service:'aq',motif_retour:'Retour DT tableau',performed_by:uid,performed_at:n})
+                await supabase.from('document_movements').insert({document_id:d.id,action:'retour',from_service:'dt',to_service:'aq',motif_retour:null,performed_by:uid,performed_at:n})
                 await createNotification('aq',lot.id,d.id,'Lot '+lot.numero_lot+' — '+col3.toUpperCase()+' retourné par DT','document_retourne')
               }})
             }
@@ -890,7 +890,7 @@ export default {
               actions.push({label:'Retourner RVP à l\'émetteur', fn: async function(){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
                 await supabase.from('liberation_documents').update({statut:'retour_emetteur',pending_ar_service:re,updated_at:n}).eq('id',rd.id)
-                await supabase.from('document_movements').insert({document_id:rd.id,action:'retour',from_service:'aq',to_service:re,motif_retour:'Retour direct tableau',performed_by:uid,performed_at:n})
+                await supabase.from('document_movements').insert({document_id:rd.id,action:'retour',from_service:'aq',to_service:re,motif_retour:null,performed_by:uid,performed_at:n})
                 await createNotification(re,lot.id,rd.id,'Lot '+lot.numero_lot+' — RVP '+re+' retourné pour rectification','document_retourne')
               }})
             }
@@ -899,7 +899,7 @@ export default {
               actions.push({label:'Retourner RVP à l\'AQ (DT)', fn: async function(){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
                 await supabase.from('liberation_documents').update({statut:'verification_aq',pending_ar_service:'aq',updated_at:n}).eq('id',rd.id)
-                await supabase.from('document_movements').insert({document_id:rd.id,action:'retour',from_service:'dt',to_service:'aq',motif_retour:'Retour DT tableau',performed_by:uid,performed_at:n})
+                await supabase.from('document_movements').insert({document_id:rd.id,action:'retour',from_service:'dt',to_service:'aq',motif_retour:null,performed_by:uid,performed_at:n})
                 await createNotification('aq',lot.id,rd.id,'Lot '+lot.numero_lot+' — RVP '+re+' retourné par DT','document_retourne')
               }})
             }
@@ -964,7 +964,7 @@ export default {
               actions.push({label:'Retourner à l\'émetteur', fn: async function(){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
                 await supabase.from('liberation_documents').update({statut:'retour_emetteur',updated_at:n}).eq('id',md.id)
-                await supabase.from('document_movements').insert({document_id:md.id,action:'retour',from_service:'aq',to_service:svc,motif_retour:'Retour direct tableau',performed_by:uid,performed_at:n})
+                await supabase.from('document_movements').insert({document_id:md.id,action:'retour',from_service:'aq',to_service:svc,motif_retour:null,performed_by:uid,performed_at:n})
                 if(svc)await createNotification(svc,lot.id,md.id,'Lot '+lot.numero_lot+' — '+COL_LABELS2[mt]+' retourné','document_retourne')
               }})
             }
@@ -973,7 +973,7 @@ export default {
               actions.push({label:'Retourner à l\'AQ (DT)', fn: async function(){
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
                 await supabase.from('liberation_documents').update({statut:'verification_aq',updated_at:n}).eq('id',md.id)
-                await supabase.from('document_movements').insert({document_id:md.id,action:'retour',from_service:'dt',to_service:'aq',motif_retour:'Retour DT tableau',performed_by:uid,performed_at:n})
+                await supabase.from('document_movements').insert({document_id:md.id,action:'retour',from_service:'dt',to_service:'aq',motif_retour:null,performed_by:uid,performed_at:n})
                 await createNotification('aq',lot.id,md.id,'Lot '+lot.numero_lot+' — '+COL_LABELS2[mt]+' retourné par DT','document_retourne')
               }})
             }
