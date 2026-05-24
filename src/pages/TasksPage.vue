@@ -11,6 +11,10 @@
         </div>
       </div>
       <div class="tp-hd-right">
+        <!-- Sélecteur service (admin uniquement) -->
+        <select v-if="isAdmin" v-model="selectedSvc" @change="load" class="tp-svc-sel">
+          <option v-for="(label,key) in SVC_LABELS_ALL" :key="key" :value="key">{{label}}</option>
+        </select>
         <span class="tp-total" :class="totalCount>0?'tp-total-bad':'tp-total-ok'">
           {{totalCount}} tâche{{totalCount!==1?'s':''}} en attente
         </span>
@@ -24,7 +28,7 @@
     <!-- Vide -->
     <div v-else-if="!loading && totalCount===0" class="tp-empty">
       <span class="tp-empty-icon">✓</span>
-      <div class="tp-empty-txt">Aucune tâche en attente pour votre service</div>
+      <div class="tp-empty-txt">Aucune tâche en attente pour ce service</div>
     </div>
 
     <!-- Catégories -->
@@ -37,8 +41,30 @@
           <span class="tp-cat-badge" :class="cat.urgent?'tp-badge-red':'tp-badge-orange'">{{cat.items.length}}</span>
           <span class="tp-cat-chev">{{cat.open?'▲':'▼'}}</span>
         </div>
-        <!-- Liste items -->
-        <div v-if="cat.open" class="tp-cat-list">
+
+        <!-- Documents : sous-groupes par lot -->
+        <div v-if="cat.open && cat.groups" class="tp-cat-list">
+          <div v-for="grp in cat.groups" :key="grp.lotId" class="tp-grp">
+            <div class="tp-grp-hd" @click.stop="grp.open=!grp.open">
+              <span class="tp-item-lot">{{grp.lotNum}}</span>
+              <span class="tp-grp-prod">{{grp.prodDesc}}</span>
+              <span class="tp-grp-badge">{{grp.docs.length}} doc{{grp.docs.length>1?'s':''}}</span>
+              <span class="tp-grp-chev">{{grp.open?'▲':'▼'}}</span>
+            </div>
+            <div v-if="grp.open" class="tp-grp-body">
+              <div v-for="d in grp.docs" :key="d.key" class="tp-doc-item" @click="$router.push('/lots/'+grp.lotId)">
+                <div class="tp-doc-left">
+                  <span class="tp-doc-type">{{d.typeLabel}}</span>
+                  <span class="tp-doc-action">{{d.action}}</span>
+                </div>
+                <span v-if="d.sinceText" class="tp-doc-since" :class="d.sinceClass">{{d.sinceText}}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Autres catégories : liste plate -->
+        <div v-else-if="cat.open" class="tp-cat-list">
           <div v-for="item in cat.items" :key="item.key" class="tp-item" @click="$router.push('/lots/'+item.lotId)">
             <div class="tp-item-main">
               <span class="tp-item-lot">{{item.lotNum}}</span>
@@ -51,6 +77,7 @@
             </div>
           </div>
         </div>
+
       </div>
     </div>
 
@@ -63,27 +90,42 @@ import { supabase } from '../supabase'
 export default {
   setup() {
     var userService = ref('')
+    var selectedSvc = ref('')
     var loading = ref(true)
     var categories = ref([])
 
     var SVC_LABELS = {planification:'Planification',stock:'Stock',aq:'Assurance Qualité',aq_dap:'AQ DAP',dt:'Direction Technique',fabrication:'Fabrication',conditionnement:'Conditionnement',lcq:'Laboratoire CQ',admin:'Administration'}
+    var SVC_LABELS_ALL = {aq:'Assurance Qualité',dt:'Direction Technique',planification:'Planification',stock:'Stock',fabrication:'Fabrication',conditionnement:'Conditionnement',lcq:'Laboratoire CQ',aq_dap:'AQ DAP'}
     var DOC_TYPE_LABELS = {if:'IF',ic:'IC',da_pc:'DA Physico',da_micro:'DA Micro',rvp:'RVP',maj_if:'MàJ IF',maj_ic:'MàJ IC',maj_nmcl_of:'MàJ N. OF',maj_nmcl_oc:'MàJ N. OC',cloture_sap_of:'Clôt. OF',cloture_sap_oc:'Clôt. OC'}
 
-    var svcLabel = computed(function(){ return SVC_LABELS[userService.value] || userService.value })
+    var isAdmin = computed(function(){ return userService.value === 'admin' })
+    var svcLabel = computed(function(){ return SVC_LABELS[selectedSvc.value] || selectedSvc.value })
     var totalCount = computed(function(){ return categories.value.reduce(function(s,c){ return s+c.items.length },0) })
 
     var makeCat = function(id,icon,title,urgent) {
       return {id:id,icon:icon,title:title,urgent:urgent||false,open:true,items:[]}
     }
 
-    // Helper : résout un tableau de lot_id → map {id: {id,numero_lot,prod_desc,prod_code}}
+    // "depuis quand" → {text, cls}
+    var fmtSince = function(dateStr) {
+      if (!dateStr) return null
+      var ms = Date.now() - new Date(dateStr).getTime()
+      if (ms < 0) return null
+      var h = Math.floor(ms / 3600000)
+      if (h < 1) return {text:'depuis < 1h', cls:'since-ok'}
+      if (h < 24) return {text:'depuis '+h+'h', cls:'since-ok'}
+      var d = Math.floor(h / 24); var rh = h % 24
+      var txt = 'depuis '+d+'j'+(rh>0?' '+rh+'h':'')
+      return {text:txt, cls: d>=3?'since-red': d>=2?'since-orange':'since-ok'}
+    }
+
+    // Helper : lot_ids → map {id: {id,numero_lot,prod_desc,prod_code}}
     var getLotsMap = async function(lotIds) {
       var uniq = lotIds.filter(function(id,i,a){ return id!=null && a.indexOf(id)===i })
       if (!uniq.length) return {}
       var res = await supabase.from('lots').select('id,numero_lot,product_id').in('id',uniq)
       var map = {}
       ;(res.data||[]).forEach(function(l){ map[l.id]=l })
-      // Récupérer les descriptions produits via product_id
       var prodIds = (res.data||[]).map(function(l){return l.product_id}).filter(function(id,i,a){return id!=null&&a.indexOf(id)===i})
       if (prodIds.length) {
         var pRes = await supabase.from('products').select('id,code_article,description').in('id',prodIds)
@@ -101,7 +143,7 @@ export default {
     var load = async function() {
       loading.value = true
       var cats = []
-      var svc = userService.value
+      var svc = selectedSvc.value
       if (!svc) { loading.value = false; return }
 
       // ── 1. CIRCUITS À VALIDER ──────────────────────────────────────
@@ -130,44 +172,59 @@ export default {
         if (circCat.items.length) cats.push(circCat)
       }
 
-      // ── 2. DOCUMENTS À TRAITER ─────────────────────────────────────
-      var docCat = makeCat('docs','📄','Documents à traiter')
+      // ── 2. DOCUMENTS À TRAITER (groupés par lot) ───────────────────
+      var docCat = {id:'docs',icon:'📄',title:'Documents à traiter',urgent:false,open:true,items:[],groups:[]}
       var docRaw = []
       if (svc==='aq') {
         var daqRes = await supabase.from('liberation_documents')
-          .select('id,type_document,statut,lot_id')
+          .select('id,type_document,statut,lot_id,updated_at')
           .in('statut',['emis','verification_aq'])
           .eq('is_applicable',true).limit(500)
         docRaw = daqRes.data||[]
         var daqMap = await getLotsMap(docRaw.map(function(d){return d.lot_id}))
+        var grpMap = {}
         docRaw.forEach(function(d){
           var l=daqMap[d.lot_id]; if(!l) return
           var lbl=d.statut==='verification_aq'?'Vérifier (retour DT)':'Vérifier AQ → DT'
+          var since=fmtSince(d.updated_at)
           docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,action:(DOC_TYPE_LABELS[d.type_document]||d.type_document)+' — '+lbl})
+          if(!grpMap[l.id]) grpMap[l.id]={lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,open:false,docs:[]}
+          grpMap[l.id].docs.push({key:'doc_'+d.id,typeLabel:DOC_TYPE_LABELS[d.type_document]||d.type_document,action:lbl,sinceText:since?since.text:null,sinceClass:since?since.cls:''})
         })
+        docCat.groups = Object.values(grpMap)
       } else if (svc==='dt') {
         var ddtRes = await supabase.from('liberation_documents')
-          .select('id,type_document,statut,lot_id')
+          .select('id,type_document,statut,lot_id,updated_at')
           .eq('statut','approuve_aq')
           .eq('is_applicable',true).limit(500)
         docRaw = ddtRes.data||[]
         var ddtMap = await getLotsMap(docRaw.map(function(d){return d.lot_id}))
+        var grpMapDt = {}
         docRaw.forEach(function(d){
           var l=ddtMap[d.lot_id]; if(!l) return
+          var since=fmtSince(d.updated_at)
           docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,action:(DOC_TYPE_LABELS[d.type_document]||d.type_document)+' — Approuver DT'})
+          if(!grpMapDt[l.id]) grpMapDt[l.id]={lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,open:false,docs:[]}
+          grpMapDt[l.id].docs.push({key:'doc_'+d.id,typeLabel:DOC_TYPE_LABELS[d.type_document]||d.type_document,action:'Approuver DT',sinceText:since?since.text:null,sinceClass:since?since.cls:''})
         })
+        docCat.groups = Object.values(grpMapDt)
       } else {
         var dEmtRes = await supabase.from('liberation_documents')
-          .select('id,type_document,lot_id')
+          .select('id,type_document,lot_id,updated_at')
           .eq('statut','retour_emetteur')
           .eq('service_emetteur',svc)
           .eq('is_applicable',true).limit(500)
         docRaw = dEmtRes.data||[]
         var dEmtMap = await getLotsMap(docRaw.map(function(d){return d.lot_id}))
+        var grpMapEmt = {}
         docRaw.forEach(function(d){
           var l=dEmtMap[d.lot_id]; if(!l) return
+          var since=fmtSince(d.updated_at)
           docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,action:(DOC_TYPE_LABELS[d.type_document]||d.type_document)+' — Rectifier et réémettre'})
+          if(!grpMapEmt[l.id]) grpMapEmt[l.id]={lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,open:false,docs:[]}
+          grpMapEmt[l.id].docs.push({key:'doc_'+d.id,typeLabel:DOC_TYPE_LABELS[d.type_document]||d.type_document,action:'Rectifier et réémettre',sinceText:since?since.text:null,sinceClass:since?since.cls:''})
         })
+        docCat.groups = Object.values(grpMapEmt)
       }
       if (docCat.items.length) cats.push(docCat)
 
@@ -243,11 +300,16 @@ export default {
       var u = await supabase.auth.getUser()
       if (u.data.user) {
         var p = await supabase.from('profiles').select('service').eq('id',u.data.user.id).single()
-        if (p.data) { userService.value = p.data.service; await load() }
+        if (p.data) {
+          userService.value = p.data.service
+          // Admin : vue par défaut sur AQ
+          selectedSvc.value = p.data.service === 'admin' ? 'aq' : p.data.service
+          await load()
+        }
       } else { loading.value = false }
     })
 
-    return {svcLabel,totalCount,loading,categories,load}
+    return {svcLabel,isAdmin,selectedSvc,totalCount,loading,categories,load,SVC_LABELS_ALL}
   }
 }
 </script>
@@ -260,11 +322,12 @@ export default {
 .tp-hd-icon{font-size:28px}
 .tp-h1{font-size:20px;font-weight:700;color:#111}
 .tp-h2{font-size:12px;color:#888;margin-top:2px}
-.tp-hd-right{display:flex;align-items:center;gap:12px}
+.tp-hd-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .tp-total{font-size:13px;font-weight:600;padding:4px 12px;border-radius:12px}
 .tp-total-bad{background:#FCEBEB;color:#A32D2D}
 .tp-total-ok{background:#EAF3DE;color:#3B6D11}
 .tp-refresh{padding:6px 14px;font-size:12px;font-family:inherit;border:1px solid #ddd;border-radius:4px;background:#fff;cursor:pointer;color:#555;transition:.15s}.tp-refresh:hover{background:#f5f5f5;border-color:#bbb}.tp-refresh:disabled{opacity:.5;cursor:default}
+.tp-svc-sel{padding:6px 10px;font-size:12px;font-family:inherit;border:1px solid #ddd;border-radius:4px;background:#fff;color:#333;cursor:pointer;outline:none}
 
 /* Loading / empty */
 .tp-loading{text-align:center;color:#999;font-size:14px;padding:48px;font-style:italic}
@@ -283,8 +346,24 @@ export default {
 .tp-badge-orange{background:#FEF5E7;color:#A0620D}
 .tp-cat-chev{font-size:10px;color:#bbb;margin-left:4px}
 
-/* Items */
+/* Groupes lot (docs) */
 .tp-cat-list{border-top:1px solid #f0f0f0}
+.tp-grp{border-bottom:1px solid #f0f0f0}.tp-grp:last-child{border-bottom:none}
+.tp-grp-hd{display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;background:#fff;user-select:none;transition:.1s}.tp-grp-hd:hover{background:#f7f9ff}
+.tp-grp-prod{font-size:12px;color:#666;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tp-grp-badge{font-size:10px;font-weight:600;color:#185FA5;background:#E6F1FB;padding:1px 7px;border-radius:8px;white-space:nowrap;flex-shrink:0}
+.tp-grp-chev{font-size:10px;color:#bbb;flex-shrink:0}
+.tp-grp-body{background:#fafcff;border-top:1px solid #eef3fb}
+.tp-doc-item{display:flex;align-items:center;justify-content:space-between;padding:8px 16px 8px 28px;border-bottom:1px solid #f5f5f5;cursor:pointer;gap:12px;transition:.1s}.tp-doc-item:last-child{border-bottom:none}.tp-doc-item:hover{background:#f0f6ff}
+.tp-doc-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+.tp-doc-type{font-size:11px;font-weight:600;color:#0C447C;background:#E6F1FB;padding:1px 6px;border-radius:3px;white-space:nowrap;flex-shrink:0}
+.tp-doc-action{font-size:12px;color:#444;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tp-doc-since{font-size:11px;font-weight:600;white-space:nowrap;flex-shrink:0;padding:1px 7px;border-radius:8px}
+.since-ok{background:#EAF3DE;color:#3B6D11}
+.since-orange{background:#FEF5E7;color:#A0620D}
+.since-red{background:#FCEBEB;color:#A32D2D}
+
+/* Items plats (autres cats) */
 .tp-item{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid #f8f8f8;cursor:pointer;transition:.1s;gap:12px}.tp-item:last-child{border-bottom:none}.tp-item:hover{background:#f5f9ff}
 .tp-item-main{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
 .tp-item-lot{font-family:'SF Mono','Fira Code',monospace;font-size:12px;font-weight:600;color:#0C447C;white-space:nowrap;background:#E6F1FB;padding:2px 7px;border-radius:3px}
