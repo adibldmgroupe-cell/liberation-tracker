@@ -111,7 +111,7 @@
       </div>
       <div v-if="!devs.length" class="em">Aucune déviation</div>
       <table class="ct" v-else><tr v-for="d in devs" :key="d.id">
-        <td class="mono cs">{{d.numero_deviation}}</td>
+        <td class="mono cs dim">Déviation</td>
         <td><span class="sp2" :class="d.statut==='ouverte'?'sp2-ko':'sp2-ok'">{{d.statut==='ouverte'?'Ouverte':'Clôturée'}}</span></td>
         <td class="dim" style="max-width:200px;overflow:hidden;text-overflow:ellipsis">{{d.description||'—'}}</td>
         <td class="cac"><button v-if="d.statut==='ouverte' && canPerform('cloturer_deviation')" class="btn-sm" @click="doCloseDeviation(d.id)">Clôturer</button></td>

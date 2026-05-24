@@ -189,10 +189,8 @@ async function processHistoriqueRow(row, headers, lotKey, stats) {
     var existingDev = await supabase.from('deviations').select('id').eq('lot_id', lotId).maybeSingle()
     if (!existingDev.data) {
       var user = await supabase.auth.getUser()
-      var count = (await supabase.from('deviations').select('*', { count: 'exact', head: true })).count || 0
       await supabase.from('deviations').insert({
-        lot_id: lotId, numero_deviation: 'DEV-IMP-' + String(count + 1).padStart(3, '0'),
-        type: 'deviation', statut: 'ouverte', description: String(deviation).trim(),
+        lot_id: lotId, type: 'deviation', statut: 'ouverte', description: String(deviation).trim(),
         declared_by: user.data.user.id, declared_at: now,
       })
       await supabase.from('liberation_dossiers').update({ deviations_closed: false, updated_at: now }).eq('lot_id', lotId)

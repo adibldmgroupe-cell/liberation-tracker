@@ -141,10 +141,10 @@ export default {
       }).filter(function(s){return s.pending>0||s.returned>0})
 
       // Alertes
-      var devs = await supabase.from('deviations').select('numero_deviation, lot_id, declared_at, lots(numero_lot)').in('statut',['ouverte','en_cours']).order('declared_at').limit(5)
+      var devs = await supabase.from('deviations').select('lot_id, declared_at, lots(numero_lot)').in('statut',['ouverte','en_cours']).order('declared_at').limit(5)
       if (devs.data) devs.data.forEach(function(d) {
         var jours = Math.floor((Date.now()-new Date(d.declared_at))/86400000)
-        alertes.value.push({level:'critique',lot:d.lots?d.lots.numero_lot:'',msg:d.numero_deviation+' ouverte depuis '+jours+'j'})
+        alertes.value.push({level:'critique',lot:d.lots?d.lots.numero_lot:'',msg:'Déviation ouverte depuis '+jours+'j'})
       })
 
       loaded.value = true

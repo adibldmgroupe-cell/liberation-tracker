@@ -134,17 +134,15 @@ export async function documentAction(docId, action, userId, lotId, docType, serv
 // ═══ DÉVIATIONS ═══
 export async function declareDeviation(lotId, observation, userId) {
   var now = new Date().toISOString()
-  var countRes = await supabase.from('deviations').select('*', { count: 'exact', head: true })
-  var numero = 'DEV-' + new Date().getFullYear() + '-' + String(((countRes.count || 0) + 1)).padStart(3, '0')
   await supabase.from('deviations').insert({
-    lot_id: lotId, numero_deviation: numero, type: 'deviation',
+    lot_id: lotId, type: 'deviation',
     statut: 'ouverte', description: observation || '',
     declared_by: userId, declared_at: now
   })
   await supabase.from('liberation_dossiers').update({ deviations_closed: false, updated_at: now }).eq('lot_id', lotId)
   await supabase.from('lot_events').insert({
     lot_id: lotId, event_type: 'deviation_declaree',
-    description: 'Déviation ' + numero + ' déclarée', triggered_by: userId, created_at: now
+    description: 'Déviation déclarée', triggered_by: userId, created_at: now
   })
 }
 

@@ -627,12 +627,9 @@ export default {
         if (isAdmin||canPerform('declarer_nc')) {
           actions.push({label:'Déclarer déviation', fn: async function(){
             var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
-            // Générer le numéro de déviation comme dans actions.js
-            var countRes = await supabase.from('deviations').select('*',{count:'exact',head:true})
-            var numero = 'DEV-' + new Date().getFullYear() + '-' + String(((countRes.count||0)+1)).padStart(3,'0')
-            await supabase.from('deviations').insert({lot_id:lot.id,numero_deviation:numero,type:'deviation',statut:'ouverte',description:'Déclaration rapide tableau',declared_by:uid,declared_at:n})
+            await supabase.from('deviations').insert({lot_id:lot.id,type:'deviation',statut:'ouverte',description:'Déclaration rapide tableau',declared_by:uid,declared_at:n})
             await supabase.from('liberation_dossiers').update({deviations_closed:false,updated_at:n}).eq('lot_id',lot.id)
-            await createNotification('aq',lot.id,null,'Lot '+lot.numero_lot+' — Déviation '+numero+' déclarée','deviation_declaree')
+            await createNotification('aq',lot.id,null,'Lot '+lot.numero_lot+' — Déviation déclarée','deviation_declaree')
           }})
         }
         if (lot.dev_open>0 && (isAdmin||canPerform('cloturer_deviation'))) {
@@ -1154,12 +1151,10 @@ var loadCharge = async function() {
           } else if (action.startsWith('dev_')) {
             var devOp=action.replace('dev_','')
             if(devOp==='declarer'){
-              var devCountRes=await supabase.from('deviations').select('*',{count:'exact',head:true})
-              var devNumero='DEV-'+new Date().getFullYear()+'-'+String(((devCountRes.count||0)+1)).padStart(3,'0')
-              await supabase.from('deviations').insert({lot_id:lotId,numero_deviation:devNumero,type:'deviation',statut:'ouverte',description:'Déclaration en masse',declared_by:userId,declared_at:now})
+              await supabase.from('deviations').insert({lot_id:lotId,type:'deviation',statut:'ouverte',description:'Déclaration en masse',declared_by:userId,declared_at:now})
               await supabase.from('liberation_dossiers').update({deviations_closed:false,updated_at:now}).eq('lot_id',lotId)
-              await supabase.from('lot_events').insert({lot_id:lotId,event_type:'deviation_declaree',description:'Déviation '+devNumero+' déclarée (masse)',triggered_by:userId,created_at:now})
-              await createNotification('aq',lotId,null,'Lot '+lot.numero_lot+' — Déviation '+devNumero+' déclarée','deviation_declaree')
+              await supabase.from('lot_events').insert({lot_id:lotId,event_type:'deviation_declaree',description:'Déviation déclarée (masse)',triggered_by:userId,created_at:now})
+              await createNotification('aq',lotId,null,'Lot '+lot.numero_lot+' — Déviation déclarée','deviation_declaree')
               result.ok++
             } else if(devOp==='cloture'){
               var openDevs=await supabase.from('deviations').select('id').eq('lot_id',lotId).in('statut',['ouverte','en_cours'])
