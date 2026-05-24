@@ -385,28 +385,51 @@ export default {
       return{label:'Planifié',cls:'s-vide',filter:'planifie'}
     }
 
+    // Correspondance type de doc → service émetteur court
+    var DOC_SVC_SHORT = {'if':'Fab.','ic':'Cond.','da_pc':'LCQ','da_micro':'LCQ','maj_if':'Fab.','maj_ic':'Cond.','maj_nmcl_of':'Planif.','maj_nmcl_oc':'Planif.'}
+    var SVC_SHORT = {fabrication:'Fab.',conditionnement:'Cond.',lcq:'LCQ',planification:'Planif.',aq:'AQ',aq_dap:'AQ DAP',dt:'DT',stock:'Stock'}
+
+    // Retourne le service qui détient actuellement le document
+    var docLocation = function(statut, emitterShort) {
+      if (statut==='non_emis'||statut==='rectification') return emitterShort||'—'
+      if (statut==='emis'||statut==='verification_aq') return 'AQ'
+      if (statut==='retour_emetteur') return '↩ '+(emitterShort||'—')
+      if (statut==='approuve_aq'||statut==='approbation_dt') return 'DT'
+      if (statut==='approuve_dt') return '✓ Lib.'
+      return emitterShort||'—'
+    }
+
     var getDocInfo = function(docs,type){
       var d=null;if(docs){for(var i=0;i<docs.length;i++){if(docs[i].type_document===type){d=docs[i];break}}}
       if(!d)return{label:'—',cls:'dc-na',date:null}
       if(!d.is_applicable)return{label:'N/A',cls:'dc-na',date:null}
-      var label=docStatutLabels[d.statut]||d.statut
+      var emitter=DOC_SVC_SHORT[type]||'—'
+      var label=docLocation(d.statut,emitter)
       var cls='dc-wait';if(d.statut==='approuve_dt')cls='dc-ok';else if(d.statut==='retour_emetteur')cls='dc-ret';else if(d.statut!=='non_emis')cls='dc-prog'
       var date=d.approved_at||d.emitted_at;return{label:label,cls:cls,date:date?fmt(date):null}
     }
 
     var getRvpInfo = function(docs,emetteur){
       var d=null;if(docs){for(var i=0;i<docs.length;i++){if(docs[i].type_document==='rvp'&&docs[i].service_emetteur===emetteur){d=docs[i];break}}}
-      if(!d)return{label:'—',cls:'dc-na'}
-      var label=docStatutLabels[d.statut]||d.statut
+      if(!d)return{label:'—',cls:'dc-na',date:null}
+      var emitter=SVC_SHORT[emetteur]||emetteur
+      var label=docLocation(d.statut,emitter)
       var cls='dc-wait';if(d.statut==='approuve_dt')cls='dc-ok';else if(d.statut==='retour_emetteur')cls='dc-ret';else if(d.statut!=='non_emis')cls='dc-prog'
       var date=d.approved_at||d.emitted_at;return{label:label,cls:cls,date:date?fmt(date):null}
     }
 
     var getClotureSapInfo = function(docs,type){
       var d=null;if(docs){for(var i=0;i<docs.length;i++){if(docs[i].type_document===type){d=docs[i];break}}}
-      if(!d)return{label:'Dem. valid.',cls:'dc-wait',date:null}
-      var label=clotureSapLabels[d.statut]||d.statut
-      var cls='dc-wait';if(d.statut==='cloture')cls='dc-ok';else if(d.statut==='cloture_demandee')cls='dc-prog';else if(d.statut!=='non_emis')cls='dc-prog'
+      var emitter=type==='cloture_sap_of'?'Fab.':'Cond.'
+      if(!d)return{label:emitter,cls:'dc-wait',date:null}
+      var label
+      if(d.statut==='non_emis') label=emitter
+      else if(d.statut==='emis') label='Planif.'
+      else if(d.statut==='valide_planif') label=emitter
+      else if(d.statut==='cloture_demandee') label='Planif.'
+      else if(d.statut==='cloture') label='✓ Clôt.'
+      else label=emitter
+      var cls='dc-wait';if(d.statut==='cloture')cls='dc-ok';else if(d.statut==='cloture_demandee'||d.statut==='emis')cls='dc-prog';else if(d.statut==='valide_planif')cls='dc-prog'
       var date=d.updated_at;return{label:label,cls:cls,date:date?fmt(date):null}
     }
 
@@ -414,9 +437,9 @@ export default {
       if(!aqls||!aqls.length)return{label:'—',cls:'dc-na',date:null}
       var latest=null;for(var i=0;i<aqls.length;i++){if(aqls[i].type===type){if(!latest||new Date(aqls[i].requested_at||0)>new Date(latest.requested_at||0))latest=aqls[i]}}
       if(!latest)return{label:'—',cls:'dc-na',date:null}
-      if(latest.resultat==='conforme')return{label:'Conforme',cls:'dc-ok',date:latest.inspected_at?fmt(latest.inspected_at):null}
-      if(latest.resultat==='non_conforme')return{label:'Non conf.',cls:'dc-ret',date:latest.inspected_at?fmt(latest.inspected_at):null}
-      return{label:'En attente',cls:'dc-prog',date:latest.requested_at?fmt(latest.requested_at):null}
+      if(latest.resultat==='conforme')return{label:'✓ Conf.',cls:'dc-ok',date:latest.inspected_at?fmt(latest.inspected_at):null}
+      if(latest.resultat==='non_conforme')return{label:'✗ N.C.',cls:'dc-ret',date:latest.inspected_at?fmt(latest.inspected_at):null}
+      return{label:'AQ',cls:'dc-prog',date:latest.requested_at?fmt(latest.requested_at):null}
     }
 
     var getOfOcInfo = function(order,statutSap){
