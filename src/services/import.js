@@ -214,6 +214,127 @@ async function processHistoriqueRow(row, headers, lotKey, stats) {
   if (isNew) stats.created++; else stats.updated++
 }
 
+// ══════════════ IMPORT GOOGLE SHEETS ══════════════
+
+function parseCSV(text) {
+  var lines = []; var row = []; var field = ''; var inQuote = false
+  for (var i = 0; i < text.length; i++) {
+    var c = text[i]
+    if (inQuote) {
+      if (c === '"') {
+        if (i+1 < text.length && text[i+1] === '"') { field += '"'; i++ }
+        else inQuote = false
+      } else field += c
+    } else {
+      if (c === '"') inQuote = true
+      else if (c === ',') { row.push(field.trim()); field = '' }
+      else if (c === '\n') {
+        row.push(field.trim()); field = ''
+        if (row.some(function(f){ return f !== '' })) lines.push(row)
+        row = []
+      } else if (c !== '\r') field += c
+    }
+  }
+  row.push(field.trim())
+  if (row.some(function(f){ return f !== '' })) lines.push(row)
+  return lines
+}
+
+function parseQuantite(val) {
+  if (!val) return 0
+  var s = String(val).replace(/\s/g, '').replace(',', '.')
+  var n = parseFloat(s)
+  return isNaN(n) ? 0 : Math.round(n)
+}
+
+function makeCsvGetVal(row, headers) {
+  return function(col) {
+    var normCol = norm(col)
+    var idx = headers[normCol]
+    if (idx === undefined) {
+      var found = Object.keys(headers).find(function(k) { return k.includes(normCol) || normCol.includes(k) })
+      if (found !== undefined) idx = headers[found]
+    }
+    return idx !== undefined ? (row[idx] || '') : ''
+  }
+}
+
+async function processCSVRow(row, headers, stats) {
+  var getVal = makeCsvGetVal(row, headers)
+  var codeArticle = clean(getVal('code_article'))
+  var numLot = clean(getVal('N_lot'))
+  if (!codeArticle || !numLot) { stats.skipped++; return }
+
+  var product = await upsertProduct(codeArticle, clean(getVal('description')) || codeArticle, getVal)
+  var statutSap = mapStatut(clean(getVal('Statut_Lot')))
+  var now = new Date().toISOString()
+  var lotData = {
+    numero_lot: numLot, product_id: product.id,
+    num_document_sap: clean(getVal('Num_document')) || null,
+    quantite: parseQuantite(getVal('quantite')), statut_sap: statutSap,
+    date_enregistrement: parseDate(getVal('date_enregistrement')),
+    date_declaration: parseDate(getVal('Date_Declaration')),
+    date_liberation: parseDate(getVal('Date_liberation')),
+    ddf: parseDate(getVal('DDF')), ddp: parseDate(getVal('DDP')),
+    prix_vente: parseNum(getVal('prix_vente')),
+    ppa: parseNum(getVal('PPA')),
+    quantite_par_colis: parseInt(clean(getVal('quantite_par_colis'))) || null,
+    shp: parseNum(getVal('SHP')),
+    synced_from_excel_at: now,
+  }
+
+  var existing = await supabase.from('lots').select('id,statut_sap').eq('numero_lot', numLot).maybeSingle()
+  if (existing.data) {
+    await supabase.from('lots').update({
+      quantite: lotData.quantite, statut_sap: lotData.statut_sap,
+      date_enregistrement: lotData.date_enregistrement, date_declaration: lotData.date_declaration,
+      date_liberation: lotData.date_liberation, ddf: lotData.ddf, ddp: lotData.ddp,
+      prix_vente: lotData.prix_vente, ppa: lotData.ppa,
+      quantite_par_colis: lotData.quantite_par_colis, shp: lotData.shp,
+      synced_from_excel_at: now, updated_at: now,
+    }).eq('id', existing.data.id)
+    if (statutSap !== 'vide') {
+      await supabase.from('orders_of').update({ statut: 'termine', etape_circuit: 'production' }).eq('lot_id', existing.data.id)
+      await supabase.from('orders_oc').update({ statut: 'termine', etape_circuit: 'production' }).eq('lot_id', existing.data.id)
+    }
+    stats.updated++
+  } else {
+    var newLot = await supabase.from('lots').insert(lotData).select('id').single()
+    if (newLot.error) throw newLot.error
+    await initLotDocuments(newLot.data.id)
+    if (statutSap !== 'vide') {
+      await supabase.from('orders_of').update({ statut: 'termine', etape_circuit: 'production' }).eq('lot_id', newLot.data.id)
+      await supabase.from('orders_oc').update({ statut: 'termine', etape_circuit: 'production' }).eq('lot_id', newLot.data.id)
+    }
+    stats.created++
+  }
+}
+
+export async function importFromGoogleSheets(url, onProgress) {
+  var stats = { created: 0, updated: 0, skipped: 0, errors: [], type: 'Google Sheets' }
+  var text
+  try {
+    var res = await fetch(url)
+    if (!res.ok) throw new Error('HTTP ' + res.status)
+    text = await res.text()
+  } catch(e) {
+    return Object.assign(stats, { errors: ['Impossible de lire l\'URL Google Sheets : ' + e.message] })
+  }
+  var rows = parseCSV(text)
+  if (!rows.length) return Object.assign(stats, { errors: ['Fichier vide'] })
+  var headerRow = rows[0]
+  var headers = {}
+  headerRow.forEach(function(h, i) { headers[norm(h)] = i })
+  var dataRows = rows.slice(1)
+  var total = dataRows.length
+  for (var i = 0; i < dataRows.length; i++) {
+    try { await processCSVRow(dataRows[i], headers, stats) }
+    catch(e) { stats.errors.push('Ligne ' + (i+2) + ' : ' + e.message) }
+    if (onProgress) onProgress(Math.round(((i+1) / total) * 100))
+  }
+  return stats
+}
+
 // ══════════════ HELPERS ══════════════
 async function upsertProduct(code, description, getVal) {
   var existing = await supabase.from('products').select('id').eq('code_article', code).maybeSingle()
