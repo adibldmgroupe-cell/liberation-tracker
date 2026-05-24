@@ -122,14 +122,41 @@
         </div>
         <button class="btn" @click="doDeclareDeviation">Confirmer</button>
       </div>
+      <!-- Résumé déviations -->
+      <div class="dev-resume" v-if="devs.length">
+        <span class="dev-res-bl">{{devBloquanteOpen}} bloquante{{devBloquanteOpen!==1?'s':''}}</span>
+        <span class="dev-res-nb">{{devNonBloquanteOpen}} non bloquante{{devNonBloquanteOpen!==1?'s':''}}</span>
+        <span class="dev-res-cl">{{devClosed}} clôturée{{devClosed!==1?'s':''}}</span>
+      </div>
       <div v-if="!devs.length" class="em">Aucune déviation</div>
-      <table class="ct" v-else><tr v-for="d in devs" :key="d.id">
-        <td><span class="dev-badge-bl" :class="d.bloquante?'dev-bl-on':'dev-bl-off'">{{d.bloquante?'BLOQUANTE':'Non bloquante'}}</span></td>
-        <td class="mono cs dim">{{d.numero_dn || '—'}}</td>
-        <td><span class="sp2" :class="d.statut==='ouverte'?'sp2-ko':'sp2-ok'">{{d.statut==='ouverte'?'Ouverte':'Clôturée'}}</span></td>
-        <td class="dim" style="max-width:180px;overflow:hidden;text-overflow:ellipsis">{{d.description||'—'}}</td>
-        <td class="cac"><button v-if="d.statut==='ouverte' && canPerform('cloturer_deviation')" class="btn-sm" @click="doCloseDeviation(d.id)">Clôturer</button></td>
-      </tr></table>
+      <div class="dev-list" v-else>
+        <div class="dev-card" v-for="d in devs" :key="d.id">
+          <!-- Ligne 1 : badges + statut + clôturer -->
+          <div class="dev-card-top">
+            <span class="dev-badge-bl" :class="d.bloquante?'dev-bl-on':'dev-bl-off'">{{d.bloquante?'BLOQUANTE':'Non bloquante'}}</span>
+            <span class="sp2" :class="d.statut==='ouverte'?'sp2-ko':'sp2-ok'">{{d.statut==='ouverte'?'Ouverte':'Clôturée'}}</span>
+            <button v-if="(d.statut==='ouverte'||d.statut==='en_cours') && canPerform('cloturer_deviation')" class="btn-sm dev-cl-btn" @click="doCloseDeviation(d.id)">Clôturer</button>
+          </div>
+          <!-- Ligne 2 : service déclarant / nom / date -->
+          <div class="dev-card-meta">
+            <span class="dev-meta-svc">{{SVC_LABELS[d.declared_service]||d.declared_service||'—'}}</span>
+            <span class="dev-meta-who" v-if="d.profiles">{{(d.profiles.prenom||'')+' '+(d.profiles.nom||'')}}</span>
+            <span class="dev-meta-when">{{fmtDevDate(d.declared_at)}}</span>
+          </div>
+          <!-- Champs éditables N° DN et Observation -->
+          <div class="dev-card-edit" v-if="devEdits[d.id]">
+            <div class="dev-card-row">
+              <label class="dev-lbl">N° DN</label>
+              <input type="text" v-model="devEdits[d.id].editNumeroDn" placeholder="Ex: DN-2026-001" class="dev-input-sm" />
+            </div>
+            <div class="dev-card-row">
+              <label class="dev-lbl">Observation</label>
+              <textarea v-model="devEdits[d.id].editObs" rows="2" placeholder="Observation..." class="dev-input"></textarea>
+            </div>
+            <button class="dev-save-btn" @click="saveDevField(d.id)">💾 Sauvegarder</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- RVP -->
@@ -244,6 +271,7 @@ export default {
     var lot = ref(null), prod = ref({}), of = ref(null), oc = ref(null), ofVals = ref([]), ocVals = ref([])
     var docs = ref([]), devs = ref([]), aqls = ref([]), dossier = ref(null), userId = ref(null), userService = ref('')
     var showDevForm = ref(false), devObs = ref(''), devBloquante = ref(false), devNumeroDn = ref(''), showModify = ref(false)
+    var devEdits = ref({})
     var editNumLot = ref(''), editCodeProd = ref(''), editProductId = ref(null), prodSuggestions = ref([])
     var aqlFabConforme = ref(false), aqlCondConforme = ref(false)
     var planning = ref(null), planSaving = ref(false)
@@ -342,6 +370,24 @@ export default {
       loadLot()
     }
 
+    var SVC_LABELS = {planification:'Planification',stock:'Stock',aq:'AQ',aq_dap:'AQ DAP',dt:'DT',fabrication:'Fabrication',conditionnement:'Conditionnement',lcq:'LCQ',admin:'Admin'}
+    var fmtDevDate = function(iso) {
+      if (!iso) return '—'
+      var d = new Date(iso)
+      return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})
+    }
+    var devBloquanteOpen = computed(function(){return devs.value.filter(function(d){return (d.statut==='ouverte'||d.statut==='en_cours')&&d.bloquante}).length})
+    var devNonBloquanteOpen = computed(function(){return devs.value.filter(function(d){return (d.statut==='ouverte'||d.statut==='en_cours')&&!d.bloquante}).length})
+    var devClosed = computed(function(){return devs.value.filter(function(d){return d.statut==='cloturee'}).length})
+
+    var saveDevField = async function(devId) {
+      var e = devEdits.value[devId]
+      if (!e) return
+      await supabase.from('deviations').update({numero_dn: e.editNumeroDn||null, description: e.editObs||''}).eq('id', devId)
+      var dev = devs.value.find(function(d){return d.id===devId})
+      if (dev) { dev.numero_dn = e.editNumeroDn; dev.description = e.editObs }
+    }
+
     var savePlanning = async function(field) {
       planSaving.value = true
       var val = planEdit.value[field] || null
@@ -389,7 +435,8 @@ export default {
       if(of.value){var ov=(await supabase.from('order_validations').select('*,profiles(prenom,nom)').eq('order_type','of').eq('order_id',of.value.id).order('validated_at')).data;ofVals.value=(ov||[]).map(function(v){return{etape:v.etape,validated_at:v.validated_at,user:v.profiles?v.profiles.prenom+' '+v.profiles.nom:''}})}
       if(oc.value){var ov2=(await supabase.from('order_validations').select('*,profiles(prenom,nom)').eq('order_type','oc').eq('order_id',oc.value.id).order('validated_at')).data;ocVals.value=(ov2||[]).map(function(v){return{etape:v.etape,validated_at:v.validated_at,user:v.profiles?v.profiles.prenom+' '+v.profiles.nom:''}})}
       docs.value=(await supabase.from('liberation_documents').select('*').eq('lot_id',l.id)).data||[]
-      devs.value=(await supabase.from('deviations').select('*').eq('lot_id',l.id).order('declared_at')).data||[]
+      devs.value=(await supabase.from('deviations').select('*,profiles!declared_by(prenom,nom)').eq('lot_id',l.id).order('declared_at')).data||[]
+      devEdits.value={}; devs.value.forEach(function(d){ devEdits.value[d.id]={editNumeroDn:d.numero_dn||'',editObs:d.description||''} })
       aqls.value=(await supabase.from('aql_inspections').select('*').eq('lot_id',l.id).order('created_at',{ascending:false})).data||[]
       dossier.value=(await supabase.from('liberation_dossiers').select('*').eq('lot_id',l.id).maybeSingle()).data
       aqlFabConforme.value=await isAqlConforme(l.id,'fabrication')
@@ -419,7 +466,9 @@ export default {
       majDocs,clotDocs,majDocLabel,clotDocLabel,clotStatLabel,clotIndClass,clotDsClass,docErrMsg,
       searchProd,selectProd,doModify,confirmDelete,canPerform,
       planning,planEdit,planSaving,savePlanning,
-      doSetDaMicroApplicable}
+      doSetDaMicroApplicable,
+      devEdits,saveDevField,SVC_LABELS,fmtDevDate,
+      devBloquanteOpen,devNonBloquanteOpen,devClosed}
   }
 }
 </script>
@@ -470,6 +519,23 @@ export default {
 .dev-tog-on{background:#FCEBEB;color:#A32D2D}.dev-tog-off{background:#f5f5f5;color:#999}
 .dev-badge-bl{font-size:10px;padding:2px 7px;border-radius:3px;font-weight:600;white-space:nowrap}
 .dev-bl-on{background:#FCEBEB;color:#A32D2D}.dev-bl-off{background:#f5f5f5;color:#bbb}
+/* Résumé déviations */
+.dev-resume{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.dev-res-bl{font-size:11px;padding:2px 10px;border-radius:10px;background:#FCEBEB;color:#A32D2D;font-weight:600}
+.dev-res-nb{font-size:11px;padding:2px 10px;border-radius:10px;background:#f5f5f5;color:#666;font-weight:500}
+.dev-res-cl{font-size:11px;padding:2px 10px;border-radius:10px;background:#EAF3DE;color:#3B6D11;font-weight:500}
+/* Cartes déviations */
+.dev-list{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.dev-card{border:1px solid #f0f0f0;border-radius:4px;padding:10px 12px;background:#fafafa}
+.dev-card-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dev-cl-btn{margin-left:auto}
+.dev-card-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px;padding-top:6px;border-top:1px solid #f0f0f0}
+.dev-meta-svc{font-size:10px;background:#E6F1FB;color:#0C447C;padding:1px 7px;border-radius:10px;font-weight:600;white-space:nowrap}
+.dev-meta-who{font-size:11px;font-weight:500;color:#555}
+.dev-meta-when{font-size:10px;font-family:'SF Mono',monospace;color:#999;margin-left:auto}
+.dev-card-edit{margin-top:8px;display:flex;flex-direction:column;gap:6px}
+.dev-card-row{display:flex;align-items:flex-start;gap:8px}
+.dev-save-btn{align-self:flex-start;font-size:11px;padding:4px 12px;border:1px solid #185FA5;border-radius:3px;background:#E6F1FB;color:#0C447C;cursor:pointer;font-family:inherit}.dev-save-btn:hover{background:#d0e3f5}
 .dim{color:#999;font-size:12px}.mono{font-family:'SF Mono',monospace;font-size:12px}
 .em{font-size:12px;color:#999;padding:12px 0;text-align:center}
 .syg{display:grid;grid-template-columns:1fr 1fr;border:1px solid #e8e8e8}.syc{padding:8px 12px;border-right:1px solid #e8e8e8;border-bottom:1px solid #e8e8e8;display:flex;justify-content:space-between;font-size:13px}.syc:nth-child(2n){border-right:none}.syc span:first-child{color:#666}
