@@ -42,20 +42,20 @@
           <span class="tp-cat-chev">{{cat.open?'▲':'▼'}}</span>
         </div>
 
-        <!-- Documents : sous-groupes par lot -->
+        <!-- Documents : sous-groupes par type de document -->
         <div v-if="cat.open && cat.groups" class="tp-cat-list">
-          <div v-for="grp in cat.groups" :key="grp.lotId" class="tp-grp">
+          <div v-for="grp in cat.groups" :key="grp.typeKey" class="tp-grp">
             <div class="tp-grp-hd" @click.stop="grp.open=!grp.open">
-              <span class="tp-item-lot">{{grp.lotNum}}</span>
-              <span class="tp-grp-prod">{{grp.prodDesc}}</span>
-              <span class="tp-grp-badge">{{grp.docs.length}} doc{{grp.docs.length>1?'s':''}}</span>
+              <span class="tp-doc-type-tag">{{grp.typeLabel}}</span>
+              <span class="tp-grp-prod">{{grp.action}}</span>
+              <span class="tp-grp-badge">{{grp.docs.length}} lot{{grp.docs.length>1?'s':''}}</span>
               <span class="tp-grp-chev">{{grp.open?'▲':'▼'}}</span>
             </div>
             <div v-if="grp.open" class="tp-grp-body">
-              <div v-for="d in grp.docs" :key="d.key" class="tp-doc-item" @click="$router.push('/lots/'+grp.lotId)">
+              <div v-for="d in grp.docs" :key="d.key" class="tp-doc-item" @click="$router.push('/lots/'+d.lotId)">
                 <div class="tp-doc-left">
-                  <span class="tp-doc-type">{{d.typeLabel}}</span>
-                  <span class="tp-doc-action">{{d.action}}</span>
+                  <span class="tp-item-lot">{{d.lotNum}}</span>
+                  <span class="tp-doc-prod">{{d.prodDesc}}</span>
                 </div>
                 <span v-if="d.sinceText" class="tp-doc-since" :class="d.sinceClass">{{d.sinceText}}</span>
               </div>
@@ -187,9 +187,10 @@ export default {
           var l=daqMap[d.lot_id]; if(!l) return
           var lbl=d.statut==='verification_aq'?'Vérifier (retour DT)':'Vérifier AQ → DT'
           var since=fmtSince(d.updated_at)
-          docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,action:(DOC_TYPE_LABELS[d.type_document]||d.type_document)+' — '+lbl})
-          if(!grpMap[l.id]) grpMap[l.id]={lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,open:false,docs:[]}
-          grpMap[l.id].docs.push({key:'doc_'+d.id,typeLabel:DOC_TYPE_LABELS[d.type_document]||d.type_document,action:lbl,sinceText:since?since.text:null,sinceClass:since?since.cls:''})
+          var typeKey=d.type_document||'autre'; var typeLabel=DOC_TYPE_LABELS[typeKey]||typeKey
+          docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,action:typeLabel+' — '+lbl})
+          if(!grpMap[typeKey]) grpMap[typeKey]={typeKey:typeKey,typeLabel:typeLabel,action:lbl,open:false,docs:[]}
+          grpMap[typeKey].docs.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,sinceText:since?since.text:null,sinceClass:since?since.cls:''})
         })
         docCat.groups = Object.values(grpMap)
       } else if (svc==='dt') {
@@ -203,9 +204,10 @@ export default {
         docRaw.forEach(function(d){
           var l=ddtMap[d.lot_id]; if(!l) return
           var since=fmtSince(d.updated_at)
-          docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,action:(DOC_TYPE_LABELS[d.type_document]||d.type_document)+' — Approuver DT'})
-          if(!grpMapDt[l.id]) grpMapDt[l.id]={lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,open:false,docs:[]}
-          grpMapDt[l.id].docs.push({key:'doc_'+d.id,typeLabel:DOC_TYPE_LABELS[d.type_document]||d.type_document,action:'Approuver DT',sinceText:since?since.text:null,sinceClass:since?since.cls:''})
+          var typeKey=d.type_document||'autre'; var typeLabel=DOC_TYPE_LABELS[typeKey]||typeKey
+          docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,action:typeLabel+' — Approuver DT'})
+          if(!grpMapDt[typeKey]) grpMapDt[typeKey]={typeKey:typeKey,typeLabel:typeLabel,action:'Approuver DT',open:false,docs:[]}
+          grpMapDt[typeKey].docs.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,sinceText:since?since.text:null,sinceClass:since?since.cls:''})
         })
         docCat.groups = Object.values(grpMapDt)
       } else {
@@ -220,9 +222,10 @@ export default {
         docRaw.forEach(function(d){
           var l=dEmtMap[d.lot_id]; if(!l) return
           var since=fmtSince(d.updated_at)
-          docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,action:(DOC_TYPE_LABELS[d.type_document]||d.type_document)+' — Rectifier et réémettre'})
-          if(!grpMapEmt[l.id]) grpMapEmt[l.id]={lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,open:false,docs:[]}
-          grpMapEmt[l.id].docs.push({key:'doc_'+d.id,typeLabel:DOC_TYPE_LABELS[d.type_document]||d.type_document,action:'Rectifier et réémettre',sinceText:since?since.text:null,sinceClass:since?since.cls:''})
+          var typeKey=d.type_document||'autre'; var typeLabel=DOC_TYPE_LABELS[typeKey]||typeKey
+          docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,action:typeLabel+' — Rectifier et réémettre'})
+          if(!grpMapEmt[typeKey]) grpMapEmt[typeKey]={typeKey:typeKey,typeLabel:typeLabel,action:'Rectifier et réémettre',open:false,docs:[]}
+          grpMapEmt[typeKey].docs.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,sinceText:since?since.text:null,sinceClass:since?since.cls:''})
         })
         docCat.groups = Object.values(grpMapEmt)
       }
@@ -356,8 +359,8 @@ export default {
 .tp-grp-body{background:#fafcff;border-top:1px solid #eef3fb}
 .tp-doc-item{display:flex;align-items:center;justify-content:space-between;padding:8px 16px 8px 28px;border-bottom:1px solid #f5f5f5;cursor:pointer;gap:12px;transition:.1s}.tp-doc-item:last-child{border-bottom:none}.tp-doc-item:hover{background:#f0f6ff}
 .tp-doc-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
-.tp-doc-type{font-size:11px;font-weight:600;color:#0C447C;background:#E6F1FB;padding:1px 6px;border-radius:3px;white-space:nowrap;flex-shrink:0}
-.tp-doc-action{font-size:12px;color:#444;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tp-doc-type-tag{font-size:12px;font-weight:700;color:#0C447C;background:#E6F1FB;padding:2px 8px;border-radius:3px;white-space:nowrap;flex-shrink:0}
+.tp-doc-prod{font-size:12px;color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
 .tp-doc-since{font-size:11px;font-weight:600;white-space:nowrap;flex-shrink:0;padding:1px 7px;border-radius:8px}
 .since-ok{background:#EAF3DE;color:#3B6D11}
 .since-orange{background:#FEF5E7;color:#A0620D}
