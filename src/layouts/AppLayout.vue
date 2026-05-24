@@ -56,7 +56,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '../supabase'
 import { loadPermissions } from '../services/permissions'
-import { getUnreadCount, getNewNotifications } from '../services/notifications'
+import { getUnreadCount, getNewNotifications, check48hDeviations } from '../services/notifications'
 import { checkPlanningAlerts } from '../services/planningAlerts'
 import { playSoundForEvent } from '../services/sounds'
 export default {
@@ -65,7 +65,7 @@ export default {
     var profile = ref(null), searchQuery = ref(''), suggestions = ref([]), showSug = ref(false)
     var clock = ref(''), unreadCount = ref(0), searchInput = ref(null), mobileMenuOpen = ref(false)
     var toasts = ref([]), lastCheck = ref(new Date().toISOString()), toastId = ref(0)
-    var debounce = null, clockInt = null, notifInt = null, planningInt = null
+    var debounce = null, clockInt = null, notifInt = null, planningInt = null, devAlertInt = null
     var serviceLabels = {planification:'Planification',stock:'Stock',aq:'Assurance Qualité',aq_dap:'AQ DAP',dt:'Direction Technique',fabrication:'Fabrication',conditionnement:'Conditionnement',lcq:'Laboratoire CQ',admin:'Administration'}
     var initials = computed(function(){return profile.value?(profile.value.prenom[0]+profile.value.nom[0]).toUpperCase():''})
     var isAdmin = computed(function(){return profile.value && profile.value.service === 'admin'})
@@ -124,10 +124,12 @@ export default {
           notifInt=setInterval(checkNewNotifs,15000)
           checkPlanningAlerts()
           planningInt=setInterval(checkPlanningAlerts, 6*60*60*1000)
+          check48hDeviations()
+          devAlertInt=setInterval(check48hDeviations, 30*60*1000)
         }
       }
     })
-    onUnmounted(function(){clearInterval(clockInt);clearInterval(notifInt);clearInterval(planningInt)})
+    onUnmounted(function(){clearInterval(clockInt);clearInterval(notifInt);clearInterval(planningInt);clearInterval(devAlertInt)})
 
     return {profile,initials,isAdmin,searchQuery,suggestions,showSug,clock,unreadCount,searchInput,
       mobileMenuOpen,toasts,serviceLabels,onSearch,submitSearch,selectSug,hideSug,logout,goToLot}

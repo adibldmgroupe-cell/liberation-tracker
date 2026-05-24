@@ -106,14 +106,28 @@
     <div class="section"><div class="sh"><span>Déviations</span></div>
       <div class="action-btns"><button v-if="canPerform('declarer_nc')" class="btn-action btn-orange" @click="showDevForm=!showDevForm">Déclarer déviation</button></div>
       <div class="dev-form" v-if="showDevForm">
-        <textarea v-model="devObs" rows="2" placeholder="Observation (facultatif)..." class="dev-input"></textarea>
+        <div class="dev-form-row">
+          <label class="dev-lbl">N° DN</label>
+          <input type="text" v-model="devNumeroDn" placeholder="Ex: DN-2026-001" class="dev-input-sm" />
+        </div>
+        <div class="dev-form-row">
+          <label class="dev-lbl">Observation</label>
+          <textarea v-model="devObs" rows="2" placeholder="Observation (facultatif)..." class="dev-input"></textarea>
+        </div>
+        <div class="dev-form-row dev-bloquante-row">
+          <label class="dev-lbl">Bloquante</label>
+          <button class="dev-tog" :class="devBloquante?'dev-tog-on':'dev-tog-off'" @click="devBloquante=!devBloquante">
+            {{devBloquante ? 'Oui — Bloquante' : 'Non — Non bloquante'}}
+          </button>
+        </div>
         <button class="btn" @click="doDeclareDeviation">Confirmer</button>
       </div>
       <div v-if="!devs.length" class="em">Aucune déviation</div>
       <table class="ct" v-else><tr v-for="d in devs" :key="d.id">
-        <td class="mono cs dim">Déviation</td>
+        <td><span class="dev-badge-bl" :class="d.bloquante?'dev-bl-on':'dev-bl-off'">{{d.bloquante?'BLOQUANTE':'Non bloquante'}}</span></td>
+        <td class="mono cs dim">{{d.numero_dn || '—'}}</td>
         <td><span class="sp2" :class="d.statut==='ouverte'?'sp2-ko':'sp2-ok'">{{d.statut==='ouverte'?'Ouverte':'Clôturée'}}</span></td>
-        <td class="dim" style="max-width:200px;overflow:hidden;text-overflow:ellipsis">{{d.description||'—'}}</td>
+        <td class="dim" style="max-width:180px;overflow:hidden;text-overflow:ellipsis">{{d.description||'—'}}</td>
         <td class="cac"><button v-if="d.statut==='ouverte' && canPerform('cloturer_deviation')" class="btn-sm" @click="doCloseDeviation(d.id)">Clôturer</button></td>
       </tr></table>
     </div>
@@ -229,7 +243,7 @@ export default {
     var route = useRoute(), router = useRouter()
     var lot = ref(null), prod = ref({}), of = ref(null), oc = ref(null), ofVals = ref([]), ocVals = ref([])
     var docs = ref([]), devs = ref([]), aqls = ref([]), dossier = ref(null), userId = ref(null), userService = ref('')
-    var showDevForm = ref(false), devObs = ref(''), showModify = ref(false)
+    var showDevForm = ref(false), devObs = ref(''), devBloquante = ref(false), devNumeroDn = ref(''), showModify = ref(false)
     var editNumLot = ref(''), editCodeProd = ref(''), editProductId = ref(null), prodSuggestions = ref([])
     var aqlFabConforme = ref(false), aqlCondConforme = ref(false)
     var planning = ref(null), planSaving = ref(false)
@@ -284,7 +298,7 @@ export default {
 
     var doValidate = async function(type,orderId,etape){await validateOrder(type,orderId,etape,userId.value,lot.value.id);loadLot()}
     var doLiberer = async function(){await libererLot(lot.value.id,userId.value);loadLot()}
-    var doDeclareDeviation = async function(){await declareDeviation(lot.value.id,devObs.value,userId.value);devObs.value='';showDevForm.value=false;loadLot()}
+    var doDeclareDeviation = async function(){await declareDeviation(lot.value.id,devObs.value,devBloquante.value,devNumeroDn.value,userId.value,userService.value);devObs.value='';devNumeroDn.value='';devBloquante.value=false;showDevForm.value=false;loadLot()}
     var doCloseDeviation = async function(id){await closeDeviation(id,lot.value.id,userId.value);loadLot()}
     var doDeclareRvp = async function(type){await declareRVP(lot.value.id,type,userId.value);loadLot()}
     var docErrMsg = ref('')
@@ -398,7 +412,7 @@ export default {
     })
 
     return{lot,prod,of,oc,ofVals,ocVals,docs,devs,aqls,dossier,statusLabels,circuitSteps,isAdmin,
-      showDevForm,devObs,showModify,editNumLot,editCodeProd,prodSuggestions,rvpDocs,mainDocs,
+      showDevForm,devObs,devBloquante,devNumeroDn,showModify,editNumLot,editCodeProd,prodSuggestions,rvpDocs,mainDocs,
       getVal,pipClass,fmtDt,ofV,ocV,docsOk,docsReq,devsOpen,leadTime,dossierComplete,canValidateStep,
       docTypeLabel,docStatLabel,indClass,dsClass,rvpServiceLabel,isDocBlocked,goBack,
       doValidate,doLiberer,doDeclareDeviation,doCloseDeviation,doDeclareRvp,doDeclareMajDoc,doDeclareClotureSap,doRequestAql,doAqlConforme,doAqlNonConforme,doRelanceAql,isLatestAql,canRelanceAql,canDemanderAql,
@@ -446,7 +460,16 @@ export default {
 .btn-app{font-size:10px;padding:3px 8px;border:1px solid #1D9E75;border-radius:3px;background:#EAF3DE;color:#3B6D11;cursor:pointer;margin-top:4px;display:block;font-family:inherit}.btn-app:hover{background:#d4edda}
 .ds-na-hint{font-size:10px;color:#ccc;display:block;margin-top:2px}
 .sp2{font-size:11px;padding:2px 8px;border-radius:2px;font-weight:500}.sp2-ok{background:#EAF3DE;color:#3B6D11}.sp2-ko{background:#FCEBEB;color:#A32D2D}.sp2-wait{background:#f5f5f5;color:#999}
-.dev-form{display:flex;gap:8px;align-items:flex-start;margin:10px 0}.dev-input{flex:1;border:1px solid #ddd;padding:6px 8px;font-size:13px;resize:vertical;font-family:inherit;border-radius:2px}
+.dev-form{display:flex;flex-direction:column;gap:8px;margin:10px 0}
+.dev-form-row{display:flex;align-items:flex-start;gap:10px}
+.dev-lbl{font-size:11px;font-weight:600;color:#999;min-width:80px;padding-top:6px;text-transform:uppercase;letter-spacing:.5px}
+.dev-input{flex:1;border:1px solid #ddd;padding:6px 8px;font-size:13px;resize:vertical;font-family:inherit;border-radius:2px}
+.dev-input-sm{flex:1;border:1px solid #ddd;padding:6px 8px;font-size:13px;font-family:inherit;border-radius:2px}
+.dev-bloquante-row{align-items:center}
+.dev-tog{padding:5px 14px;border:none;border-radius:10px;cursor:pointer;font-size:11px;font-weight:600}
+.dev-tog-on{background:#FCEBEB;color:#A32D2D}.dev-tog-off{background:#f5f5f5;color:#999}
+.dev-badge-bl{font-size:10px;padding:2px 7px;border-radius:3px;font-weight:600;white-space:nowrap}
+.dev-bl-on{background:#FCEBEB;color:#A32D2D}.dev-bl-off{background:#f5f5f5;color:#bbb}
 .dim{color:#999;font-size:12px}.mono{font-family:'SF Mono',monospace;font-size:12px}
 .em{font-size:12px;color:#999;padding:12px 0;text-align:center}
 .syg{display:grid;grid-template-columns:1fr 1fr;border:1px solid #e8e8e8}.syc{padding:8px 12px;border-right:1px solid #e8e8e8;border-bottom:1px solid #e8e8e8;display:flex;justify-content:space-between;font-size:13px}.syc:nth-child(2n){border-right:none}.syc span:first-child{color:#666}

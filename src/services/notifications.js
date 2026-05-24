@@ -1,5 +1,24 @@
 import { supabase } from '../supabase'
 
+export async function check48hDeviations() {
+  var cutoff = new Date(Date.now() - 48 * 3600 * 1000).toISOString()
+  var res = await supabase.from('deviations')
+    .select('id, lot_id, declared_service, lots(numero_lot)')
+    .in('statut', ['ouverte', 'en_cours'])
+    .eq('notified_48h', false)
+    .lte('declared_at', cutoff)
+  if (!res.data || !res.data.length) return
+  for (var i = 0; i < res.data.length; i++) {
+    var dev = res.data[i]
+    var svc = dev.declared_service || 'admin'
+    var lotNum = dev.lots ? dev.lots.numero_lot : ''
+    await createNotification(svc, dev.lot_id, null,
+      'Lot ' + lotNum + ' — Déviation ouverte depuis plus de 48h',
+      'deviation_48h')
+    await supabase.from('deviations').update({ notified_48h: true }).eq('id', dev.id)
+  }
+}
+
 export async function createNotification(targetService, lotId, documentId, message, eventType) {
   await supabase.from('notifications').insert({
     service: targetService,

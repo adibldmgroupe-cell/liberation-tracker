@@ -43,6 +43,13 @@
         <label class="bulk-date-lbl">Date :</label>
         <input type="date" v-model="bulkDate" class="bulk-date-in" />
       </div>
+      <div v-if="actionType==='dev_declarer'" class="bulk-dev-wrap">
+        <input type="text" v-model="bulkDevNumeroDn" placeholder="N° DN (optionnel)" class="bulk-dev-in" />
+        <input type="text" v-model="bulkDevObs" placeholder="Observation (optionnel)" class="bulk-dev-in" />
+        <button class="bulk-dev-tog" :class="bulkDevBloquante?'bulk-dev-bl-on':'bulk-dev-bl-off'" @click.stop="bulkDevBloquante=!bulkDevBloquante">
+          {{bulkDevBloquante?'BLOQUANTE':'Non bloquante'}}
+        </button>
+      </div>
       <button class="bulk-btn" :disabled="!canExecute" @click="showConfirm=true">
         Exécuter<span v-if="selected.length"> ({{selected.length}})</span>
       </button>
@@ -115,7 +122,7 @@
     <!-- Menu inline actions (position:fixed) -->
     <div v-if="inlineMenu" class="inline-menu" :style="{top:inlineMenu.top+'px',left:inlineMenu.left+'px'}" @click.stop>
       <div class="inline-menu-title">{{inlineMenu.colLabel}}</div>
-      <button v-for="(act,idx) in inlineMenu.actions" :key="idx" class="inline-act" @click="executeInline(act.fn)">{{act.label}}</button>
+      <button v-for="(act,idx) in inlineMenu.actions" :key="idx" class="inline-act" @click="executeInline(act)">{{act.label}}</button>
       <div v-if="!inlineMenu.actions.length" class="inline-empty">Aucune action disponible</div>
     </div>
 
@@ -143,6 +150,20 @@
       <div class="dp-actions">
         <button class="dp-ok" @click="savePlanning">✓ Valider</button>
         <button class="dp-cancel" @click="datePicker=null">✕</button>
+      </div>
+    </div>
+
+    <!-- Popup déclaration déviation inline -->
+    <div v-if="devPopup" class="dev-pop" :style="{top:devPopup.top+'px',left:devPopup.left+'px'}" @click.stop>
+      <div class="dev-pop-title">Déclarer déviation — {{devPopup.lotNum}}</div>
+      <input type="text" v-model="devPopup.numeroDn" placeholder="N° DN (optionnel)" class="dev-pop-in" />
+      <textarea v-model="devPopup.obs" rows="2" placeholder="Observation (optionnel)" class="dev-pop-ta"></textarea>
+      <button class="dev-pop-tog" :class="devPopup.bloquante?'dev-pop-bl-on':'dev-pop-bl-off'" @click.stop="devPopup.bloquante=!devPopup.bloquante">
+        {{devPopup.bloquante?'BLOQUANTE':'Non bloquante'}}
+      </button>
+      <div class="dev-pop-actions">
+        <button class="dp-ok" @click="confirmDevPopup">✓ Confirmer</button>
+        <button class="dp-cancel" @click="devPopup=null">✕</button>
       </div>
     </div>
 
@@ -195,6 +216,8 @@ export default {
     var selected = ref([]), actionType = ref(''), showConfirm = ref(false)
     var executing = ref(false), progress = ref(0), execResult = ref(null)
     var userService = ref(''), bulkDate = ref('')
+    var bulkDevBloquante = ref(false), bulkDevNumeroDn = ref(''), bulkDevObs = ref('')
+    var devPopup = ref(null)
     var dpInput = ref(null)
 
     // ── Autorisation via table permissions DB ─────────────────────────
@@ -625,11 +648,11 @@ export default {
 
       } else if (col==='dev') {
         if (isAdmin||canPerform('declarer_nc')) {
-          actions.push({label:'Déclarer déviation', fn: async function(){
-            var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
-            await supabase.from('deviations').insert({lot_id:lot.id,type:'deviation',statut:'ouverte',description:'Déclaration rapide tableau',declared_by:uid,declared_at:n})
-            await supabase.from('liberation_dossiers').update({deviations_closed:false,updated_at:n}).eq('lot_id',lot.id)
-            await createNotification('aq',lot.id,null,'Lot '+lot.numero_lot+' — Déviation déclarée','deviation_declaree')
+          actions.push({label:'Déclarer déviation', noReload:true, fn: function(){
+            var rect = {bottom: (inlineMenu.value ? inlineMenu.value.top + 30 : 200), left: (inlineMenu.value ? inlineMenu.value.left : 400)}
+            var top = rect.bottom + 4, left = rect.left
+            if (left + 260 > window.innerWidth) left = window.innerWidth - 270
+            devPopup.value = {lotId:lot.id, lotNum:lot.numero_lot, top:top, left:left, bloquante:false, numeroDn:'', obs:''}
           }})
         }
         if (lot.dev_open>0 && (isAdmin||canPerform('cloturer_deviation'))) {
@@ -830,9 +853,27 @@ export default {
       inlineMenu.value = { top: top, left: left, colLabel: COL_LABELS2[col]||col, actions: actions }
     }
 
-    var executeInline = async function(fn) {
+    var executeInline = async function(action) {
       inlineMenu.value = null
-      await fn()
+      await action.fn()
+      if (!action.noReload) await load()
+    }
+
+    var confirmDevPopup = async function() {
+      if (!devPopup.value) return
+      var u = await supabase.auth.getUser(); var uid = u.data.user.id; var n = new Date().toISOString()
+      await supabase.from('deviations').insert({
+        lot_id: devPopup.value.lotId, type: 'deviation', statut: 'ouverte',
+        description: devPopup.value.obs || '',
+        bloquante: devPopup.value.bloquante || false,
+        numero_dn: devPopup.value.numeroDn || null,
+        declared_service: userService.value || null,
+        declared_by: uid, declared_at: n
+      })
+      await supabase.from('liberation_dossiers').update({deviations_closed:false,updated_at:n}).eq('lot_id',devPopup.value.lotId)
+      await supabase.from('lot_events').insert({lot_id:devPopup.value.lotId,event_type:'deviation_declaree',description:'Déviation déclarée'+(devPopup.value.bloquante?' (BLOQUANTE)':''),triggered_by:uid,created_at:n})
+      await createNotification('aq',devPopup.value.lotId,null,'Lot '+devPopup.value.lotNum+' — Déviation déclarée'+(devPopup.value.bloquante?' (BLOQUANTE)':''),'deviation_declaree')
+      devPopup.value = null
       await load()
     }
     // ──────────────────────────────────────────────────────────────────
@@ -935,7 +976,7 @@ var loadCharge = async function() {
     }
     // ──────────────────────────────────────────────────────────────────
 
-    var closeAll = function() { activeDropdown.value = null; inlineMenu.value = null; showColPanel.value = false; if(datePicker.value) datePicker.value = null }
+    var closeAll = function() { activeDropdown.value = null; inlineMenu.value = null; showColPanel.value = false; if(datePicker.value) datePicker.value = null; if(devPopup.value) devPopup.value = null }
 
     var filteredLots = computed(function(){
       var result = lots.value
@@ -1151,10 +1192,11 @@ var loadCharge = async function() {
           } else if (action.startsWith('dev_')) {
             var devOp=action.replace('dev_','')
             if(devOp==='declarer'){
-              await supabase.from('deviations').insert({lot_id:lotId,type:'deviation',statut:'ouverte',description:'Déclaration en masse',declared_by:userId,declared_at:now})
+              var isBl=bulkDevBloquante.value; var dn=bulkDevNumeroDn.value||null; var obs=bulkDevObs.value||''
+              await supabase.from('deviations').insert({lot_id:lotId,type:'deviation',statut:'ouverte',description:obs,bloquante:isBl,numero_dn:dn,declared_service:userService.value||null,declared_by:userId,declared_at:now})
               await supabase.from('liberation_dossiers').update({deviations_closed:false,updated_at:now}).eq('lot_id',lotId)
-              await supabase.from('lot_events').insert({lot_id:lotId,event_type:'deviation_declaree',description:'Déviation déclarée (masse)',triggered_by:userId,created_at:now})
-              await createNotification('aq',lotId,null,'Lot '+lot.numero_lot+' — Déviation déclarée','deviation_declaree')
+              await supabase.from('lot_events').insert({lot_id:lotId,event_type:'deviation_declaree',description:'Déviation déclarée (masse)'+(isBl?' (BLOQUANTE)':''),triggered_by:userId,created_at:now})
+              await createNotification('aq',lotId,null,'Lot '+lot.numero_lot+' — Déviation déclarée'+(isBl?' (BLOQUANTE)':''),'deviation_declaree')
               result.ok++
             } else if(devOp==='cloture'){
               var openDevs=await supabase.from('deviations').select('id').eq('lot_id',lotId).in('statut',['ouverte','en_cours'])
@@ -1276,7 +1318,8 @@ var loadCharge = async function() {
       actionGroups,userService,
       columnFilters,activeDropdown,ddPos,openDropdown,getColumnValues,setColumnFilter,clearColumnFilters,removeColumnFilter,hasColumnFilters,
       visibleCols,showColPanel,colDefs,isColVisible,toggleCol,resetCols,moveColUp,moveColDown,CC,
-      inlineMenu,openInlineMenu,executeInline,closeAll,
+      inlineMenu,openInlineMenu,executeInline,closeAll,devPopup,confirmDevPopup,
+      bulkDevBloquante,bulkDevNumeroDn,bulkDevObs,
       datePicker,dpInput,openDatePicker,savePlanning,getPlanClass,
       chargeCount,chargeLoading,loadCharge,
       planHistory,planHistLoading}
@@ -1368,6 +1411,19 @@ var loadCharge = async function() {
 .dp-actions{display:flex;gap:6px;margin-top:8px}
 .dp-ok{flex:1;padding:6px;background:#185FA5;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px;font-weight:500}.dp-ok:hover{background:#0C447C}
 .dp-cancel{padding:6px 10px;background:#f5f5f5;color:#666;border:none;border-radius:3px;cursor:pointer;font-size:12px}
+/* Popup déviation inline */
+.dev-pop{position:fixed;background:#fff;border:1px solid #ddd;border-radius:4px;box-shadow:0 6px 20px rgba(0,0,0,.15);z-index:400;padding:12px;min-width:260px;display:flex;flex-direction:column;gap:8px}
+.dev-pop-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#999}
+.dev-pop-in{width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:3px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box}
+.dev-pop-ta{width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:3px;font-size:13px;font-family:inherit;resize:vertical;outline:none;box-sizing:border-box}
+.dev-pop-tog{padding:5px 14px;border:none;border-radius:10px;cursor:pointer;font-size:11px;font-weight:600;align-self:flex-start}
+.dev-pop-bl-on{background:#FCEBEB;color:#A32D2D}.dev-pop-bl-off{background:#f5f5f5;color:#999}
+.dev-pop-actions{display:flex;gap:6px}
+/* Bulk déviation */
+.bulk-dev-wrap{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.bulk-dev-in{padding:6px 8px;border:1px solid #ddd;border-radius:3px;font-size:12px;font-family:inherit;min-width:130px}
+.bulk-dev-tog{padding:5px 12px;border:none;border-radius:10px;cursor:pointer;font-size:11px;font-weight:600}
+.bulk-dev-bl-on{background:#FCEBEB;color:#A32D2D}.bulk-dev-bl-off{background:#f5f5f5;color:#999}
 /* bulk bar */
 .bulk-bar{display:flex;align-items:center;gap:8px;padding:6px 0;flex-wrap:wrap;border-bottom:1px solid #e8e8e8}
 .bulk-sel{padding:5px 8px;font-size:12px;border:1px solid #ddd;border-radius:3px;outline:none;font-family:inherit;min-width:220px}.bulk-sel:focus{border-color:#185FA5}
