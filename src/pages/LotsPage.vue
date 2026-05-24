@@ -125,6 +125,21 @@
       <div class="inline-menu-title">{{inlineMenu.colLabel}}</div>
       <button v-for="(act,idx) in inlineMenu.actions" :key="idx" class="inline-act" @click="executeInline(act)">{{act.label}}</button>
       <div v-if="!inlineMenu.actions.length" class="inline-empty">Aucune action disponible</div>
+      <!-- Audit trail -->
+      <button class="inline-hist-toggle" @click.stop="toggleInlineHistory">
+        {{inlineMenu.historyOpen ? '▲ Masquer l\'historique' : '▼ Voir l\'historique'}}
+      </button>
+      <div v-if="inlineMenu.historyOpen" class="inline-hist">
+        <div v-if="inlineMenu.historyLoading" class="inline-hist-empty">⟳ Chargement…</div>
+        <div v-else-if="!inlineMenu.historyData.length" class="inline-hist-empty">Aucun historique enregistré</div>
+        <div v-for="(h,i) in inlineMenu.historyData" :key="i" class="inline-hist-row">
+          <span class="inline-hist-label">{{h.label}}</span>
+          <div class="inline-hist-sub">
+            <span class="inline-hist-who">{{h.who}}</span>
+            <span class="inline-hist-at">{{h.at}}</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Date picker inline planification (position:fixed) -->
@@ -876,15 +891,87 @@ export default {
       var actions = buildInlineActions(lot, col)
       var rect = event.currentTarget.getBoundingClientRect()
       var top = rect.bottom + 2, left = rect.left
-      // Ajust pour sortir du bord droit
-      if (left + 200 > window.innerWidth) left = window.innerWidth - 210
-      inlineMenu.value = { top: top, left: left, colLabel: COL_LABELS2[col]||col, actions: actions }
+      if (left + 240 > window.innerWidth) left = window.innerWidth - 250
+      inlineMenu.value = { top: top, left: left, colLabel: COL_LABELS2[col]||col, actions: actions,
+        lotRef: lot, colRef: col, historyOpen: false, historyData: [], historyLoading: false }
     }
 
     var executeInline = async function(action) {
       inlineMenu.value = null
       await action.fn()
       if (!action.noReload) await load()
+    }
+
+    var fmtHistDate = function(iso) {
+      if (!iso) return '—'
+      var d = new Date(iso)
+      return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit'})+' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})
+    }
+
+    var DOC_COLS = ['if','ic','da_pc','da_micro','rvp_fab','rvp_cond','rvp_lcq','maj_if','maj_ic','maj_nmcl_of','maj_nmcl_oc','cloture_sap_of','cloture_sap_oc']
+    var RVP_SVC = {rvp_fab:'fabrication',rvp_cond:'conditionnement',rvp_lcq:'lcq'}
+    var DOC_ACT_LABELS = {emission:'Émission',approbation:'Approbation',retour:'Retour',rectification:'Rectification',validation:'Validation',cloture:'Dem. clôture',cloture_confirmee:'Clôture confirmée'}
+
+    var loadInlineHistory = async function() {
+      if (!inlineMenu.value) return
+      var lot = inlineMenu.value.lotRef, col = inlineMenu.value.colRef
+      inlineMenu.value.historyLoading = true
+      inlineMenu.value.historyData = []
+      var rows = []
+
+      if (col === 'of' || col === 'oc') {
+        var orderId = col === 'of' ? lot.of_id : lot.oc_id
+        if (orderId) {
+          var r = await supabase.from('order_validations')
+            .select('etape,validated_at,profiles(prenom,nom)')
+            .eq('order_type', col).eq('order_id', orderId)
+            .order('validated_at', {ascending:false}).limit(15)
+          var el = {planification:'Mise en circuit',stock:'Valid. Stock',aq:'Valid. AQ',dt:'Autor. DT',aq_dap:'Remise AQ DAP',production:'Accusé récp.'}
+          rows = (r.data||[]).map(function(v){
+            return {label:el[v.etape]||v.etape, who:v.profiles?v.profiles.prenom+' '+v.profiles.nom:'—', at:fmtHistDate(v.validated_at)}
+          })
+        }
+
+      } else if (col === 'aql_fab' || col === 'aql_cond') {
+        var aqlType = col === 'aql_fab' ? 'fabrication' : 'conditionnement'
+        var r2 = await supabase.from('aql_inspections')
+          .select('resultat,requested_at,inspected_at,profiles!inspected_by(prenom,nom)')
+          .eq('lot_id', lot.id).eq('type', aqlType)
+          .order('requested_at', {ascending:false}).limit(10)
+        rows = (r2.data||[]).map(function(a){
+          var lbl = a.resultat==='conforme'?'Conforme':a.resultat==='non_conforme'?'Non conforme':'Demandé'
+          return {label:lbl, who:a.profiles?a.profiles.prenom+' '+a.profiles.nom:'—', at:fmtHistDate(a.inspected_at||a.requested_at)}
+        })
+
+      } else if (DOC_COLS.indexOf(col) >= 0) {
+        var doc = null
+        if (col.startsWith('rvp_')) {
+          doc = (lot.docs||[]).find(function(d){return d.type_document==='rvp'&&d.service_emetteur===RVP_SVC[col]})
+        } else {
+          doc = (lot.docs||[]).find(function(d){return d.type_document===col})
+        }
+        if (doc) {
+          var r3 = await supabase.from('document_movements')
+            .select('action,from_service,to_service,performed_at,profiles(prenom,nom)')
+            .eq('document_id', doc.id)
+            .order('performed_at', {ascending:false}).limit(15)
+          rows = (r3.data||[]).map(function(m){
+            var svc = m.to_service ? (m.from_service||'')+'→'+(m.to_service||'') : (m.from_service||'')
+            return {label:(DOC_ACT_LABELS[m.action]||m.action)+(svc?' ('+svc+')':''), who:m.profiles?m.profiles.prenom+' '+m.profiles.nom:'—', at:fmtHistDate(m.performed_at)}
+          })
+        }
+      }
+
+      inlineMenu.value.historyData = rows
+      inlineMenu.value.historyLoading = false
+    }
+
+    var toggleInlineHistory = async function() {
+      if (!inlineMenu.value) return
+      inlineMenu.value.historyOpen = !inlineMenu.value.historyOpen
+      if (inlineMenu.value.historyOpen && !inlineMenu.value.historyData.length && !inlineMenu.value.historyLoading) {
+        await loadInlineHistory()
+      }
     }
 
     var SVC_LABELS = {planification:'Planification',stock:'Stock',aq:'AQ',aq_dap:'AQ DAP',dt:'DT',fabrication:'Fabrication',conditionnement:'Conditionnement',lcq:'LCQ',admin:'Admin'}
@@ -1405,7 +1492,7 @@ var loadCharge = async function() {
       actionGroups,userService,
       columnFilters,activeDropdown,ddPos,openDropdown,getColumnValues,setColumnFilter,clearColumnFilters,removeColumnFilter,hasColumnFilters,
       visibleCols,showColPanel,colDefs,isColVisible,toggleCol,resetCols,moveColUp,moveColDown,CC,
-      inlineMenu,openInlineMenu,executeInline,closeAll,
+      inlineMenu,openInlineMenu,executeInline,toggleInlineHistory,closeAll,
       devPopup,openDevPopup,confirmDevPopup,closeDevInPopup,saveDevField,canPerform,SVC_LABELS,fmtDevDate,
       bulkDevBloquante,bulkDevNumeroDn,bulkDevObs,
       datePicker,dpInput,openDatePicker,savePlanning,getPlanClass,
@@ -1479,6 +1566,15 @@ var loadCharge = async function() {
 .inline-menu-title{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:#999;padding:7px 12px 5px;border-bottom:1px solid #f0f0f0}
 .inline-act{display:block;width:100%;padding:8px 12px;text-align:left;border:none;background:#fff;cursor:pointer;font-size:12px;font-family:inherit;border-bottom:1px solid #f8f8f8;transition:.1s}.inline-act:hover{background:#E6F1FB;color:#0C447C}
 .inline-empty{padding:10px 12px;font-size:11px;color:#999;text-align:center}
+.inline-hist-toggle{display:block;width:100%;padding:6px 12px;text-align:left;border:none;border-top:1px solid #f0f0f0;background:#fafafa;cursor:pointer;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:#aaa;font-family:inherit;transition:.1s}.inline-hist-toggle:hover{color:#185FA5;background:#f0f4ff}
+.inline-hist{max-height:220px;overflow-y:auto;border-top:1px solid #f0f0f0}
+.inline-hist-empty{padding:8px 12px;font-size:11px;color:#bbb;font-style:italic}
+.inline-hist-row{padding:6px 12px;border-bottom:1px solid #f8f8f8}
+.inline-hist-row:last-child{border-bottom:none}
+.inline-hist-label{display:block;font-size:11px;font-weight:500;color:#333}
+.inline-hist-sub{display:flex;justify-content:space-between;align-items:center;margin-top:1px}
+.inline-hist-who{font-size:10px;color:#888}
+.inline-hist-at{font-size:9px;font-family:'SF Mono',monospace;color:#bbb}
 /* Date picker popup */
 .date-picker-pop{position:fixed;background:#fff;border:1px solid #ddd;border-radius:4px;box-shadow:0 6px 20px rgba(0,0,0,.15);z-index:400;padding:12px;min-width:200px}
 .dp-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:#999;margin-bottom:8px}
