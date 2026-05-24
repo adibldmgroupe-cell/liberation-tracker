@@ -9,11 +9,16 @@
           <button class="btn-cols" :class="{'btn-cols-on':showColPanel}" @click="showColPanel=!showColPanel">⚙ Colonnes</button>
           <div class="col-panel" v-if="showColPanel">
             <div class="col-panel-title">Colonnes (ordre & visibilité)</div>
-            <div v-for="col in colDefs" :key="col.key" class="col-item">
-              <input type="checkbox" :checked="isColVisible(col.key)" @change="toggleCol(col.key)" />
+            <div v-for="(col,idx) in colDefs" :key="col.key" class="col-item"
+              draggable="true"
+              :class="{'col-item-dragging':colDragIdx===idx,'col-item-over':colDragOverIdx===idx}"
+              @dragstart.stop="onColDragStart(idx,$event)"
+              @dragover.prevent.stop="onColDragOver(idx)"
+              @drop.prevent.stop="onColDrop(idx)"
+              @dragend.stop="onColDragEnd">
+              <span class="col-drag-handle" title="Glisser pour réordonner">⠿</span>
+              <input type="checkbox" :checked="isColVisible(col.key)" @change="toggleCol(col.key)" @click.stop />
               <span class="col-item-label">{{col.label}}</span>
-              <button class="col-mv" @click.stop="moveColUp(col.key)" title="Monter">▲</button>
-              <button class="col-mv" @click.stop="moveColDown(col.key)" title="Descendre">▼</button>
             </div>
             <button class="col-reset" @click="resetCols">Réinitialiser</button>
           </div>
@@ -382,6 +387,27 @@ export default {
     var resetCols = function(){ visibleCols.value = ALL_COLS.slice(); try{localStorage.removeItem('lots_vis_cols')}catch(e){} }
     var moveColUp = function(col){var i=visibleCols.value.indexOf(col);if(i>0){var a=visibleCols.value.slice();var t=a[i];a[i]=a[i-1];a[i-1]=t;visibleCols.value=a;try{localStorage.setItem('lots_vis_cols',JSON.stringify(a))}catch(e){}}}
     var moveColDown = function(col){var i=visibleCols.value.indexOf(col);if(i>=0&&i<visibleCols.value.length-1){var a=visibleCols.value.slice();var t=a[i];a[i]=a[i+1];a[i+1]=t;visibleCols.value=a;try{localStorage.setItem('lots_vis_cols',JSON.stringify(a))}catch(e){}}}
+
+    // ── Drag & drop colonnes ───────────────────────────────────────────
+    var colDragIdx = ref(null)
+    var colDragOverIdx = ref(null)
+    var onColDragStart = function(idx, e) {
+      colDragIdx.value = idx
+      if (e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', idx) }
+    }
+    var onColDragOver = function(idx) { colDragOverIdx.value = idx }
+    var onColDrop = function(targetIdx) {
+      var fromIdx = colDragIdx.value
+      if (fromIdx === null || fromIdx === targetIdx) { colDragIdx.value = null; colDragOverIdx.value = null; return }
+      var a = visibleCols.value.slice()
+      var moved = a.splice(fromIdx, 1)[0]
+      a.splice(targetIdx, 0, moved)
+      visibleCols.value = a
+      try { localStorage.setItem('lots_vis_cols', JSON.stringify(a)) } catch(e) {}
+      colDragIdx.value = null
+      colDragOverIdx.value = null
+    }
+    var onColDragEnd = function() { colDragIdx.value = null; colDragOverIdx.value = null }
     // ──────────────────────────────────────────────────────────────────
 
     var statusLabels = {vide:'Planifié',quarantaine:'Quarantaine',sous_investigation:'Investigation',accepte:'Accepté',refuse:'Refusé'}
@@ -1785,6 +1811,7 @@ var loadCharge = async function() {
       actionGroups,userService,
       columnFilters,activeDropdown,ddPos,openDropdown,getColumnValues,setColumnFilter,clearColumnFilters,removeColumnFilter,hasColumnFilters,
       visibleCols,showColPanel,colDefs,isColVisible,toggleCol,resetCols,moveColUp,moveColDown,CC,
+      colDragIdx,colDragOverIdx,onColDragStart,onColDragOver,onColDrop,onColDragEnd,
       inlineMenu,openInlineMenu,executeInline,confirmInlineMotif,toggleInlineHistory,closeAll,
       devPopup,openDevPopup,confirmDevPopup,closeDevInPopup,saveDevField,markBloquanteInPopup,canPerform,SVC_LABELS,fmtDevDate,
       bulkDevBloquante,bulkDevNumeroDn,bulkDevObs,
@@ -1804,10 +1831,12 @@ var loadCharge = async function() {
 .col-panel-wrap{position:relative}
 .col-panel{position:absolute;top:calc(100% + 4px);right:0;background:#fff;border:1px solid #ddd;border-radius:4px;box-shadow:0 6px 20px rgba(0,0,0,.12);z-index:300;padding:10px;min-width:180px}
 .col-panel-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:#999;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #f0f0f0}
-.col-item{display:flex;align-items:center;gap:6px;font-size:12px;color:#333;padding:3px 0;cursor:pointer;white-space:nowrap}
+.col-item{display:flex;align-items:center;gap:6px;font-size:12px;color:#333;padding:3px 4px;border-radius:3px;white-space:nowrap;transition:background .1s}
 .col-item input{cursor:pointer;accent-color:#185FA5}
 .col-item-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
-.col-mv{background:none;border:1px solid #e8e8e8;border-radius:2px;cursor:pointer;font-size:8px;padding:1px 4px;color:#999;line-height:1}.col-mv:hover{color:#185FA5;border-color:#185FA5;background:#E6F1FB}
+.col-drag-handle{cursor:grab;color:#ccc;font-size:14px;line-height:1;user-select:none;padding:0 1px;flex-shrink:0}.col-drag-handle:active{cursor:grabbing}
+.col-item-dragging{opacity:.35;background:#f5f5f5}
+.col-item-over{background:#E6F1FB;border-color:#185FA5}
 .col-reset{margin-top:8px;width:100%;padding:5px;font-size:11px;border:1px solid #ddd;border-radius:3px;background:#fafafa;cursor:pointer;color:#666}.col-reset:hover{background:#f0f0f0}
 .filters{display:flex;gap:4px;padding:8px 0;flex-wrap:wrap}
 .fbtn{display:flex;align-items:center;gap:4px;padding:5px 10px;min-height:32px;font-size:11px;border:1px solid #e8e8e8;border-radius:3px;background:#fff;cursor:pointer;color:#666;font-family:inherit;transition:.15s}
