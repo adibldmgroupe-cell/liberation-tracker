@@ -399,16 +399,17 @@ export async function importFromGoogleSheets(url, onProgress) {
   if (onProgress) onProgress(80)
 
   // ── 8. Init documents uniquement pour les lots vraiment nouveaux ──────
-  // Vérification batch : quels lots n'ont pas encore de documents ?
   if (newLotRows.length) {
     var newIds = newLotRows.map(function(l){ return l.id })
+    // 1 seule requête pour savoir quels lots ont déjà des documents
     var existDocsRes = await supabase.from('liberation_documents').select('lot_id').in('lot_id', newIds)
     var hasDocMap = {}
     ;(existDocsRes.data||[]).forEach(function(d){ hasDocMap[d.lot_id] = true })
-    for (var i = 0; i < newLotRows.length; i++) {
-      if (!hasDocMap[newLotRows[i].id]) {
-        await initLotDocuments(newLotRows[i].id)
-      }
+    // Lots sans documents → init (avec ignoreDuplicates pour éviter les blocages)
+    var toInit = newLotRows.filter(function(l){ return !hasDocMap[l.id] })
+    for (var i = 0; i < toInit.length; i++) {
+      try { await initLotDocumentsSafe(toInit[i].id) } catch(e) { /* ignore, lot peut déjà exister partiellement */ }
+      if (onProgress) onProgress(80 + Math.round((i+1)/Math.max(toInit.length,1)*8))
     }
   }
   if (onProgress) onProgress(90)
@@ -451,6 +452,19 @@ async function initLotDocuments(lotId) {
   await supabase.from('liberation_dossiers').insert({ lot_id: lotId, da_micro_applicable: false })
   await supabase.from('orders_of').insert({ lot_id: lotId, statut: 'planifie', etape_circuit: 'planification' })
   await supabase.from('orders_oc').insert({ lot_id: lotId, statut: 'planifie', etape_circuit: 'planification' })
+}
+
+// Version sécurisée pour Google Sheets : ignore les doublons silencieusement
+async function initLotDocumentsSafe(lotId) {
+  await supabase.from('liberation_documents').upsert([
+    { lot_id: lotId, type_document: 'if', is_applicable: true, is_required: true, service_emetteur: 'fabrication' },
+    { lot_id: lotId, type_document: 'ic', is_applicable: true, is_required: true, service_emetteur: 'conditionnement' },
+    { lot_id: lotId, type_document: 'da_pc', is_applicable: true, is_required: true, service_emetteur: 'lcq' },
+    { lot_id: lotId, type_document: 'da_micro', is_applicable: false, is_required: false, service_emetteur: 'lcq' },
+  ], { onConflict: 'lot_id,type_document', ignoreDuplicates: true })
+  await supabase.from('liberation_dossiers').upsert({ lot_id: lotId, da_micro_applicable: false }, { onConflict: 'lot_id', ignoreDuplicates: true })
+  await supabase.from('orders_of').upsert({ lot_id: lotId, statut: 'planifie', etape_circuit: 'planification' }, { onConflict: 'lot_id', ignoreDuplicates: true })
+  await supabase.from('orders_oc').upsert({ lot_id: lotId, statut: 'planifie', etape_circuit: 'planification' }, { onConflict: 'lot_id', ignoreDuplicates: true })
 }
 
 async function updateDoc(lotId, type, date) {
