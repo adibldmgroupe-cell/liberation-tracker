@@ -244,7 +244,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="p in filteredPlanning" :key="p.id" :class="{plan-annule: p.statut_planification==='Annulé'}">
+          <tr v-for="p in filteredPlanning" :key="p.id" :class="{'plan-annule': p.statut_planification==='Annulé'}">
             <td class="num">
               <div class="order-btns">
                 <button class="ob" @click="movePlan(p,'up')" :disabled="p.ordre_plan<=1" title="Monter">↑</button>
