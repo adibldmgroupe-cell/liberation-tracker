@@ -41,31 +41,27 @@
     <div v-else class="tp-cats">
       <div v-for="cat in categories" :key="cat.id" v-show="isCatVisible(cat)" class="tp-cat">
 
-        <!-- En-tête catégorie -->
-        <div class="tp-cat-hd" @click="cat.open=!cat.open">
+        <!-- En-tête catégorie — barre gauche colorée + titre uppercase -->
+        <div class="tp-cat-hd" :class="{'tp-cat-urgent': cat.urgent}" @click="cat.open=!cat.open">
           <span class="tp-cat-icon">{{cat.icon}}</span>
           <span class="tp-cat-title">{{cat.title}}</span>
-          <span class="tp-cat-badge" :class="cat.urgent?'tp-badge-red':'tp-badge-orange'">{{cat.items.length}}</span>
+          <span class="tp-cat-badge" :class="cat.urgent?'tp-badge-red':'tp-badge-blue'">{{cat.items.length}} tâche{{cat.items.length>1?'s':''}}</span>
           <span class="tp-cat-chev">{{cat.open?'▲':'▼'}}</span>
         </div>
 
         <!-- Documents : groupes par type -->
         <div v-if="cat.open && cat.groups" class="tp-cat-list">
-          <!-- En-tête tableau -->
-          <div class="tp-tbl-hd">
-            <span class="tp-tbl-h1">Type</span>
-            <span class="tp-tbl-h2">Action</span>
-            <span class="tp-tbl-h3">Lots</span>
-          </div>
           <div v-for="grp in visibleGroups(cat)" :key="grp.typeKey" class="tp-grp">
+            <!-- En-tête groupe — indenté, bordure gauche bleue -->
             <div class="tp-grp-hd" @click.stop="grp.open=!grp.open">
               <span class="tp-doc-type-tag">{{grp.typeLabel}}</span>
+              <span class="tp-grp-sep">›</span>
               <span class="tp-grp-action">{{grp.action}}</span>
               <span class="tp-grp-badge">{{getDocsForGroup(grp).length}} lot{{getDocsForGroup(grp).length>1?'s':''}}</span>
               <span class="tp-grp-chev">{{grp.open?'▲':'▼'}}</span>
             </div>
             <div v-if="grp.open" class="tp-grp-body">
-              <!-- En-tête tri colonnes -->
+              <!-- En-tête colonnes tri -->
               <div class="tp-grp-sort-hd">
                 <span class="tp-sort-col tp-sort-lot" @click.stop="toggleSort(grp,'lotNum')">
                   N° Lot <span class="tp-sort-icon">{{sortIcon(grp,'lotNum')}}</span>
@@ -73,6 +69,7 @@
                 <span class="tp-sort-col tp-sort-desc" @click.stop="toggleSort(grp,'prodDesc')">
                   Désignation <span class="tp-sort-icon">{{sortIcon(grp,'prodDesc')}}</span>
                 </span>
+                <span class="tp-sort-col tp-sort-sap">Statut SAP</span>
                 <span class="tp-sort-col tp-sort-since">Depuis</span>
                 <span class="tp-sort-col tp-sort-acts">Actions</span>
               </div>
@@ -88,8 +85,8 @@
                 <!-- Ligne normale -->
                 <div v-else class="tp-doc-item">
                   <span class="tp-lot-mono" @click="$router.push('/lots/'+d.lotId)">{{d.lotNum}}</span>
-                  <span class="tp-act-badge" :class="d.actionClass">{{d.action}}</span>
                   <span class="tp-prod-desc">{{d.prodDesc}}<span class="tp-prod-code">{{d.prodCode}}</span></span>
+                  <span class="tp-sap-badge" :class="'sap-'+(d.statutSap||'vide')">{{SAP_SHORT[d.statutSap]||''}}</span>
                   <span v-if="d.sinceText" class="tp-doc-since" :class="d.sinceClass">{{d.sinceText}}</span>
                   <div class="tp-doc-btns">
                     <button v-if="d.canAct" class="tp-do-btn" :disabled="d.acting" @click.stop="doDocAction(d,grp,cat)">{{d.acting?'…':d.btnLabel}}</button>
@@ -108,6 +105,7 @@
             <div class="tp-item-main" @click="$router.push('/lots/'+item.lotId)">
               <span class="tp-item-lot">{{item.lotNum}}</span>
               <span v-if="item.urgent" class="tp-item-bl">⚠ BLQ</span>
+              <span class="tp-sap-badge" :class="'sap-'+(item.statutSap||'vide')">{{SAP_SHORT[item.statutSap]||''}}</span>
               <span class="tp-item-prod">{{item.prodDesc}}</span>
             </div>
             <div class="tp-item-right">
@@ -145,6 +143,7 @@ export default {
 
     var SVC_LABELS = {planification:'Planification',stock:'Stock',aq:'Assurance Qualité',aq_dap:'AQ DAP',dt:'Direction Technique',fabrication:'Fabrication',conditionnement:'Conditionnement',lcq:'Laboratoire CQ',admin:'Administration'}
     var SVC_LABELS_ALL = {aq:'Assurance Qualité',dt:'Direction Technique',planification:'Planification',stock:'Stock',fabrication:'Fabrication',conditionnement:'Conditionnement',lcq:'Laboratoire CQ',aq_dap:'AQ DAP'}
+    var SAP_SHORT = {quarantaine:'Qtné',sous_investigation:'S.I.',refuse:'Refêsé',vide:''}
     var DOC_TYPE_LABELS = {if:'IF',ic:'IC',da_pc:'DA Physico',da_micro:'DA Micro',rvp:'RVP',maj_if:'MàJ IF',maj_ic:'MàJ IC',maj_nmcl_of:'MàJ N. OF',maj_nmcl_oc:'MàJ N. OC',cloture_sap_of:'Clôt. OF',cloture_sap_oc:'Clôt. OC'}
     var SVC_MAP = {'if':'fabrication',ic:'conditionnement',da_pc:'lcq',da_micro:'lcq',maj_if:'fabrication',maj_ic:'conditionnement',maj_nmcl_of:'planification',maj_nmcl_oc:'planification'}
     var FLOW = ['planification','stock','aq','dt','aq_dap']
@@ -338,7 +337,7 @@ export default {
       }
       var canAct = svc==='aq'?(isAdm||canPerform('verifier_'+typeKey)):svc==='dt'?(isAdm||canPerform('approuver_'+typeKey)):(isAdm||canPerform('emettre_'+typeKey))
       var newDoc = {key:'doc_'+arItem.docId,docId:arItem.docId,typeDocument:typeKey,statut:statut,
-        lotId:arItem.lotId,lotNum:arItem.lotNum,prodDesc:arItem.prodDesc,prodCode:arItem.prodCode||'',
+        lotId:arItem.lotId,lotNum:arItem.lotNum,prodDesc:arItem.prodDesc,prodCode:arItem.prodCode||'',statutSap:arItem.statutSap||'',
         action:action,actionClass:actionClass,sinceText:null,sinceClass:'',
         canAct:canAct,btnLabel:btnLabel,canReturn:canReturn||false,
         returnBtnLabel:returnBtnLabel,returnLabel:returnLabel,showReturnInput:false,returnMotif:'',acting:false}
@@ -478,7 +477,7 @@ export default {
             var isPendingAr = o.pending_ar_service === svc
             var permKey = isPendingAr ? 'accuser_reception_circuit' : getPermissionForEtape(ofEtape,'of')
             var canAct = isAdm || (permKey ? canPerform(permKey) : false)
-            circCat.items.push({key:'of_'+o.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,
+            circCat.items.push({key:'of_'+o.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,statutSap:l.statut_sap||'',
               action:'Circuit OF — '+(isPendingAr?'AR en attente':'Valider : '+(ETAPE_LABELS_LONG[ofEtape]||ofEtape)),
               canAct:canAct, btnLabel:isPendingAr?'✅ AR':'✓ Valider', acting:false,
               orderId:o.id, orderTable:'orders_of', orderType:'of', etape:o.etape_circuit,
@@ -493,7 +492,7 @@ export default {
             var isPendingAr = o.pending_ar_service === svc
             var permKey = isPendingAr ? 'accuser_reception_circuit' : getPermissionForEtape(ocEtape,'oc')
             var canAct = isAdm || (permKey ? canPerform(permKey) : false)
-            circCat.items.push({key:'oc_'+o.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,
+            circCat.items.push({key:'oc_'+o.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,statutSap:l.statut_sap||'',
               action:'Circuit OC — '+(isPendingAr?'AR en attente':'Valider : '+(ETAPE_LABELS_LONG[ocEtape]||ocEtape)),
               canAct:canAct, btnLabel:isPendingAr?'✅ AR':'✓ Valider', acting:false,
               orderId:o.id, orderTable:'orders_oc', orderType:'oc', etape:o.etape_circuit,
@@ -521,10 +520,10 @@ export default {
           var actCls=d.statut==='verification_aq'?'act-orange':'act-blue'
           var canAct=isAdm||canPerform('verifier_'+typeKey)
           var canReturn=isAdm||canPerform('retourner_document')
-          docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||''})
+          docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',statutSap:l.statut_sap||''})
           if(!grpMap[typeKey]) grpMap[typeKey]=makeGrp(typeKey,typeLabel,lbl)
           grpMap[typeKey].docs.push({key:'doc_'+d.id,docId:d.id,typeDocument:typeKey,statut:d.statut,
-            lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',
+            lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',statutSap:l.statut_sap||'',
             action:lbl,actionClass:actCls,sinceText:since?since.text:null,sinceClass:since?since.cls:'',
             canAct:canAct,btnLabel:'✓ Valider',
             canReturn:canReturn,returnBtnLabel:'↩ Retourner',returnLabel:'Retourner à l\'émetteur',
@@ -544,10 +543,10 @@ export default {
           var typeKey=d.type_document||'autre'; var typeLabel=DOC_TYPE_LABELS[typeKey]||typeKey
           var canAct=isAdm||canPerform('approuver_'+typeKey)
           var canReturn=isAdm||canPerform('retourner_document')
-          docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||''})
+          docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',statutSap:l.statut_sap||''})
           if(!grpMapDt[typeKey]) grpMapDt[typeKey]=makeGrp(typeKey,typeLabel,'Approuver DT')
           grpMapDt[typeKey].docs.push({key:'doc_'+d.id,docId:d.id,typeDocument:typeKey,statut:d.statut,
-            lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',
+            lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',statutSap:l.statut_sap||'',
             action:'Approuver DT',actionClass:'act-purple',sinceText:since?since.text:null,sinceClass:since?since.cls:'',
             canAct:canAct,btnLabel:'✓ Approuver',
             canReturn:canReturn,returnBtnLabel:'↩ Retour AQ',returnLabel:'Retourner à l\'AQ',
@@ -566,10 +565,10 @@ export default {
           var since=fmtSince(d.updated_at)
           var typeKey=d.type_document||'autre'; var typeLabel=DOC_TYPE_LABELS[typeKey]||typeKey
           var canAct=isAdm||canPerform('emettre_'+typeKey)
-          docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||''})
+          docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',statutSap:l.statut_sap||''})
           if(!grpMapEmt[typeKey]) grpMapEmt[typeKey]=makeGrp(typeKey,typeLabel,'Rectifier et réémettre')
           grpMapEmt[typeKey].docs.push({key:'doc_'+d.id,docId:d.id,typeDocument:typeKey,statut:'retour_emetteur',
-            lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',
+            lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',statutSap:l.statut_sap||'',
             action:'Rectifier et réémettre',actionClass:'act-red',sinceText:since?since.text:null,sinceClass:since?since.cls:'',
             canAct:canAct,btnLabel:'↑ Réémettre',canReturn:false,
             showReturnInput:false,returnMotif:'',acting:false})
@@ -587,7 +586,7 @@ export default {
       var arDocMap = await getLotsMap((arDocR.data||[]).map(function(d){return d.lot_id}))
       ;(arDocR.data||[]).forEach(function(d){
         var l=arDocMap[d.lot_id]; if(!l) return
-        arCat.items.push({key:'ar_doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',
+        arCat.items.push({key:'ar_doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',statutSap:l.statut_sap||'',
           action:(DOC_TYPE_LABELS[d.type_document]||d.type_document)+' — Accuser réception',
           canAct:arCanDoc,btnLabel:'✅ AR',acting:false,
           arType:'doc',docId:d.id,typeDocument:d.type_document})
@@ -597,7 +596,7 @@ export default {
       var arOfMap = await getLotsMap((arOfR.data||[]).map(function(o){return o.lot_id}))
       ;(arOfR.data||[]).forEach(function(o){
         var l=arOfMap[o.lot_id]; if(!l) return
-        arCat.items.push({key:'ar_of_'+o.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,
+        arCat.items.push({key:'ar_of_'+o.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,statutSap:l.statut_sap||'',
           action:'Circuit OF — AR ('+o.etape_circuit+')',
           canAct:arCanCirc,btnLabel:'✅ AR',acting:false,
           arType:'circuit',orderId:o.id,orderTable:'orders_of',orderType:'of',etape:o.etape_circuit})
@@ -607,7 +606,7 @@ export default {
       var arOcMap = await getLotsMap((arOcR.data||[]).map(function(o){return o.lot_id}))
       ;(arOcR.data||[]).forEach(function(o){
         var l=arOcMap[o.lot_id]; if(!l) return
-        arCat.items.push({key:'ar_oc_'+o.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,
+        arCat.items.push({key:'ar_oc_'+o.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,statutSap:l.statut_sap||'',
           action:'Circuit OC — AR ('+o.etape_circuit+')',
           canAct:arCanCirc,btnLabel:'✅ AR',acting:false,
           arType:'circuit',orderId:o.id,orderTable:'orders_oc',orderType:'oc',etape:o.etape_circuit})
@@ -620,7 +619,7 @@ export default {
         ;(arAqlDR.data||[]).forEach(function(a){
           var l=arAqlDMap[a.lot_id]; if(!l) return
           var aLabel=a.type==='fabrication'?'Fabrication':'Conditionnement'
-          arCat.items.push({key:'ar_aql_d_'+a.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,
+          arCat.items.push({key:'ar_aql_d_'+a.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,statutSap:l.statut_sap||'',
             action:'AQL '+aLabel+' — AR demande',
             canAct:arCanAqlD,btnLabel:'✅ AR',acting:false,
             arType:'aql_demande',aqlId:a.id,aqlTypeLabel:aLabel})
@@ -635,7 +634,7 @@ export default {
         ;(arAqlRR.data||[]).forEach(function(a){
           var l=arAqlRMap[a.lot_id]; if(!l) return
           var aLabel=a.type==='fabrication'?'Fabrication':'Conditionnement'
-          arCat.items.push({key:'ar_aql_r_'+a.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,
+          arCat.items.push({key:'ar_aql_r_'+a.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,statutSap:l.statut_sap||'',
             action:'AQL '+aLabel+' — AR résultat ('+a.resultat+')',
             canAct:arCanAqlR,btnLabel:'✅ AR',acting:false,
             arType:'aql_resultat',aqlId:a.id,aqlTypeLabel:aLabel})
@@ -652,7 +651,7 @@ export default {
         var aqlMap = await getLotsMap((aqlR.data||[]).map(function(a){return a.lot_id}))
         ;(aqlR.data||[]).forEach(function(a){
           var l=aqlMap[a.lot_id]; if(!l) return
-          aqlCat.items.push({key:'aql_'+a.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,
+          aqlCat.items.push({key:'aql_'+a.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,statutSap:l.statut_sap||'',
             action:'AQL '+a.type+' — Résultat à saisir',
             canAqlSaisir:canAqlSaisir,acting:false,
             aqlId:a.id,aqlType:a.type})
@@ -667,7 +666,7 @@ export default {
         var devMap = await getLotsMap((devR.data||[]).map(function(d){return d.lot_id}))
         ;(devR.data||[]).forEach(function(d){
           var l=devMap[d.lot_id]; if(!l) return
-          devCat.items.push({key:'dev_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,
+          devCat.items.push({key:'dev_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,statutSap:l.statut_sap||'',
             action:'Déviation bloquante'+(d.numero_dn?' ('+d.numero_dn+')':''),urgent:true,canAct:false,acting:false})
         })
         if (devCat.items.length) cats.push(devCat)
@@ -692,7 +691,7 @@ export default {
     return {
       svcLabel, isAdmin, selectedSvc, totalCount, loading, categories, load, SVC_LABELS_ALL,
       searchQuery, searchResultCount, isCatVisible, visibleGroups, getItemsForCat, getDocsForGroup,
-      toggleSort, sortIcon,
+      toggleSort, sortIcon, SAP_SHORT,
       doDocAction, doDocReturn, doItemAction, doAqlSaisir
     }
   }
@@ -729,80 +728,87 @@ export default {
 .tp-empty-icon{font-size:36px;color:#3B6D11}
 .tp-empty-txt{font-size:14px}
 
-/* Categories */
-.tp-cats{display:flex;flex-direction:column;gap:12px}
-.tp-cat{border:1px solid #e8e8e8;border-radius:6px;overflow:hidden;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.04)}
-.tp-cat-hd{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;background:#fafafa;user-select:none;transition:.1s}.tp-cat-hd:hover{background:#f0f4ff}
-.tp-cat-icon{font-size:16px}
-.tp-cat-title{font-size:13px;font-weight:600;color:#222;flex:1}
-.tp-cat-badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;min-width:20px;text-align:center}
+/* ── Categories ──────────────────────────────────────────────────── */
+.tp-cats{display:flex;flex-direction:column;gap:14px}
+.tp-cat{border:1px solid #e0e8f0;border-radius:8px;overflow:hidden;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+
+/* Niveau 1 — Catégorie : bandeau avec barre gauche colorée */
+.tp-cat-hd{display:flex;align-items:center;gap:10px;padding:13px 18px;cursor:pointer;user-select:none;transition:.1s;background:#f4f7fc;border-left:4px solid #185FA5}
+.tp-cat-hd:hover{background:#edf2fa}
+.tp-cat-urgent{border-left-color:#E24B4A;background:#fdf5f5}
+.tp-cat-urgent:hover{background:#faeaea}
+.tp-cat-icon{font-size:15px;flex-shrink:0}
+.tp-cat-title{font-size:11px;font-weight:700;color:#1a2a3a;text-transform:uppercase;letter-spacing:.9px;flex:1}
+.tp-cat-badge{font-size:10px;font-weight:700;padding:2px 9px;border-radius:10px;white-space:nowrap;flex-shrink:0}
+.tp-badge-blue{background:#E6F1FB;color:#0C447C}
 .tp-badge-red{background:#FCEBEB;color:#A32D2D}
-.tp-badge-orange{background:#FEF5E7;color:#A0620D}
-.tp-cat-chev{font-size:10px;color:#bbb;margin-left:4px}
+.tp-cat-chev{font-size:10px;color:#aab;flex-shrink:0;margin-left:2px}
 
-/* Table header docs */
-.tp-tbl-hd{display:flex;align-items:center;gap:10px;padding:6px 16px;background:#f5f5f5;border-top:1px solid #ebebeb;border-bottom:1px solid #ebebeb}
-.tp-tbl-h1{font-size:10px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.5px;width:80px;flex-shrink:0}
-.tp-tbl-h2{font-size:10px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.5px;flex:1}
-.tp-tbl-h3{font-size:10px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.5px;width:60px;text-align:right;flex-shrink:0}
+/* ── Groupes (niveau 2) ───────────────────────────────────────────── */
+.tp-cat-list{border-top:1px solid #e8eef5}
+.tp-grp{border-bottom:1px solid #edf2f7}.tp-grp:last-child{border-bottom:none}
 
-/* Doc groups */
-.tp-cat-list{border-top:1px solid #f0f0f0}
-.tp-grp{border-bottom:1px solid #efefef}.tp-grp:last-child{border-bottom:none}
-.tp-grp-hd{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;background:#fff;user-select:none;transition:.1s}.tp-grp-hd:hover{background:#f7f9ff}
-.tp-doc-type-tag{font-size:12px;font-weight:700;color:#0C447C;background:#E6F1FB;padding:2px 8px;border-radius:3px;white-space:nowrap;flex-shrink:0;width:80px;text-align:center;box-sizing:border-box}
-.tp-grp-action{font-size:12px;color:#555;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* En-tête groupe — indenté + bordure gauche subtile */
+.tp-grp-hd{display:flex;align-items:center;gap:8px;padding:9px 18px 9px 24px;cursor:pointer;background:#fff;user-select:none;transition:.1s;border-left:3px solid #c8dff4}
+.tp-grp-hd:hover{background:#f5f9ff;border-left-color:#185FA5}
+.tp-doc-type-tag{font-size:11px;font-weight:700;color:#0C447C;background:#E6F1FB;padding:2px 8px;border-radius:3px;white-space:nowrap;flex-shrink:0;min-width:52px;text-align:center;box-sizing:border-box}
+.tp-grp-sep{font-size:11px;color:#bbb;flex-shrink:0}
+.tp-grp-action{font-size:12px;color:#444;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tp-grp-badge{font-size:10px;font-weight:600;color:#185FA5;background:#E6F1FB;padding:1px 7px;border-radius:8px;white-space:nowrap;flex-shrink:0}
 .tp-grp-chev{font-size:10px;color:#bbb;flex-shrink:0}
 
-/* En-tête tri colonnes */
+/* ── En-tête colonnes tri (niveau 3) ─────────────────────────────── */
 .tp-grp-body{background:#fafcff;border-top:1px solid #eef3fb}
-.tp-grp-sort-hd{display:flex;align-items:center;gap:8px;padding:5px 16px;background:#f0f4fb;border-bottom:1px solid #e4ecf8}
-.tp-sort-col{font-size:10px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.3px;display:flex;align-items:center;gap:3px;user-select:none;padding:2px 0}
+.tp-grp-sort-hd{display:flex;align-items:center;gap:8px;padding:5px 18px 5px 32px;background:#f0f4fa;border-bottom:1px solid #e2eaf5}
+.tp-sort-col{font-size:9px;font-weight:700;color:#9aabbf;text-transform:uppercase;letter-spacing:.4px;display:flex;align-items:center;gap:3px;user-select:none;padding:2px 0}
 .tp-sort-col.tp-sort-lot,.tp-sort-col.tp-sort-desc{cursor:pointer;transition:.1s}.tp-sort-col.tp-sort-lot:hover,.tp-sort-col.tp-sort-desc:hover{color:#185FA5}
 .tp-sort-lot{width:110px;flex-shrink:0}
 .tp-sort-desc{flex:1}
-.tp-sort-since{width:90px;flex-shrink:0;cursor:default}
-.tp-sort-acts{width:120px;flex-shrink:0;cursor:default}
+.tp-sort-sap{width:68px;flex-shrink:0;cursor:default}
+.tp-sort-since{width:80px;flex-shrink:0;cursor:default}
+.tp-sort-acts{width:130px;flex-shrink:0;cursor:default}
 .tp-sort-icon{font-size:10px}
 
-/* Doc items (inside groups) */
-.tp-doc-item{display:flex;align-items:center;padding:7px 16px;border-bottom:1px solid #f0f0f0;gap:8px}.tp-doc-item:last-child{border-bottom:none}.tp-doc-item:hover{background:#f0f6ff}
-.tp-lot-mono{font-family:'SF Mono','Fira Code',monospace;font-size:10px;font-weight:500;white-space:nowrap;flex-shrink:0;cursor:pointer;color:#0C447C;width:110px}
-.tp-act-badge{font-size:9px;padding:2px 5px;border-radius:2px;font-weight:500;white-space:nowrap;flex-shrink:0}
-.act-blue{background:#E6F1FB;color:#185FA5}
-.act-orange{background:#FEF5E7;color:#A0620D}
-.act-purple{background:#F0EBF8;color:#6B3FA0}
-.act-red{background:#FCEBEB;color:#A32D2D}
+/* ── Items dans groupes (niveau 4) ───────────────────────────────── */
+.tp-doc-item{display:flex;align-items:center;padding:7px 18px 7px 32px;border-bottom:1px solid #f0f4f8;gap:8px}.tp-doc-item:last-child{border-bottom:none}.tp-doc-item:hover{background:#eef5ff}
+.tp-lot-mono{font-family:'SF Mono','Fira Code',monospace;font-size:10px;font-weight:600;white-space:nowrap;flex-shrink:0;cursor:pointer;color:#0C447C;width:110px;background:#EBF3FF;padding:2px 5px;border-radius:2px}
+.tp-lot-mono:hover{text-decoration:underline}
 .tp-prod-desc{font-size:11px;color:#444;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
-.tp-prod-code{font-size:9px;color:#999;font-family:'SF Mono',monospace;margin-left:3px}
-.tp-doc-since{font-size:11px;font-weight:600;white-space:nowrap;flex-shrink:0;padding:1px 7px;border-radius:8px}
+.tp-prod-code{font-size:9px;color:#aaa;font-family:'SF Mono',monospace;margin-left:4px}
+.tp-doc-since{font-size:10px;font-weight:600;white-space:nowrap;flex-shrink:0;padding:1px 7px;border-radius:8px;width:68px;text-align:center;box-sizing:border-box}
 .since-ok{background:#EAF3DE;color:#3B6D11}
 .since-orange{background:#FEF5E7;color:#A0620D}
 .since-red{background:#FCEBEB;color:#A32D2D}
 
+/* Statut SAP badge */
+.tp-sap-badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;white-space:nowrap;flex-shrink:0;width:68px;text-align:center;box-sizing:border-box}
+.sap-quarantaine{background:#FAEEDA;color:#854F0B}
+.sap-sous_investigation{background:#FCEBEB;color:#A32D2D}
+.sap-refuse{background:#e8e8e8;color:#555}
+.sap-vide,.sap-{background:transparent;color:transparent}
+
 /* Action buttons */
-.tp-doc-btns{display:flex;gap:4px;flex-shrink:0}
+.tp-doc-btns{display:flex;gap:4px;flex-shrink:0;width:130px;justify-content:flex-end}
 .tp-do-btn{padding:3px 10px;font-size:11px;font-weight:600;font-family:inherit;border-radius:3px;border:1px solid #185FA5;background:#E6F1FB;color:#185FA5;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:.1s}.tp-do-btn:hover{background:#185FA5;color:#fff}.tp-do-btn:disabled{opacity:.5;cursor:default}
 .tp-do-ok{border-color:#1D9E75;background:#EAF3DE;color:#1D9E75}.tp-do-ok:hover{background:#1D9E75;color:#fff}
 .tp-do-nok{border-color:#A32D2D;background:#FCEBEB;color:#A32D2D}.tp-do-nok:hover{background:#A32D2D;color:#fff}
 .tp-do-ret{border-color:#A0620D;background:#FEF5E7;color:#A0620D}.tp-do-ret:hover{background:#A0620D;color:#fff}
+.tp-item-arr{font-size:12px;color:#ccc;cursor:pointer;padding:0 2px;flex-shrink:0}.tp-item-arr:hover{color:#185FA5}
 
 /* Motif retour inline */
-.tp-return-row{display:flex;align-items:center;gap:8px;padding:8px 16px;background:#FEF5E7;border-bottom:1px solid #f0e0c0;flex-wrap:wrap}
+.tp-return-row{display:flex;align-items:center;gap:8px;padding:8px 18px 8px 32px;background:#FEF5E7;border-bottom:1px solid #f0e0c0;flex-wrap:wrap}
 .tp-return-label{font-size:11px;font-weight:600;color:#A0620D;white-space:nowrap;flex-shrink:0}
 .tp-return-motif{flex:1;min-width:160px;font-size:11px;font-family:inherit;border:1px solid #E89C3A;border-radius:3px;padding:4px 8px;resize:none;outline:none;background:#fff}
 .tp-btn-cancel{padding:3px 8px;font-size:11px;font-family:inherit;border:1px solid #ccc;border-radius:3px;background:#fff;color:#666;cursor:pointer}.tp-btn-cancel:hover{background:#f5f5f5}
 
-/* Items plats (autres cats) */
-.tp-item{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid #f8f8f8;gap:12px}.tp-item:last-child{border-bottom:none}.tp-item:hover{background:#f5f9ff}
+/* ── Items plats (autres catégories) ─────────────────────────────── */
+.tp-item{display:flex;align-items:center;justify-content:space-between;padding:10px 18px 10px 24px;border-bottom:1px solid #f5f8fb;gap:12px;border-left:3px solid transparent;transition:.1s}.tp-item:last-child{border-bottom:none}.tp-item:hover{background:#f5f9ff;border-left-color:#185FA5}
 .tp-item-main{display:flex;align-items:center;gap:8px;min-width:0;flex:1;cursor:pointer}
-.tp-item-lot{font-family:'SF Mono','Fira Code',monospace;font-size:12px;font-weight:600;color:#0C447C;white-space:nowrap;background:#E6F1FB;padding:2px 7px;border-radius:3px}
-.tp-item-bl{font-size:10px;font-weight:700;color:#A32D2D;background:#FCEBEB;padding:1px 5px;border-radius:2px;white-space:nowrap}
-.tp-item-prod{font-size:12px;color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tp-item-lot{font-family:'SF Mono','Fira Code',monospace;font-size:11px;font-weight:600;color:#0C447C;white-space:nowrap;background:#EBF3FF;padding:2px 7px;border-radius:3px;flex-shrink:0}
+.tp-item-bl{font-size:10px;font-weight:700;color:#A32D2D;background:#FCEBEB;padding:1px 5px;border-radius:2px;white-space:nowrap;flex-shrink:0}
+.tp-item-prod{font-size:12px;color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
 .tp-item-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.tp-item-action{font-size:12px;font-weight:500;white-space:nowrap}
+.tp-item-action{font-size:11px;font-weight:500;white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis}
 .tp-action-blue{color:#185FA5}
 .tp-action-red{color:#A32D2D}
-.tp-item-arr{font-size:12px;color:#bbb;cursor:pointer}
 </style>
