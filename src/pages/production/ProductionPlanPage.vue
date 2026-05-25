@@ -52,8 +52,15 @@
         :style="{cursor: isPanning?'grabbing': editMode?'crosshair':'grab'}"
       >
         <div class="canvas-inner" :style="transformStyle">
-          <!-- PDF canvas -->
-          <canvas ref="pdfCanvas" class="pdf-canvas"></canvas>
+          <!-- Plan PNG (généré par CI via pdftoppm) -->
+          <img
+            :src="'/plans/P004_page-'+currentPage+'.png'"
+            class="plan-img"
+            @load="onImgLoad"
+            @error="onImgError"
+            :alt="'Plan production page '+currentPage"
+            draggable="false"
+          />
 
           <!-- SVG overlay : hotspots + flux arrows -->
           <svg class="hotspot-svg" :style="{width: canvasW+'px', height: canvasH+'px'}" xmlns="http://www.w3.org/2000/svg">
@@ -239,13 +246,9 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '../../supabase'
-import * as pdfjsLib from 'pdfjs-dist'
-
-// Le worker est copié dans /public par le script prebuild
-pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
 
 export default {
   setup() {
@@ -260,15 +263,13 @@ export default {
     var editMode = ref(false)
     var isAdmin = ref(false)
 
-    // PDF
-    var pdfCanvas = ref(null)
+    // Plan image
     var canvasWrap = ref(null)
     var planBody = ref(null)
-    var canvasW = ref(1200)
-    var canvasH = ref(900)
+    var canvasW = ref(2400)
+    var canvasH = ref(1700)
     var currentPage = ref(1)
-    var totalPages = ref(1)
-    var pdfDoc = ref(null)
+    var totalPages = ref(2)   // P004 a 2 pages (ajuster si besoin)
 
     // Pan / zoom
     var scale = ref(1)
@@ -323,36 +324,21 @@ export default {
       return z?z.label:'—'
     }
 
-    // ─── PDF RENDERING ────────────────────────────────────────
-    var renderPage = async function(pageNum) {
-      if (!pdfDoc.value || !pdfCanvas.value) return
-      var page = await pdfDoc.value.getPage(pageNum)
-      var viewport = page.getViewport({scale: 2.5}) // haute résolution
-      var canvas = pdfCanvas.value
-      var ctx = canvas.getContext('2d')
-      canvas.width  = viewport.width
-      canvas.height = viewport.height
-      canvasW.value = viewport.width
-      canvasH.value = viewport.height
-      await page.render({canvasContext: ctx, viewport}).promise
+    // ─── IMAGE PLAN ───────────────────────────────────────────
+    var onImgLoad = function(e) {
+      canvasW.value = e.target.naturalWidth
+      canvasH.value = e.target.naturalHeight
+    }
+    var onImgError = function() {
+      // Si la page n'existe pas, revenir à 1
+      if (currentPage.value > 1) { currentPage.value = 1; totalPages.value = 1 }
     }
 
-    var loadPDF = async function() {
-      try {
-        var pdf = await pdfjsLib.getDocument('/plans/P004.pdf').promise
-        pdfDoc.value = pdf
-        totalPages.value = pdf.numPages
-        await renderPage(1)
-      } catch(e) {
-        console.error('PDF load error:', e)
-      }
+    var prevPage = function() {
+      if (currentPage.value > 1) currentPage.value--
     }
-
-    var prevPage = async function() {
-      if (currentPage.value > 1) { currentPage.value--; await renderPage(currentPage.value) }
-    }
-    var nextPage = async function() {
-      if (currentPage.value < totalPages.value) { currentPage.value++; await renderPage(currentPage.value) }
+    var nextPage = function() {
+      if (currentPage.value < totalPages.value) currentPage.value++
     }
 
     // ─── LOAD DATA ────────────────────────────────────────────
@@ -663,7 +649,6 @@ export default {
     var refreshInt = null
     onMounted(async function() {
       await loadProfile()
-      await loadPDF()
       await loadAll()
       refreshInt = setInterval(loadAll, 60000)
     })
@@ -671,8 +656,9 @@ export default {
 
     return {
       mode, loading, isFullscreen, showToolbar, tbTimer, editMode, isAdmin,
-      pdfCanvas, canvasWrap, planBody, canvasW, canvasH,
+      canvasWrap, planBody, canvasW, canvasH,
       currentPage, totalPages, scale, offsetX, offsetY, isPanning, panStart,
+      onImgLoad, onImgError,
       rooms, selectedRoom, suiviFab, sessions, deviations, arrets, activeSessions,
       selectedLotId, fluxArrows, newRoom, newRoomModal, drawStart,
       zones, legend,
@@ -724,7 +710,7 @@ export default {
 /* ── Canvas wrap ── */
 .canvas-wrap { flex:1; overflow:hidden; position:relative; }
 .canvas-inner { position:absolute; top:0; left:0; }
-.pdf-canvas { display:block; }
+.plan-img { display:block; max-width:none; user-select:none; -webkit-user-drag:none; }
 
 /* ── SVG overlay ── */
 .hotspot-svg { position:absolute; top:0; left:0; pointer-events:none; }
