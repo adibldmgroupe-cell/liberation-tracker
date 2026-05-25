@@ -1429,8 +1429,18 @@ var loadCharge = async function() {
       if(cfk.length>0){result=result.filter(function(l){return cfk.every(function(k){return l[k]===cf[k]})})}
       if(sortCol.value){
         var col=sortCol.value,dir=sortDir.value
+        // Convertit dd/mm/yyyy → timestamp pour tri chronologique
+        var parseFrDate=function(s){if(!s||s==='—')return 0;var p=s.split('/');return p.length===3?new Date(p[2],p[1]-1,p[0]).getTime():0}
         result=result.slice().sort(function(a,b){
           var va=a[col]||'',vb=b[col]||''
+          // Tri numérique pour le numéro de lot
+          if(col==='numero_lot'){var na=parseInt(va)||0,nb=parseInt(vb)||0;return dir==='asc'?na-nb:nb-na}
+          // Tri chronologique pour les colonnes de dates (format dd/mm/yyyy)
+          if(col==='date_fmt'||col==='date_lib'||col==='plan_dt1'||col==='plan_dt2'||col==='plan_aq'||col==='plan_lcq'){
+            var da=parseFrDate(String(va)),db=parseFrDate(String(vb))
+            if(da!==db)return dir==='asc'?da-db:db-da
+            return 0
+          }
           if(typeof va==='string')va=va.toLowerCase()
           if(typeof vb==='string')vb=vb.toLowerCase()
           if(va<vb)return dir==='asc'?-1:1;if(va>vb)return dir==='asc'?1:-1;return 0

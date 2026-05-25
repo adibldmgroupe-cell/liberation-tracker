@@ -96,7 +96,9 @@ export default {
     var searchTimeout = null
 
     onMounted(async function() {
-      var res = await supabase.from('lots').select('numero_lot').order('numero_lot', { ascending: false }).limit(50)
+      // Récupère tous les numéros de lots et trouve le max numérique
+      // (pas de limit ni d'ORDER BY textuel qui donnerait "991" > "26001")
+      var res = await supabase.from('lots').select('numero_lot')
       if (res.data && res.data.length) {
         var maxNum = 0
         var maxLot = ''
@@ -104,7 +106,7 @@ export default {
           var n = parseInt(res.data[i].numero_lot)
           if (!isNaN(n) && n > maxNum) { maxNum = n; maxLot = res.data[i].numero_lot }
         }
-        lastLot.value = maxLot || res.data[0].numero_lot
+        lastLot.value = maxLot || ''
       }
     })
 
