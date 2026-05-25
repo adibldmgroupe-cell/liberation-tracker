@@ -396,26 +396,11 @@ export async function importFromGoogleSheets(url, onProgress) {
     if (lotMap[l.numero_lot]) { stats.updated++ }
     else { newLotRows.push(l); stats.created++ }
   })
-  if (onProgress) onProgress(80)
+  if (onProgress) onProgress(85)
+  // Note : la sync Google Sheets ne crée pas les documents/dossiers des nouveaux lots.
+  // Utiliser l'import Excel pour initialiser complètement un nouveau lot.
 
-  // ── 8. Init documents uniquement pour les lots vraiment nouveaux ──────
-  if (newLotRows.length) {
-    var newIds = newLotRows.map(function(l){ return l.id })
-    // 1 seule requête pour savoir quels lots ont déjà des documents
-    var existDocsRes = await supabase.from('liberation_documents').select('lot_id').in('lot_id', newIds)
-    var hasDocMap = {}
-    ;(existDocsRes.data||[]).forEach(function(d){ hasDocMap[d.lot_id] = true })
-    // Lots sans documents → init (avec ignoreDuplicates pour éviter les blocages)
-    var toInit = newLotRows.filter(function(l){ return !hasDocMap[l.id] })
-    for (var i = 0; i < toInit.length; i++) {
-      try { await initLotDocumentsSafe(toInit[i].id) } catch(e) { /* ignore, lot peut déjà exister partiellement */ }
-      if (onProgress) onProgress(80 + Math.round((i+1)/Math.max(toInit.length,1)*8))
-    }
-  }
-  if (onProgress) onProgress(90)
-
-  // ── 9. OF/OC : 2 requêtes batch ─────────────────────────────────────
-  var allUpsertedIds = (upsertRes.data||[]).map(function(l){ return l.id })
+  // ── 9. OF/OC : mise à jour batch pour lots avec statut SAP ───────────
   var idsAvecStatut = (upsertRes.data||[]).filter(function(l){ return l.statut_sap !== 'vide' }).map(function(l){ return l.id })
   if (idsAvecStatut.length) {
     await supabase.from('orders_of').update({ statut: 'termine', etape_circuit: 'production' }).in('lot_id', idsAvecStatut)
