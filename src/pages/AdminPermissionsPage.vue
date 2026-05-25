@@ -44,57 +44,60 @@
     <div v-else>
       <!-- Legend -->
       <div class="legend">
-        <span class="leg-item"><span class="cb-on">✓</span> Autorisé</span>
-        <span class="leg-item leg-col">Clic colonne = toggle toute la colonne</span>
-        <span class="leg-item leg-row">Clic service = toggle toute la ligne</span>
-        <span class="leg-item leg-grp">Clic groupe = toggle tout le groupe</span>
+        <span class="leg-item"><span class="cb-on-eg">✓</span> Autorisé</span>
+        <span class="leg-sep">·</span>
+        <span class="leg-item">Clic <strong>en-tête service</strong> = toggle toute la colonne</span>
+        <span class="leg-sep">·</span>
+        <span class="leg-item">Clic <strong>nom permission</strong> = toggle pour tous les services</span>
+        <span class="leg-sep">·</span>
+        <span class="leg-item">Clic <strong>⊡ groupe</strong> = toggle tout le groupe</span>
       </div>
 
-      <!-- Matrix -->
+      <!-- Matrix: permissions as rows, services as columns -->
       <div class="matrix-outer">
         <table class="matrix">
           <thead>
-            <!-- Row 1: group headers -->
-            <tr class="grp-row">
-              <th class="corner" rowspan="2">Service</th>
-              <th v-for="g in actionGroups" :key="g.label" :colspan="g.actions.length" class="grp-hd">
-                <div class="grp-hd-inner">
-                  <span class="grp-hd-label">{{g.label}}</span>
-                  <button class="grp-tog" @click.stop="toggleGroup(g)" title="Tout basculer pour ce groupe (tous services)">⊡</button>
-                </div>
-              </th>
-            </tr>
-            <!-- Row 2: individual permission headers (rotated) -->
-            <tr class="perm-row">
+            <tr>
+              <th class="corner">Permission</th>
               <th
-                v-for="p in allPerms"
-                :key="p.key"
-                class="perm-hd"
-                @click="togglePermColumn(p.key)"
-                :title="'Toggle «' + p.label + '» pour tous les services'"
+                v-for="svc in services"
+                :key="svc.id"
+                class="svc-hd"
+                @click="toggleServiceCol(svc)"
+                :title="'Toggle toutes les permissions pour ' + svc.label"
               >
-                <div class="perm-hd-inner">{{p.label}}</div>
+                <div class="svc-hd-name">{{svc.label}}</div>
+                <div class="svc-hd-count">{{countAllowed(svc.id)}}/{{allPerms.length}}</div>
               </th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="svc in services" :key="svc.id">
-              <td class="svc-cell" @click="toggleServiceRow(svc)" :title="'Toggle toutes les permissions pour ' + svc.label">
-                <div class="svc-inner">
-                  <span class="svc-name">{{svc.label}}</span>
-                  <span class="svc-count">{{countAllowed(svc.id)}}/{{allPerms.length}}</span>
-                </div>
-              </td>
-              <td
-                v-for="p in allPerms"
-                :key="p.key"
-                class="cb-cell"
-                :class="'grp-'+getGroupIndex(p.key)"
-                @click="togglePerm(svc.id, p.key)"
-              >
-                <span :class="isAllowed(svc.id, p.key) ? 'cb-on' : 'cb-off'">{{isAllowed(svc.id, p.key) ? '✓' : ''}}</span>
-              </td>
-            </tr>
+            <template v-for="g in actionGroups" :key="g.label">
+              <!-- Group header row -->
+              <tr class="grp-row">
+                <td :colspan="services.length + 1" class="grp-hd">
+                  <div class="grp-hd-inner">
+                    <span class="grp-hd-label">{{g.label}}</span>
+                    <button class="grp-tog" @click.stop="toggleGroup(g)" title="Tout basculer pour ce groupe (tous services)">⊡ Tout basculer</button>
+                  </div>
+                </td>
+              </tr>
+              <!-- Permission rows -->
+              <tr v-for="p in g.actions" :key="p.key" class="perm-row">
+                <td class="perm-cell" @click="togglePermRow(p.key)" :title="'Toggle «' + p.label + '» pour tous les services'">
+                  <div class="perm-name">{{p.label}}</div>
+                  <div class="perm-key">{{p.key}}</div>
+                </td>
+                <td
+                  v-for="svc in services"
+                  :key="svc.id"
+                  class="cb-cell"
+                  @click="togglePerm(svc.id, p.key)"
+                >
+                  <span :class="isAllowed(svc.id, p.key) ? 'cb-on' : 'cb-off'">{{isAllowed(svc.id, p.key) ? '✓' : ''}}</span>
+                </td>
+              </tr>
+            </template>
           </tbody>
         </table>
       </div>
@@ -130,8 +133,8 @@ export default {
           { key: 'valider_oc', label: 'Valider OC (AQ)' },
           { key: 'autoriser_lancement', label: 'Autoriser lancement (DT)' },
           { key: 'remettre_ordre_production', label: 'Remettre à production' },
-          { key: 'accuser_reception_of', label: 'AR OF' },
-          { key: 'accuser_reception_oc', label: 'AR OC' },
+          { key: 'accuser_reception_of', label: 'Accuser réception OF' },
+          { key: 'accuser_reception_oc', label: 'Accuser réception OC' },
         ]
       },
       {
@@ -139,91 +142,96 @@ export default {
         actions: [
           { key: 'emettre_if', label: 'Émettre IF' },
           { key: 'emettre_ic', label: 'Émettre IC' },
-          { key: 'emettre_da_pc', label: 'Émettre DA PC' },
-          { key: 'emettre_da_micro', label: 'Émettre DA Micro' },
+          { key: 'emettre_da_pc', label: 'Émettre DA Physico-chimie' },
+          { key: 'emettre_da_micro', label: 'Émettre DA Microbiologie' },
           { key: 'emettre_rvp', label: 'Émettre RVP' },
-          { key: 'verifier_if', label: 'Vérifier IF' },
-          { key: 'verifier_ic', label: 'Vérifier IC' },
-          { key: 'verifier_da_pc', label: 'Vérifier DA PC' },
-          { key: 'verifier_da_micro', label: 'Vérifier DA Micro' },
-          { key: 'verifier_rvp', label: 'Vérifier RVP' },
-          { key: 'retourner_document', label: 'Retourner doc.' },
-          { key: 'rectifier_document', label: 'Rectifier doc.' },
-          { key: 'approuver_if', label: 'Approuver IF' },
-          { key: 'approuver_ic', label: 'Approuver IC' },
-          { key: 'approuver_da_pc', label: 'Approuver DA PC' },
-          { key: 'approuver_da_micro', label: 'Approuver DA Micro' },
-          { key: 'approuver_rvp', label: 'Approuver RVP' },
-          { key: 'transferer_dossier_dt', label: 'Transférer au DT' },
+          { key: 'verifier_if', label: 'Vérifier IF (AQ)' },
+          { key: 'verifier_ic', label: 'Vérifier IC (AQ)' },
+          { key: 'verifier_da_pc', label: 'Vérifier DA Physico-chimie (AQ)' },
+          { key: 'verifier_da_micro', label: 'Vérifier DA Microbiologie (AQ)' },
+          { key: 'verifier_rvp', label: 'Vérifier RVP (AQ)' },
+          { key: 'retourner_document', label: 'Retourner un document' },
+          { key: 'rectifier_document', label: 'Rectifier un document' },
+          { key: 'approuver_if', label: 'Approuver IF (DT)' },
+          { key: 'approuver_ic', label: 'Approuver IC (DT)' },
+          { key: 'approuver_da_pc', label: 'Approuver DA Physico-chimie (DT)' },
+          { key: 'approuver_da_micro', label: 'Approuver DA Microbiologie (DT)' },
+          { key: 'approuver_rvp', label: 'Approuver RVP (DT)' },
+          { key: 'transferer_dossier_dt', label: 'Transférer le dossier au DT' },
           { key: 'liberer_lot', label: 'Libérer le lot' },
-          { key: 'doc_delete', label: 'Supprimer doc.' },
+          { key: 'doc_delete', label: 'Supprimer un document' },
         ]
       },
       {
         label: 'AQL',
         actions: [
-          { key: 'demander_aql_fab', label: 'Demander AQL Fab.' },
-          { key: 'demander_aql_cond', label: 'Demander AQL Cond.' },
+          { key: 'demander_aql_fab', label: 'Demander AQL Fabrication' },
+          { key: 'demander_aql_cond', label: 'Demander AQL Conditionnement' },
           { key: 'realiser_aql', label: 'Réaliser AQL' },
-          { key: 'aql_delete', label: 'Supprimer AQL' },
+          { key: 'aql_delete', label: 'Supprimer un AQL' },
         ]
       },
       {
-        label: 'MàJ Docs',
+        label: 'MàJ Documents',
         actions: [
-          { key: 'emettre_maj_if', label: 'Émettre MàJ IF' },
-          { key: 'emettre_maj_ic', label: 'Émettre MàJ IC' },
-          { key: 'emettre_maj_nmcl_of', label: 'MàJ Nmcl OF' },
-          { key: 'emettre_maj_nmcl_oc', label: 'MàJ Nmcl OC' },
-          { key: 'verifier_maj_doc', label: 'Vérifier MàJ (AQ)' },
-          { key: 'approuver_maj_doc', label: 'Approuver MàJ (DT)' },
+          { key: 'emettre_maj_if', label: 'Émettre MàJ IF (Fabrication)' },
+          { key: 'emettre_maj_ic', label: 'Émettre MàJ IC (Conditionnement)' },
+          { key: 'emettre_maj_nmcl_of', label: 'Émettre MàJ Nmcl OF (Planification)' },
+          { key: 'emettre_maj_nmcl_oc', label: 'Émettre MàJ Nmcl OC (Planification)' },
+          { key: 'verifier_maj_doc', label: 'Vérifier une MàJ documentaire (AQ)' },
+          { key: 'approuver_maj_doc', label: 'Approuver une MàJ documentaire (DT)' },
         ]
       },
       {
-        label: 'Clôture SAP',
+        label: 'Clôture SAP — OF',
         actions: [
-          { key: 'emettre_cloture_sap_of', label: 'Émettre clôture OF' },
-          { key: 'valider_cloture_sap_of', label: 'Valider clôture OF' },
-          { key: 'demander_cloture_sap_of', label: 'Demander clôture OF' },
-          { key: 'confirmer_cloture_sap_of', label: 'Confirmer clôture OF' },
-          { key: 'emettre_cloture_sap_oc', label: 'Émettre clôture OC' },
-          { key: 'valider_cloture_sap_oc', label: 'Valider clôture OC' },
-          { key: 'demander_cloture_sap_oc', label: 'Demander clôture OC' },
-          { key: 'confirmer_cloture_sap_oc', label: 'Confirmer clôture OC' },
+          { key: 'emettre_cloture_sap_of', label: 'Émettre demande clôture SAP OF' },
+          { key: 'valider_cloture_sap_of', label: 'Valider clôture SAP OF (Planification)' },
+          { key: 'demander_cloture_sap_of', label: 'Demander clôture SAP OF (Fabrication)' },
+          { key: 'confirmer_cloture_sap_of', label: 'Confirmer clôture SAP OF (Planification)' },
         ]
       },
       {
-        label: 'Planning',
+        label: 'Clôture SAP — OC',
         actions: [
-          { key: 'modifier_planning', label: 'Modifier dates prév.' },
+          { key: 'emettre_cloture_sap_oc', label: 'Émettre demande clôture SAP OC' },
+          { key: 'valider_cloture_sap_oc', label: 'Valider clôture SAP OC (Planification)' },
+          { key: 'demander_cloture_sap_oc', label: 'Demander clôture SAP OC (Conditionnement)' },
+          { key: 'confirmer_cloture_sap_oc', label: 'Confirmer clôture SAP OC (Planification)' },
+        ]
+      },
+      {
+        label: 'Dates prévisionnelles',
+        actions: [
+          { key: 'modifier_planning', label: 'Modifier les dates prévisionnelles' },
         ]
       },
       {
         label: 'Déviations',
         actions: [
-          { key: 'declarer_nc', label: 'Déclarer NC' },
-          { key: 'cloturer_deviation', label: 'Clôturer déviation' },
-          { key: 'dev_bloquer', label: 'Bloquer lot (dév.)' },
-          { key: 'dev_delete', label: 'Supprimer déviation' },
+          { key: 'declarer_nc', label: 'Déclarer une non-conformité' },
+          { key: 'cloturer_deviation', label: 'Clôturer une déviation' },
+          { key: 'dev_bloquer', label: 'Bloquer un lot (déviation bloquante)' },
+          { key: 'dev_delete', label: 'Supprimer une déviation' },
         ]
       },
       {
-        label: 'Fab. / LCQ',
+        label: 'Fabrication / LCQ',
         actions: [
-          { key: 'declarer_etape_fab', label: 'Déclarer étape Fab.' },
-          { key: 'declarer_fin_sf', label: 'Fin semi-fini' },
-          { key: 'declarer_fin_pf', label: 'Fin produit fini' },
-          { key: 'realiser_analyse_pc', label: 'Analyse PC' },
-          { key: 'realiser_analyse_micro', label: 'Analyse Micro' },
+          { key: 'declarer_etape_fab', label: 'Déclarer une étape de fabrication' },
+          { key: 'declarer_fin_sf', label: 'Déclarer fin semi-fini' },
+          { key: 'declarer_fin_pf', label: 'Déclarer fin produit fini' },
+          { key: 'realiser_analyse_pc', label: 'Réaliser analyse physico-chimie' },
+          { key: 'realiser_analyse_micro', label: 'Réaliser analyse microbiologie' },
         ]
       },
       {
-        label: 'Accusés réception',
+        label: 'Accusés de réception',
         actions: [
-          { key: 'accuser_reception_circuit', label: 'AR circuit OF/OC' },
-          { key: 'accuser_reception_document', label: 'AR document' },
-          { key: 'accuser_reception_aql_demande', label: 'AR demande AQL' },
-          { key: 'accuser_reception_aql_resultat', label: 'AR résultat AQL' },
+          { key: 'accuser_reception_circuit', label: 'AR circuit OF/OC (étapes intermédiaires)' },
+          { key: 'accuser_reception_document', label: 'AR document (IF, IC, DA, RVP)' },
+          { key: 'accuser_reception_aql_demande', label: 'AR demande AQL (AQ / LCQ)' },
+          { key: 'accuser_reception_aql_resultat', label: 'AR résultat AQL (Fab. / Cond.)' },
         ]
       },
       {
@@ -231,17 +239,17 @@ export default {
         actions: [
           { key: 'modifier_lot', label: 'Modifier un lot' },
           { key: 'supprimer_lot', label: 'Supprimer un lot' },
-          { key: 'lot_edit_statut_sap', label: 'Modifier statut SAP' },
+          { key: 'lot_edit_statut_sap', label: 'Modifier le statut SAP' },
           { key: 'lot_edit_quarantaine', label: 'Mettre en quarantaine' },
         ]
       },
       {
-        label: 'Dashboard',
+        label: 'Tableau de bord',
         actions: [
-          { key: 'voir_dashboard', label: 'Voir dashboard' },
+          { key: 'voir_dashboard', label: 'Voir le dashboard' },
           { key: 'voir_lots', label: 'Voir les lots' },
-          { key: 'voir_timeline', label: 'Voir timeline' },
-          { key: 'voir_kpi', label: 'Voir KPI' },
+          { key: 'voir_timeline', label: 'Voir la timeline' },
+          { key: 'voir_kpi', label: 'Voir les KPI' },
         ]
       },
     ]
@@ -252,11 +260,6 @@ export default {
       return result
     })
 
-    // Build a map: permKey → groupIndex (for column shading)
-    var groupIndexMap = {}
-    actionGroups.forEach(function(g, gi) { g.actions.forEach(function(a) { groupIndexMap[a.key] = gi }) })
-    var getGroupIndex = function(key) { return groupIndexMap[key] !== undefined ? groupIndexMap[key] % 2 : 0 }
-
     var isAllowed = function(svc, action) {
       return !!(permMap.value[svc] && permMap.value[svc][action])
     }
@@ -266,7 +269,7 @@ export default {
       return Object.values(permMap.value[svcId]).filter(Boolean).length
     }
 
-    // Single toggle
+    // Single cell toggle
     var togglePerm = async function(svc, action) {
       var current = isAllowed(svc, action)
       var newVal = !current
@@ -277,8 +280,8 @@ export default {
       if (error) { permMap.value[svc][action] = current; alert('Erreur : ' + error.message) }
     }
 
-    // Toggle all permissions for a service row
-    var toggleServiceRow = async function(svc) {
+    // Toggle all permissions for a service column
+    var toggleServiceCol = async function(svc) {
       var allowed = countAllowed(svc.id)
       var newVal = allowed === 0
       var rows = allPerms.value.map(function(p) { return { service: svc.id, action: p.key, allowed: newVal } })
@@ -288,8 +291,8 @@ export default {
       if (error) { alert('Erreur : ' + error.message); await loadPermissions() }
     }
 
-    // Toggle a permission column for all services
-    var togglePermColumn = async function(key) {
+    // Toggle a permission row for all services
+    var togglePermRow = async function(key) {
       var totalAllowed = services.value.filter(function(s) { return isAllowed(s.id, key) }).length
       var newVal = totalAllowed === 0
       var rows = services.value.map(function(s) { return { service: s.id, action: key, allowed: newVal } })
@@ -386,8 +389,8 @@ export default {
     return {
       loading, services, actionGroups, allPerms,
       showMgr, editSvc, newSvcId, newSvcLabel, mgrErr,
-      isAllowed, countAllowed, getGroupIndex,
-      togglePerm, toggleServiceRow, togglePermColumn, toggleGroup,
+      isAllowed, countAllowed,
+      togglePerm, toggleServiceCol, togglePermRow, toggleGroup,
       startEditSvc, saveEditSvc, deleteSvc, addSvc
     }
   }
@@ -426,61 +429,91 @@ export default {
 .mgr-err { font-size:12px; color:#E24B4A; margin-top:8px }
 
 /* Legend */
-.legend { display:flex; align-items:center; gap:16px; flex-wrap:wrap; font-size:11px; color:#888; margin-bottom:10px; padding:6px 10px; background:#fafafa; border:1px solid #f0f0f0; border-radius:3px }
-.leg-item { display:flex; align-items:center; gap:4px }
-.cb-on { color:#1D9E75; font-weight:700; font-size:13px }
-.leg-col { cursor:pointer }
-.leg-row { cursor:pointer }
-.leg-grp { cursor:pointer }
+.legend { display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:11px; color:#888; margin-bottom:10px; padding:6px 10px; background:#fafafa; border:1px solid #f0f0f0; border-radius:3px }
+.cb-on-eg { color:#1D9E75; font-weight:700; font-size:13px }
+.leg-sep { color:#ddd }
 
 /* Matrix container */
-.matrix-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid #e8e8e8; border-radius:4px }
-.matrix { border-collapse:collapse; table-layout:fixed }
+.matrix-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid #e0e0e0; border-radius:4px }
+.matrix { border-collapse:collapse; table-layout:fixed; min-width:100% }
 
-/* Corner cell */
-.corner { position:sticky; left:0; z-index:3; background:#f4f7fc; width:170px; min-width:170px; font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.8px; color:#888; text-align:left; padding:8px 10px; border:1px solid #d8e4f0 }
+/* Sticky top-left corner */
+.corner {
+  position:sticky; top:0; left:0; z-index:4;
+  background:#f4f7fc;
+  width:220px; min-width:220px;
+  font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.8px; color:#888;
+  text-align:left; padding:10px 12px;
+  border-bottom:2px solid #d0dff0; border-right:2px solid #d0dff0
+}
 
-/* Group header row */
-.grp-hd { background:#f0f5fb; padding:4px 8px; text-align:center; border:1px solid #d0dff0; white-space:nowrap }
-.grp-hd-inner { display:flex; align-items:center; justify-content:center; gap:6px }
-.grp-hd-label { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; color:#185FA5; white-space:nowrap }
-.grp-tog { font-size:14px; padding:0 3px; border:none; background:none; cursor:pointer; color:#185FA5; opacity:0.6; line-height:1 }
-.grp-tog:hover { opacity:1 }
+/* Service column headers (sticky top) */
+.svc-hd {
+  position:sticky; top:0; z-index:2;
+  background:#f0f5fb;
+  min-width:90px; width:90px;
+  text-align:center; padding:8px 6px;
+  cursor:pointer;
+  border-bottom:2px solid #d0dff0; border-right:1px solid #dde8f4;
+  transition:background .1s
+}
+.svc-hd:hover { background:#e0eefb }
+.svc-hd-name { font-size:11px; font-weight:600; color:#185FA5; line-height:1.3 }
+.svc-hd-count { font-size:10px; color:#aaa; font-family:'SF Mono',monospace; margin-top:2px }
 
-/* Permission header cells (rotated) */
-.perm-hd { width:26px; min-width:26px; max-width:26px; height:140px; vertical-align:bottom; padding:0; cursor:pointer; border:1px solid #e8e8e8 }
-.perm-hd:hover { background:#f0f5fb }
-.perm-hd-inner { writing-mode:vertical-rl; transform:rotate(180deg); font-size:10px; color:#555; white-space:nowrap; padding:6px 7px 10px; font-weight:400; line-height:1 }
+/* Group header rows */
+.grp-row .grp-hd {
+  background:#f4f7fc;
+  padding:7px 12px;
+  border-top:2px solid #d0dff0; border-bottom:1px solid #d8e4f0
+}
+.grp-hd-inner { display:flex; align-items:center; justify-content:space-between }
+.grp-hd-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#185FA5 }
+.grp-tog { font-size:11px; padding:2px 10px; border:1px solid #c0d8f0; background:#fff; color:#185FA5; border-radius:2px; cursor:pointer; font-family:inherit }
+.grp-tog:hover { background:#E6F1FB }
 
-/* Service name (sticky left column) */
-.svc-cell { position:sticky; left:0; z-index:1; background:#fff; width:170px; min-width:170px; padding:0 10px; cursor:pointer; border:1px solid #e8e8e8; border-right:2px solid #d0dff0 }
-.svc-cell:hover { background:#f0f7ff }
-.svc-inner { display:flex; align-items:center; justify-content:space-between; gap:8px }
-.svc-name { font-size:12px; font-weight:600; color:#111; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-.svc-count { font-size:10px; color:#bbb; font-family:'SF Mono',monospace; flex-shrink:0 }
+/* Permission name (sticky left) */
+.perm-cell {
+  position:sticky; left:0; z-index:1;
+  background:#fff;
+  width:220px; min-width:220px;
+  padding:7px 12px;
+  cursor:pointer;
+  border-bottom:1px solid #f0f0f0; border-right:2px solid #e8eef6
+}
+.perm-cell:hover { background:#f7fbff }
+.perm-name { font-size:12px; color:#222; line-height:1.3 }
+.perm-key { font-size:10px; color:#ccc; font-family:'SF Mono',monospace; margin-top:1px }
 
 /* Checkbox cells */
-.cb-cell { width:26px; min-width:26px; max-width:26px; text-align:center; padding:0; cursor:pointer; border:1px solid #ebebeb; transition:background .1s }
-.cb-cell:hover { background:#e6f1fb !important }
-.cb-on { color:#1D9E75; font-size:13px; font-weight:700 }
-.cb-off { color:transparent; font-size:13px }
+.cb-cell {
+  text-align:center; padding:0;
+  cursor:pointer;
+  border-bottom:1px solid #f0f0f0; border-right:1px solid #f0f0f0;
+  transition:background .1s
+}
+.cb-cell:hover { background:#e6f1fb }
+.cb-on { color:#1D9E75; font-size:15px; font-weight:700 }
+.cb-off { color:transparent; font-size:15px }
 
-/* Alternating group shading */
-.grp-0 { background:#fff }
-.grp-1 { background:#fafbfd }
-tbody tr:hover .cb-cell { background:#f7faff }
-tbody tr:hover .svc-cell { background:#f0f7ff }
-tbody tr { height:36px }
+/* Alternating permission rows */
+.perm-row:nth-child(even) .cb-cell { background:#fafbfd }
+.perm-row:nth-child(even) .cb-cell:hover { background:#e6f1fb }
+.perm-row:nth-child(even) .perm-cell { background:#fafbfd }
+.perm-row:nth-child(even) .perm-cell:hover { background:#f0f7ff }
+.perm-row { height:36px }
 
 /* Loading */
 .em { text-align:center; padding:40px; color:#999; font-size:13px }
 
 /* Responsive */
 @media (max-width:768px) {
-  .corner { width:120px; min-width:120px }
-  .svc-cell { width:120px; min-width:120px }
-  .svc-name { font-size:11px }
-  .legend { gap:10px; font-size:10px }
+  .corner { width:150px; min-width:150px }
+  .perm-cell { width:150px; min-width:150px }
+  .svc-hd { min-width:70px; width:70px }
+  .svc-hd-name { font-size:10px }
+  .perm-name { font-size:11px }
+  .legend { font-size:10px; gap:6px }
   .mgr-add { flex-direction:column }
   .mgr-add .btn-add { width:100% }
 }
