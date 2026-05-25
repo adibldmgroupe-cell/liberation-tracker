@@ -68,6 +68,7 @@
               >
                 <div class="svc-hd-name">{{svc.label}}</div>
                 <div class="svc-hd-count">{{countAllowed(svc.id)}}/{{allPerms.length}}</div>
+                <button class="svc-reset-btn" @click.stop="resetService(svc)" title="Réinitialiser aux permissions par défaut">↺ Réinit.</button>
               </th>
             </tr>
           </thead>
@@ -323,6 +324,86 @@ export default {
       if (error) { alert('Erreur : ' + error.message); await loadPermissions() }
     }
 
+    // Permissions par défaut par service
+    var defaultPermissions = {
+      planification: [
+        'valider_quantites_of','valider_quantites_oc',
+        'accuser_reception_of','accuser_reception_oc',
+        'valider_cloture_sap_of','confirmer_cloture_sap_of',
+        'valider_cloture_sap_oc','confirmer_cloture_sap_oc',
+        'emettre_maj_nmcl_of','emettre_maj_nmcl_oc',
+        'modifier_planning',
+        'voir_lots','voir_dashboard','voir_timeline','voir_kpi'
+      ],
+      stock: [
+        'voir_lots','voir_dashboard'
+      ],
+      aq: [
+        'creer_lot','mettre_en_circuit_of','mettre_en_circuit_oc',
+        'valider_of','valider_oc',
+        'verifier_if','verifier_ic','verifier_da_pc','verifier_da_micro','verifier_rvp',
+        'retourner_document','rectifier_document',
+        'liberer_lot',
+        'demander_aql_fab','demander_aql_cond',
+        'verifier_maj_doc',
+        'declarer_nc','cloturer_deviation','dev_bloquer',
+        'accuser_reception_circuit','accuser_reception_document','accuser_reception_aql_demande',
+        'modifier_lot','lot_edit_statut_sap','lot_edit_quarantaine',
+        'voir_lots','voir_dashboard','voir_timeline','voir_kpi'
+      ],
+      aq_dap: [
+        'remettre_ordre_production',
+        'accuser_reception_circuit',
+        'voir_lots','voir_dashboard'
+      ],
+      dt: [
+        'autoriser_lancement',
+        'approuver_if','approuver_ic','approuver_da_pc','approuver_da_micro','approuver_rvp',
+        'transferer_dossier_dt',
+        'approuver_maj_doc',
+        'voir_lots','voir_dashboard','voir_timeline','voir_kpi'
+      ],
+      fabrication: [
+        'mettre_en_circuit_of',
+        'emettre_if','emettre_maj_if',
+        'emettre_cloture_sap_of','demander_cloture_sap_of',
+        'declarer_etape_fab','declarer_fin_sf','declarer_fin_pf',
+        'accuser_reception_circuit','accuser_reception_aql_resultat',
+        'dev_bloquer',
+        'voir_lots','voir_dashboard'
+      ],
+      conditionnement: [
+        'mettre_en_circuit_oc',
+        'emettre_ic','emettre_maj_ic',
+        'emettre_cloture_sap_oc','demander_cloture_sap_oc',
+        'accuser_reception_circuit','accuser_reception_aql_resultat',
+        'voir_lots','voir_dashboard'
+      ],
+      lcq: [
+        'realiser_aql',
+        'realiser_analyse_pc','realiser_analyse_micro',
+        'modifier_planning',
+        'accuser_reception_aql_demande',
+        'voir_lots','voir_dashboard','voir_timeline','voir_kpi'
+      ],
+      admin: null // null = toutes les permissions
+    }
+
+    var resetService = async function(svc) {
+      if (!confirm('Réinitialiser les permissions de "' + svc.label + '" aux valeurs par défaut ?')) return
+      var defaults = defaultPermissions[svc.id]
+      var defaultSet = defaults === null
+        ? new Set(allPerms.value.map(function(p) { return p.key }))
+        : new Set(defaults || [])
+      var rows = allPerms.value.map(function(p) {
+        return { service: svc.id, action: p.key, allowed: defaultSet.has(p.key) }
+      })
+      if (!permMap.value[svc.id]) permMap.value[svc.id] = {}
+      allPerms.value.forEach(function(p) { permMap.value[svc.id][p.key] = defaultSet.has(p.key) })
+      var { error } = await supabase.from('permissions').upsert(rows, { onConflict: 'service,action' })
+      if (error) { alert('Erreur : ' + error.message); await loadPermissions() }
+    }
+
     var loadPermissions = async function() {
       var res = await supabase.from('permissions').select('service, action, allowed')
       var map = {}
@@ -390,7 +471,7 @@ export default {
       loading, services, actionGroups, allPerms,
       showMgr, editSvc, newSvcId, newSvcLabel, mgrErr,
       isAllowed, countAllowed,
-      togglePerm, toggleServiceCol, togglePermRow, toggleGroup,
+      togglePerm, toggleServiceCol, togglePermRow, toggleGroup, resetService,
       startEditSvc, saveEditSvc, deleteSvc, addSvc
     }
   }
@@ -460,6 +541,8 @@ export default {
 .svc-hd:hover { background:#e0eefb }
 .svc-hd-name { font-size:11px; font-weight:600; color:#185FA5; line-height:1.3 }
 .svc-hd-count { font-size:10px; color:#aaa; font-family:'SF Mono',monospace; margin-top:2px }
+.svc-reset-btn { display:block; margin:5px auto 0; font-size:10px; padding:2px 7px; border:1px solid #c0d8f0; background:#fff; color:#185FA5; border-radius:2px; cursor:pointer; font-family:inherit; white-space:nowrap; opacity:0.7; transition:.1s }
+.svc-reset-btn:hover { opacity:1; background:#E6F1FB }
 
 /* Group header rows */
 .grp-row .grp-hd {
