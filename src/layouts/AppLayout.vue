@@ -18,6 +18,7 @@
         </router-link>
         <div class="nav-sep">Tracking production</div>
         <router-link to="/production/plan" class="nav-item nav-plan" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🗺</span>Plan Production</router-link>
+        <router-link to="/production/flux" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🔬</span>Schéma Flux</router-link>
         <router-link to="/tracking/pdp-fab" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🏭</span>PDP Fabrication</router-link>
         <router-link to="/tracking/pdp-cond" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">📦</span>PDP Conditionnement</router-link>
         <router-link to="/tracking/trs" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">⚡</span>TRS Live</router-link>
