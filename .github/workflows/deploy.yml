@@ -19,11 +19,13 @@ jobs:
           node-version: 20
       - name: Install poppler-utils (PDF → PNG)
         run: sudo apt-get install -y poppler-utils
-      - name: Convert PDF plans to PNG
+      - name: Convert PDF plans to PNG (page 1 uniquement, nom fixe)
         run: |
-          pdftoppm -r 150 -png public/plans/P004.pdf public/plans/P004_page
-          pdftoppm -r 150 -png public/plans/P027.pdf public/plans/P027_page
-          ls -lh public/plans/
+          pdftoppm -r 150 -png -f 1 -l 1 public/plans/P004.pdf /tmp/p004
+          mv /tmp/p004*.png public/plans/P004_plan.png
+          pdftoppm -r 150 -png -f 1 -l 1 public/plans/P027.pdf /tmp/p027
+          mv /tmp/p027*.png public/plans/P027_plan.png
+          echo "=== Plans générés ===" && ls -lh public/plans/*.png
       - run: npm install
       - run: npm run build
         env:
