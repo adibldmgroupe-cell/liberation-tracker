@@ -22,6 +22,7 @@ const routes = [
       // Routes administration — réservées au service 'admin'
       { path: 'admin/users', name: 'AdminUsers', component: () => import('../pages/AdminUsersPage.vue'), meta: { requiresAdmin: true } },
       { path: 'admin/permissions', name: 'AdminPermissions', component: () => import('../pages/AdminPermissionsPage.vue'), meta: { requiresAdmin: true } },
+      { path: 'admin/products', name: 'AdminProducts', component: () => import('../pages/ProductsCatalogPage.vue'), meta: { requiresAdmin: true } },
     ],
   },
 ]

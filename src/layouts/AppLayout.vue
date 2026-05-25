@@ -20,6 +20,7 @@
           <div class="nav-sep">Administration</div>
           <router-link to="/admin/users" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">👥</span>Utilisateurs</router-link>
           <router-link to="/admin/permissions" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🔑</span>Permissions</router-link>
+          <router-link to="/admin/products" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">📦</span>Catalogue produits</router-link>
         </template>
       </nav>
       <div class="sidebar-user" v-if="profile">
