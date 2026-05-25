@@ -87,38 +87,42 @@ export default {
     var loadPendingTasksCount = async function(svc) {
       if (!svc) return
       var total = 0
+      // Récupérer les IDs des lots acceptés pour les exclure
+      var accRes = await supabase.from('lots').select('id').eq('statut_sap','accepte')
+      var accIds = (accRes.data||[]).map(function(l){return l.id})
+      var excl = function(q){ return accIds.length ? q.not('lot_id','in','('+accIds.join(',')+')') : q }
       // Circuits
       var circEtapeMap = {planification:'planification',stock:'stock',aq:'aq',dt:'dt',aq_dap:'aq_dap'}
       var circEtape = circEtapeMap[svc]
       if (circEtape) {
-        var r1 = await supabase.from('orders_of').select('id',{count:'exact',head:true}).eq('statut','en_circuit').eq('etape_circuit',circEtape)
+        var r1 = await excl(supabase.from('orders_of').select('id',{count:'exact',head:true}).eq('statut','en_circuit').eq('etape_circuit',circEtape))
         total += r1.count||0
-        var r2 = await supabase.from('orders_oc').select('id',{count:'exact',head:true}).eq('statut','en_circuit').eq('etape_circuit',circEtape)
+        var r2 = await excl(supabase.from('orders_oc').select('id',{count:'exact',head:true}).eq('statut','en_circuit').eq('etape_circuit',circEtape))
         total += r2.count||0
       } else if (svc==='fabrication') {
-        var r3 = await supabase.from('orders_of').select('id',{count:'exact',head:true}).eq('statut','en_circuit').eq('etape_circuit','production')
+        var r3 = await excl(supabase.from('orders_of').select('id',{count:'exact',head:true}).eq('statut','en_circuit').eq('etape_circuit','production'))
         total += r3.count||0
       } else if (svc==='conditionnement') {
-        var r4 = await supabase.from('orders_oc').select('id',{count:'exact',head:true}).eq('statut','en_circuit').eq('etape_circuit','production')
+        var r4 = await excl(supabase.from('orders_oc').select('id',{count:'exact',head:true}).eq('statut','en_circuit').eq('etape_circuit','production'))
         total += r4.count||0
       }
       // Documents
       if (svc==='aq') {
-        var r5 = await supabase.from('liberation_documents').select('id',{count:'exact',head:true}).in('statut',['emis','verification_aq']).eq('is_applicable',true)
+        var r5 = await excl(supabase.from('liberation_documents').select('id',{count:'exact',head:true}).in('statut',['emis','verification_aq']).eq('is_applicable',true))
         total += r5.count||0
       } else if (svc==='dt') {
-        var r6 = await supabase.from('liberation_documents').select('id',{count:'exact',head:true}).eq('statut','approuve_aq').eq('is_applicable',true)
+        var r6 = await excl(supabase.from('liberation_documents').select('id',{count:'exact',head:true}).eq('statut','approuve_aq').eq('is_applicable',true))
         total += r6.count||0
       } else {
-        var r7 = await supabase.from('liberation_documents').select('id',{count:'exact',head:true}).eq('statut','retour_emetteur').eq('service_emetteur',svc).eq('is_applicable',true)
+        var r7 = await excl(supabase.from('liberation_documents').select('id',{count:'exact',head:true}).eq('statut','retour_emetteur').eq('service_emetteur',svc).eq('is_applicable',true))
         total += r7.count||0
       }
       // AR
-      var r8 = await supabase.from('liberation_documents').select('id',{count:'exact',head:true}).eq('pending_ar_service',svc)
+      var r8 = await excl(supabase.from('liberation_documents').select('id',{count:'exact',head:true}).eq('pending_ar_service',svc))
       total += r8.count||0
-      var r9 = await supabase.from('orders_of').select('id',{count:'exact',head:true}).eq('pending_ar_service',svc)
+      var r9 = await excl(supabase.from('orders_of').select('id',{count:'exact',head:true}).eq('pending_ar_service',svc))
       total += r9.count||0
-      var r10 = await supabase.from('orders_oc').select('id',{count:'exact',head:true}).eq('pending_ar_service',svc)
+      var r10 = await excl(supabase.from('orders_oc').select('id',{count:'exact',head:true}).eq('pending_ar_service',svc))
       total += r10.count||0
       pendingTasksCount.value = total
     }

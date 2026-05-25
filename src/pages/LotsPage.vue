@@ -4,6 +4,7 @@
       <span class="pt">LOTS</span>
       <div class="ph-right">
         <span class="pc" v-if="total">{{total}} lots</span>
+        <button class="btn-toggle btn-accepted" :class="{'btn-accepted-on': hideAccepted}" @click.stop="toggleHideAccepted">{{hideAccepted ? '✅ Acceptés' : '☐ Acceptés'}}</button>
         <button class="btn-toggle" @click.stop="showDates=!showDates">{{showDates?'Voir statuts':'Voir dates'}}</button>
         <div class="col-panel-wrap" @click.stop>
           <button class="btn-cols" :class="{'btn-cols-on':showColPanel}" @click="showColPanel=!showColPanel">⚙ Colonnes</button>
@@ -288,6 +289,8 @@ export default {
     var route = useRoute(), router = useRouter()
     var lots = ref([]), total = ref(0), activeFilters = ref([])
     var sortCol = ref(''), sortDir = ref('asc'), showDates = ref(false)
+    var hideAccepted = ref(localStorage.getItem('lots_hide_accepted') !== 'false')
+    var toggleHideAccepted = function() { hideAccepted.value = !hideAccepted.value; localStorage.setItem('lots_hide_accepted', String(hideAccepted.value)) }
     var selected = ref([]), actionType = ref(''), showConfirm = ref(false)
     var executing = ref(false), progress = ref(0), execResult = ref(null)
     var userService = ref(''), bulkDate = ref('')
@@ -1420,6 +1423,7 @@ var loadCharge = async function() {
 
     var filteredLots = computed(function(){
       var result = lots.value
+      if(hideAccepted.value){result=result.filter(function(l){return l.statut_sap!=='accepte'})}
       if(activeFilters.value.length>0){result=result.filter(function(l){return activeFilters.value.indexOf(l.statut_filter)>=0})}
       var cf=columnFilters.value,cfk=Object.keys(cf)
       if(cfk.length>0){result=result.filter(function(l){return cfk.every(function(k){return l[k]===cf[k]})})}
@@ -1811,7 +1815,7 @@ var loadCharge = async function() {
     onUnmounted(function(){document.removeEventListener('click', closeAll)})
     watch(function(){return route.query},load,{deep:true})
 
-    return{lots,total,activeFilters,showDates,filteredLots,filterOptions,
+    return{lots,total,activeFilters,showDates,hideAccepted,toggleHideAccepted,filteredLots,filterOptions,
       toggleFilter,sortBy,sortIcon,goToLot,doExportExcel,doExportPDF,
       selected,actionType,showConfirm,executing,progress,execResult,bulkDate,
       actionLabel,canExecute,allVisibleChecked,someVisibleChecked,
@@ -1835,6 +1839,7 @@ var loadCharge = async function() {
 .ph-right{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .btn-exp{font-size:11px;padding:4px 10px;border:1px solid #ddd;border-radius:3px;background:#fff;cursor:pointer;color:#666;font-family:inherit}.btn-exp:hover{background:#f5f5f5}
 .btn-toggle{font-size:11px;padding:4px 10px;border:1px solid #185FA5;border-radius:3px;background:#E6F1FB;cursor:pointer;color:#0C447C;font-family:inherit}.btn-toggle:hover{background:#d0e3f5}
+.btn-accepted{border-color:#ccc;background:#fff;color:#999}.btn-accepted:hover{background:#f5f5f5;border-color:#bbb}.btn-accepted-on{border-color:#1D9E75;background:#EAF3DE;color:#3B6D11}.btn-accepted-on:hover{background:#d8edcc}
 .btn-cols{font-size:11px;padding:4px 10px;border:1px solid #ddd;border-radius:3px;background:#fff;cursor:pointer;color:#666;font-family:inherit;white-space:nowrap}.btn-cols:hover{background:#f5f5f5}.btn-cols-on{border-color:#185FA5;background:#E6F1FB;color:#0C447C}
 .col-panel-wrap{position:relative}
 .col-panel{position:absolute;top:calc(100% + 4px);right:0;background:#fff;border:1px solid #ddd;border-radius:4px;box-shadow:0 6px 20px rgba(0,0,0,.12);z-index:300;padding:10px;min-width:180px}
