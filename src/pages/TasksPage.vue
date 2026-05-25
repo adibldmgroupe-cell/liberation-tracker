@@ -63,13 +63,13 @@
             <div v-if="grp.open" class="tp-grp-body">
               <!-- En-tête colonnes tri -->
               <div class="tp-grp-sort-hd">
+                <span class="tp-sort-col tp-sort-sap">Statut</span>
                 <span class="tp-sort-col tp-sort-lot" @click.stop="toggleSort(grp,'lotNum')">
                   N° Lot <span class="tp-sort-icon">{{sortIcon(grp,'lotNum')}}</span>
                 </span>
                 <span class="tp-sort-col tp-sort-desc" @click.stop="toggleSort(grp,'prodDesc')">
                   Désignation <span class="tp-sort-icon">{{sortIcon(grp,'prodDesc')}}</span>
                 </span>
-                <span class="tp-sort-col tp-sort-sap">Statut SAP</span>
                 <span class="tp-sort-col tp-sort-since">Depuis</span>
                 <span class="tp-sort-col tp-sort-acts">Actions</span>
               </div>
@@ -84,9 +84,9 @@
                 </div>
                 <!-- Ligne normale -->
                 <div v-else class="tp-doc-item">
+                  <span class="tp-sap-badge" :class="'sap-'+(d.statutSap||'vide')">{{SAP_SHORT[d.statutSap]||''}}</span>
                   <span class="tp-lot-mono" @click="$router.push('/lots/'+d.lotId)">{{d.lotNum}}</span>
                   <span class="tp-prod-desc">{{d.prodDesc}}<span class="tp-prod-code">{{d.prodCode}}</span></span>
-                  <span class="tp-sap-badge" :class="'sap-'+(d.statutSap||'vide')">{{SAP_SHORT[d.statutSap]||''}}</span>
                   <span v-if="d.sinceText" class="tp-doc-since" :class="d.sinceClass">{{d.sinceText}}</span>
                   <div class="tp-doc-btns">
                     <button v-if="d.canAct" class="tp-do-btn" :disabled="d.acting" @click.stop="doDocAction(d,grp,cat)">{{d.acting?'…':d.btnLabel}}</button>
@@ -103,9 +103,9 @@
         <div v-else-if="cat.open" class="tp-cat-list">
           <div v-for="item in getItemsForCat(cat)" :key="item.key" class="tp-item">
             <div class="tp-item-main" @click="$router.push('/lots/'+item.lotId)">
+              <span class="tp-sap-badge" :class="'sap-'+(item.statutSap||'vide')">{{SAP_SHORT[item.statutSap]||''}}</span>
               <span class="tp-item-lot">{{item.lotNum}}</span>
               <span v-if="item.urgent" class="tp-item-bl">⚠ BLQ</span>
-              <span class="tp-sap-badge" :class="'sap-'+(item.statutSap||'vide')">{{SAP_SHORT[item.statutSap]||''}}</span>
               <span class="tp-item-prod">{{item.prodDesc}}</span>
             </div>
             <div class="tp-item-right">
@@ -757,43 +757,44 @@ export default {
 .tp-grp-badge{font-size:10px;font-weight:600;color:#185FA5;background:#E6F1FB;padding:1px 7px;border-radius:8px;white-space:nowrap;flex-shrink:0}
 .tp-grp-chev{font-size:10px;color:#bbb;flex-shrink:0}
 
+/* ── Statut SAP badge (colonne 1, avant N° lot) ─────────────────── */
+/* Largeurs fixes synchronisées avec l'en-tête de tri */
+.tp-sap-badge{font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;white-space:nowrap;flex-shrink:0;width:52px;text-align:center;box-sizing:border-box;display:inline-block}
+.sap-quarantaine{background:#FAEEDA;color:#854F0B}
+.sap-sous_investigation{background:#FCEBEB;color:#A32D2D}
+.sap-refuse{background:#e8e8e8;color:#555}
+.sap-vide,.sap-{visibility:hidden}  /* réserve l'espace, badge invisible si vide */
+
 /* ── En-tête colonnes tri (niveau 3) ─────────────────────────────── */
 .tp-grp-body{background:#fafcff;border-top:1px solid #eef3fb}
 .tp-grp-sort-hd{display:flex;align-items:center;gap:8px;padding:5px 18px 5px 32px;background:#f0f4fa;border-bottom:1px solid #e2eaf5}
-.tp-sort-col{font-size:9px;font-weight:700;color:#9aabbf;text-transform:uppercase;letter-spacing:.4px;display:flex;align-items:center;gap:3px;user-select:none;padding:2px 0}
+.tp-sort-col{font-size:9px;font-weight:700;color:#9aabbf;text-transform:uppercase;letter-spacing:.4px;display:flex;align-items:center;gap:3px;user-select:none;padding:2px 0;flex-shrink:0}
 .tp-sort-col.tp-sort-lot,.tp-sort-col.tp-sort-desc{cursor:pointer;transition:.1s}.tp-sort-col.tp-sort-lot:hover,.tp-sort-col.tp-sort-desc:hover{color:#185FA5}
-.tp-sort-lot{width:110px;flex-shrink:0}
-.tp-sort-desc{flex:1}
-.tp-sort-sap{width:68px;flex-shrink:0;cursor:default}
-.tp-sort-since{width:80px;flex-shrink:0;cursor:default}
-.tp-sort-acts{width:130px;flex-shrink:0;cursor:default}
+.tp-sort-sap{width:52px}
+.tp-sort-lot{width:116px}   /* badge(52) + gap(8) + padding lot = alignement exact */
+.tp-sort-desc{flex:1;min-width:0}
+.tp-sort-since{width:96px}
+.tp-sort-acts{width:200px;text-align:right}
 .tp-sort-icon{font-size:10px}
 
 /* ── Items dans groupes (niveau 4) ───────────────────────────────── */
-.tp-doc-item{display:flex;align-items:center;padding:7px 18px 7px 32px;border-bottom:1px solid #f0f4f8;gap:8px}.tp-doc-item:last-child{border-bottom:none}.tp-doc-item:hover{background:#eef5ff}
-.tp-lot-mono{font-family:'SF Mono','Fira Code',monospace;font-size:10px;font-weight:600;white-space:nowrap;flex-shrink:0;cursor:pointer;color:#0C447C;width:110px;background:#EBF3FF;padding:2px 5px;border-radius:2px}
+.tp-doc-item{display:flex;align-items:center;padding:7px 18px 7px 32px;border-bottom:1px solid #f0f4f8;gap:8px;min-width:0}.tp-doc-item:last-child{border-bottom:none}.tp-doc-item:hover{background:#eef5ff}
+.tp-lot-mono{font-family:'SF Mono','Fira Code',monospace;font-size:10px;font-weight:600;white-space:nowrap;flex-shrink:0;cursor:pointer;color:#0C447C;width:108px;background:#EBF3FF;padding:2px 5px;border-radius:2px}
 .tp-lot-mono:hover{text-decoration:underline}
-.tp-prod-desc{font-size:11px;color:#444;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.tp-prod-desc{font-size:11px;color:#444;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
 .tp-prod-code{font-size:9px;color:#aaa;font-family:'SF Mono',monospace;margin-left:4px}
-.tp-doc-since{font-size:10px;font-weight:600;white-space:nowrap;flex-shrink:0;padding:1px 7px;border-radius:8px;width:68px;text-align:center;box-sizing:border-box}
+.tp-doc-since{font-size:10px;font-weight:600;white-space:nowrap;flex-shrink:0;padding:2px 8px;border-radius:8px;width:88px;text-align:center;box-sizing:border-box}
 .since-ok{background:#EAF3DE;color:#3B6D11}
 .since-orange{background:#FEF5E7;color:#A0620D}
 .since-red{background:#FCEBEB;color:#A32D2D}
 
-/* Statut SAP badge */
-.tp-sap-badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;white-space:nowrap;flex-shrink:0;width:68px;text-align:center;box-sizing:border-box}
-.sap-quarantaine{background:#FAEEDA;color:#854F0B}
-.sap-sous_investigation{background:#FCEBEB;color:#A32D2D}
-.sap-refuse{background:#e8e8e8;color:#555}
-.sap-vide,.sap-{background:transparent;color:transparent}
-
 /* Action buttons */
-.tp-doc-btns{display:flex;gap:4px;flex-shrink:0;width:130px;justify-content:flex-end}
-.tp-do-btn{padding:3px 10px;font-size:11px;font-weight:600;font-family:inherit;border-radius:3px;border:1px solid #185FA5;background:#E6F1FB;color:#185FA5;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:.1s}.tp-do-btn:hover{background:#185FA5;color:#fff}.tp-do-btn:disabled{opacity:.5;cursor:default}
+.tp-doc-btns{display:flex;gap:4px;flex-shrink:0;width:200px;justify-content:flex-end}
+.tp-do-btn{padding:3px 11px;font-size:11px;font-weight:600;font-family:inherit;border-radius:3px;border:1px solid #185FA5;background:#E6F1FB;color:#185FA5;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:.1s}.tp-do-btn:hover{background:#185FA5;color:#fff}.tp-do-btn:disabled{opacity:.5;cursor:default}
 .tp-do-ok{border-color:#1D9E75;background:#EAF3DE;color:#1D9E75}.tp-do-ok:hover{background:#1D9E75;color:#fff}
 .tp-do-nok{border-color:#A32D2D;background:#FCEBEB;color:#A32D2D}.tp-do-nok:hover{background:#A32D2D;color:#fff}
 .tp-do-ret{border-color:#A0620D;background:#FEF5E7;color:#A0620D}.tp-do-ret:hover{background:#A0620D;color:#fff}
-.tp-item-arr{font-size:12px;color:#ccc;cursor:pointer;padding:0 2px;flex-shrink:0}.tp-item-arr:hover{color:#185FA5}
+.tp-item-arr{font-size:12px;color:#ccc;cursor:pointer;padding:0 2px;flex-shrink:0;margin-left:4px}.tp-item-arr:hover{color:#185FA5}
 
 /* Motif retour inline */
 .tp-return-row{display:flex;align-items:center;gap:8px;padding:8px 18px 8px 32px;background:#FEF5E7;border-bottom:1px solid #f0e0c0;flex-wrap:wrap}
@@ -806,9 +807,47 @@ export default {
 .tp-item-main{display:flex;align-items:center;gap:8px;min-width:0;flex:1;cursor:pointer}
 .tp-item-lot{font-family:'SF Mono','Fira Code',monospace;font-size:11px;font-weight:600;color:#0C447C;white-space:nowrap;background:#EBF3FF;padding:2px 7px;border-radius:3px;flex-shrink:0}
 .tp-item-bl{font-size:10px;font-weight:700;color:#A32D2D;background:#FCEBEB;padding:1px 5px;border-radius:2px;white-space:nowrap;flex-shrink:0}
-.tp-item-prod{font-size:12px;color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.tp-item-prod{font-size:12px;color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
 .tp-item-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .tp-item-action{font-size:11px;font-weight:500;white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis}
 .tp-action-blue{color:#185FA5}
 .tp-action-red{color:#A32D2D}
+
+/* ── Responsive mobile ───────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .tp{padding:2px 0 32px}
+  /* Catégorie : titre plus compact */
+  .tp-cat-hd{padding:10px 14px}
+  .tp-cat-title{font-size:10px;letter-spacing:.6px}
+
+  /* Groupe : moins d'indent */
+  .tp-grp-hd{padding:8px 12px 8px 16px}
+
+  /* En-tête tri : masqué sur mobile (trop étroit) */
+  .tp-grp-sort-hd{display:none}
+
+  /* Items groupes : 2 lignes empilées */
+  .tp-doc-item{flex-wrap:wrap;padding:8px 12px 8px 18px;gap:4px 8px;align-items:flex-start}
+  /* Ligne 1 : badge + N° lot + désignation */
+  .tp-sap-badge{width:auto;flex-shrink:0;align-self:center}
+  .tp-lot-mono{width:auto;align-self:center}
+  .tp-prod-desc{order:1;width:100%;flex:none;margin-top:2px;padding-left:0}
+  /* Ligne 2 : depuis + boutons */
+  .tp-doc-since{order:2;margin-top:4px;width:auto}
+  .tp-doc-btns{order:3;margin-top:4px;width:auto;margin-left:auto}
+  .tp-item-arr{order:4;align-self:flex-start;margin-top:4px}
+
+  /* Items plats : stack */
+  .tp-item{flex-wrap:wrap;padding:10px 12px 10px 16px;gap:6px}
+  .tp-item-main{width:100%}
+  .tp-item-right{width:100%;justify-content:flex-end}
+  .tp-item-action{flex:1;max-width:none}
+
+  /* Retour motif */
+  .tp-return-row{padding:8px 12px 8px 18px}
+
+  /* Cacher la désignation dans l'en-tête groupe sur mobile */
+  .tp-grp-action{display:none}
+  .tp-grp-sep{display:none}
+}
 </style>
