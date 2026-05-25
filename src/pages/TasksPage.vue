@@ -143,7 +143,7 @@ export default {
 
     var SVC_LABELS = {planification:'Planification',stock:'Stock',aq:'Assurance Qualité',aq_dap:'AQ DAP',dt:'Direction Technique',fabrication:'Fabrication',conditionnement:'Conditionnement',lcq:'Laboratoire CQ',admin:'Administration'}
     var SVC_LABELS_ALL = {aq:'Assurance Qualité',dt:'Direction Technique',planification:'Planification',stock:'Stock',fabrication:'Fabrication',conditionnement:'Conditionnement',lcq:'Laboratoire CQ',aq_dap:'AQ DAP'}
-    var SAP_SHORT = {quarantaine:'Qtné',sous_investigation:'S.I.',refuse:'Refêsé',vide:''}
+    var SAP_SHORT = {quarantaine:'Quarantaine',sous_investigation:'Sous investigation',refuse:'Refusé',vide:''}
     var DOC_TYPE_LABELS = {if:'IF',ic:'IC',da_pc:'DA Physico',da_micro:'DA Micro',rvp:'RVP',maj_if:'MàJ IF',maj_ic:'MàJ IC',maj_nmcl_of:'MàJ N. OF',maj_nmcl_oc:'MàJ N. OC',cloture_sap_of:'Clôt. OF',cloture_sap_oc:'Clôt. OC'}
     var SVC_MAP = {'if':'fabrication',ic:'conditionnement',da_pc:'lcq',da_micro:'lcq',maj_if:'fabrication',maj_ic:'conditionnement',maj_nmcl_of:'planification',maj_nmcl_oc:'planification'}
     var FLOW = ['planification','stock','aq','dt','aq_dap']
@@ -759,7 +759,7 @@ export default {
 
 /* ── Statut SAP badge (colonne 1, avant N° lot) ─────────────────── */
 /* Largeurs fixes synchronisées avec l'en-tête de tri */
-.tp-sap-badge{font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;white-space:nowrap;flex-shrink:0;width:52px;text-align:center;box-sizing:border-box;display:inline-block}
+.tp-sap-badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;white-space:nowrap;flex-shrink:0;width:110px;text-align:center;box-sizing:border-box;display:inline-block}
 .sap-quarantaine{background:#FAEEDA;color:#854F0B}
 .sap-sous_investigation{background:#FCEBEB;color:#A32D2D}
 .sap-refuse{background:#e8e8e8;color:#555}
@@ -770,7 +770,7 @@ export default {
 .tp-grp-sort-hd{display:flex;align-items:center;gap:8px;padding:5px 18px 5px 32px;background:#f0f4fa;border-bottom:1px solid #e2eaf5}
 .tp-sort-col{font-size:9px;font-weight:700;color:#9aabbf;text-transform:uppercase;letter-spacing:.4px;display:flex;align-items:center;gap:3px;user-select:none;padding:2px 0;flex-shrink:0}
 .tp-sort-col.tp-sort-lot,.tp-sort-col.tp-sort-desc{cursor:pointer;transition:.1s}.tp-sort-col.tp-sort-lot:hover,.tp-sort-col.tp-sort-desc:hover{color:#185FA5}
-.tp-sort-sap{width:52px}
+.tp-sort-sap{width:110px}
 .tp-sort-lot{width:116px}   /* badge(52) + gap(8) + padding lot = alignement exact */
 .tp-sort-desc{flex:1;min-width:0}
 .tp-sort-since{width:96px}
