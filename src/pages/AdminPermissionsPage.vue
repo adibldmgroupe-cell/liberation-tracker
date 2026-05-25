@@ -50,7 +50,7 @@
         <span class="leg-sep">·</span>
         <span class="leg-item">Clic <strong>nom permission</strong> = toggle pour tous les services</span>
         <span class="leg-sep">·</span>
-        <span class="leg-item">Clic <strong>⊡ groupe</strong> = toggle tout le groupe</span>
+        <span class="leg-item">Clic <strong>⊡ dans groupe</strong> = toggle ce groupe pour ce service</span>
       </div>
 
       <!-- Matrix: permissions as rows, services as columns -->
@@ -74,13 +74,16 @@
           </thead>
           <tbody>
             <template v-for="g in actionGroups" :key="g.label">
-              <!-- Group header row -->
+              <!-- Group header row: label + one toggle button per service -->
               <tr class="grp-row">
-                <td :colspan="services.length + 1" class="grp-hd">
-                  <div class="grp-hd-inner">
-                    <span class="grp-hd-label">{{g.label}}</span>
-                    <button class="grp-tog" @click.stop="toggleGroup(g)" title="Tout basculer pour ce groupe (tous services)">⊡ Tout basculer</button>
-                  </div>
+                <td class="grp-hd-label-cell">{{g.label}}</td>
+                <td
+                  v-for="svc in services"
+                  :key="svc.id"
+                  class="grp-svc-cell"
+                  :title="'Tout basculer «' + g.label + '» pour ' + svc.label"
+                >
+                  <button class="grp-svc-tog" @click.stop="toggleGroupForService(g, svc)">⊡</button>
                 </td>
               </tr>
               <!-- Permission rows -->
@@ -305,21 +308,13 @@ export default {
       if (error) { alert('Erreur : ' + error.message); await loadPermissions() }
     }
 
-    // Toggle all permissions in a group for all services
-    var toggleGroup = async function(g) {
-      var total = 0
-      services.value.forEach(function(s) {
-        g.actions.forEach(function(a) { if (isAllowed(s.id, a.key)) total++ })
-      })
-      var newVal = total === 0
-      var rows = []
-      services.value.forEach(function(s) {
-        if (!permMap.value[s.id]) permMap.value[s.id] = {}
-        g.actions.forEach(function(a) {
-          permMap.value[s.id][a.key] = newVal
-          rows.push({ service: s.id, action: a.key, allowed: newVal })
-        })
-      })
+    // Toggle all permissions in a group for a specific service
+    var toggleGroupForService = async function(g, svc) {
+      var totalAllowed = g.actions.filter(function(a) { return isAllowed(svc.id, a.key) }).length
+      var newVal = totalAllowed === 0
+      if (!permMap.value[svc.id]) permMap.value[svc.id] = {}
+      g.actions.forEach(function(a) { permMap.value[svc.id][a.key] = newVal })
+      var rows = g.actions.map(function(a) { return { service: svc.id, action: a.key, allowed: newVal } })
       var { error } = await supabase.from('permissions').upsert(rows, { onConflict: 'service,action' })
       if (error) { alert('Erreur : ' + error.message); await loadPermissions() }
     }
@@ -471,7 +466,7 @@ export default {
       loading, services, actionGroups, allPerms,
       showMgr, editSvc, newSvcId, newSvcLabel, mgrErr,
       isAllowed, countAllowed,
-      togglePerm, toggleServiceCol, togglePermRow, toggleGroup, resetService,
+      togglePerm, toggleServiceCol, togglePermRow, toggleGroupForService, resetService,
       startEditSvc, saveEditSvc, deleteSvc, addSvc
     }
   }
@@ -545,15 +540,24 @@ export default {
 .svc-reset-btn:hover { opacity:1; background:#E6F1FB }
 
 /* Group header rows */
-.grp-row .grp-hd {
-  background:#f4f7fc;
-  padding:7px 12px;
-  border-top:2px solid #d0dff0; border-bottom:1px solid #d8e4f0
+.grp-row .grp-hd-label-cell {
+  position:sticky; left:0; z-index:1;
+  background:#eef3fb;
+  padding:6px 12px;
+  border-top:2px solid #c8d8ee; border-bottom:1px solid #c8d8ee;
+  font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#185FA5;
+  white-space:nowrap
 }
-.grp-hd-inner { display:flex; align-items:center; justify-content:space-between }
-.grp-hd-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#185FA5 }
-.grp-tog { font-size:11px; padding:2px 10px; border:1px solid #c0d8f0; background:#fff; color:#185FA5; border-radius:2px; cursor:pointer; font-family:inherit }
-.grp-tog:hover { background:#E6F1FB }
+.grp-row .grp-svc-cell {
+  background:#eef3fb;
+  text-align:center; padding:4px 2px;
+  border-top:2px solid #c8d8ee; border-bottom:1px solid #c8d8ee; border-right:1px solid #dde8f4
+}
+.grp-svc-tog {
+  font-size:13px; padding:1px 4px; border:1px solid #c0d8f0; background:#fff;
+  color:#185FA5; border-radius:2px; cursor:pointer; line-height:1; opacity:0.75; transition:.1s
+}
+.grp-svc-tog:hover { opacity:1; background:#E6F1FB }
 
 /* Permission name (sticky left) */
 .perm-cell {
