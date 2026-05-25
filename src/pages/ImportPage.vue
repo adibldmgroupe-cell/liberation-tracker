@@ -141,6 +141,7 @@
 <script>
 import { ref, onMounted } from 'vue'
 import { importExcel, importFromGoogleSheets } from '../services/import'
+import { supabase } from '../supabase'
 
 var GS_URL_KEY = 'liberation_gs_url'
 var GS_LAST_KEY = 'liberation_gs_last'
@@ -158,13 +159,24 @@ export default {
     var gsLastSync = ref('')
     var showUrlEdit = ref(false)
 
-    onMounted(function() {
-      gsUrl.value = localStorage.getItem(GS_URL_KEY) || ''
+    onMounted(async function() {
+      // 1. Charger depuis localStorage (rapide, même appareil)
+      var cached = localStorage.getItem(GS_URL_KEY) || ''
+      gsUrl.value = cached
       gsLastSync.value = localStorage.getItem(GS_LAST_KEY) || ''
+      // 2. Charger depuis Supabase (synchronisé entre appareils)
+      var res = await supabase.from('app_settings').select('value').eq('key', 'gs_url').maybeSingle()
+      if (res.data && res.data.value) {
+        gsUrl.value = res.data.value
+        localStorage.setItem(GS_URL_KEY, res.data.value)
+      }
     })
 
-    var saveGsUrl = function() {
-      localStorage.setItem(GS_URL_KEY, gsUrl.value || '')
+    var saveGsUrl = async function() {
+      var val = gsUrl.value || ''
+      localStorage.setItem(GS_URL_KEY, val)
+      // Sauvegarder en DB pour synchronisation multi-appareils
+      await supabase.from('app_settings').upsert({ key: 'gs_url', value: val }, { onConflict: 'key' })
     }
 
     var syncGoogleSheets = async function() {
