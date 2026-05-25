@@ -28,6 +28,7 @@
           <router-link to="/admin/products" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🗃</span>Catalogue produits</router-link>
           <router-link to="/admin/equipements" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">⚙️</span>Équipements</router-link>
           <router-link to="/admin/arret-types" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🛑</span>Types d'arrêts</router-link>
+          <router-link to="/admin/ateliers" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🏗</span>Processus & Ateliers</router-link>
           <router-link to="/admin/shifts" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🕐</span>Shifts & Équipes</router-link>
         </template>
       </nav>
