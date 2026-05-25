@@ -16,11 +16,19 @@
           <span class="nav-icon">📋</span>Tâches
           <span class="notif-badge tasks-badge" v-if="pendingTasksCount>0">{{pendingTasksCount}}</span>
         </router-link>
+        <div class="nav-sep">Tracking production</div>
+        <router-link to="/tracking/pdp-fab" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🏭</span>PDP Fabrication</router-link>
+        <router-link to="/tracking/pdp-cond" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">📦</span>PDP Conditionnement</router-link>
+        <router-link to="/tracking/trs" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">⚡</span>TRS Live</router-link>
+        <router-link to="/tracking/analytics" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">📊</span>Analytics TRS</router-link>
         <template v-if="isAdmin">
           <div class="nav-sep">Administration</div>
           <router-link to="/admin/users" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">👥</span>Utilisateurs</router-link>
           <router-link to="/admin/permissions" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🔑</span>Permissions</router-link>
-          <router-link to="/admin/products" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">📦</span>Catalogue produits</router-link>
+          <router-link to="/admin/products" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🗃</span>Catalogue produits</router-link>
+          <router-link to="/admin/equipements" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">⚙️</span>Équipements</router-link>
+          <router-link to="/admin/arret-types" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🛑</span>Types d'arrêts</router-link>
+          <router-link to="/admin/shifts" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🕐</span>Shifts & Équipes</router-link>
         </template>
       </nav>
       <div class="sidebar-user" v-if="profile">

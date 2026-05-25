@@ -23,6 +23,13 @@ const routes = [
       { path: 'admin/users', name: 'AdminUsers', component: () => import('../pages/AdminUsersPage.vue'), meta: { requiresAdmin: true } },
       { path: 'admin/permissions', name: 'AdminPermissions', component: () => import('../pages/AdminPermissionsPage.vue'), meta: { requiresAdmin: true } },
       { path: 'admin/products', name: 'AdminProducts', component: () => import('../pages/ProductsCatalogPage.vue'), meta: { requiresAdmin: true } },
+      { path: 'tracking/pdp-fab',   name: 'SuiviPDPFab',   component: () => import('../pages/tracking/SuiviPDPFabPage.vue') },
+      { path: 'tracking/pdp-cond',  name: 'SuiviPDPCond',  component: () => import('../pages/tracking/SuiviPDPCondPage.vue') },
+      { path: 'tracking/trs',       name: 'TrsLive',       component: () => import('../pages/tracking/TrsLivePage.vue') },
+      { path: 'tracking/analytics', name: 'TrsAnalytics',  component: () => import('../pages/tracking/TrsAnalyticsPage.vue') },
+      { path: 'admin/arret-types', name: 'AdminArretTypes', component: () => import('../pages/admin/AdminArretTypesPage.vue'), meta: { requiresAdmin: true } },
+      { path: 'admin/equipements', name: 'AdminEquipements', component: () => import('../pages/admin/AdminEquipementsPage.vue'), meta: { requiresAdmin: true } },
+      { path: 'admin/shifts', name: 'AdminShifts', component: () => import('../pages/admin/AdminShiftsPage.vue'), meta: { requiresAdmin: true } },
     ],
   },
 ]
