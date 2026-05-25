@@ -64,7 +64,7 @@
           <div class="fi">
             <label>Service</label>
             <select v-model="form.service" class="inp">
-              <option v-for="(label, key) in serviceLabels" :key="key" :value="key">{{ label }}</option>
+              <option v-for="svc in servicesList" :key="svc.id" :value="svc.id">{{ svc.label }}</option>
             </select>
           </div>
           <div class="fi">
@@ -85,7 +85,7 @@
   </div>
 </template>
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../supabase'
 import { adminCreateUser, adminDeleteUser } from '../services/adminAuth'
 export default {
@@ -95,7 +95,13 @@ export default {
     var editId = ref(null), editEmail = ref('')
     var form = ref({ prenom: '', nom: '', email: '', password: '', service: 'aq', role: 'operateur' })
 
-    var serviceLabels = { planification: 'Planification', stock: 'Stock', aq: 'Assurance Qualité', aq_dap: 'AQ DAP', dt: 'Direction Technique', fabrication: 'Fabrication', conditionnement: 'Conditionnement', lcq: 'Laboratoire CQ', admin: 'Administration' }
+    // Services chargés depuis la DB (table services)
+    var servicesList = ref([{ id: 'aq', label: 'Assurance Qualité' }]) // valeur par défaut
+    var serviceLabels = computed(function() {
+      var map = {}
+      servicesList.value.forEach(function(s) { map[s.id] = s.label })
+      return map
+    })
     var roleLabels = { operateur: 'Opérateur', responsable: 'Responsable', admin: 'Administrateur' }
 
     var initials = function(p) { return ((p.prenom || '').charAt(0) + (p.nom || '').charAt(0)).toUpperCase() }
@@ -179,15 +185,20 @@ export default {
       alert('Email de réinitialisation envoyé à ' + editEmail.value)
     }
 
+    var loadServices = async function() {
+      var res = await supabase.from('services').select('id, label, sort_order').order('sort_order')
+      if (res.data && res.data.length) servicesList.value = res.data
+    }
+
     onMounted(async function() {
       var u = await supabase.auth.getUser()
       currentUserId.value = u.data.user ? u.data.user.id : null
-      await loadProfiles()
+      await Promise.all([loadProfiles(), loadServices()])
     })
 
     return {
       profiles, loading, currentUserId, showModal, isEdit, saving, formErr, form,
-      serviceLabels, roleLabels, initials, fmtDate,
+      servicesList, serviceLabels, roleLabels, initials, fmtDate,
       toggleActive, openCreate, openEdit, submitForm, confirmDelete, sendReset
     }
   }
