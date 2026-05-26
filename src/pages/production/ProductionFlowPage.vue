@@ -187,14 +187,14 @@
             rx="8" fill="none" stroke="#fbbf24" stroke-width="2.5"/>
         </g>
 
-        <!-- ── TITRE CENTRAL ── -->
-        <rect :x="SVG_W/2-140" :y="SVG_H/2-28" width="280" height="56"
-          rx="28" fill="#1a1a3e" stroke="#3b3b6e" stroke-width="1.5"/>
-        <text :x="SVG_W/2" :y="SVG_H/2-4" text-anchor="middle"
-          fill="#7c7cff" font-size="13" font-weight="800" letter-spacing="2">
+        <!-- ── TITRE COIN SUP GAUCHE ── -->
+        <rect x="16" y="16" width="200" height="44"
+          rx="8" fill="#1a1a3e" stroke="#3b3b6e" stroke-width="1.5"/>
+        <text x="116" y="36" text-anchor="middle"
+          fill="#7c7cff" font-size="12" font-weight="800" letter-spacing="2">
           PRODUCTION
         </text>
-        <text :x="SVG_W/2" :y="SVG_H/2+14" text-anchor="middle"
+        <text x="116" y="52" text-anchor="middle"
           fill="#4b4b8a" font-size="9" letter-spacing="3">
           LDM GROUPE
         </text>
