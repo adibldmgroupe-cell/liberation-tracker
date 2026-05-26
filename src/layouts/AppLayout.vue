@@ -18,8 +18,6 @@
         </router-link>
         <div class="nav-sep">Tracking production</div>
         <router-link to="/production/flux" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🏭</span>Schéma Production</router-link>
-        <router-link to="/tracking/pdp-fab" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🏭</span>PDP Fabrication</router-link>
-        <router-link to="/tracking/pdp-cond" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">📦</span>PDP Conditionnement</router-link>
         <router-link to="/tracking/trs" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">⚡</span>TRS Live</router-link>
         <router-link to="/tracking/analytics" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">📊</span>Analytics TRS</router-link>
         <template v-if="isAdmin">
@@ -31,6 +29,7 @@
           <router-link to="/admin/arret-types" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🛑</span>Types d'arrêts</router-link>
           <router-link to="/admin/ateliers" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🏗</span>Processus & Ateliers</router-link>
           <router-link to="/admin/shifts" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🕐</span>Shifts & Équipes</router-link>
+          <router-link to="/admin/flux" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">⚙</span>Flux produits</router-link>
         </template>
       </nav>
       <div class="sidebar-user" v-if="profile">
