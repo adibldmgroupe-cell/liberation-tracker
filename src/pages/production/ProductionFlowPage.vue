@@ -1313,16 +1313,24 @@ export default {
       trsStartModal.cadenceObj = null; trsStartModal.error = ''; trsStartModal.saving = false; trsStartModal.show = true
     }
 
-    var trsSearchLots = function() {
-      clearTimeout(trsLotTimeout)
+    var trsSearchLots = async function() {
       var q = trsStartModal.lotSearch
       if (!q || q.length < 2) { trsStartModal.lotSuggestions = []; return }
-      trsLotTimeout = setTimeout(async function() {
-        var r = await supabase.from('lots').select('id, numero_lot, product_id, products(code_article, description)').ilike('numero_lot', '%'+q+'%').limit(8)
-        trsStartModal.lotSuggestions = (r.data||[]).map(function(l) {
-          return { id:l.id, numero_lot:l.numero_lot, code_article:l.products?l.products.code_article:'', description:l.products?l.products.description:'', product_id:l.product_id }
-        })
-      }, 200)
+      var r = await supabase
+        .from('lots')
+        .select('id, numero_lot, product_id, products(code_article, description)')
+        .ilike('numero_lot', '%' + q + '%')
+        .limit(8)
+      if (r.error) { trsStartModal.lotSuggestions = []; return }
+      trsStartModal.lotSuggestions = (r.data || []).map(function(l) {
+        return {
+          id: l.id,
+          numero_lot: l.numero_lot,
+          code_article: l.products ? l.products.code_article : '',
+          description:  l.products ? l.products.description  : '',
+          product_id:   l.product_id
+        }
+      })
     }
 
     var trsSelectLot = async function(l) {
