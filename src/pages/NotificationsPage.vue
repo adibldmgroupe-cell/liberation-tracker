@@ -49,4 +49,9 @@ export default {
 .nsvc{font-size:10px;padding:1px 6px;background:#f0f0f0;border-radius:2px;color:#666}
 .nlot{font-family:'SF Mono',monospace;font-size:11px;color:#185FA5}.ntime{font-family:'SF Mono',monospace;font-size:11px;color:#999}
 .empty{text-align:center;padding:40px;color:#999}
+@media(max-width:480px){
+  .btn-mark{min-height:44px;padding:8px 16px;font-size:13px}
+  .nitem{padding:12px 0;min-height:44px}
+  .ph{flex-wrap:wrap;gap:8px}
+}
 </style>

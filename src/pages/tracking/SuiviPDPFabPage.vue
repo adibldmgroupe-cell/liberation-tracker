@@ -156,6 +156,7 @@
         <button class="btn-act" @click="openFabModal(null, null)">+ Nouveau suivi</button>
       </div>
 
+      <div class="sf-table-wrap">
       <table class="sf-table">
         <thead>
           <tr>
@@ -195,6 +196,7 @@
           <tr v-if="!filteredSuivis.length"><td colspan="10" class="no-data">Aucun suivi trouvé</td></tr>
         </tbody>
       </table>
+      </div>
     </div>
 
     <!-- ════════════════════════════════════════
@@ -219,6 +221,7 @@
         </div>
       </div>
 
+      <div class="sf-table-wrap">
       <table class="sf-table">
         <thead>
           <tr>
@@ -251,6 +254,7 @@
           <tr v-if="!filteredArrets.length"><td colspan="8" class="no-data">Aucun arrêt trouvé</td></tr>
         </tbody>
       </table>
+      </div>
     </div>
 
     <!-- ══════════════════════════════════════════════
@@ -1086,4 +1090,35 @@ export default {
 .btn-save { padding:7px 20px; border:none; border-radius:4px; background:#0a0a0a; color:#fff; font-size:13px; cursor:pointer; font-weight:500; }
 .btn-save:hover { background:#333; }
 .btn-save:disabled { opacity:.5; cursor:not-allowed; }
+
+/* ── Table scroll wrapper ── */
+.sf-table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.sf-table { min-width:640px; }
+
+/* ══ RESPONSIVE MOBILE ══ */
+@media(max-width:768px){
+  .ph { flex-direction:column; align-items:flex-start; }
+  .ph-right { width:100%; justify-content:flex-start; }
+  .view-tabs { flex-wrap:wrap; }
+  .vtab { min-height:44px; flex:1; justify-content:center; }
+  .ateliers-grid { grid-template-columns:1fr; }
+  .at-actions { flex-wrap:wrap; }
+  .btn-act { min-height:44px; flex:1; }
+  .sf-toolbar { flex-direction:column; align-items:stretch; }
+  .sf-search, .sf-sel { width:100%; font-size:16px; min-height:40px; }
+  .arr-toolbar { flex-direction:column; align-items:stretch; }
+  .arr-stats { margin-left:0; justify-content:space-between; }
+  .btn-sm { min-height:36px; padding:5px 10px; }
+  .gantt-toolbar { flex-direction:column; align-items:flex-start; gap:8px; }
+  .gantt-legend { margin-left:0; }
+  .gantt-label-cell { width:140px; min-width:140px; }
+  .form-row-2 { grid-template-columns:1fr; }
+  .modal-ft { flex-direction:column-reverse; }
+  .btn-save, .btn-cancel { width:100%; min-height:44px; }
+}
+@media(max-width:480px){
+  .sf-table { min-width:500px; font-size:11px; }
+  .sf-table th { padding:6px 7px; font-size:10px; }
+  .sf-table td { padding:5px 7px; }
+}
 </style>

@@ -234,7 +234,7 @@ export default {
 .count-err{color:#E24B4A;border-color:#E24B4A;font-size:12px}
 .btn-plan{width:100%;padding:12px;font-size:14px;font-weight:500;background:#0a0a0a;color:#fff;border:none;cursor:pointer;border-radius:2px;letter-spacing:.3px}.btn-plan:hover{background:#222}.btn-plan:disabled{opacity:.3;cursor:not-allowed}
 .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:100}
-.modal{background:#fff;padding:24px;width:400px;border-radius:4px}
+.modal{background:#fff;padding:24px;width:min(90vw,400px);border-radius:4px}
 .modal-title{font-size:16px;font-weight:500;margin-bottom:16px}
 .modal-body{margin-bottom:20px}
 .modal-line{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid #f5f5f5}
@@ -249,4 +249,12 @@ export default {
 .rc{padding:12px;text-align:center;border-right:1px solid #e8e8e8}.rc:last-child{border-right:none}
 .rv{font-size:20px;font-weight:500;font-family:'SF Mono',monospace}.rl{font-size:10px;color:#999;text-transform:uppercase;margin-top:2px}
 .btn-see{margin-top:14px;padding:8px 20px;background:#185FA5;color:#fff;border:none;font-size:13px;cursor:pointer;border-radius:2px}.btn-see:hover{background:#0C447C}
+@media(max-width:600px){
+  .row{flex-direction:column}
+  .input,.auto-list{font-size:16px}
+  .modal{padding:16px}
+  .btn-confirm,.btn-cancel{min-height:44px;font-size:14px}
+  .btn-plan{min-height:44px}
+  .rg{grid-template-columns:1fr 1fr}
+}
 </style>

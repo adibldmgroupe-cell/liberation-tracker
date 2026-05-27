@@ -1165,7 +1165,25 @@ export default {
 
 @media(max-width:768px){
   .panels-grid{grid-template-columns:1fr}
-  .cascade-selects{flex-direction:column}
+  .cascade-selects{flex-direction:column;gap:8px}
   .cs-arrow{display:none}
+  /* Modal */
+  .trs-modal{width:min(96vw,480px);padding:16px}
+  .form-row{flex-direction:column}
+  .btn-save,.btn-cancel,.btn-go,.btn-stop,.btn-close-sess{min-height:44px;font-size:14px}
+  .modal-acts{flex-wrap:wrap}
+  .btn-save,.btn-cancel{flex:1}
+  /* Panneau panel */
+  .panel{font-size:12px}
+  .panel-hd{flex-wrap:wrap}
+  .oee-grid{grid-template-columns:1fr 1fr}
+  .action-btns{flex-wrap:wrap}
+  .action-btns .btn-sm{flex:1;min-height:40px}
+  /* Header barre */
+  .page-header{flex-wrap:wrap;gap:8px}
+}
+@media(max-width:480px){
+  .panels-grid{grid-template-columns:1fr}
+  .kpi-grid{grid-template-columns:1fr 1fr}
 }
 </style>

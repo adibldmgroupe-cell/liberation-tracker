@@ -2306,4 +2306,58 @@ export default {
 .trs-btn-cloture:hover:not(:disabled) { background:#4c1d95; }
 .trs-btn-cancel { background:transparent; border:1px solid #0d3a22; border-radius:5px; color:#4b5563; padding:8px 16px; font-size:12px; cursor:pointer; }
 .trs-btn-cancel:hover { color:#d1d5db; border-color:#4b5563; }
+
+/* ══ RESPONSIVE MOBILE ══ */
+@media(max-width:768px){
+  /* Header : empiler le centre (recherche produit) */
+  .flow-header { flex-wrap:wrap; gap:8px; }
+  .fh-left { order:1; }
+  .fh-center { order:3; width:100%; }
+  .fh-right { order:2; }
+  .fh-legend { display:none; }
+  .fh-title { font-size:10px; letter-spacing:2px; }
+  .fh-sub { display:none; }
+  .prod-input { min-width:0; }
+
+  /* TRS band scrollable horizontalement */
+  .trs-band { overflow-x:auto; -webkit-overflow-scrolling:touch; gap:12px; }
+  .trs-kpi-group { flex-shrink:0; }
+
+  /* SVG : rendu scrollable au lieu d'être rétréci */
+  .flow-body { overflow:auto; -webkit-overflow-scrolling:touch; }
+  .flow-svg  { width:auto; height:auto; min-width:900px; min-height:560px; display:block; }
+
+  /* Panneaux latéraux → drawer du bas */
+  .detail-panel, .trs-detail-panel {
+    position:fixed; bottom:0; left:0; right:0;
+    top:auto; width:auto; height:55vh;
+    border-left:none; border-top:1px solid #1e1e3a;
+    z-index:80;
+  }
+  .trs-detail-panel { border-top-color:#064e35; }
+
+  /* Métriques TRS dans le panel : 2 col au lieu de 4 */
+  .tdp-metrics { grid-template-columns:1fr 1fr; }
+  .tdp-oee     { grid-template-columns:1fr 1fr; }
+  .trs-op-grid { grid-template-columns:1fr 1fr; }
+
+  /* Form rows dans les modals TRS → empilés */
+  .trs-form-row { flex-direction:column; }
+  .trs-cascade  { flex-direction:column; gap:8px; }
+  .trs-cs-arrow { transform:rotate(90deg); padding-bottom:0; align-self:center; }
+
+  /* Boutons actions TRS */
+  .trs-btn-save, .trs-btn-cancel, .mb-ok, .mb-cancel { min-height:44px; }
+  .trs-modal-acts { flex-wrap:wrap; }
+  .trs-btn-save, .trs-btn-cancel { flex:1; }
+
+  /* Boutons dp-actions 2 col */
+  .dp-actions-grid { grid-template-columns:1fr 1fr; }
+  .tdp-btn { min-height:40px; }
+}
+
+@media(max-width:480px){
+  .flow-svg { min-width:700px; min-height:440px; }
+  .detail-panel, .trs-detail-panel { height:60vh; }
+}
 </style>

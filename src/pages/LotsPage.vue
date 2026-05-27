@@ -2044,10 +2044,18 @@ var loadCharge = async function() {
   .fbtn{min-height:36px;padding:6px 12px;white-space:nowrap}
   .td-prod{max-width:110px}
   .tb td{padding:8px 4px}
+  .tb th{font-size:10px}
   .table-wrap{max-height:calc(100vh - 220px)}
   .bulk-sel{min-width:0;width:100%}
   .bulk-bar{flex-direction:column;align-items:stretch}
   .bulk-btn{width:100%;padding:10px;min-height:44px}
-  .col-panel{right:auto;left:0}
+  .col-panel{right:auto;left:0;max-height:70vh;overflow-y:auto}
+  /* Popups fixed : forcer dans l'écran */
+  .col-dd{max-width:calc(100vw - 16px) !important}
+  .inline-menu{left:8px !important;right:8px !important;max-width:none !important;min-width:0}
+  .date-picker-pop{left:8px !important;right:8px !important;min-width:0}
+  .dev-pop{left:8px !important;right:8px !important;max-width:none !important;min-width:0}
+  .m-overlay{padding:12px}
+  .m-box{width:100%}
 }
 </style>

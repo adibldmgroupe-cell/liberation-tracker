@@ -186,7 +186,11 @@ export default {
   .k:nth-child(5){border-top:1px solid #e8e8e8;border-right:none}
   .k:nth-child(odd):last-child{grid-column:span 2}
   .kv{font-size:20px}
-  .kl{font-size:9px}
+  .kl{font-size:10px}
+  .sh{font-size:9px;letter-spacing:.4px}
   .dh{padding-bottom:8px}
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .mtb{min-width:520px}
+  .row-label{max-width:100px}
 }
 </style>

@@ -43,6 +43,7 @@
     <!-- Circuit OF -->
     <div class="section" v-if="of">
       <div class="sh"><span>Circuit OF</span></div>
+      <div class="flow-wrap">
       <div class="flow flow-6">
         <template v-for="(e,idx) in circuitSteps" :key="'of-'+e.key">
           <div class="flow-step" :class="circuitFlowClass('of',e.key)">
@@ -51,6 +52,7 @@
           </div>
           <div class="flow-arrow" v-if="idx<circuitSteps.length-1">→</div>
         </template>
+      </div>
       </div>
       <div class="circ-act">
         <span v-if="of.pending_ar_service" class="circ-ar-pending">⏳ {{SVC_LABELS[of.pending_ar_service]||of.pending_ar_service}}</span>
@@ -73,6 +75,7 @@
     <!-- Circuit OC -->
     <div class="section" v-if="oc">
       <div class="sh"><span>Circuit OC</span></div>
+      <div class="flow-wrap">
       <div class="flow flow-6">
         <template v-for="(e,idx) in circuitSteps" :key="'oc-'+e.key">
           <div class="flow-step" :class="circuitFlowClass('oc',e.key)">
@@ -81,6 +84,7 @@
           </div>
           <div class="flow-arrow" v-if="idx<circuitSteps.length-1">→</div>
         </template>
+      </div>
       </div>
       <div class="circ-act">
         <span v-if="oc.pending_ar_service" class="circ-ar-pending">⏳ {{SVC_LABELS[oc.pending_ar_service]||oc.pending_ar_service}}</span>
@@ -107,7 +111,7 @@
         <button v-if="canPerform('demander_aql_cond') && canDemanderAql('conditionnement')" class="btn-action" @click="doRequestAql('conditionnement')">Demander AQL Conditionnement</button>
       </div>
       <div v-if="!aqls.length" class="em">Aucune demande AQL</div>
-      <table class="ct" v-else><tr v-for="a in aqls" :key="a.id">
+      <div v-else style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table class="ct"><tr v-for="a in aqls" :key="a.id">
         <td class="cs">AQL {{a.type}}</td>
         <td><span class="sp2" :class="a.resultat==='conforme'?'sp2-ok':a.resultat==='non_conforme'?'sp2-ko':'sp2-wait'">{{a.resultat==='en_attente'?'En attente':a.resultat==='conforme'?'Conforme':'Non conforme'}}</span></td>
         <td class="cdt">{{fmtDt(a.inspected_at||a.requested_at)}}</td>
@@ -118,7 +122,7 @@
           <button v-if="a.resultat==='en_attente' && !a.request_ar_pending && canPerform('realiser_aql')" class="btn br" @click="doAqlNonConforme(a.id)">Non conforme</button>
           <button v-if="a.resultat==='non_conforme' && isLatestAql(a) && canRelanceAql(a)" class="btn" @click="doRelanceAql(a)">Relancer AQL</button>
         </td>
-      </tr></table>
+      </tr></table></div>
     </div>
 
     <!-- Documents -->
@@ -635,7 +639,8 @@ export default {
 .dim{color:#999;font-size:12px}.mono{font-family:'SF Mono',monospace;font-size:12px}
 .em{font-size:12px;color:#999;padding:12px 0;text-align:center}
 /* Stepper circuit OF/OC */
-.flow{display:flex;align-items:center;gap:0;margin:12px 0;border:1px solid #e8e8e8;border-radius:2px;overflow:hidden;flex-wrap:nowrap}
+.flow-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:12px 0}
+.flow{display:flex;align-items:center;gap:0;border:1px solid #e8e8e8;border-radius:2px;overflow:hidden;flex-wrap:nowrap;min-width:480px}
 .flow-6 .flow-step{padding:8px 4px}
 .flow-step{flex:1;padding:10px 12px;text-align:center;display:flex;align-items:center;justify-content:center;gap:5px;min-height:44px}
 .flow-arrow{padding:0 2px;color:#ccc;font-size:12px;flex-shrink:0}

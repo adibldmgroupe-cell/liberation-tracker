@@ -212,7 +212,7 @@ export default {
 .logout-btn{background:none;border:none;color:#666;cursor:pointer;font-size:12px;padding:4px}
 .main-content{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 .top-bar{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid #e8e8e8;flex-shrink:0}
-.hamburger{display:none;background:none;border:none;font-size:20px;cursor:pointer;padding:4px 8px}
+.hamburger{display:none;background:none;border:none;font-size:20px;cursor:pointer;padding:10px 14px;min-height:44px;min-width:44px;line-height:1}
 .search-container{position:relative;flex:1;max-width:400px}.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:15px;color:#999}
 .search-input{width:100%;padding:7px 14px 7px 32px;font-size:13px;border:1px solid #ddd;border-radius:4px;background:#fafafa;outline:none;font-family:inherit;box-sizing:border-box}.search-input:focus{border-color:#185FA5;background:#fff}
 .suggestions{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ddd;border-radius:4px;margin-top:4px;box-shadow:0 6px 16px rgba(0,0,0,.08);z-index:100;max-height:320px;overflow-y:auto}
@@ -237,9 +237,11 @@ export default {
   .sidebar{position:fixed;left:-240px;top:0;bottom:0;width:240px;transition:left .25s ease;z-index:50}
   .sidebar-open{left:0}
   .mobile-overlay{display:block}
-  .hamburger{display:block}
+  .hamburger{display:flex;align-items:center;justify-content:center}
   .clock{display:none}
   .page-content{padding:12px}
   .toast-container{left:12px;right:12px;max-width:none}
+  .search-input{font-size:16px}
+  .user-service{display:none}
 }
 </style>
