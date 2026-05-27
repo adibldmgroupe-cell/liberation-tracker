@@ -520,12 +520,12 @@
                 <div class="lot-dropdown" v-if="modal.lotDropdown.length">
                   <div v-for="l in modal.lotDropdown" :key="l.id" class="ld-item"
                     @click="selectModalLot(l)">
-                    <b>{{l.numero_lot}}</b> — {{l.products?.nom_produit||l.description||'—'}}
+                    <b>{{l.numero_lot}}</b> — {{l.products?.description||'—'}}
                   </div>
                 </div>
               </div>
               <div v-if="modal.selectedLot" class="lot-chip">
-                ✓ {{modal.selectedLot.numero_lot}} — {{modal.selectedLot.products?.nom_produit||'—'}}
+                ✓ {{modal.selectedLot.numero_lot}} — {{modal.selectedLot.products?.description||'—'}}
               </div>
             </div>
             <div class="mf-row">
@@ -1481,7 +1481,8 @@ export default {
       var cadNom = s.cadence_nominale_snapshot || eq.cadence_nominale_boite_min || 0
       var cadReelle = (totalMin>0 && total>0) ? parseFloat((total/totalMin).toFixed(2)) : null
       var D   = to>0 ? Math.round((tf/to)*100) : null
-      var P   = (tf>0 && cadNom>0) ? Math.min(100, Math.round((cadReelle||0)/cadNom*100)) : null
+      // Performance = colisTotal / (cadNom × tf) — identique à la preview OEE
+      var P   = (tf>0 && cadNom>0) ? Math.min(100, Math.round((total/(cadNom*tf))*100)) : null
       var Q   = total>0 ? Math.round((good/total)*100) : null
       var TRS = (D!=null && P!=null && Q!=null) ? Math.round((D/100)*(P/100)*(Q/100)*100) : null
       var rendPct = (s.objectif_boites && total) ? Math.round((total/s.objectif_boites)*100) : null
@@ -1712,7 +1713,7 @@ export default {
           res.push({
             id: 'f' + sf.id, fabId: sf.id, lotRawId: sf.lot_id,
             numero_lot: sf.lots?.numero_lot || sf.lot_id,
-            nom_produit: sf.lots?.products?.nom_produit || '',
+            nom_produit: sf.lots?.products?.description || '',
             statut: sf.statut, isFab: true
           })
         })
@@ -1812,7 +1813,7 @@ export default {
       var q = modal.value.lotSearch
       if (!q || q.length < 2) { modal.value.lotDropdown = []; return }
       var res = await supabase.from('lots')
-        .select('id,numero_lot,description,products(nom_produit)')
+        .select('id,numero_lot,products(description)')
         .ilike('numero_lot', '%'+q+'%')
         .limit(10)
       if (!res.error) modal.value.lotDropdown = res.data
@@ -1870,14 +1871,15 @@ export default {
       var node = selectedNode.value
       var res
       if (node.type === 'cond') {
-        // Cond: insert production_arret
+        // Cond: insert production_arret (utiliser TRS modal pour les arrêts détaillés)
         res = await supabase.from('production_arrets').insert({
           session_id: modal.value.fabId,
-          motif: modal.value.motif,
+          commentaire: modal.value.motif || null,
+          heure_debut: new Date().toTimeString().slice(0,5) + ':00',
           is_running: true
         })
         if (!res.error) {
-          await supabase.from('production_sessions').update({ statut: 'Arrêt' }).eq('id', modal.value.fabId)
+          await supabase.from('production_sessions').update({ statut: 'Arrêt', updated_at: new Date().toISOString() }).eq('id', modal.value.fabId)
         }
       } else {
         // Fab: insert atelier_arret
@@ -1922,11 +1924,13 @@ export default {
       if (!modal.value.lotId) { modal.value.err = 'Sélectionner un lot.'; return }
       if (!modal.value.description.trim()) { modal.value.err = 'Description requise.'; return }
       modal.value.saving = true; modal.value.err = ''
+      var userData = await supabase.auth.getUser()
+      var userId = userData.data.user?.id || null
       var res = await supabase.from('deviations').insert({
         lot_id: modal.value.lotId,
         description: modal.value.description,
         statut: 'ouverte',
-        date_detection: new Date().toISOString()
+        declared_by: userId
       })
       modal.value.saving = false
       if (res.error) { modal.value.err = res.error.message; return }
@@ -1940,10 +1944,10 @@ export default {
       var [r1, r2, r3, r4, r5, r6, r7] = await Promise.all([
         supabase.from('plan_rooms').select('*'),
         supabase.from('suivi_fabrication')
-          .select('id,lot_id,atelier_id,statut,lots(numero_lot,products(nom_produit))')
+          .select('id,lot_id,atelier_id,statut,lots(numero_lot,products(description))')
           .is('deleted_at', null).in('statut', ['En cours', 'Arrêt']),
         supabase.from('production_sessions')
-          .select('id,lot_id,equipement_id,statut,lots(numero_lot,products(nom_produit))')
+          .select('id,lot_id,equipement_id,statut,lots(numero_lot,products(description))')
           .in('statut', ['En cours', 'Arrêt']),
         supabase.from('deviations')
           .select('id,lot_id,statut').in('statut', ['ouverte', 'en_cours']),

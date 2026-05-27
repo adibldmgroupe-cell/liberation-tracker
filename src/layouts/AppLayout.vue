@@ -20,6 +20,8 @@
         <router-link to="/production/flux" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🏭</span>Schéma Production</router-link>
         <router-link to="/tracking/trs" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">⚡</span>TRS Live</router-link>
         <router-link to="/tracking/analytics" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">📊</span>Analytics TRS</router-link>
+        <router-link to="/tracking/pdp-fab" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🏗</span>PDP Fabrication</router-link>
+        <router-link to="/tracking/pdp-cond" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">📦</span>PDP Conditionnement</router-link>
         <template v-if="isAdmin">
           <div class="nav-sep">Administration</div>
           <router-link to="/admin/users" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">👥</span>Utilisateurs</router-link>

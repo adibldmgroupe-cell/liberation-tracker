@@ -41,7 +41,7 @@
           <div v-for="sf in getActiveFab(at.id)" :key="sf.id" class="at-lot-row">
             <div class="alr-left">
               <div class="alr-num">Lot {{sf.lots?.numero_lot||sf.lot_id}}</div>
-              <div class="alr-prod">{{sf.lots?.products?.nom_produit||'—'}}</div>
+              <div class="alr-prod">{{sf.lots?.products?.description||'—'}}</div>
             </div>
             <div class="alr-mid">
               <span class="alr-statut" :class="'st-'+sf.statut.toLowerCase().replace(/\s/g,'-')">{{sf.statut}}</span>
@@ -113,7 +113,7 @@
         <div v-for="sf in ganttSuivis" :key="sf.id" class="gantt-row">
           <div class="gantt-label-cell">
             <div class="gantt-lot-nom">Lot {{sf.lots?.numero_lot||sf.lot_id}}</div>
-            <div class="gantt-lot-sub">{{sf.lots?.products?.nom_produit||'—'}} · {{getAtelierNom(sf.atelier_id)}}</div>
+            <div class="gantt-lot-sub">{{sf.lots?.products?.description||'—'}} · {{getAtelierNom(sf.atelier_id)}}</div>
           </div>
           <div class="gantt-dates-cell">
             <div class="gantt-track" :style="{width: ganttTotalW+'px'}">
@@ -160,7 +160,7 @@
         <thead>
           <tr>
             <th @click="sfSort('lots.numero_lot')" class="sortable">Lot <span class="sort-ic">{{sfSortIc('lots.numero_lot')}}</span></th>
-            <th @click="sfSort('lots.products.nom_produit')" class="sortable">Produit <span class="sort-ic">{{sfSortIc('lots.products.nom_produit')}}</span></th>
+            <th @click="sfSort('lots.products.description')" class="sortable">Produit <span class="sort-ic">{{sfSortIc('lots.products.description')}}</span></th>
             <th @click="sfSort('nom_atelier')" class="sortable">Atelier <span class="sort-ic">{{sfSortIc('nom_atelier')}}</span></th>
             <th>Processus</th>
             <th @click="sfSort('date_debut')" class="sortable">Début <span class="sort-ic">{{sfSortIc('date_debut')}}</span></th>
@@ -174,7 +174,7 @@
         <tbody>
           <tr v-for="sf in filteredSuivis" :key="sf.id" :class="'row-'+sf.statut.toLowerCase().replace(/\s/g,'-')">
             <td class="td-mono">{{sf.lots?.numero_lot||sf.lot_id}}</td>
-            <td>{{sf.lots?.products?.nom_produit||'—'}}</td>
+            <td>{{sf.lots?.products?.description||'—'}}</td>
             <td>{{getAtelierNom(sf.atelier_id)}}</td>
             <td><span class="proc-chip" :style="{background:procColor(sf.processus_id)+'22',color:procColor(sf.processus_id)}">{{getProcNom(sf.processus_id)}}</span></td>
             <td class="td-mono">{{fmtDate(sf.date_debut)}}</td>
@@ -270,8 +270,8 @@
               <div class="lot-suggestions" v-if="lotSuggestions.length">
                 <div v-for="l in lotSuggestions" :key="l.id" class="lot-sug" @click="selectLot(l)">
                   <span class="ls-num">{{l.numero_lot}}</span>
-                  <span class="ls-prod">{{l.products?.nom_produit}}</span>
-                  <span class="ls-qty">{{l.quantite_prevue}} u.</span>
+                  <span class="ls-prod">{{l.products?.description}}</span>
+                  <span class="ls-qty">{{l.quantite}} u.</span>
                 </div>
               </div>
             </div>
@@ -427,7 +427,7 @@ export default {
         supabase.from('processus').select('*').eq('actif',true).order('ordre'),
         supabase.from('ateliers').select('*').eq('actif',true).order('nom_atelier'),
         supabase.from('suivi_fabrication')
-          .select('*, lots(id,numero_lot,quantite_prevue,products(nom_produit))')
+          .select('*, lots(id,numero_lot,quantite,products(description))')
           .is('deleted_at',null)
           .order('date_debut',{ascending:false}),
         supabase.from('atelier_arrets')
@@ -562,7 +562,7 @@ export default {
         if (sfSearch.value) {
           var q = sfSearch.value.toLowerCase()
           var num = (sf.lots?.numero_lot||'').toLowerCase()
-          var prod = (sf.lots?.products?.nom_produit||'').toLowerCase()
+          var prod = (sf.lots?.products?.description||'').toLowerCase()
           if (!num.includes(q)&&!prod.includes(q)) return false
         }
         if (filterAtelier.value && sf.atelier_id!=filterAtelier.value) return false
@@ -573,7 +573,7 @@ export default {
       list = list.slice().sort(function(a,b) {
         var va='', vb=''
         if (sfSortCol.value==='lots.numero_lot') { va=a.lots?.numero_lot||''; vb=b.lots?.numero_lot||'' }
-        else if (sfSortCol.value==='lots.products.nom_produit') { va=a.lots?.products?.nom_produit||''; vb=b.lots?.products?.nom_produit||'' }
+        else if (sfSortCol.value==='lots.products.description') { va=a.lots?.products?.description||''; vb=b.lots?.products?.description||'' }
         else if (sfSortCol.value==='nom_atelier') { va=getAtelierNom(a.atelier_id); vb=getAtelierNom(b.atelier_id) }
         else { va=a[sfSortCol.value]||''; vb=b[sfSortCol.value]||'' }
         var cmp = va<vb?-1:va>vb?1:0
@@ -622,7 +622,9 @@ export default {
       return arretAtelier.value.filter(function(a){ return a.atelier_id===atelierId && !a.heure_fin })
     }
     var getArretCount = function(fabId) {
-      return arretAtelier.value.filter(function(a){ return a.suivi_fab_id===fabId }).length
+      var fab = suiviFab.value.find(function(s){ return s.id === fabId })
+      if (!fab) return 0
+      return arretAtelier.value.filter(function(a){ return a.lot_id === fab.lot_id && a.atelier_id === fab.atelier_id }).length
     }
     var getAtelierNom = function(id) {
       var at = ateliers.value.find(function(a){ return a.id===id })
@@ -724,7 +726,7 @@ export default {
       if (!q) { lotSuggestions.value=[]; return }
       lotAcTimer = setTimeout(async function() {
         var res = await supabase.from('lots')
-          .select('id,numero_lot,quantite_prevue,products(nom_produit)')
+          .select('id,numero_lot,quantite,products(description)')
           .or('numero_lot.ilike.%'+q+'%')
           .limit(8)
         if (!res.error) lotSuggestions.value = res.data
@@ -733,7 +735,7 @@ export default {
     var selectLot = function(l) {
       fabModal.value.lotId = l.id
       fabModal.value.lotNum = l.numero_lot
-      fabModal.value.lotProd = l.products?.nom_produit||''
+      fabModal.value.lotProd = l.products?.description||''
       fabModal.value.lotSearch = l.numero_lot
       lotSuggestions.value = []
     }
@@ -745,7 +747,7 @@ export default {
       if (sf) {
         fabModal.value = {
           open:true, id:sf.id,
-          lotId:sf.lot_id, lotNum:sf.lots?.numero_lot||'', lotProd:sf.lots?.products?.nom_produit||'',
+          lotId:sf.lot_id, lotNum:sf.lots?.numero_lot||'', lotProd:sf.lots?.products?.description||'',
           lotSearch:sf.lots?.numero_lot||'',
           atelierId:sf.atelier_id, processusId:sf.processus_id,
           dateDebut:sf.date_debut?sf.date_debut.slice(0,16):'',
@@ -817,7 +819,7 @@ export default {
       arretModal.value = {
         open:true, fabId:sf.id, lot_id:sf.lot_id,
         lotNum:sf.lots?.numero_lot||sf.lot_id,
-        lotProd:sf.lots?.products?.nom_produit||'',
+        lotProd:sf.lots?.products?.description||'',
         atelierId:sf.atelier_id,
         motif:'', heureDebut:now2,
         err:'', saving:false
