@@ -513,35 +513,39 @@
           <div class="modal-hd">▶ Démarrer — <span class="mh-code">{{selectedNode?.code}}</span></div>
           <div class="modal-body">
             <div class="mf-row">
-              <label>Numéro de lot</label>
+              <label>Lots <span class="mf-badge" v-if="modal.lots&&modal.lots.length">{{modal.lots.length}}</span></label>
               <div class="lot-search-wrap">
-                <input class="mf-input" placeholder="Chercher lot..." v-model="modal.lotSearch"
+                <input class="mf-input" placeholder="Rechercher et ajouter un lot…" v-model="modal.lotSearch"
                   @input="searchModalLots"/>
                 <div class="lot-dropdown" v-if="modal.lotDropdown.length">
                   <div v-for="l in modal.lotDropdown" :key="l.id" class="ld-item"
                     @click="selectModalLot(l)">
                     <b>{{l.numero_lot}}</b> — {{l.products?.description||'—'}}
+                    <span v-if="modal.lots&&modal.lots.find(function(x){return x.id===l.id})" class="ld-check">✓</span>
                   </div>
                 </div>
               </div>
-              <div v-if="modal.selectedLot" class="lot-chip">
-                ✓ {{modal.selectedLot.numero_lot}} — {{modal.selectedLot.products?.description||'—'}}
+              <div class="lot-multi-list" v-if="modal.lots&&modal.lots.length">
+                <div v-for="l in modal.lots" :key="l.id" class="lot-chip-multi">
+                  <span class="lcm-num">{{l.numero_lot}}</span>
+                  <span class="lcm-desc">{{l.products?.description||'—'}}</span>
+                  <button class="lcm-rm" @click="removeLot(l)" title="Retirer">×</button>
+                </div>
               </div>
+              <div class="mf-hint" v-else>Aucun lot sélectionné — rechercher ci-dessus</div>
             </div>
             <div class="mf-row">
               <label>Date/heure début</label>
               <input class="mf-input" type="datetime-local" v-model="modal.dateDebut"/>
             </div>
-            <div class="mf-row" v-if="modal.nodeType==='fab'">
-              <label>Quantité</label>
-              <input class="mf-input" type="number" v-model="modal.quantite" placeholder="Nb unités"/>
-            </div>
             <div class="mf-err" v-if="modal.err">{{modal.err}}</div>
           </div>
           <div class="modal-ft">
             <button class="mb-cancel" @click="closeModal">Annuler</button>
-            <button class="mb-ok" @click="saveStart" :disabled="modal.saving">
-              {{modal.saving?'…':'▶ Démarrer'}}
+            <button class="mb-ok" @click="saveStart" :disabled="modal.saving||!(modal.lots&&modal.lots.length)">
+              <template v-if="modal.saving">…</template>
+              <template v-else-if="modal.lots&&modal.lots.length>1">▶ Démarrer ({{modal.lots.length}} lots)</template>
+              <template v-else>▶ Démarrer</template>
             </button>
           </div>
         </template>
@@ -1793,7 +1797,7 @@ export default {
       var now2 = new Date().toISOString().slice(0, 16)
       modal.value = {
         open: true, type: type, saving: false, err: '',
-        lotSearch: '', lotDropdown: [], selectedLot: null,
+        lotSearch: '', lotDropdown: [], selectedLot: null, lots: [],
         dateDebut: now2, dateFin: now2,
         quantite: null, motif: '', fabId: '', lotId: '',
         description: '', nodeType: selectedNode.value?.type || 'fab'
@@ -1804,8 +1808,10 @@ export default {
       resetModal('start')
       // Pre-select lot if one was clicked in the list
       if (modalLotPreselect.value) {
-        modal.value.selectedLot = modalLotPreselect.value
-        modal.value.lotSearch = modalLotPreselect.value.numero_lot
+        var l = modalLotPreselect.value
+        modal.value.selectedLot = l
+        modal.value.lots = [l]
+        modal.value.lotSearch = ''
       }
     }
     var openStopModal = function() {
@@ -1829,9 +1835,21 @@ export default {
     }
 
     var selectModalLot = function(l) {
+      // Ajoute à la liste multi-lots si pas déjà présent
+      if (!modal.value.lots) modal.value.lots = []
+      if (!modal.value.lots.find(function(x) { return x.id === l.id })) {
+        modal.value.lots.push(l)
+      }
       modal.value.selectedLot = l
-      modal.value.lotSearch = l.numero_lot
+      modal.value.lotSearch = ''
       modal.value.lotDropdown = []
+    }
+
+    var removeLot = function(l) {
+      modal.value.lots = modal.value.lots.filter(function(x) { return x.id !== l.id })
+      if (modal.value.selectedLot && modal.value.selectedLot.id === l.id) {
+        modal.value.selectedLot = modal.value.lots.length ? modal.value.lots[modal.value.lots.length - 1] : null
+      }
     }
 
     // Mapping op_code → nom du processus dans la table `processus`
@@ -1846,7 +1864,10 @@ export default {
     }
 
     var saveStart = async function() {
-      if (!modal.value.selectedLot) { modal.value.err = 'Sélectionner un lot.'; return }
+      var lotsToStart = (modal.value.lots && modal.value.lots.length)
+        ? modal.value.lots
+        : (modal.value.selectedLot ? [modal.value.selectedLot] : [])
+      if (!lotsToStart.length) { modal.value.err = 'Sélectionner au moins un lot.'; return }
       if (!selectedNode.value) return
       modal.value.saving = true; modal.value.err = ''
       var node = selectedNode.value
@@ -1862,14 +1883,17 @@ export default {
           eqId = eqR.data.id
           await supabase.from('plan_rooms').upsert({code:node.id, equipement_id:eqId, atelier_id:null},{onConflict:'code'})
         }
-        res = await supabase.from('production_sessions').insert({
-          lot_id: modal.value.selectedLot.id,
-          equipement_id: eqId,
-          date: modal.value.dateDebut.slice(0, 10),
-          heure_debut: modal.value.dateDebut.slice(11) + ':00',
-          statut: 'En cours',
-          colis_produits: 0, colis_rebuts: 0
-        })
+        for (var ci = 0; ci < lotsToStart.length; ci++) {
+          res = await supabase.from('production_sessions').insert({
+            lot_id: lotsToStart[ci].id,
+            equipement_id: eqId,
+            date: modal.value.dateDebut.slice(0, 10),
+            heure_debut: modal.value.dateDebut.slice(11) + ':00',
+            statut: 'En cours',
+            colis_produits: 0, colis_rebuts: 0
+          })
+          if (res.error) { modal.value.err = 'Lot '+lotsToStart[ci].numero_lot+' : '+res.error.message; modal.value.saving=false; return }
+        }
       } else {
         // ── FABRICATION ──────────────────────────────────────────
         var atId = node.atelier_id
@@ -1899,16 +1923,18 @@ export default {
         }
         var atRes = await supabase.from('ateliers').select('processus_id').eq('id',atId).single()
         var processusId = atRes.data?.processus_id || null
-        res = await supabase.from('suivi_fabrication').insert({
-          lot_id: modal.value.selectedLot.id,
-          atelier_id: atId,
-          processus_id: processusId,
-          date_debut: modal.value.dateDebut || null,
-          statut: 'En cours'
-        })
+        for (var fi = 0; fi < lotsToStart.length; fi++) {
+          res = await supabase.from('suivi_fabrication').insert({
+            lot_id: lotsToStart[fi].id,
+            atelier_id: atId,
+            processus_id: processusId,
+            date_debut: modal.value.dateDebut || null,
+            statut: 'En cours'
+          })
+          if (res.error) { modal.value.err = 'Lot '+lotsToStart[fi].numero_lot+' : '+res.error.message; modal.value.saving=false; return }
+        }
       }
       modal.value.saving = false
-      if (res.error) { modal.value.err = res.error.message; return }
       modal.value.open = false
       modalLotPreselect.value = null
       await loadLive()
@@ -2076,7 +2102,7 @@ export default {
       // Modals
       modal, modalLotPreselect,
       closeModal, openStartModal, openStopModal, openCloseModal, openDevModal,
-      searchModalLots, selectModalLot, saveStart, saveStop, saveClose, saveDev,
+      searchModalLots, selectModalLot, removeLot, saveStart, saveStop, saveClose, saveDev,
       loadLive,
       // TRS overlay
       trsMode, trsLoading, trsColor, nodeTrs, trsSummary, loadTrsData, toggleTrsMode,
@@ -2243,6 +2269,15 @@ export default {
 .ld-item:hover { background:#22224a; }
 .ld-item:last-child { border-bottom:none; }
 .lot-chip { font-size:11px; color:#10b981; background:#05966911; border-radius:4px; padding:5px 10px; margin-top:4px; }
+.mf-badge { display:inline-flex; align-items:center; justify-content:center; background:#7c3aed; color:#fff; font-size:10px; font-weight:800; border-radius:10px; min-width:18px; height:18px; padding:0 5px; margin-left:6px; }
+.mf-hint { font-size:10px; color:#4b5563; margin-top:4px; font-style:italic; }
+.ld-check { color:#10b981; font-weight:800; margin-left:6px; }
+.lot-multi-list { display:flex; flex-direction:column; gap:3px; margin-top:6px; max-height:160px; overflow-y:auto; }
+.lot-chip-multi { display:flex; align-items:center; gap:6px; background:#12124a; border:1px solid #2a2a5a; border-radius:5px; padding:5px 8px; }
+.lcm-num { font-size:11px; font-weight:700; color:#a78bfa; white-space:nowrap; }
+.lcm-desc { font-size:10px; color:#6b7280; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.lcm-rm { background:none; border:none; color:#4b5563; cursor:pointer; font-size:15px; line-height:1; padding:0 2px; flex-shrink:0; }
+.lcm-rm:hover { color:#ef4444; }
 
 /* ── TRS Detail Panel ── */
 .trs-detail-panel { position:absolute; right:0; top:0; bottom:0; width:300px; background:#060f0a; border-left:1px solid #064e35; display:flex; flex-direction:column; overflow-y:auto; z-index:50; }
