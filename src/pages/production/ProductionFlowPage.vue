@@ -304,9 +304,139 @@
       </svg>
     </div>
 
+    <!-- ── TRS DETAIL PANEL ── -->
+    <transition name="panel-slide">
+      <div class="trs-detail-panel" v-if="trsMode && selectedNode && selectedNode.type === 'cond'" @click.stop>
+        <div class="tdp-hd" :style="{borderLeftColor: selectedTrsPanel ? trsPanelColor(selectedTrsPanel) : '#4b5563'}">
+          <div class="tdp-hd-info">
+            <div class="tdp-equip">{{selectedNode.code}}</div>
+            <div class="tdp-nom">{{selectedNode.nom}}</div>
+          </div>
+          <div class="tdp-right">
+            <div class="tdp-status" :style="{background: (selectedTrsPanel ? trsPanelColor(selectedTrsPanel) : '#4b5563')+'22', color: selectedTrsPanel ? trsPanelColor(selectedTrsPanel) : '#4b5563'}">
+              {{selectedTrsPanel && selectedTrsPanel.session ? selectedTrsPanel.session.statut : 'Disponible'}}
+            </div>
+            <div class="tdp-clock">{{trsClock}}</div>
+            <button class="tdp-close" @click="selectedNode=null; selectedTrsPanel=null">✕</button>
+          </div>
+        </div>
+
+        <!-- No panel / no session -->
+        <div v-if="!selectedTrsPanel" class="tdp-empty">
+          <div class="tdp-empty-msg">Équipement non trouvé dans le conditionnement</div>
+        </div>
+
+        <template v-else>
+          <!-- Shift & équipe -->
+          <div class="tdp-chips" v-if="selectedTrsPanel.shiftNom || selectedTrsPanel.equipeNom">
+            <span v-if="selectedTrsPanel.shiftNom" class="tdp-chip" :style="{background:selectedTrsPanel.shiftCouleur+'22',color:selectedTrsPanel.shiftCouleur,borderColor:selectedTrsPanel.shiftCouleur+'44'}">{{selectedTrsPanel.shiftNom}}</span>
+            <span v-if="selectedTrsPanel.equipeNom" class="tdp-chip" :style="{background:selectedTrsPanel.equipeCouleur+'22',color:selectedTrsPanel.equipeCouleur}">{{selectedTrsPanel.equipeNom}}</span>
+          </div>
+
+          <!-- Lot -->
+          <div class="tdp-lot" v-if="selectedTrsPanel.session">
+            <div class="tdp-lot-num">Lot {{selectedTrsPanel.lotNum}}</div>
+            <div class="tdp-lot-prod">{{selectedTrsPanel.lotProd}}</div>
+          </div>
+          <div class="tdp-no-session" v-else>Aucune session active</div>
+
+          <!-- Timer -->
+          <div class="tdp-timer" v-if="selectedTrsPanel.session">
+            <div class="tdp-timer-lbl">
+              {{selectedTrsPanel.session.statut === 'En cours' ? 'TEMPS PRODUCTION' : selectedTrsPanel.session.statut === 'Arrêt' ? 'ARRÊT EN COURS' : 'PAUSE'}}
+            </div>
+            <div class="tdp-timer-val" :style="{color: trsPanelColor(selectedTrsPanel)}">
+              {{selectedTrsPanel.session.statut === 'En cours' ? trsTimers[selectedTrsPanel.equip.id] || '00:00:00' : (selectedTrsPanel.activeArret ? trsArretTimers[selectedTrsPanel.activeArret.id] || '00:00:00' : '—')}}
+            </div>
+            <div class="tdp-arret-info" v-if="selectedTrsPanel.activeArret">
+              <span class="tdp-arret-chip" :style="{background:(selectedTrsPanel.activeArret.couleur||'#EF4444')+'22',color:selectedTrsPanel.activeArret.couleur||'#EF4444'}">
+                {{selectedTrsPanel.activeArret.arret_code || '—'}}
+              </span>
+              <span class="tdp-arret-nom">{{selectedTrsPanel.activeArret.arret_nom || selectedTrsPanel.activeArret.famille_nom}}</span>
+            </div>
+          </div>
+
+          <!-- Métriques -->
+          <div class="tdp-metrics" v-if="selectedTrsPanel.session">
+            <div class="tdp-metric">
+              <div class="tdp-metric-val">{{selectedTrsPanel.session.colis_produits || 0}}</div>
+              <div class="tdp-metric-lbl">Colis prod.</div>
+            </div>
+            <div class="tdp-metric">
+              <div class="tdp-metric-val">{{selectedTrsPanel.session.objectif_boites || '—'}}</div>
+              <div class="tdp-metric-lbl">Objectif</div>
+            </div>
+            <div class="tdp-metric">
+              <div class="tdp-metric-val">{{selectedTrsPanel.session.cadence_reelle_boite_min != null ? selectedTrsPanel.session.cadence_reelle_boite_min : '—'}}</div>
+              <div class="tdp-metric-lbl">b/min réel</div>
+            </div>
+            <div class="tdp-metric">
+              <div class="tdp-metric-val">{{selectedTrsPanel.session.cadence_objectif_snapshot || selectedTrsPanel.equip.cadence_objectif_boite_min || '—'}}</div>
+              <div class="tdp-metric-lbl">b/min obj.</div>
+            </div>
+          </div>
+
+          <!-- Barre rendement -->
+          <div class="tdp-rend" v-if="selectedTrsPanel.session && selectedTrsPanel.session.objectif_boites">
+            <div class="tdp-rend-bar">
+              <div class="tdp-rend-fill" :style="{width: Math.min(selectedTrsPanel.rendPct,100)+'%', background: selectedTrsPanel.rendPct>=100?'#1D9E75':selectedTrsPanel.rendPct>=80?'#F97316':'#EF4444'}"></div>
+            </div>
+            <div class="tdp-rend-pct" :style="{color: selectedTrsPanel.rendPct>=100?'#1D9E75':selectedTrsPanel.rendPct>=80?'#F97316':'#EF4444'}">{{selectedTrsPanel.rendPct}}%</div>
+          </div>
+
+          <!-- OEE live -->
+          <div class="tdp-oee" v-if="selectedTrsPanel.session">
+            <div class="tdp-oee-item">
+              <div class="tdp-oee-val" :class="trsOeeClass(nodeTrs(selectedNode)?.d)">{{nodeTrs(selectedNode)?.d != null ? nodeTrs(selectedNode).d+'%' : '—'}}</div>
+              <div class="tdp-oee-lbl">Dispo</div>
+            </div>
+            <div class="tdp-oee-item">
+              <div class="tdp-oee-val" :class="trsOeeClass(nodeTrs(selectedNode)?.p)">{{nodeTrs(selectedNode)?.p != null ? nodeTrs(selectedNode).p+'%' : '—'}}</div>
+              <div class="tdp-oee-lbl">Perf.</div>
+            </div>
+            <div class="tdp-oee-item">
+              <div class="tdp-oee-val" :class="trsOeeClass(nodeTrs(selectedNode)?.q)">{{nodeTrs(selectedNode)?.q != null ? nodeTrs(selectedNode).q+'%' : '—'}}</div>
+              <div class="tdp-oee-lbl">Qual.</div>
+            </div>
+            <div class="tdp-oee-item">
+              <div class="tdp-oee-val" :class="trsOeeClass(nodeTrs(selectedNode)?.trs)" style="font-size:20px;">{{nodeTrs(selectedNode)?.trs != null ? nodeTrs(selectedNode).trs+'%' : '—'}}</div>
+              <div class="tdp-oee-lbl">TRS</div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="tdp-actions">
+            <template v-if="!selectedTrsPanel.session">
+              <button class="tdp-btn tdp-btn-start" @click="trsOpenStart(selectedTrsPanel.equip)">▶ Démarrer session</button>
+            </template>
+            <template v-else-if="selectedTrsPanel.session.statut === 'En cours'">
+              <button class="tdp-btn tdp-btn-stop"  @click="trsOpenArret(selectedTrsPanel)">⏸ Arrêt</button>
+              <button class="tdp-btn tdp-btn-count" @click="trsOpenComptage(selectedTrsPanel)">+ Comptage</button>
+              <button class="tdp-btn tdp-btn-close" @click="trsOpenClose(selectedTrsPanel)">✓ Clôturer</button>
+            </template>
+            <template v-else-if="selectedTrsPanel.session.statut === 'Arrêt' || selectedTrsPanel.session.statut === 'Pause'">
+              <button class="tdp-btn tdp-btn-resume"  @click="trsClotureArret(selectedTrsPanel)">▶ Reprendre</button>
+              <button class="tdp-btn tdp-btn-requal"  @click="trsOpenRequalif(selectedTrsPanel)" v-if="selectedTrsPanel.activeArret">✎ Requalifier</button>
+            </template>
+          </div>
+
+          <!-- Arrêts history -->
+          <div class="tdp-arrets" v-if="selectedTrsPanel.session && selectedTrsPanel.arrets && selectedTrsPanel.arrets.length">
+            <div class="tdp-arrets-title">Arrêts du shift</div>
+            <div v-for="a in selectedTrsPanel.arrets" :key="a.id" class="tdp-arret-row" :class="{running: a.is_running}">
+              <span class="tdp-arret-dot" :style="{background: a.couleur || (a.est_pause ? '#10B981' : '#EF4444')}"></span>
+              <span class="tdp-arret-code">{{a.arret_code || '—'}}</span>
+              <span class="tdp-arret-name">{{a.arret_nom || a.famille_nom || '—'}}</span>
+              <span class="tdp-arret-dur">{{a.is_running ? '⏱ en cours' : (a.duree_minutes ? a.duree_minutes+'min' : '—')}}</span>
+            </div>
+          </div>
+        </template>
+      </div>
+    </transition>
+
     <!-- ── PANEL DÉTAIL NŒUD ── -->
     <transition name="panel-slide">
-      <div class="detail-panel" v-if="selectedNode" @click.stop>
+      <div class="detail-panel" v-if="selectedNode && !(trsMode && selectedNode.type === 'cond')" @click.stop>
         <div class="dp-hd" :style="{borderLeftColor: zoneColor(selectedNode.zone)}">
           <div>
             <div class="dp-code">{{selectedNode.code}}</div>
@@ -502,11 +632,198 @@
       </div>
     </div>
 
+    <!-- ══ TRS MODAL : DÉMARRER SESSION ══ -->
+    <div class="trs-overlay" v-if="trsStartModal.show" @click.self="trsStartModal.show=false">
+      <div class="trs-modal">
+        <div class="trs-modal-hd">▶ Démarrer — {{trsStartModal.equip?.nom_equipement}}</div>
+        <label class="trs-lbl">N° Lot *</label>
+        <div class="trs-auto-wrap">
+          <input v-model="trsStartModal.lotSearch" class="trs-inp" placeholder="Rechercher numéro de lot…" @input="trsSearchLots" />
+          <div class="trs-auto-list" v-if="trsStartModal.lotSuggestions.length">
+            <div v-for="l in trsStartModal.lotSuggestions" :key="l.id" class="trs-auto-item" @mousedown.prevent="trsSelectLot(l)">
+              <span class="trs-auto-code">{{l.numero_lot}}</span>
+              <span class="trs-auto-desc">{{l.code_article}} — {{l.description}}</span>
+            </div>
+          </div>
+        </div>
+        <div class="trs-sel-lot" v-if="trsStartModal.lot">✓ Lot <strong>{{trsStartModal.lot.numero_lot}}</strong> — {{trsStartModal.lot.description}}</div>
+        <div class="trs-form-row">
+          <div class="trs-form-field">
+            <label class="trs-lbl">Shift</label>
+            <select v-model="trsStartModal.shift_id" class="trs-inp">
+              <option :value="null">— Aucun —</option>
+              <option v-for="s in trsShifts" :key="s.id" :value="s.id">{{s.nom}} ({{s.heure_debut.slice(0,5)}}→{{s.heure_fin.slice(0,5)}})</option>
+            </select>
+          </div>
+          <div class="trs-form-field">
+            <label class="trs-lbl">Équipe</label>
+            <select v-model="trsStartModal.equipe_id" class="trs-inp">
+              <option :value="null">— Aucune —</option>
+              <option v-for="e in trsEquipes" :key="e.id" :value="e.id">{{e.nom}}</option>
+            </select>
+          </div>
+        </div>
+        <div class="trs-form-row">
+          <div class="trs-form-field">
+            <label class="trs-lbl">Date</label>
+            <input type="date" v-model="trsStartModal.date" class="trs-inp" />
+          </div>
+          <div class="trs-form-field">
+            <label class="trs-lbl">Heure début</label>
+            <input type="time" v-model="trsStartModal.heure_debut" class="trs-inp" step="60" />
+          </div>
+        </div>
+        <div class="trs-cad-preview" v-if="trsStartModal.equip">
+          <div class="trs-cp-row"><span class="trs-cp-lbl">Cadence nominale</span><span class="trs-cp-val">{{trsStartModal.equip.cadence_nominale_boite_min || '—'}} b/min</span></div>
+          <div class="trs-cp-row"><span class="trs-cp-lbl">Cadence objectif</span><span class="trs-cp-val trs-cp-obj">{{trsStartModal.cadenceObj || trsStartModal.equip.cadence_objectif_boite_min || '—'}} b/min</span></div>
+          <div class="trs-cp-row" v-if="trsStartModal.cadenceObj || trsStartModal.equip.cadence_objectif_boite_min"><span class="trs-cp-lbl">Objectif / shift</span><span class="trs-cp-val trs-cp-obj">{{trsComputeObjShift(trsStartModal)}} boîtes</span></div>
+        </div>
+        <div class="trs-err" v-if="trsStartModal.error">{{trsStartModal.error}}</div>
+        <div class="trs-modal-acts">
+          <button class="trs-btn-save trs-btn-go" @click="trsDoStart" :disabled="trsStartModal.saving || !trsStartModal.lot">{{trsStartModal.saving ? 'Démarrage…' : '▶ Démarrer'}}</button>
+          <button class="trs-btn-cancel" @click="trsStartModal.show=false">Annuler</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TRS MODAL : DÉCLARER ARRÊT ══ -->
+    <div class="trs-overlay" v-if="trsArretModal.show" @click.self="trsArretModal.show=false">
+      <div class="trs-modal">
+        <div class="trs-modal-hd">⏸ Déclarer un arrêt — {{trsArretModal.panel?.equip.nom_equipement}}</div>
+        <div class="trs-cascade">
+          <div class="trs-cs-step">
+            <label class="trs-lbl">Famille *</label>
+            <select v-model="trsArretModal.famille_id" class="trs-inp" @change="trsOnFamilleChange">
+              <option :value="null">— Sélectionner —</option>
+              <option v-for="f in trsArretFamilles" :key="f.id" :value="f.id">{{f.nom}}</option>
+            </select>
+          </div>
+          <div class="trs-cs-arrow">→</div>
+          <div class="trs-cs-step">
+            <label class="trs-lbl">Sous-famille *</label>
+            <select v-model="trsArretModal.sf_id" class="trs-inp" :disabled="!trsArretModal.famille_id" @change="trsOnSFChange">
+              <option :value="null">— Sélectionner —</option>
+              <option v-for="sf in trsArretModal.sousFamilles" :key="sf.id" :value="sf.id">{{sf.nom}}</option>
+            </select>
+          </div>
+          <div class="trs-cs-arrow">→</div>
+          <div class="trs-cs-step">
+            <label class="trs-lbl">Code arrêt *</label>
+            <select v-model="trsArretModal.type_id" class="trs-inp" :disabled="!trsArretModal.sf_id" @change="trsOnTypeChange">
+              <option :value="null">— Sélectionner —</option>
+              <option v-for="t in trsArretModal.types" :key="t.id" :value="t.id">{{t.code}} — {{t.nom}}</option>
+            </select>
+          </div>
+        </div>
+        <div class="trs-type-preview" v-if="trsArretModal.selectedType">
+          <span class="trs-code-chip" :style="{background:(trsArretModal.selectedType.couleur||trsArretModal.familleCouleur)+'22',color:trsArretModal.selectedType.couleur||trsArretModal.familleCouleur}">{{trsArretModal.selectedType.code}}</span>
+          <span class="trs-prev-nom">{{trsArretModal.selectedType.nom}}</span>
+          <span class="trs-tag trs-tag-plan" v-if="trsArretModal.selectedType.est_planifie">Planifié</span>
+          <span class="trs-tag trs-tag-pause" v-if="trsArretModal.selectedType.est_pause">Pause</span>
+        </div>
+        <div class="trs-form-row">
+          <div class="trs-form-field">
+            <label class="trs-lbl">Heure début arrêt</label>
+            <input type="time" v-model="trsArretModal.heure_debut" class="trs-inp" step="60" />
+          </div>
+        </div>
+        <label class="trs-lbl">Commentaire</label>
+        <input v-model="trsArretModal.commentaire" class="trs-inp" placeholder="Optionnel…" />
+        <div class="trs-err" v-if="trsArretModal.error">{{trsArretModal.error}}</div>
+        <div class="trs-modal-acts">
+          <button class="trs-btn-save trs-btn-stop" @click="trsDoArret" :disabled="trsArretModal.saving || !trsArretModal.type_id">{{trsArretModal.saving ? 'Enregistrement…' : '⏸ Démarrer chrono arrêt'}}</button>
+          <button class="trs-btn-cancel" @click="trsArretModal.show=false">Annuler</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TRS MODAL : REQUALIFIER ARRÊT ══ -->
+    <div class="trs-overlay" v-if="trsRequalModal.show" @click.self="trsRequalModal.show=false">
+      <div class="trs-modal trs-modal-sm">
+        <div class="trs-modal-hd">✎ Requalifier l'arrêt en cours — {{trsRequalModal.panel?.equip.nom_equipement}}</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div><label class="trs-lbl">Famille</label>
+            <select v-model="trsRequalModal.famille_id" class="trs-inp" @change="trsOnRequalFamilleChange">
+              <option :value="null">— Sélectionner —</option>
+              <option v-for="f in trsArretFamilles" :key="f.id" :value="f.id">{{f.nom}}</option>
+            </select></div>
+          <div><label class="trs-lbl">Sous-famille</label>
+            <select v-model="trsRequalModal.sf_id" class="trs-inp" :disabled="!trsRequalModal.famille_id" @change="trsOnRequalSFChange">
+              <option :value="null">— Sélectionner —</option>
+              <option v-for="sf in trsRequalModal.sousFamilles" :key="sf.id" :value="sf.id">{{sf.nom}}</option>
+            </select></div>
+          <div><label class="trs-lbl">Code arrêt</label>
+            <select v-model="trsRequalModal.type_id" class="trs-inp" :disabled="!trsRequalModal.sf_id">
+              <option :value="null">— Sélectionner —</option>
+              <option v-for="t in trsRequalModal.types" :key="t.id" :value="t.id">{{t.code}} — {{t.nom}}</option>
+            </select></div>
+        </div>
+        <div class="trs-modal-acts">
+          <button class="trs-btn-save" @click="trsDoRequalif" :disabled="trsRequalModal.saving || !trsRequalModal.type_id">{{trsRequalModal.saving ? '…' : 'Requalifier'}}</button>
+          <button class="trs-btn-cancel" @click="trsRequalModal.show=false">Annuler</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TRS MODAL : COMPTAGE ══ -->
+    <div class="trs-overlay" v-if="trsComptageModal.show" @click.self="trsComptageModal.show=false">
+      <div class="trs-modal trs-modal-sm">
+        <div class="trs-modal-hd">+ Saisie comptage — {{trsComptageModal.panel?.equip.nom_equipement}}</div>
+        <div class="trs-modal-ctx" v-if="trsComptageModal.panel?.session">Session en cours · Colis : <strong>{{trsComptageModal.panel.session.colis_produits}}</strong></div>
+        <div class="trs-form-row">
+          <div class="trs-form-field"><label class="trs-lbl">Heure relevé</label><input type="time" v-model="trsComptageModal.heure" class="trs-inp" step="60" /></div>
+          <div class="trs-form-field"><label class="trs-lbl">Colis cumulés *</label><input type="number" v-model.number="trsComptageModal.colis" class="trs-inp" placeholder="ex: 1250" min="0" /></div>
+        </div>
+        <div class="trs-form-row">
+          <div class="trs-form-field"><label class="trs-lbl">Rebuts cumulés</label><input type="number" v-model.number="trsComptageModal.rebuts" class="trs-inp" placeholder="0" min="0" /></div>
+        </div>
+        <div class="trs-cad-calc" v-if="trsComptageModal.panel?.session && trsComptageModal.colis">
+          <div class="trs-cc-row"><span class="trs-cp-lbl">Cadence calculée</span><span class="trs-cp-val">{{trsComputeCadence(trsComptageModal)}} b/min</span></div>
+          <div class="trs-cc-row"><span class="trs-cp-lbl">vs objectif</span><span class="trs-cp-val" :class="trsComputeCadenceVsObj(trsComptageModal) >= 100 ? 'trs-ok' : 'trs-bad'">{{trsComputeCadenceVsObj(trsComptageModal)}}%</span></div>
+        </div>
+        <div class="trs-modal-acts">
+          <button class="trs-btn-save" @click="trsDoComptage" :disabled="trsComptageModal.saving || !trsComptageModal.colis">{{trsComptageModal.saving ? '…' : 'Enregistrer'}}</button>
+          <button class="trs-btn-cancel" @click="trsComptageModal.show=false">Annuler</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TRS MODAL : CLÔTURER SESSION ══ -->
+    <div class="trs-overlay" v-if="trsCloseModal.show" @click.self="trsCloseModal.show=false">
+      <div class="trs-modal">
+        <div class="trs-modal-hd">✓ Clôturer la session — {{trsCloseModal.panel?.equip.nom_equipement}}</div>
+        <div class="trs-modal-ctx" v-if="trsCloseModal.panel?.session">Lot {{trsCloseModal.panel.lotNum}} · Démarré à {{trsCloseModal.panel.session.heure_debut}}</div>
+        <div class="trs-form-row">
+          <div class="trs-form-field"><label class="trs-lbl">Heure fin *</label><input type="time" v-model="trsCloseModal.heure_fin" class="trs-inp" step="60" /></div>
+          <div class="trs-form-field"><label class="trs-lbl">Colis produits *</label><input type="number" v-model.number="trsCloseModal.colis_produits" class="trs-inp" min="0" /></div>
+        </div>
+        <div class="trs-form-row">
+          <div class="trs-form-field"><label class="trs-lbl">Colis rebuts</label><input type="number" v-model.number="trsCloseModal.colis_rebuts" class="trs-inp" min="0" /></div>
+        </div>
+        <label class="trs-lbl">Observation</label>
+        <input v-model="trsCloseModal.observation" class="trs-inp" placeholder="Optionnel…" />
+        <div class="trs-oee-preview" v-if="trsCloseModal.panel && trsCloseModal.heure_fin && trsCloseModal.colis_produits">
+          <div class="trs-op-title">OEE estimé à la clôture</div>
+          <div class="trs-op-grid">
+            <div class="trs-op-item" v-for="item in trsComputeOEEPreview(trsCloseModal)" :key="item.label">
+              <div class="trs-op-val" :class="trsOeeClass(item.val)">{{item.val != null ? item.val+'%' : '—'}}</div>
+              <div class="trs-op-lbl">{{item.label}}</div>
+            </div>
+          </div>
+        </div>
+        <div class="trs-err" v-if="trsCloseModal.error">{{trsCloseModal.error}}</div>
+        <div class="trs-modal-acts">
+          <button class="trs-btn-save trs-btn-cloture" @click="trsDoClose" :disabled="trsCloseModal.saving || !trsCloseModal.heure_fin">{{trsCloseModal.saving ? 'Clôture…' : '✓ Clôturer et calculer OEE'}}</button>
+          <button class="trs-btn-cancel" @click="trsCloseModal.show=false">Annuler</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
 <script>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '../../supabase'
 
@@ -793,7 +1110,399 @@ export default {
 
     var toggleTrsMode = async function() {
       trsMode.value = !trsMode.value
-      if (trsMode.value) await loadTrsData()
+      if (trsMode.value) {
+        await loadTrsFull()
+        trsClockInt   = setInterval(trsTick, 1000)
+        trsRefreshInt = setInterval(loadTrsFull, 60000)
+        trsTick()
+      } else {
+        clearInterval(trsClockInt)
+        clearInterval(trsRefreshInt)
+        trsClockInt = null; trsRefreshInt = null
+        selectedTrsPanel.value = null
+      }
+    }
+
+    // ── TRS LIVE STATE ─────────────────────────────────────────────
+    var trsPanels        = ref([])
+    var trsShifts        = ref([])
+    var trsEquipes       = ref([])
+    var trsArretFamilles = ref([])
+    var trsClock         = ref('')
+    var trsTimers        = ref({})
+    var trsArretTimers   = ref({})
+    var selectedTrsPanel = ref(null)
+    var trsClockInt      = null
+    var trsRefreshInt    = null
+    var trsLotTimeout    = null
+
+    var trsStartModal    = reactive({ show:false, equip:null, lotSearch:'', lotSuggestions:[], lot:null, shift_id:null, equipe_id:null, date:'', heure_debut:'', cadenceObj:null, error:'', saving:false })
+    var trsArretModal    = reactive({ show:false, panel:null, famille_id:null, sf_id:null, type_id:null, sousFamilles:[], types:[], selectedType:null, familleCouleur:'#EF4444', heure_debut:'', commentaire:'', error:'', saving:false })
+    var trsRequalModal   = reactive({ show:false, panel:null, famille_id:null, sf_id:null, type_id:null, sousFamilles:[], types:[], saving:false })
+    var trsComptageModal = reactive({ show:false, panel:null, heure:'', colis:null, rebuts:0, saving:false })
+    var trsCloseModal    = reactive({ show:false, panel:null, heure_fin:'', colis_produits:null, colis_rebuts:0, observation:'', error:'', saving:false })
+
+    var trsNowTime = function() {
+      var n = new Date()
+      return String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0')
+    }
+
+    var trsToDateTime = function(dateStr, timeStr) {
+      if (!dateStr || !timeStr) return null
+      return new Date(dateStr + 'T' + timeStr)
+    }
+
+    var trsFormatElapsed = function(ms) {
+      if (ms < 0) ms = 0
+      var s = Math.floor(ms / 1000)
+      var h = Math.floor(s / 3600)
+      var m = Math.floor((s % 3600) / 60)
+      var sec = s % 60
+      return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(sec).padStart(2,'0')
+    }
+
+    var trsPanelColor = function(p) {
+      if (!p.session) return '#9CA3AF'
+      if (p.session.statut === 'En cours') return '#1D9E75'
+      if (p.session.statut === 'Arrêt') return '#EF4444'
+      if (p.session.statut === 'Pause') return '#F97316'
+      return '#9CA3AF'
+    }
+
+    var trsOeeClass = function(v) {
+      if (v == null) return ''
+      if (v >= 85) return 'oee-green'
+      if (v >= 60) return 'oee-orange'
+      return 'oee-red'
+    }
+
+    var trsComputeObjShift = function(m) {
+      var cadObj = m.cadenceObj || (m.equip && m.equip.cadence_objectif_boite_min)
+      if (!cadObj || !m.equip) return '—'
+      var to = m.equip.temps_ouverture_shift_min || 480
+      var pauses = m.equip.temps_pause_planifie_min || 0
+      return Math.round(cadObj * (to - pauses))
+    }
+
+    var trsComputeCadence = function(m) {
+      var s = m.panel && m.panel.session
+      if (!s || !m.colis || !s.heure_debut || !s.date) return '—'
+      var start = trsToDateTime(s.date, s.heure_debut)
+      if (!start) return '—'
+      var minElapsed = (new Date() - start) / 60000
+      if (minElapsed <= 0) return '—'
+      return (m.colis / minElapsed).toFixed(1)
+    }
+
+    var trsComputeCadenceVsObj = function(m) {
+      var cadR = parseFloat(trsComputeCadence(m))
+      var cadO = m.panel && m.panel.session && m.panel.session.cadence_objectif_snapshot
+      if (!cadR || !cadO) return '—'
+      return Math.round((cadR / cadO) * 100)
+    }
+
+    var trsComputeOEEPreview = function(m) {
+      var s = m.panel && m.panel.session
+      if (!s) return []
+      var eq = m.panel.equip
+      var start = trsToDateTime(s.date, s.heure_debut)
+      var end   = trsToDateTime(s.date, m.heure_fin)
+      if (!start || !end || end <= start) return []
+      var totalMin   = (end - start) / 60000
+      var arretImpro = (m.panel.arrets||[]).reduce(function(acc,a){ return !a.est_planifie && !a.est_pause ? acc+(a.duree_minutes||0) : acc }, 0)
+      var pauses     = (m.panel.arrets||[]).reduce(function(acc,a){ return a.est_pause ? acc+(a.duree_minutes||0) : acc }, 0)
+      var to = totalMin - pauses; var tf = to - arretImpro
+      var colisGood = (m.colis_produits||0) - (m.colis_rebuts||0); var total = m.colis_produits||0
+      var cadNom = s.cadence_nominale_snapshot || eq.cadence_nominale_boite_min || 0
+      var tn = cadNom>0 && tf>0 ? Math.min((total/cadNom),tf) : tf
+      var D = to>0 ? Math.round((tf/to)*100) : null
+      var P = tf>0 && cadNom>0 ? Math.round((tn/tf)*100) : null
+      var Q = total>0 ? Math.round((colisGood/total)*100) : null
+      var TRS = (D!=null && P!=null && Q!=null) ? Math.round((D*P*Q)/10000) : null
+      return [{ label:'Disponibilité', val:D }, { label:'Performance', val:P }, { label:'Qualité', val:Q }, { label:'TRS', val:TRS }]
+    }
+
+    var trsTick = function() {
+      var n = new Date()
+      var p2 = function(v){ return String(v).padStart(2,'0') }
+      trsClock.value = p2(n.getHours())+':'+p2(n.getMinutes())+':'+p2(n.getSeconds())
+      var newT = {}, newAT = {}
+      for (var i = 0; i < trsPanels.value.length; i++) {
+        var p = trsPanels.value[i]
+        if (p.session && p.session.statut === 'En cours') {
+          var start = trsToDateTime(p.session.date, p.session.heure_debut)
+          if (start) newT[p.equip.id] = trsFormatElapsed(n - start)
+        }
+        if (p.activeArret && p.activeArret.is_running) {
+          var aStart = trsToDateTime(p.session ? p.session.date : new Date().toISOString().slice(0,10), p.activeArret.heure_debut)
+          if (aStart) newAT[p.activeArret.id] = trsFormatElapsed(n - aStart)
+        }
+      }
+      trsTimers.value = newT; trsArretTimers.value = newAT
+    }
+
+    var loadTrsFull = async function() {
+      trsLoading.value = true
+      var [rEq, rSh, rEq2, rFam] = await Promise.all([
+        supabase.from('equipements_conditionnement').select('*').eq('actif', true).order('ordre_affichage'),
+        supabase.from('shifts').select('*').eq('actif', true).order('heure_debut'),
+        supabase.from('equipes').select('*').eq('actif', true).order('nom'),
+        supabase.from('arret_familles').select('*').eq('actif', true).order('ordre')
+      ])
+      if (rSh.data)  trsShifts.value       = rSh.data
+      if (rEq2.data) trsEquipes.value       = rEq2.data
+      if (rFam.data) trsArretFamilles.value = rFam.data
+      var equipList = rEq.data || []
+      var newPanels = []
+      for (var i = 0; i < equipList.length; i++) {
+        var eq = equipList[i]
+        var rSess = await supabase.from('production_sessions')
+          .select('*').eq('equipement_id', eq.id).neq('statut', 'Clôturé')
+          .is('deleted_at', null).order('created_at', { ascending: false }).limit(1).maybeSingle()
+        var session = rSess.data || null
+        var lotNum = '—', lotProd = '—'
+        if (session) {
+          var rLot = await supabase.from('lots').select('numero_lot, product_id').eq('id', session.lot_id).maybeSingle()
+          if (rLot.data) {
+            lotNum = rLot.data.numero_lot
+            var rProd = await supabase.from('products').select('code_article, description').eq('id', rLot.data.product_id).maybeSingle()
+            if (rProd.data) lotProd = rProd.data.code_article + ' — ' + rProd.data.description
+          }
+        }
+        var panelArrets = [], activeArret = null
+        if (session) {
+          var rArr = await supabase.from('production_arrets').select('*').eq('session_id', session.id).order('created_at', { ascending: false })
+          if (rArr.data) { panelArrets = rArr.data; activeArret = panelArrets.find(function(a){ return a.is_running }) || null }
+        }
+        var shiftNom = '', shiftCouleur = '#3B82F6', equipeNom = '', equipeCouleur = '#8B5CF6'
+        if (session && session.shift_id) {
+          var sh = trsShifts.value.find(function(s){ return s.id === session.shift_id })
+          if (sh) { shiftNom = sh.nom; shiftCouleur = sh.couleur }
+        }
+        if (session && session.equipe_id) {
+          var eq2 = trsEquipes.value.find(function(e){ return e.id === session.equipe_id })
+          if (eq2) { equipeNom = eq2.nom; equipeCouleur = eq2.couleur }
+        }
+        var rendPct = 0
+        if (session && session.objectif_boites && session.colis_produits)
+          rendPct = Math.round((session.colis_produits / session.objectif_boites) * 100)
+        newPanels.push({ equip: eq, session, activeArret, arrets: panelArrets, lotNum, lotProd, shiftNom, shiftCouleur, equipeNom, equipeCouleur, rendPct })
+      }
+      trsPanels.value = newPanels
+      // Sync TRS overlay data
+      var today = new Date().toISOString().slice(0, 10)
+      var [rS, rA] = await Promise.all([
+        supabase.from('production_sessions').select('id,equipement_id,statut,date,heure_debut,heure_fin,disponibilite,performance,qualite,trs,colis_produits,colis_rebuts,objectif_boites,cadence_nominale_snapshot').eq('date', today).neq('statut', 'Annulé'),
+        supabase.from('production_arrets').select('id,session_id,duree_minutes,est_planifie,est_pause,is_running')
+      ])
+      if (!rS.error) trsSessionsFull.value = rS.data || []
+      if (!rA.error) trsArretsFull.value   = rA.data || []
+      // Sync selectedTrsPanel pointer after reload
+      if (selectedTrsPanel.value) {
+        var updated = newPanels.find(function(p){ return p.equip.id === selectedTrsPanel.value.equip.id })
+        selectedTrsPanel.value = updated || null
+      }
+      trsLoading.value = false
+    }
+
+    // ── TRS Actions ───────────────────────────────────────────────
+    var trsOpenStart = function(equip) {
+      trsStartModal.equip = equip; trsStartModal.lotSearch = ''; trsStartModal.lotSuggestions = []
+      trsStartModal.lot = null; trsStartModal.shift_id = null; trsStartModal.equipe_id = null
+      trsStartModal.date = new Date().toISOString().slice(0,10); trsStartModal.heure_debut = trsNowTime()
+      trsStartModal.cadenceObj = null; trsStartModal.error = ''; trsStartModal.saving = false; trsStartModal.show = true
+    }
+
+    var trsSearchLots = function() {
+      clearTimeout(trsLotTimeout)
+      var q = trsStartModal.lotSearch
+      if (!q || q.length < 2) { trsStartModal.lotSuggestions = []; return }
+      trsLotTimeout = setTimeout(async function() {
+        var r = await supabase.from('lots').select('id, numero_lot, product_id, products(code_article, description)').ilike('numero_lot', '%'+q+'%').limit(8)
+        trsStartModal.lotSuggestions = (r.data||[]).map(function(l) {
+          return { id:l.id, numero_lot:l.numero_lot, code_article:l.products?l.products.code_article:'', description:l.products?l.products.description:'', product_id:l.product_id }
+        })
+      }, 200)
+    }
+
+    var trsSelectLot = async function(l) {
+      trsStartModal.lot = l; trsStartModal.lotSearch = l.numero_lot; trsStartModal.lotSuggestions = []
+      if (trsStartModal.equip) {
+        var r = await supabase.from('objectifs_production').select('cadence_objectif_boite_min').eq('equipement_id', trsStartModal.equip.id).eq('product_id', l.product_id).eq('actif', true).limit(1).maybeSingle()
+        trsStartModal.cadenceObj = r.data ? r.data.cadence_objectif_boite_min : null
+      }
+    }
+
+    var trsDoStart = async function() {
+      if (!trsStartModal.lot) { trsStartModal.error = 'Sélectionner un lot.'; return }
+      trsStartModal.saving = true
+      var eq = trsStartModal.equip
+      var cadObj = trsStartModal.cadenceObj || eq.cadence_objectif_boite_min
+      var to = eq.temps_ouverture_shift_min || 480; var pauses = eq.temps_pause_planifie_min || 0
+      var objBoites = cadObj ? Math.round(cadObj * (to - pauses)) : null
+      var r = await supabase.from('production_sessions').insert({
+        lot_id: trsStartModal.lot.id, equipement_id: eq.id,
+        shift_id: trsStartModal.shift_id||null, equipe_id: trsStartModal.equipe_id||null,
+        date: trsStartModal.date, heure_debut: trsStartModal.heure_debut+':00', statut: 'En cours',
+        cadence_nominale_snapshot: eq.cadence_nominale_boite_min||null, cadence_objectif_snapshot: cadObj||null,
+        objectif_boites: objBoites, colis_produits: 0, colis_rebuts: 0
+      })
+      if (r.error) { trsStartModal.error = r.error.message; trsStartModal.saving = false; return }
+      trsStartModal.show = false; trsStartModal.saving = false
+      await loadTrsFull()
+    }
+
+    var trsOpenArret = function(p) {
+      trsArretModal.panel = p; trsArretModal.famille_id = null; trsArretModal.sf_id = null; trsArretModal.type_id = null
+      trsArretModal.sousFamilles = []; trsArretModal.types = []; trsArretModal.selectedType = null
+      trsArretModal.heure_debut = trsNowTime(); trsArretModal.commentaire = ''; trsArretModal.error = ''; trsArretModal.saving = false; trsArretModal.show = true
+    }
+
+    var trsOnFamilleChange = async function() {
+      trsArretModal.sf_id = null; trsArretModal.type_id = null; trsArretModal.sousFamilles = []; trsArretModal.types = []; trsArretModal.selectedType = null
+      if (!trsArretModal.famille_id) return
+      var f = trsArretFamilles.value.find(function(x){ return x.id === trsArretModal.famille_id })
+      trsArretModal.familleCouleur = f ? f.couleur : '#EF4444'
+      var r = await supabase.from('arret_sous_familles').select('*').eq('famille_id', trsArretModal.famille_id).eq('actif', true).order('ordre')
+      trsArretModal.sousFamilles = r.data || []
+    }
+
+    var trsOnSFChange = async function() {
+      trsArretModal.type_id = null; trsArretModal.types = []; trsArretModal.selectedType = null
+      if (!trsArretModal.sf_id) return
+      var r = await supabase.from('arret_types').select('*').eq('sous_famille_id', trsArretModal.sf_id).eq('actif', true).order('code')
+      trsArretModal.types = r.data || []
+    }
+
+    var trsOnTypeChange = function() {
+      trsArretModal.selectedType = trsArretModal.types.find(function(t){ return t.id === trsArretModal.type_id }) || null
+    }
+
+    var trsDoArret = async function() {
+      if (!trsArretModal.type_id) { trsArretModal.error = 'Sélectionner un code arrêt.'; return }
+      trsArretModal.saving = true
+      var t = trsArretModal.selectedType
+      var f = trsArretFamilles.value.find(function(x){ return x.id === trsArretModal.famille_id })
+      var sf = trsArretModal.sousFamilles.find(function(x){ return x.id === trsArretModal.sf_id })
+      var r = await supabase.from('production_arrets').insert({
+        session_id: trsArretModal.panel.session.id, arret_type_id: t.id,
+        famille_nom: f?f.nom:'', sous_famille_nom: sf?sf.nom:'', arret_code: t.code, arret_nom: t.nom,
+        couleur: t.couleur||(f?f.couleur:'#EF4444'), est_planifie: t.est_planifie, est_pause: t.est_pause,
+        heure_debut: trsArretModal.heure_debut+':00', is_running: true, commentaire: trsArretModal.commentaire||null
+      })
+      if (r.error) { trsArretModal.error = r.error.message; trsArretModal.saving = false; return }
+      await supabase.from('production_sessions').update({ statut: t.est_pause?'Pause':'Arrêt', updated_at: new Date().toISOString() }).eq('id', trsArretModal.panel.session.id)
+      trsArretModal.show = false; trsArretModal.saving = false
+      await loadTrsFull()
+    }
+
+    var trsClotureArret = async function(p) {
+      if (!p.activeArret) return
+      var now = trsNowTime()
+      var start = trsToDateTime(p.session.date, p.activeArret.heure_debut)
+      var dur = start ? Math.round((new Date() - start) / 60000) : null
+      await supabase.from('production_arrets').update({ heure_fin: now+':00', duree_minutes: dur, is_running: false, updated_at: new Date().toISOString() }).eq('id', p.activeArret.id)
+      await supabase.from('production_sessions').update({ statut: 'En cours', updated_at: new Date().toISOString() }).eq('id', p.session.id)
+      await loadTrsFull()
+    }
+
+    var trsOpenRequalif = function(p) {
+      trsRequalModal.panel = p; trsRequalModal.famille_id = null; trsRequalModal.sf_id = null; trsRequalModal.type_id = null
+      trsRequalModal.sousFamilles = []; trsRequalModal.types = []; trsRequalModal.saving = false; trsRequalModal.show = true
+    }
+
+    var trsOnRequalFamilleChange = async function() {
+      trsRequalModal.sf_id = null; trsRequalModal.type_id = null; trsRequalModal.types = []
+      if (!trsRequalModal.famille_id) return
+      var r = await supabase.from('arret_sous_familles').select('*').eq('famille_id', trsRequalModal.famille_id).eq('actif', true).order('ordre')
+      trsRequalModal.sousFamilles = r.data || []
+    }
+
+    var trsOnRequalSFChange = async function() {
+      trsRequalModal.type_id = null
+      if (!trsRequalModal.sf_id) return
+      var r = await supabase.from('arret_types').select('*').eq('sous_famille_id', trsRequalModal.sf_id).eq('actif', true).order('code')
+      trsRequalModal.types = r.data || []
+    }
+
+    var trsDoRequalif = async function() {
+      if (!trsRequalModal.type_id || !trsRequalModal.panel.activeArret) return
+      trsRequalModal.saving = true
+      var t = trsRequalModal.types.find(function(x){ return x.id === trsRequalModal.type_id })
+      var f = trsArretFamilles.value.find(function(x){ return x.id === trsRequalModal.famille_id })
+      var sf = trsRequalModal.sousFamilles.find(function(x){ return x.id === trsRequalModal.sf_id })
+      await supabase.from('production_arrets').update({
+        arret_type_id: t.id, famille_nom: f?f.nom:'', sous_famille_nom: sf?sf.nom:'',
+        arret_code: t.code, arret_nom: t.nom, couleur: t.couleur||(f?f.couleur:'#EF4444'),
+        est_planifie: t.est_planifie, est_pause: t.est_pause, updated_at: new Date().toISOString()
+      }).eq('id', trsRequalModal.panel.activeArret.id)
+      trsRequalModal.show = false; trsRequalModal.saving = false
+      await loadTrsFull()
+    }
+
+    var trsOpenComptage = function(p) {
+      trsComptageModal.panel  = p; trsComptageModal.heure  = trsNowTime()
+      trsComptageModal.colis  = p.session ? p.session.colis_produits : null
+      trsComptageModal.rebuts = p.session ? p.session.colis_rebuts   : 0
+      trsComptageModal.saving = false; trsComptageModal.show = true
+    }
+
+    var trsDoComptage = async function() {
+      if (!trsComptageModal.colis) return
+      trsComptageModal.saving = true
+      var s = trsComptageModal.panel.session
+      var start = trsToDateTime(s.date, s.heure_debut)
+      var minEl = start ? (new Date() - start) / 60000 : null
+      var cadInst = (minEl && minEl > 0) ? parseFloat((trsComptageModal.colis / minEl).toFixed(2)) : null
+      await supabase.from('production_comptages').insert({ session_id: s.id, heure: trsComptageModal.heure+':00', colis_cumules: trsComptageModal.colis, rebuts_cumules: trsComptageModal.rebuts||0, cadence_instantanee: cadInst })
+      await supabase.from('production_sessions').update({ colis_produits: trsComptageModal.colis, colis_rebuts: trsComptageModal.rebuts||0, cadence_reelle_boite_min: cadInst, updated_at: new Date().toISOString() }).eq('id', s.id)
+      trsComptageModal.show = false; trsComptageModal.saving = false
+      await loadTrsFull()
+    }
+
+    var trsOpenClose = function(p) {
+      trsCloseModal.panel = p; trsCloseModal.heure_fin = trsNowTime()
+      trsCloseModal.colis_produits = p.session ? p.session.colis_produits : null
+      trsCloseModal.colis_rebuts   = p.session ? p.session.colis_rebuts   : 0
+      trsCloseModal.observation = ''; trsCloseModal.error = ''; trsCloseModal.saving = false; trsCloseModal.show = true
+    }
+
+    var trsDoClose = async function() {
+      if (!trsCloseModal.heure_fin) { trsCloseModal.error = 'Heure de fin requise.'; return }
+      trsCloseModal.saving = true
+      var s = trsCloseModal.panel.session; var eq = trsCloseModal.panel.equip; var arrs = trsCloseModal.panel.arrets || []
+      var start = trsToDateTime(s.date, s.heure_debut); var end = trsToDateTime(s.date, trsCloseModal.heure_fin)
+      var totalMin   = (start && end) ? Math.round((end - start) / 60000) : 0
+      var arretImpro = arrs.reduce(function(a,x){ return !x.est_planifie && !x.est_pause ? a+(x.duree_minutes||0) : a }, 0)
+      var arretPlan  = arrs.reduce(function(a,x){ return x.est_planifie && !x.est_pause ? a+(x.duree_minutes||0) : a }, 0)
+      var pauses     = arrs.reduce(function(a,x){ return x.est_pause ? a+(x.duree_minutes||0) : a }, 0)
+      var to = totalMin - pauses; var tf = to - arretImpro
+      var total = trsCloseModal.colis_produits||0; var good = total - (trsCloseModal.colis_rebuts||0)
+      var cadNom = s.cadence_nominale_snapshot || eq.cadence_nominale_boite_min || 0
+      var cadReelle = (totalMin>0 && total>0) ? parseFloat((total/totalMin).toFixed(2)) : null
+      var D   = to>0 ? Math.round((tf/to)*100) : null
+      var P   = (tf>0 && cadNom>0) ? Math.min(100, Math.round((cadReelle||0)/cadNom*100)) : null
+      var Q   = total>0 ? Math.round((good/total)*100) : null
+      var TRS = (D!=null && P!=null && Q!=null) ? Math.round((D/100)*(P/100)*(Q/100)*100) : null
+      var rendPct = (s.objectif_boites && total) ? Math.round((total/s.objectif_boites)*100) : null
+      if (trsCloseModal.panel.activeArret) {
+        var now = trsNowTime()
+        var aStart = trsToDateTime(s.date, trsCloseModal.panel.activeArret.heure_debut)
+        var aDur = aStart ? Math.round((end - aStart) / 60000) : null
+        await supabase.from('production_arrets').update({ heure_fin: now+':00', duree_minutes: aDur, is_running: false, updated_at: new Date().toISOString() }).eq('id', trsCloseModal.panel.activeArret.id)
+      }
+      var r = await supabase.from('production_sessions').update({
+        heure_fin: trsCloseModal.heure_fin+':00', statut: 'Clôturé',
+        colis_produits: total, colis_rebuts: trsCloseModal.colis_rebuts||0,
+        cadence_reelle_boite_min: cadReelle, rendement_pct: rendPct,
+        temps_ouverture_min: to, temps_fonctionnement_min: tf,
+        temps_arret_planifie_min: arretPlan, temps_arret_impro_min: arretImpro, temps_pause_min: pauses,
+        disponibilite: D, performance: P, qualite: Q, trs: TRS,
+        observation: trsCloseModal.observation||null, updated_at: new Date().toISOString()
+      }).eq('id', s.id)
+      if (r.error) { trsCloseModal.error = r.error.message; trsCloseModal.saving = false; return }
+      trsCloseModal.show = false; trsCloseModal.saving = false; selectedTrsPanel.value = null
+      await loadTrsFull()
     }
 
     // ── PRODUCT FLUX STATE ────────────────────────────────────────
@@ -1274,6 +1983,12 @@ export default {
     var selectNode = function(node) {
       selectedNode.value = node
       modalLotPreselect.value = null
+      if (trsMode.value && node.type === 'cond') {
+        var panel = trsPanels.value.find(function(p){ return p.equip.id === node.equipement_id }) || null
+        selectedTrsPanel.value = panel
+      } else {
+        selectedTrsPanel.value = null
+      }
     }
 
     // ─── LIFECYCLE ───────────────────────────────────────────────
@@ -1282,7 +1997,11 @@ export default {
       await loadLive()
       refreshInt = setInterval(loadLive, 60000)
     })
-    onBeforeUnmount(function() { clearInterval(refreshInt) })
+    onBeforeUnmount(function() {
+      clearInterval(refreshInt)
+      clearInterval(trsClockInt)
+      clearInterval(trsRefreshInt)
+    })
 
     return {
       SVG_W, SVG_H, NW, NH,
@@ -1305,8 +2024,19 @@ export default {
       closeModal, openStartModal, openStopModal, openCloseModal, openDevModal,
       searchModalLots, selectModalLot, saveStart, saveStop, saveClose, saveDev,
       loadLive,
-      // TRS
+      // TRS overlay
       trsMode, trsLoading, trsColor, nodeTrs, trsSummary, loadTrsData, toggleTrsMode,
+      // TRS LIVE
+      trsPanels, trsShifts, trsEquipes, trsArretFamilles,
+      trsClock, trsTimers, trsArretTimers, selectedTrsPanel,
+      trsStartModal, trsArretModal, trsRequalModal, trsComptageModal, trsCloseModal,
+      trsPanelColor, trsOeeClass, trsComputeObjShift, trsComputeCadence, trsComputeCadenceVsObj, trsComputeOEEPreview,
+      loadTrsFull,
+      trsOpenStart, trsSearchLots, trsSelectLot, trsDoStart,
+      trsOpenArret, trsOnFamilleChange, trsOnSFChange, trsOnTypeChange, trsDoArret,
+      trsClotureArret, trsOpenRequalif, trsOnRequalFamilleChange, trsOnRequalSFChange, trsDoRequalif,
+      trsOpenComptage, trsDoComptage,
+      trsOpenClose, trsDoClose,
     }
   }
 }
@@ -1459,4 +2189,117 @@ export default {
 .ld-item:hover { background:#22224a; }
 .ld-item:last-child { border-bottom:none; }
 .lot-chip { font-size:11px; color:#10b981; background:#05966911; border-radius:4px; padding:5px 10px; margin-top:4px; }
+
+/* ── TRS Detail Panel ── */
+.trs-detail-panel { position:absolute; right:0; top:0; bottom:0; width:300px; background:#060f0a; border-left:1px solid #064e35; display:flex; flex-direction:column; overflow-y:auto; z-index:50; }
+.tdp-hd { display:flex; justify-content:space-between; align-items:flex-start; padding:12px 14px 10px; border-left:3px solid #10b981; }
+.tdp-hd-info .tdp-equip { font-size:20px; font-weight:900; color:#fff; font-family:monospace; line-height:1; }
+.tdp-hd-info .tdp-nom   { font-size:10px; color:#4b5563; margin-top:3px; }
+.tdp-right { display:flex; flex-direction:column; align-items:flex-end; gap:4px; }
+.tdp-status { font-size:10px; font-weight:700; padding:3px 8px; border-radius:10px; letter-spacing:.5px; }
+.tdp-clock  { font-size:11px; color:#10b981; font-family:monospace; font-weight:700; }
+.tdp-close  { background:none; border:none; color:#4b5563; cursor:pointer; font-size:14px; }
+.tdp-close:hover { color:#fff; }
+.tdp-empty { padding:20px 14px; }
+.tdp-empty-msg { font-size:11px; color:#374151; font-style:italic; }
+.tdp-chips  { display:flex; flex-wrap:wrap; gap:5px; padding:8px 14px 0; }
+.tdp-chip   { font-size:10px; font-weight:600; padding:2px 8px; border-radius:10px; border:1px solid transparent; }
+.tdp-lot    { padding:8px 14px 0; }
+.tdp-lot-num  { font-size:13px; font-weight:700; color:#6ee7b7; font-family:monospace; }
+.tdp-lot-prod { font-size:10px; color:#4b5563; margin-top:2px; }
+.tdp-no-session { padding:8px 14px; font-size:11px; color:#374151; font-style:italic; }
+.tdp-timer  { padding:10px 14px; text-align:center; }
+.tdp-timer-lbl { font-size:9px; letter-spacing:2px; color:#4b5563; font-weight:700; }
+.tdp-timer-val { font-size:28px; font-weight:900; font-family:monospace; line-height:1.1; }
+.tdp-arret-info { display:flex; align-items:center; gap:6px; justify-content:center; margin-top:4px; }
+.tdp-arret-chip { font-size:10px; font-weight:700; padding:2px 7px; border-radius:4px; }
+.tdp-arret-nom  { font-size:10px; color:#9ca3af; }
+.tdp-metrics { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:4px; padding:8px 14px; }
+.tdp-metric { text-align:center; background:#0a1a0f; border-radius:5px; padding:6px 4px; }
+.tdp-metric-val { font-size:15px; font-weight:900; color:#e2e8f0; line-height:1; }
+.tdp-metric-lbl { font-size:8px; color:#4b5563; margin-top:2px; }
+.tdp-rend { display:flex; align-items:center; gap:8px; padding:4px 14px 6px; }
+.tdp-rend-bar { flex:1; height:5px; background:#12122a; border-radius:3px; overflow:hidden; }
+.tdp-rend-fill { height:100%; border-radius:3px; transition:width .3s; }
+.tdp-rend-pct { font-size:11px; font-weight:700; min-width:36px; text-align:right; }
+.tdp-oee { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:4px; padding:6px 14px 8px; border-top:1px solid #0a2a1a; border-bottom:1px solid #0a2a1a; }
+.tdp-oee-item { text-align:center; background:#0a1a0f; border-radius:5px; padding:6px 2px; }
+.tdp-oee-val  { font-size:14px; font-weight:900; line-height:1; }
+.tdp-oee-lbl  { font-size:8px; color:#4b5563; margin-top:2px; font-weight:700; }
+.oee-green { color:#10b981 !important; }
+.oee-orange { color:#f59e0b !important; }
+.oee-red    { color:#ef4444 !important; }
+.tdp-actions { display:flex; flex-wrap:wrap; gap:5px; padding:8px 14px; }
+.tdp-btn { flex:1; min-width:80px; padding:7px 6px; border-radius:5px; border:1px solid #1a3a28; background:#0a1a0f; color:#6ee7b7; font-size:10px; font-weight:700; cursor:pointer; transition:all .15s; }
+.tdp-btn:hover:not(:disabled) { background:#0f2a1a; border-color:#10b981; color:#fff; }
+.tdp-btn:disabled { opacity:.3; cursor:not-allowed; }
+.tdp-btn-start  { border-color:#05966944; color:#10b981; }
+.tdp-btn-start:hover:not(:disabled) { background:#05966922; }
+.tdp-btn-stop   { border-color:#ef444444; color:#ef4444; }
+.tdp-btn-stop:hover:not(:disabled)  { background:#ef444411; }
+.tdp-btn-count  { border-color:#3b82f644; color:#60a5fa; }
+.tdp-btn-close  { border-color:#7c3aed44; color:#a78bfa; }
+.tdp-btn-resume { border-color:#10b98144; color:#10b981; }
+.tdp-btn-requal { border-color:#f59e0b44; color:#f59e0b; }
+.tdp-arrets { padding:6px 14px 10px; }
+.tdp-arrets-title { font-size:9px; letter-spacing:2px; color:#4b5563; font-weight:700; margin-bottom:6px; }
+.tdp-arret-row { display:flex; align-items:center; gap:5px; padding:4px 0; border-bottom:1px solid #0a2a1a; font-size:10px; }
+.tdp-arret-row.running { background:#0f2a1a; border-radius:4px; padding:4px 4px; }
+.tdp-arret-dot  { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+.tdp-arret-code { color:#e2e8f0; font-weight:700; font-family:monospace; min-width:40px; }
+.tdp-arret-name { flex:1; color:#6b7280; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tdp-arret-dur  { color:#4b5563; white-space:nowrap; }
+
+/* ── TRS Modals ── */
+.trs-overlay { position:fixed; inset:0; background:rgba(0,0,0,.78); z-index:300; display:flex; align-items:center; justify-content:center; }
+.trs-modal { background:#060f0a; border:1px solid #064e35; border-radius:10px; width:480px; max-width:96vw; max-height:90vh; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding:20px; box-shadow:0 24px 60px rgba(0,0,0,.9); }
+.trs-modal-sm { width:380px; }
+.trs-modal-hd { font-size:13px; font-weight:800; color:#e2e8f0; border-bottom:1px solid #0a2a1a; padding-bottom:10px; margin-bottom:2px; letter-spacing:.5px; }
+.trs-modal-ctx { font-size:11px; color:#4b5563; }
+.trs-lbl  { font-size:10px; color:#4b5563; letter-spacing:1px; text-transform:uppercase; font-weight:700; display:block; margin-bottom:3px; }
+.trs-inp  { width:100%; background:#0a1a0f; border:1px solid #0d3a22; border-radius:5px; color:#e2e8f0; font-size:12px; padding:7px 10px; outline:none; box-sizing:border-box; }
+.trs-inp:focus { border-color:#10b981; }
+.trs-auto-wrap { position:relative; }
+.trs-auto-list { position:absolute; top:100%; left:0; right:0; background:#0d2a1a; border:1px solid #0d3a22; border-radius:5px; z-index:10; max-height:160px; overflow-y:auto; margin-top:2px; }
+.trs-auto-item { display:flex; align-items:center; gap:8px; padding:7px 10px; cursor:pointer; font-size:11px; border-bottom:1px solid #0a2a1a; }
+.trs-auto-item:hover { background:#0f3a22; }
+.trs-auto-code { color:#6ee7b7; font-weight:700; font-family:monospace; min-width:80px; }
+.trs-auto-desc { color:#9ca3af; }
+.trs-sel-lot { font-size:11px; color:#6ee7b7; background:#05966911; border-radius:4px; padding:5px 10px; }
+.trs-form-row { display:flex; gap:10px; }
+.trs-form-field { flex:1; display:flex; flex-direction:column; gap:3px; }
+.trs-cad-preview, .trs-cad-calc { background:#0a1a0f; border-radius:5px; padding:8px 10px; display:flex; flex-direction:column; gap:4px; }
+.trs-cp-row, .trs-cc-row { display:flex; justify-content:space-between; align-items:center; font-size:11px; }
+.trs-cp-lbl { color:#4b5563; }
+.trs-cp-val { color:#e2e8f0; font-weight:700; }
+.trs-cp-obj { color:#6ee7b7; }
+.trs-ok { color:#10b981; font-weight:700; }
+.trs-bad { color:#ef4444; font-weight:700; }
+.trs-cascade { display:flex; align-items:flex-end; gap:6px; }
+.trs-cs-step { flex:1; }
+.trs-cs-arrow { color:#4b5563; padding-bottom:8px; font-size:14px; }
+.trs-type-preview { display:flex; align-items:center; gap:8px; padding:6px 10px; background:#0a1a0f; border-radius:5px; flex-wrap:wrap; }
+.trs-code-chip { font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px; }
+.trs-prev-nom { font-size:11px; color:#e2e8f0; flex:1; }
+.trs-tag { font-size:9px; font-weight:700; padding:1px 5px; border-radius:3px; }
+.trs-tag-plan  { background:#3b82f622; color:#60a5fa; }
+.trs-tag-pause { background:#10b98122; color:#6ee7b7; }
+.trs-err { font-size:11px; color:#ef4444; background:#ef444411; border-radius:4px; padding:6px 10px; }
+.trs-oee-preview { background:#0a1a0f; border-radius:6px; padding:10px; }
+.trs-op-title { font-size:9px; letter-spacing:2px; color:#10b981; font-weight:700; margin-bottom:8px; }
+.trs-op-grid  { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:6px; }
+.trs-op-item  { text-align:center; }
+.trs-op-val   { font-size:18px; font-weight:900; }
+.trs-op-lbl   { font-size:9px; color:#4b5563; margin-top:2px; }
+.trs-modal-acts { display:flex; justify-content:flex-end; gap:8px; padding-top:4px; }
+.trs-btn-save   { background:#047857; border:none; border-radius:5px; color:#fff; padding:8px 16px; font-size:12px; cursor:pointer; font-weight:700; }
+.trs-btn-save:hover:not(:disabled)   { background:#065f46; }
+.trs-btn-save:disabled { opacity:.4; cursor:not-allowed; }
+.trs-btn-go     { background:#047857; }
+.trs-btn-stop   { background:#991b1b; }
+.trs-btn-stop:hover:not(:disabled) { background:#7f1d1d; }
+.trs-btn-cloture { background:#5b21b6; }
+.trs-btn-cloture:hover:not(:disabled) { background:#4c1d95; }
+.trs-btn-cancel { background:transparent; border:1px solid #0d3a22; border-radius:5px; color:#4b5563; padding:8px 16px; font-size:12px; cursor:pointer; }
+.trs-btn-cancel:hover { color:#d1d5db; border-color:#4b5563; }
 </style>
