@@ -42,14 +42,56 @@
       </div>
 
       <div class="fh-right">
-        <div class="fh-legend">
+        <div class="fh-legend" v-if="!trsMode">
           <span class="fl" v-for="l in legend" :key="l.label">
             <span class="fl-dot" :style="{background:l.color}"></span>{{l.label}}
           </span>
         </div>
+        <div class="fh-legend" v-else>
+          <span class="fl"><span class="fl-dot" style="background:#10b981"></span>≥85% Excellent</span>
+          <span class="fl"><span class="fl-dot" style="background:#f59e0b"></span>≥60% Moyen</span>
+          <span class="fl"><span class="fl-dot" style="background:#ef4444"></span>&lt;60% Faible</span>
+        </div>
         <button class="fh-btn" :class="{spinning:loading}" @click="loadLive" title="Rafraîchir">↻</button>
+        <button class="fh-btn" :class="{'fh-btn-trs-on': trsMode}" @click="toggleTrsMode" title="Mode TRS OEE">📊</button>
         <router-link to="/admin/flux" class="fh-btn fh-btn-admin" title="⚙ Paramétrer flux produits">⚙</router-link>
       </div>
+    </div>
+
+    <!-- ── TRS BANDEAU ── -->
+    <div class="trs-band" v-if="trsMode">
+      <div class="trs-band-label">📊 MODE TRS — OEE TEMPS RÉEL</div>
+      <div class="trs-kpi-group">
+        <div class="trs-kpi">
+          <div class="trs-kpi-val">{{trsSummary.active}}<span class="trs-kpi-tot">/{{trsSummary.total}}</span></div>
+          <div class="trs-kpi-lbl">Machines actives</div>
+        </div>
+        <div class="trs-kpi trs-kpi-main">
+          <div class="trs-kpi-val" :style="{color: trsColor(trsSummary.avgTrs)}">
+            {{trsSummary.avgTrs != null ? trsSummary.avgTrs+'%' : '—'}}
+          </div>
+          <div class="trs-kpi-lbl">TRS moyen site</div>
+        </div>
+        <div class="trs-kpi">
+          <div class="trs-kpi-val" :style="{color: trsSummary.arretsCount>0?'#ef4444':'#10b981'}">
+            {{trsSummary.arretsCount}}
+          </div>
+          <div class="trs-kpi-lbl">Arrêts actifs</div>
+        </div>
+        <div class="trs-kpi">
+          <div class="trs-kpi-val" :style="{color: trsColor(trsSummary.bestTrs)}">
+            {{trsSummary.bestTrs != null ? trsSummary.bestTrs+'%' : '—'}}
+          </div>
+          <div class="trs-kpi-lbl">Meilleure machine</div>
+        </div>
+        <div class="trs-kpi">
+          <div class="trs-kpi-val" :style="{color: trsColor(trsSummary.worstTrs)}">
+            {{trsSummary.worstTrs != null ? trsSummary.worstTrs+'%' : '—'}}
+          </div>
+          <div class="trs-kpi-lbl">Machine la plus faible</div>
+        </div>
+      </div>
+      <button class="trs-band-refresh" :class="{spinning:trsLoading}" @click="loadTrsData" title="Actualiser TRS">↻</button>
     </div>
 
     <!-- ── CORPS SVG ── -->
@@ -185,6 +227,54 @@
           <rect v-if="nodeIsFlux(node)"
             :x="node.x" :y="node.y" :width="node.w" :height="node.h"
             rx="8" fill="none" stroke="#fbbf24" stroke-width="2.5"/>
+
+          <!-- ── TRS OVERLAY (mode TRS uniquement) ── -->
+          <template v-if="trsMode">
+            <!-- Fond bandeau bas -->
+            <rect :x="node.x" :y="node.y+node.h-26" :width="node.w" height="26"
+              rx="0" fill="rgba(0,0,0,0.82)" :opacity="nodeDim(node)"/>
+            <!-- Séparateurs verticaux -->
+            <line :x1="node.x+node.w*0.25" :y1="node.y+node.h-26" :x2="node.x+node.w*0.25" :y2="node.y+node.h"
+              stroke="#2a2a4a" stroke-width="0.5" :opacity="nodeDim(node)"/>
+            <line :x1="node.x+node.w*0.5"  :y1="node.y+node.h-26" :x2="node.x+node.w*0.5"  :y2="node.y+node.h"
+              stroke="#2a2a4a" stroke-width="0.5" :opacity="nodeDim(node)"/>
+            <line :x1="node.x+node.w*0.75" :y1="node.y+node.h-26" :x2="node.x+node.w*0.75" :y2="node.y+node.h"
+              stroke="#2a2a4a" stroke-width="0.5" :opacity="nodeDim(node)"/>
+            <!-- Labels D P Q TRS -->
+            <text :x="node.x+node.w*0.125" :y="node.y+node.h-15" text-anchor="middle"
+              fill="#6b7280" font-size="6" letter-spacing="0.5" :opacity="nodeDim(node)">D</text>
+            <text :x="node.x+node.w*0.375" :y="node.y+node.h-15" text-anchor="middle"
+              fill="#6b7280" font-size="6" letter-spacing="0.5" :opacity="nodeDim(node)">P</text>
+            <text :x="node.x+node.w*0.625" :y="node.y+node.h-15" text-anchor="middle"
+              fill="#6b7280" font-size="6" letter-spacing="0.5" :opacity="nodeDim(node)">Q</text>
+            <text :x="node.x+node.w*0.875" :y="node.y+node.h-15" text-anchor="middle"
+              fill="#9ca3af" font-size="6" font-weight="700" letter-spacing="0.5" :opacity="nodeDim(node)">TRS</text>
+            <!-- Valeurs D -->
+            <text :x="node.x+node.w*0.125" :y="node.y+node.h-4" text-anchor="middle"
+              font-size="8" font-weight="700"
+              :fill="nodeTrs(node) ? trsColor(nodeTrs(node).d) : '#374151'" :opacity="nodeDim(node)">
+              {{nodeTrs(node) && nodeTrs(node).d != null ? nodeTrs(node).d+'%' : '—'}}
+            </text>
+            <!-- Valeurs P -->
+            <text :x="node.x+node.w*0.375" :y="node.y+node.h-4" text-anchor="middle"
+              font-size="8" font-weight="700"
+              :fill="nodeTrs(node) ? trsColor(nodeTrs(node).p) : '#374151'" :opacity="nodeDim(node)">
+              {{nodeTrs(node) && nodeTrs(node).p != null ? nodeTrs(node).p+'%' : '—'}}
+            </text>
+            <!-- Valeurs Q -->
+            <text :x="node.x+node.w*0.625" :y="node.y+node.h-4" text-anchor="middle"
+              font-size="8" font-weight="700"
+              :fill="nodeTrs(node) ? trsColor(nodeTrs(node).q) : '#374151'" :opacity="nodeDim(node)">
+              {{nodeTrs(node) && nodeTrs(node).q != null ? nodeTrs(node).q+'%' : '—'}}
+            </text>
+            <!-- Valeur TRS (plus grande) -->
+            <text :x="node.x+node.w*0.875" :y="node.y+node.h-3" text-anchor="middle"
+              font-size="9.5" font-weight="900"
+              :fill="nodeTrs(node) && nodeTrs(node).trs != null ? trsColor(nodeTrs(node).trs) : '#374151'"
+              :opacity="nodeDim(node)">
+              {{nodeTrs(node) && nodeTrs(node).trs != null ? nodeTrs(node).trs+'%' : '—'}}
+            </text>
+          </template>
         </g>
 
         <!-- ── TITRE COIN SUP GAUCHE ── -->
@@ -608,6 +698,104 @@ export default {
     var arrets        = ref([])
     var rooms         = ref([])
 
+    // ── TRS MODE ──────────────────────────────────────────────────
+    var trsMode          = ref(false)
+    var trsLoading       = ref(false)
+    var trsSessionsFull  = ref([])   // production_sessions du jour avec champs OEE
+    var trsArretsFull    = ref([])   // production_arrets (tous) pour calcul live
+
+    var trsColor = function(val) {
+      if (val == null) return '#4b5563'
+      if (val >= 85) return '#10b981'
+      if (val >= 60) return '#f59e0b'
+      return '#ef4444'
+    }
+
+    var calcLiveTrs = function(sess, sessArrets) {
+      if (!sess.heure_debut || !sess.date) return { d: null, p: null, q: null, trs: null, statut: sess.statut }
+      var start = new Date(sess.date + 'T' + sess.heure_debut)
+      var now   = new Date()
+      var totalMin = (now - start) / 60000
+      if (totalMin <= 0) return { d: null, p: null, q: null, trs: null, statut: sess.statut }
+      var arretImpro = (sessArrets || []).reduce(function(acc, a) {
+        return acc + (!a.est_planifie && !a.est_pause ? (a.duree_minutes || 0) : 0)
+      }, 0)
+      var pauses = (sessArrets || []).reduce(function(acc, a) {
+        return acc + (a.est_pause ? (a.duree_minutes || 0) : 0)
+      }, 0)
+      var to = totalMin - pauses
+      var tf = Math.max(0, to - arretImpro)
+      var colisTotal = sess.colis_produits || 0
+      var colisBon   = Math.max(0, colisTotal - (sess.colis_rebuts || 0))
+      var cadNom     = sess.cadence_nominale_snapshot || 0
+      var d   = to > 0 ? Math.min(100, Math.round((tf / to) * 100)) : null
+      var p   = tf > 0 && cadNom > 0 ? Math.min(100, Math.round((colisTotal / (cadNom * tf)) * 100)) : null
+      var q   = colisTotal > 0 ? Math.min(100, Math.round((colisBon / colisTotal) * 100)) : null
+      var trs = (d != null && p != null && q != null) ? Math.round((d * p * q) / 10000) : null
+      return { d, p, q, trs, statut: sess.statut }
+    }
+
+    var trsDataByEquipId = computed(function() {
+      var map = {}
+      trsSessionsFull.value.forEach(function(sess) {
+        if (!sess.equipement_id) return
+        var sessArrets = trsArretsFull.value.filter(function(a) { return a.session_id === sess.id })
+        var result
+        if (sess.statut === 'Clôturé' && sess.trs != null) {
+          result = { d: sess.disponibilite, p: sess.performance, q: sess.qualite, trs: sess.trs, statut: sess.statut }
+        } else {
+          result = calcLiveTrs(sess, sessArrets)
+        }
+        if (result) map[sess.equipement_id] = result
+      })
+      return map
+    })
+
+    var nodeTrs = function(node) {
+      if (!trsMode.value) return null
+      if (node.type === 'cond' && node.equipement_id) {
+        return trsDataByEquipId.value[node.equipement_id] || null
+      }
+      return null
+    }
+
+    var trsSummary = computed(function() {
+      var entries = Object.values(trsDataByEquipId.value)
+      var withTrs = entries.filter(function(t) { return t.trs != null })
+      var sumTrs  = withTrs.reduce(function(a, t) { return a + t.trs }, 0)
+      var arretsCount = entries.filter(function(t) { return t.statut === 'Arrêt' }).length
+      var trsVals = withTrs.map(function(t) { return t.trs })
+      return {
+        active:   entries.length,
+        total:    allNodes.value.filter(function(n) { return n.type === 'cond' }).length,
+        avgTrs:   withTrs.length > 0 ? Math.round(sumTrs / withTrs.length) : null,
+        bestTrs:  trsVals.length ? Math.max.apply(null, trsVals) : null,
+        worstTrs: trsVals.length ? Math.min.apply(null, trsVals) : null,
+        arretsCount
+      }
+    })
+
+    var loadTrsData = async function() {
+      trsLoading.value = true
+      var today = new Date().toISOString().slice(0, 10)
+      var [rS, rA] = await Promise.all([
+        supabase.from('production_sessions')
+          .select('id,equipement_id,statut,date,heure_debut,heure_fin,disponibilite,performance,qualite,trs,colis_produits,colis_rebuts,objectif_boites,cadence_nominale_snapshot')
+          .eq('date', today)
+          .neq('statut', 'Annulé'),
+        supabase.from('production_arrets')
+          .select('id,session_id,duree_minutes,est_planifie,est_pause,is_running')
+      ])
+      if (!rS.error) trsSessionsFull.value = rS.data || []
+      if (!rA.error) trsArretsFull.value   = rA.data || []
+      trsLoading.value = false
+    }
+
+    var toggleTrsMode = async function() {
+      trsMode.value = !trsMode.value
+      if (trsMode.value) await loadTrsData()
+    }
+
     // ── PRODUCT FLUX STATE ────────────────────────────────────────
     var productSearch     = ref('')
     var showSuggestions   = ref(false)
@@ -756,6 +944,13 @@ export default {
     }
 
     var nodeColor = function(node) {
+      if (trsMode.value) {
+        var t = nodeTrs(node)
+        if (!t || t.trs == null) return '#12122a'
+        if (t.trs >= 85) return '#062216'
+        if (t.trs >= 60) return '#231500'
+        return '#1f0808'
+      }
       var st = nodeStatus(node)
       if (st.label === 'Arrêt')     return '#3f1212'
       if (st.label === 'Déviation') return '#3f2e00'
@@ -767,6 +962,11 @@ export default {
 
     var nodeStroke = function(node) {
       if (selectedNode.value && selectedNode.value.id === node.id) return '#fff'
+      if (trsMode.value) {
+        var t = nodeTrs(node)
+        if (t && t.trs != null) return trsColor(t.trs)
+        return '#2a2a4a'
+      }
       if (nodeIsFlux(node)) return '#fbbf24'
       var st = nodeStatus(node)
       if (st.label === 'Arrêt')     return '#ef4444'
@@ -777,6 +977,10 @@ export default {
 
     var nodeStrokeWidth = function(node) {
       if (selectedNode.value && selectedNode.value.id === node.id) return 2.5
+      if (trsMode.value) {
+        var t = nodeTrs(node)
+        return (t && t.trs != null) ? 2 : 1
+      }
       if (nodeIsFlux(node)) return 2
       return 1.5
     }
@@ -1101,6 +1305,8 @@ export default {
       closeModal, openStartModal, openStopModal, openCloseModal, openDevModal,
       searchModalLots, selectModalLot, saveStart, saveStop, saveClose, saveDev,
       loadLive,
+      // TRS
+      trsMode, trsLoading, trsColor, nodeTrs, trsSummary, loadTrsData, toggleTrsMode,
     }
   }
 }
@@ -1122,6 +1328,20 @@ export default {
 .fh-btn { width:30px; height:30px; border:1px solid #2a2a4a; border-radius:4px; background:transparent; color:#6b7280; cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center; text-decoration:none; }
 .fh-btn:hover { color:#fff; border-color:#4b5563; }
 .fh-btn.spinning { animation: spin 1s linear infinite; }
+.fh-btn-trs-on { background:#0f4c3a !important; border-color:#10b981 !important; color:#6ee7b7 !important; font-size:13px; }
+
+/* ── TRS Bandeau ── */
+.trs-band { display:flex; align-items:center; gap:20px; padding:6px 16px; background:#050f0a; border-bottom:1px solid #064e35; flex-shrink:0; }
+.trs-band-label { font-size:10px; font-weight:800; letter-spacing:2px; color:#10b981; white-space:nowrap; }
+.trs-kpi-group  { display:flex; align-items:center; gap:20px; flex:1; }
+.trs-kpi        { display:flex; flex-direction:column; align-items:center; gap:1px; min-width:64px; }
+.trs-kpi-val    { font-size:18px; font-weight:900; color:#e2e8f0; line-height:1; font-variant-numeric:tabular-nums; }
+.trs-kpi-tot    { font-size:12px; color:#4b5563; font-weight:500; }
+.trs-kpi-lbl    { font-size:9px; color:#4b5563; letter-spacing:0.5px; white-space:nowrap; }
+.trs-kpi-main .trs-kpi-val { font-size:26px; }
+.trs-band-refresh { width:28px; height:28px; border:1px solid #064e35; border-radius:4px; background:transparent; color:#10b981; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.trs-band-refresh:hover { background:#0d2e20; }
+.trs-band-refresh.spinning { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ── Product Search ── */
