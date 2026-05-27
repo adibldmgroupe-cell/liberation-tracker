@@ -901,7 +901,8 @@ INSERT INTO product_flux (product_code, product_name, op_number, route, room_cod
 -- ─── 5. VUES UTILES ───────────────────────────────────────────────────
 
 -- Vue : flux complet d'un produit avec détails atelier
-CREATE OR REPLACE VIEW v_product_flux_detail AS
+CREATE OR REPLACE VIEW v_product_flux_detail
+WITH (security_invoker = true) AS
 SELECT
   pf.product_code,
   pf.product_name,
@@ -917,7 +918,8 @@ JOIN operations_master om ON pf.op_number = om.op_number
 ORDER BY pf.product_code, pf.route, pf.op_number;
 
 -- Vue : résumé par produit (type de flux détecté automatiquement)
-CREATE OR REPLACE VIEW v_product_flux_summary AS
+CREATE OR REPLACE VIEW v_product_flux_summary
+WITH (security_invoker = true) AS
 SELECT
   product_code,
   product_name,
