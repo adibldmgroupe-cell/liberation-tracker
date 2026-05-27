@@ -123,46 +123,47 @@ ON CONFLICT (code) DO UPDATE SET atelier_id = EXCLUDED.atelier_id, equipement_id
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- ÉTAPE 3 : Upsert plan_rooms — nœuds CONDITIONNEMENT
+-- equipements_conditionnement n'a pas de room_code → match par nom_equipement ILIKE
 -- ─────────────────────────────────────────────────────────────────────────────
 
 INSERT INTO plan_rooms (code, nom, zone, type, atelier_id, equipement_id)
-VALUES ('c149', 'MB421', 'cond_primaire', 'cond', NULL, (SELECT id FROM equipements_conditionnement WHERE room_code = '149' OR nom_equipement ILIKE '%marchesini mb421%' LIMIT 1))
+VALUES ('c149', 'MB421', 'cond_primaire', 'cond', NULL, (SELECT id FROM equipements_conditionnement WHERE nom_equipement ILIKE '%marchesini%421%' OR nom_equipement ILIKE '%mb421%' LIMIT 1))
 ON CONFLICT (code) DO UPDATE SET equipement_id = EXCLUDED.equipement_id, atelier_id = NULL;
 
 INSERT INTO plan_rooms (code, nom, zone, type, atelier_id, equipement_id)
-VALUES ('c148', 'IMA TR100L', 'cond_primaire', 'cond', NULL, (SELECT id FROM equipements_conditionnement WHERE room_code = '148' OR nom_equipement ILIKE '%ima tr100%' LIMIT 1))
+VALUES ('c148', 'IMA TR100L', 'cond_primaire', 'cond', NULL, (SELECT id FROM equipements_conditionnement WHERE nom_equipement ILIKE '%ima%tr100%' OR nom_equipement ILIKE '%tr100%' LIMIT 1))
 ON CONFLICT (code) DO UPDATE SET equipement_id = EXCLUDED.equipement_id, atelier_id = NULL;
 
 INSERT INTO plan_rooms (code, nom, zone, type, atelier_id, equipement_id)
-VALUES ('c147', 'INTEGRA 300', 'cond_primaire', 'cond', NULL, (SELECT id FROM equipements_conditionnement WHERE room_code = '147' OR nom_equipement ILIKE '%integra 300%' LIMIT 1))
+VALUES ('c147', 'INTEGRA 300', 'cond_primaire', 'cond', NULL, (SELECT id FROM equipements_conditionnement WHERE nom_equipement ILIKE '%integra%300%' LIMIT 1))
 ON CONFLICT (code) DO UPDATE SET equipement_id = EXCLUDED.equipement_id, atelier_id = NULL;
 
 INSERT INTO plan_rooms (code, nom, zone, type, atelier_id, equipement_id)
-VALUES ('c146', 'IMA PG SUPER 1', 'cond_primaire', 'cond', NULL, (SELECT id FROM equipements_conditionnement WHERE room_code = '146' OR nom_equipement ILIKE '%ima pg super 1%' LIMIT 1))
+VALUES ('c146', 'IMA PG SUPER 1', 'cond_primaire', 'cond', NULL, (SELECT id FROM equipements_conditionnement WHERE nom_equipement ILIKE '%pg%super%1%' OR nom_equipement ILIKE '%ima%pg%1%' LIMIT 1))
 ON CONFLICT (code) DO UPDATE SET equipement_id = EXCLUDED.equipement_id, atelier_id = NULL;
 
 INSERT INTO plan_rooms (code, nom, zone, type, atelier_id, equipement_id)
-VALUES ('c220', 'MARCH. R,P', 'cond_primaire', 'cond', NULL, (SELECT id FROM equipements_conditionnement WHERE room_code = '220' OR nom_equipement ILIKE '%marchesini r%p%' LIMIT 1))
+VALUES ('c220', 'MARCH. R,P', 'cond_primaire', 'cond', NULL, (SELECT id FROM equipements_conditionnement WHERE nom_equipement ILIKE '%marchesini%r%p%' OR nom_equipement ILIKE '%march%r,p%' LIMIT 1))
 ON CONFLICT (code) DO UPDATE SET equipement_id = EXCLUDED.equipement_id, atelier_id = NULL;
 
 INSERT INTO plan_rooms (code, nom, zone, type, atelier_id, equipement_id)
-VALUES ('c222', 'INTEGRA 520', 'cond_primaire', 'cond', NULL, (SELECT id FROM equipements_conditionnement WHERE room_code = '222' OR nom_equipement ILIKE '%integra 520%' LIMIT 1))
+VALUES ('c222', 'INTEGRA 520', 'cond_primaire', 'cond', NULL, (SELECT id FROM equipements_conditionnement WHERE nom_equipement ILIKE '%integra%520%' LIMIT 1))
 ON CONFLICT (code) DO UPDATE SET equipement_id = EXCLUDED.equipement_id, atelier_id = NULL;
 
 INSERT INTO plan_rooms (code, nom, zone, type, atelier_id, equipement_id)
-VALUES ('c223', 'IMA PG SUPER 2', 'cond_primaire', 'cond', NULL, (SELECT id FROM equipements_conditionnement WHERE room_code = '223' OR nom_equipement ILIKE '%ima pg super 2%' LIMIT 1))
+VALUES ('c223', 'IMA PG SUPER 2', 'cond_primaire', 'cond', NULL, (SELECT id FROM equipements_conditionnement WHERE nom_equipement ILIKE '%pg%super%2%' OR nom_equipement ILIKE '%ima%pg%2%' LIMIT 1))
 ON CONFLICT (code) DO UPDATE SET equipement_id = EXCLUDED.equipement_id, atelier_id = NULL;
 
 INSERT INTO plan_rooms (code, nom, zone, type, atelier_id, equipement_id)
-VALUES ('c153', 'Cond. Sec.', 'cond_secondaire', 'cond', NULL, (SELECT id FROM equipements_conditionnement WHERE room_code = '153' LIMIT 1))
+VALUES ('c153', 'Cond. Sec.', 'cond_secondaire', 'cond', NULL, NULL)
 ON CONFLICT (code) DO UPDATE SET equipement_id = EXCLUDED.equipement_id, atelier_id = NULL;
 
 INSERT INTO plan_rooms (code, nom, zone, type, atelier_id, equipement_id)
-VALUES ('c154', 'Cond. Sec. Ext.', 'cond_secondaire', 'cond', NULL, (SELECT id FROM equipements_conditionnement WHERE room_code = '154' LIMIT 1))
+VALUES ('c154', 'Cond. Sec. Ext.', 'cond_secondaire', 'cond', NULL, NULL)
 ON CONFLICT (code) DO UPDATE SET equipement_id = EXCLUDED.equipement_id, atelier_id = NULL;
 
 INSERT INTO plan_rooms (code, nom, zone, type, atelier_id, equipement_id)
-VALUES ('i521', 'Réception Injectables', 'injectable', 'cond', NULL, (SELECT id FROM equipements_conditionnement WHERE room_code = '521' OR nom_equipement ILIKE '%inject%' LIMIT 1))
+VALUES ('i521', 'Réception Injectables', 'injectable', 'cond', NULL, (SELECT id FROM equipements_conditionnement WHERE nom_equipement ILIKE '%inject%' LIMIT 1))
 ON CONFLICT (code) DO UPDATE SET equipement_id = EXCLUDED.equipement_id, atelier_id = NULL;
 
 -- ─────────────────────────────────────────────────────────────────────────────
