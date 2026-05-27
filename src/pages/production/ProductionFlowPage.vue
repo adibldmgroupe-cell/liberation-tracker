@@ -1559,9 +1559,10 @@ export default {
     }
 
     // ─── NODES enrichis ─────────────────────────────────────────
+    // plan_rooms.code = n.id ('p464','n140'...) — pas n.code ('464','140')
     var allNodes = computed(function() {
       return NODES_DEF.map(function(n) {
-        var room = rooms.value.find(function(r) { return r.code === n.code })
+        var room = rooms.value.find(function(r) { return r.code === n.id })
         return Object.assign({}, n, {
           atelier_id:    room ? room.atelier_id    : null,
           equipement_id: room ? room.equipement_id : null,
@@ -1859,7 +1860,7 @@ export default {
           var eqR = await supabase.from('equipements_conditionnement').select('id').ilike('nom_equipement','%'+node.label+'%').limit(1).maybeSingle()
           if (!eqR.data) { modal.value.err = 'Équipement introuvable pour nœud '+node.code+'. Vérifier le nom dans Équipements.'; modal.value.saving=false; return }
           eqId = eqR.data.id
-          await supabase.from('plan_rooms').upsert({code:node.code, equipement_id:eqId, atelier_id:null},{onConflict:'code'})
+          await supabase.from('plan_rooms').upsert({code:node.id, equipement_id:eqId, atelier_id:null},{onConflict:'code'})
         }
         res = await supabase.from('production_sessions').insert({
           lot_id: modal.value.selectedLot.id,
@@ -1874,7 +1875,7 @@ export default {
         var atId = node.atelier_id
         if (!atId) {
           // Auto-résolution : cherche dans operations_master puis crée/trouve l'atelier
-          var omR = await supabase.from('operations_master').select('room_name,op_code').eq('room_code',node.code).limit(1).maybeSingle()
+          var omR = await supabase.from('operations_master').select('room_name,op_code').eq('room_code',node.id).limit(1).maybeSingle()
           var roomName = omR.data ? omR.data.room_name : node.label
           var opCode   = omR.data ? omR.data.op_code   : ''
           var procName = OP_CODE_TO_PROC[opCode] || null
@@ -1894,7 +1895,7 @@ export default {
             atId = insAt.data.id
           }
           // Mémorise dans plan_rooms pour les prochaines fois
-          await supabase.from('plan_rooms').upsert({code:node.code, atelier_id:atId, equipement_id:null},{onConflict:'code'})
+          await supabase.from('plan_rooms').upsert({code:node.id, atelier_id:atId, equipement_id:null},{onConflict:'code'})
         }
         var atRes = await supabase.from('ateliers').select('processus_id').eq('id',atId).single()
         var processusId = atRes.data?.processus_id || null
