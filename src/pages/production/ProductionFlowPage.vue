@@ -384,6 +384,36 @@
             <div class="tdp-rend-pct" :style="{color: selectedTrsPanel.rendPct>=100?'#1D9E75':selectedTrsPanel.rendPct>=80?'#F97316':'#EF4444'}">{{selectedTrsPanel.rendPct}}%</div>
           </div>
 
+          <!-- ── Comptage théorique vs réel ── -->
+          <div class="tdp-comptage-bloc" v-if="selectedTrsPanel.session && selectedTrsPanel.cadences && selectedTrsPanel.cadences.length">
+            <div class="tdp-cad-line">
+              <span class="tdp-cad-ic">⚙</span>
+              <span class="tdp-cad-val">{{trsTheoCounters[selectedTrsPanel.equip.id]?.currentCadence || selectedTrsPanel.cadences[selectedTrsPanel.cadences.length-1]?.cadence_bpm || '—'}} b/min</span>
+              <span v-if="selectedTrsPanel.session.colisage_confirme" class="tdp-cad-col"> · {{selectedTrsPanel.session.colisage_confirme}} btes/colis</span>
+              <button class="tdp-cad-edit" @click="trsOpenCadence(selectedTrsPanel)" v-if="selectedTrsPanel.session.statut==='En cours'">✎</button>
+            </div>
+            <div class="tdp-cpt-table">
+              <div class="tdp-cpt-row tdp-cpt-hd">
+                <div class="tdp-cpt-cell"></div>
+                <div class="tdp-cpt-cell tdp-cpt-th">THÉO</div>
+                <div class="tdp-cpt-cell tdp-cpt-th">RÉEL</div>
+              </div>
+              <div class="tdp-cpt-row">
+                <div class="tdp-cpt-cell tdp-cpt-lbl">Boîtes</div>
+                <div class="tdp-cpt-cell tdp-cpt-theo">{{trsTheoCounters[selectedTrsPanel.equip.id]?.boites != null ? trsTheoCounters[selectedTrsPanel.equip.id].boites.toLocaleString('fr-FR') : '—'}}</div>
+                <div class="tdp-cpt-cell tdp-cpt-reel">—</div>
+              </div>
+              <div class="tdp-cpt-row">
+                <div class="tdp-cpt-cell tdp-cpt-lbl">Colis</div>
+                <div class="tdp-cpt-cell tdp-cpt-theo">{{trsTheoCounters[selectedTrsPanel.equip.id]?.colis != null ? trsTheoCounters[selectedTrsPanel.equip.id].colis.toLocaleString('fr-FR') : '—'}}</div>
+                <div class="tdp-cpt-cell tdp-cpt-reel">{{selectedTrsPanel.session.colis_produits || 0}}</div>
+              </div>
+            </div>
+            <div class="tdp-reminder" v-if="trsTheoCounters[selectedTrsPanel.equip.id]?.needsComptage">
+              ⚠ COMPTAGE EN ATTENTE — {{trsTheoCounters[selectedTrsPanel.equip.id]?.minsSinceCpt}} min
+            </div>
+          </div>
+
           <!-- OEE live -->
           <div class="tdp-oee" v-if="selectedTrsPanel.session">
             <div class="tdp-oee-item">
@@ -682,6 +712,19 @@
           <div class="trs-cp-row"><span class="trs-cp-lbl">Cadence objectif</span><span class="trs-cp-val trs-cp-obj">{{trsStartModal.cadenceObj || trsStartModal.equip.cadence_objectif_boite_min || '—'}} b/min</span></div>
           <div class="trs-cp-row" v-if="trsStartModal.cadenceObj || trsStartModal.equip.cadence_objectif_boite_min"><span class="trs-cp-lbl">Objectif / shift</span><span class="trs-cp-val trs-cp-obj">{{trsComputeObjShift(trsStartModal)}} boîtes</span></div>
         </div>
+        <!-- Cadence réelle opérateur + colisage -->
+        <div class="trs-form-row trs-cad-real-row" v-if="trsStartModal.lot">
+          <div class="trs-form-field">
+            <label class="trs-lbl">Cadence réelle machine <span class="trs-lbl-unit">b/min</span></label>
+            <input type="number" v-model.number="trsStartModal.cadenceReel" class="trs-inp" placeholder="ex: 60" min="1" step="0.5" />
+          </div>
+          <div class="trs-form-field">
+            <label class="trs-lbl">Colisage <span class="trs-lbl-unit">btes/colis</span>
+              <span v-if="trsStartModal.colisageSrc" class="trs-lbl-src">{{trsStartModal.colisageSrc==='catalogue'?'📦 catalogue':'📋 SAP'}}</span>
+            </label>
+            <input type="number" v-model.number="trsStartModal.colisage" class="trs-inp" placeholder="ex: 30" min="1" />
+          </div>
+        </div>
         <div class="trs-err" v-if="trsStartModal.error">{{trsStartModal.error}}</div>
         <div class="trs-modal-acts">
           <button class="trs-btn-save trs-btn-go" @click="trsDoStart" :disabled="trsStartModal.saving || !trsStartModal.lot">{{trsStartModal.saving ? 'Démarrage…' : '▶ Démarrer'}}</button>
@@ -765,6 +808,24 @@
         <div class="trs-modal-acts">
           <button class="trs-btn-save" @click="trsDoRequalif" :disabled="trsRequalModal.saving || !trsRequalModal.type_id">{{trsRequalModal.saving ? '…' : 'Requalifier'}}</button>
           <button class="trs-btn-cancel" @click="trsRequalModal.show=false">Annuler</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TRS MODAL : MODIFIER CADENCE ══ -->
+    <div class="trs-overlay" v-if="trsCadenceModal.show" @click.self="trsCadenceModal.show=false">
+      <div class="trs-modal trs-modal-sm">
+        <div class="trs-modal-hd">⚙ Modifier cadence — {{trsCadenceModal.panel?.equip.nom_equipement}}</div>
+        <div class="trs-modal-ctx">Nouvelle valeur lue sur la machine</div>
+        <div class="trs-form-row">
+          <div class="trs-form-field" style="flex:1">
+            <label class="trs-lbl">Cadence réelle * <span class="trs-lbl-unit">b/min</span></label>
+            <input type="number" v-model.number="trsCadenceModal.cadence" class="trs-inp" placeholder="ex: 60" min="1" step="0.5" autofocus />
+          </div>
+        </div>
+        <div class="trs-modal-acts">
+          <button class="trs-btn-save" @click="trsDoChangeCadence" :disabled="trsCadenceModal.saving || !trsCadenceModal.cadence">{{trsCadenceModal.saving ? '…' : 'Enregistrer'}}</button>
+          <button class="trs-btn-cancel" @click="trsCadenceModal.show=false">Annuler</button>
         </div>
       </div>
     </div>
@@ -1140,11 +1201,13 @@ export default {
     var trsRefreshInt    = null
     var trsLotTimeout    = null
 
-    var trsStartModal    = reactive({ show:false, equip:null, lotSearch:'', lotSuggestions:[], lot:null, shift_id:null, equipe_id:null, date:'', heure_debut:'', cadenceObj:null, error:'', saving:false })
+    var trsStartModal    = reactive({ show:false, equip:null, lotSearch:'', lotSuggestions:[], lot:null, shift_id:null, equipe_id:null, date:'', heure_debut:'', cadenceObj:null, cadenceReel:null, colisage:null, colisageSrc:'', error:'', saving:false })
     var trsArretModal    = reactive({ show:false, panel:null, famille_id:null, sf_id:null, type_id:null, sousFamilles:[], types:[], selectedType:null, familleCouleur:'#EF4444', heure_debut:'', commentaire:'', error:'', saving:false })
     var trsRequalModal   = reactive({ show:false, panel:null, famille_id:null, sf_id:null, type_id:null, sousFamilles:[], types:[], saving:false })
     var trsComptageModal = reactive({ show:false, panel:null, heure:'', colis:null, rebuts:0, saving:false })
     var trsCloseModal    = reactive({ show:false, panel:null, heure_fin:'', colis_produits:null, colis_rebuts:0, observation:'', error:'', saving:false })
+    var trsCadenceModal  = reactive({ show:false, panel:null, cadence:null, saving:false })
+    var trsTheoCounters  = ref({})
 
     var trsNowTime = function() {
       var n = new Date()
@@ -1230,19 +1293,61 @@ export default {
       var n = new Date()
       var p2 = function(v){ return String(v).padStart(2,'0') }
       trsClock.value = p2(n.getHours())+':'+p2(n.getMinutes())+':'+p2(n.getSeconds())
-      var newT = {}, newAT = {}
+      var newT = {}, newAT = {}, newTheo = {}
       for (var i = 0; i < trsPanels.value.length; i++) {
         var p = trsPanels.value[i]
         if (p.session && p.session.statut === 'En cours') {
           var start = trsToDateTime(p.session.date, p.session.heure_debut)
           if (start) newT[p.equip.id] = trsFormatElapsed(n - start)
+          // ── Compteur théorique (cadence × temps_net segmenté) ──
+          var cads = p.cadences || []
+          if (cads.length > 0) {
+            var colisage  = p.session.colisage_confirme || null
+            var arrets    = p.arrets || []
+            var boitesTheo = 0
+            for (var ci = 0; ci < cads.length; ci++) {
+              var cad      = cads[ci]
+              var segStart = new Date(cad.started_at)
+              var segEnd   = (ci < cads.length - 1) ? new Date(cads[ci + 1].started_at) : n
+              if (segStart >= segEnd) continue
+              var netMs = segEnd.getTime() - segStart.getTime()
+              // Soustraire les chevauchements d'arrêts dans ce segment
+              for (var ai = 0; ai < arrets.length; ai++) {
+                var arr     = arrets[ai]
+                var aS      = trsToDateTime(p.session.date, arr.heure_debut)
+                if (!aS) continue
+                var aE      = arr.is_running ? n : (arr.duree_minutes ? new Date(aS.getTime() + arr.duree_minutes * 60000) : null)
+                if (!aE) continue
+                var overlapS = Math.max(segStart.getTime(), aS.getTime())
+                var overlapE = Math.min(segEnd.getTime(), aE.getTime())
+                if (overlapE > overlapS) netMs -= (overlapE - overlapS)
+              }
+              boitesTheo += cad.cadence_bpm * Math.max(0, netMs / 60000)
+            }
+            var colisTheo = (colisage && colisage > 0) ? Math.floor(boitesTheo / colisage) : null
+            // ── Rappel 30 min (pause si arrêt actif) ──
+            var needsComptage = false; var minsSinceCpt = null
+            if (!p.activeArret) {
+              var refTime = null
+              if (p.lastComptage && p.lastComptage.created_at) { refTime = new Date(p.lastComptage.created_at) }
+              else if (start) { refTime = start }
+              if (refTime) { minsSinceCpt = Math.floor((n - refTime) / 60000); needsComptage = minsSinceCpt >= 30 }
+            }
+            newTheo[p.equip.id] = {
+              boites: Math.floor(boitesTheo),
+              colis: colisTheo,
+              currentCadence: cads[cads.length - 1].cadence_bpm,
+              needsComptage: needsComptage,
+              minsSinceCpt: minsSinceCpt
+            }
+          }
         }
         if (p.activeArret && p.activeArret.is_running) {
           var aStart = trsToDateTime(p.session ? p.session.date : new Date().toISOString().slice(0,10), p.activeArret.heure_debut)
           if (aStart) newAT[p.activeArret.id] = trsFormatElapsed(n - aStart)
         }
       }
-      trsTimers.value = newT; trsArretTimers.value = newAT
+      trsTimers.value = newT; trsArretTimers.value = newAT; trsTheoCounters.value = newTheo
     }
 
     var loadTrsFull = async function() {
@@ -1274,9 +1379,14 @@ export default {
           }
         }
         var panelArrets = [], activeArret = null
+        var cadences = [], lastComptage = null
         if (session) {
           var rArr = await supabase.from('production_arrets').select('*').eq('session_id', session.id).order('created_at', { ascending: false })
           if (rArr.data) { panelArrets = rArr.data; activeArret = panelArrets.find(function(a){ return a.is_running }) || null }
+          var rCad = await supabase.from('session_cadences').select('*').eq('session_id', session.id).order('started_at')
+          if (!rCad.error) cadences = rCad.data || []
+          var rLastCpt = await supabase.from('production_comptages').select('id,heure,colis_cumules,created_at').eq('session_id', session.id).order('created_at', { ascending: false }).limit(1).maybeSingle()
+          if (!rLastCpt.error) lastComptage = rLastCpt.data || null
         }
         var shiftNom = '', shiftCouleur = '#3B82F6', equipeNom = '', equipeCouleur = '#8B5CF6'
         if (session && session.shift_id) {
@@ -1290,7 +1400,7 @@ export default {
         var rendPct = 0
         if (session && session.objectif_boites && session.colis_produits)
           rendPct = Math.round((session.colis_produits / session.objectif_boites) * 100)
-        newPanels.push({ equip: eq, session, activeArret, arrets: panelArrets, lotNum, lotProd, shiftNom, shiftCouleur, equipeNom, equipeCouleur, rendPct })
+        newPanels.push({ equip: eq, session, activeArret, arrets: panelArrets, cadences, lastComptage, lotNum, lotProd, shiftNom, shiftCouleur, equipeNom, equipeCouleur, rendPct })
       }
       trsPanels.value = newPanels
       // Sync TRS overlay data
@@ -1314,7 +1424,8 @@ export default {
       trsStartModal.equip = equip; trsStartModal.lotSearch = ''; trsStartModal.lotSuggestions = []
       trsStartModal.lot = null; trsStartModal.shift_id = null; trsStartModal.equipe_id = null
       trsStartModal.date = new Date().toISOString().slice(0,10); trsStartModal.heure_debut = trsNowTime()
-      trsStartModal.cadenceObj = null; trsStartModal.error = ''; trsStartModal.saving = false; trsStartModal.show = true
+      trsStartModal.cadenceObj = null; trsStartModal.cadenceReel = null; trsStartModal.colisage = null; trsStartModal.colisageSrc = ''
+      trsStartModal.error = ''; trsStartModal.saving = false; trsStartModal.show = true
     }
 
     var trsSearchLots = async function() {
@@ -1342,7 +1453,20 @@ export default {
       if (trsStartModal.equip) {
         var r = await supabase.from('objectifs_production').select('cadence_objectif_boite_min').eq('equipement_id', trsStartModal.equip.id).eq('product_id', l.product_id).eq('actif', true).limit(1).maybeSingle()
         trsStartModal.cadenceObj = r.data ? r.data.cadence_objectif_boite_min : null
+        // Pré-remplir cadence réelle avec l'objectif comme suggestion
+        if (!trsStartModal.cadenceReel && trsStartModal.cadenceObj) trsStartModal.cadenceReel = trsStartModal.cadenceObj
       }
+      // Colisage : catalogue_produits en priorité, fallback products
+      var colisage = null; var colisageSrc = ''
+      if (l.code_article) {
+        var catR = await supabase.from('catalogue_produits').select('quantite_par_colis').eq('code_article', l.code_article).maybeSingle()
+        if (catR.data && catR.data.quantite_par_colis) { colisage = catR.data.quantite_par_colis; colisageSrc = 'catalogue' }
+      }
+      if (!colisage && l.product_id) {
+        var prodR = await supabase.from('products').select('quantite_par_colis').eq('id', l.product_id).maybeSingle()
+        if (prodR.data && prodR.data.quantite_par_colis) { colisage = prodR.data.quantite_par_colis; colisageSrc = 'sap' }
+      }
+      trsStartModal.colisage = colisage; trsStartModal.colisageSrc = colisageSrc
     }
 
     var trsDoStart = async function() {
@@ -1357,9 +1481,20 @@ export default {
         shift_id: trsStartModal.shift_id||null, equipe_id: trsStartModal.equipe_id||null,
         date: trsStartModal.date, heure_debut: trsStartModal.heure_debut+':00', statut: 'En cours',
         cadence_nominale_snapshot: eq.cadence_nominale_boite_min||null, cadence_objectif_snapshot: cadObj||null,
-        objectif_boites: objBoites, colis_produits: 0, colis_rebuts: 0
-      })
+        objectif_boites: objBoites, colis_produits: 0, colis_rebuts: 0,
+        colisage_confirme: trsStartModal.colisage || null
+      }).select('id').single()
       if (r.error) { trsStartModal.error = r.error.message; trsStartModal.saving = false; return }
+      // Insérer la cadence initiale dans session_cadences
+      if (trsStartModal.cadenceReel && r.data) {
+        var isoStart = new Date(trsStartModal.date + 'T' + trsStartModal.heure_debut).toISOString()
+        await supabase.from('session_cadences').insert({
+          session_id: r.data.id,
+          cadence_bpm: trsStartModal.cadenceReel,
+          colisage: trsStartModal.colisage || null,
+          started_at: isoStart
+        })
+      }
       trsStartModal.show = false; trsStartModal.saving = false
       await loadTrsFull()
     }
@@ -1449,6 +1584,29 @@ export default {
         est_planifie: t.est_planifie, est_pause: t.est_pause, updated_at: new Date().toISOString()
       }).eq('id', trsRequalModal.panel.activeArret.id)
       trsRequalModal.show = false; trsRequalModal.saving = false
+      await loadTrsFull()
+    }
+
+    var trsOpenCadence = function(p) {
+      var cads = p.cadences || []
+      trsCadenceModal.panel   = p
+      trsCadenceModal.cadence = cads.length ? cads[cads.length - 1].cadence_bpm : null
+      trsCadenceModal.saving  = false
+      trsCadenceModal.show    = true
+    }
+
+    var trsDoChangeCadence = async function() {
+      if (!trsCadenceModal.cadence) return
+      trsCadenceModal.saving = true
+      var s = trsCadenceModal.panel.session
+      var r = await supabase.from('session_cadences').insert({
+        session_id: s.id,
+        cadence_bpm: trsCadenceModal.cadence,
+        colisage: s.colisage_confirme || null,
+        started_at: new Date().toISOString()
+      })
+      if (r.error) { trsCadenceModal.saving = false; return }
+      trsCadenceModal.show = false; trsCadenceModal.saving = false
       await loadTrsFull()
     }
 
@@ -2115,6 +2273,7 @@ export default {
       trsOpenStart, trsSearchLots, trsSelectLot, trsDoStart,
       trsOpenArret, trsOnFamilleChange, trsOnSFChange, trsOnTypeChange, trsDoArret,
       trsClotureArret, trsOpenRequalif, trsOnRequalFamilleChange, trsOnRequalSFChange, trsDoRequalif,
+      trsTheoCounters, trsCadenceModal, trsOpenCadence, trsDoChangeCadence,
       trsOpenComptage, trsDoComptage,
       trsOpenClose, trsDoClose,
     }
@@ -2278,6 +2437,30 @@ export default {
 .lcm-desc { font-size:10px; color:#6b7280; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .lcm-rm { background:none; border:none; color:#4b5563; cursor:pointer; font-size:15px; line-height:1; padding:0 2px; flex-shrink:0; }
 .lcm-rm:hover { color:#ef4444; }
+
+/* ── TRS Start modal extras ── */
+.trs-cad-real-row { margin-top:10px; padding-top:10px; border-top:1px solid #0d2e20; }
+.trs-lbl-unit { font-size:9px; color:#4b5563; margin-left:4px; font-weight:400; }
+.trs-lbl-src  { font-size:9px; color:#10b981; margin-left:6px; }
+
+/* ── Comptage théo/réel dans le panel TRS ── */
+.tdp-comptage-bloc { border-top:1px solid #0d2e20; padding:10px 14px; }
+.tdp-cad-line { display:flex; align-items:center; gap:5px; margin-bottom:8px; }
+.tdp-cad-ic   { color:#10b981; font-size:13px; flex-shrink:0; }
+.tdp-cad-val  { font-size:12px; font-weight:700; color:#d1fae5; }
+.tdp-cad-col  { font-size:10px; color:#4b5563; }
+.tdp-cad-edit { margin-left:auto; flex-shrink:0; background:none; border:1px solid #1e3a2e; color:#4b5563; border-radius:3px; cursor:pointer; font-size:11px; padding:1px 7px; }
+.tdp-cad-edit:hover { color:#10b981; border-color:#10b981; }
+.tdp-cpt-table { width:100%; }
+.tdp-cpt-row  { display:grid; grid-template-columns:1fr 1fr 1fr; gap:2px; }
+.tdp-cpt-hd .tdp-cpt-cell { font-size:9px; font-weight:800; letter-spacing:1px; color:#4b5563; padding:0 0 4px; }
+.tdp-cpt-cell { font-size:12px; padding:3px 0; }
+.tdp-cpt-lbl  { color:#6b7280; font-size:11px; }
+.tdp-cpt-th   { text-align:center; color:#4b5563; }
+.tdp-cpt-theo { color:#a78bfa; font-weight:700; font-family:monospace; font-size:14px; text-align:center; }
+.tdp-cpt-reel { color:#10b981; font-weight:700; font-family:monospace; font-size:14px; text-align:center; }
+.tdp-reminder { margin-top:8px; background:#3f1f0033; border:1px solid #f59e0b55; border-radius:5px; padding:6px 10px; font-size:10px; font-weight:800; color:#f59e0b; letter-spacing:.5px; animation:tdp-pulse 1.5s ease-in-out infinite; }
+@keyframes tdp-pulse { 0%,100%{opacity:1} 50%{opacity:.55} }
 
 /* ── TRS Detail Panel ── */
 .trs-detail-panel { position:absolute; right:0; top:0; bottom:0; width:300px; background:#060f0a; border-left:1px solid #064e35; display:flex; flex-direction:column; overflow-y:auto; z-index:50; }
