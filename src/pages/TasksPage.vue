@@ -319,6 +319,27 @@ export default {
       var idx = cat.items.indexOf(item); if(idx>=0) cat.items.splice(idx,1)
     }
 
+    // Après AR demande AQL → ajoute immédiatement l'item "à réaliser" dans la catégorie AQL
+    var addToAqlCatAfterAr = function(arItem) {
+      var isAdm = userService.value === 'admin'
+      var canAqlSaisir = isAdm || canPerform('realiser_aql')
+      var newItem = {key:'aql_'+arItem.aqlId, lotId:arItem.lotId, lotNum:arItem.lotNum,
+        prodDesc:arItem.prodDesc, statutSap:arItem.statutSap||'',
+        action:'AQL '+arItem.aqlTypeLabel+' — Résultat à saisir',
+        canAqlSaisir:canAqlSaisir, acting:false,
+        aqlId:arItem.aqlId, aqlType:arItem.aqlType}
+      var aqlCatObj = categories.value.find(function(c){ return c.id==='aql' })
+      if (aqlCatObj) {
+        aqlCatObj.items.push(newItem)
+        aqlCatObj.open = true
+      } else {
+        var newCat = makeCat('aql','🔬','Inspections AQL à réaliser')
+        newCat.items.push(newItem)
+        newCat.open = true
+        categories.value.push(newCat)
+      }
+    }
+
     var addToDocsCatAfterAr = function(arItem) {
       var svc = selectedSvc.value
       var isAdm = userService.value === 'admin'
@@ -421,6 +442,9 @@ export default {
         res = await supabase.from('aql_inspections').update({request_ar_pending:false}).eq('id',item.aqlId)
         if (res.error) { alert('Erreur : '+res.error.message); item.acting=false; return }
         await supabase.from('lot_events').insert({lot_id:item.lotId,event_type:'ar_aql_demande',description:'AQL '+item.aqlTypeLabel+' — Accusé réception demande',triggered_by:uid,created_at:n})
+        removeCatItem(item, cat)
+        addToAqlCatAfterAr(item)  // Affiche immédiatement l'item "à réaliser"
+        return
       } else if (item.arType==='aql_resultat') {
         res = await supabase.from('aql_inspections').update({result_ar_pending:false}).eq('id',item.aqlId)
         if (res.error) { alert('Erreur : '+res.error.message); item.acting=false; return }

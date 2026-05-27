@@ -1833,37 +1833,78 @@ export default {
       modal.value.lotDropdown = []
     }
 
+    // Mapping op_code → nom du processus dans la table `processus`
+    var OP_CODE_TO_PROC = {
+      'PESEE':'Pesée','PESÉE':'Pesée',
+      'GRANULATION SEC':'Granulation','GRANULATION':'Granulation',
+      'MELANGE':'Mélange','MÉLANGE':'Mélange',
+      'COMPRESSION':'Compression',
+      'PELLICULAGE':'Pelliculage',
+      'MISE EN GELULE':'Encapsulation','MISE EN GÉLULE':'Encapsulation',
+      'FAB/CREME ET POMMADE':'Fabrication Crème/Pommade'
+    }
+
     var saveStart = async function() {
       if (!modal.value.selectedLot) { modal.value.err = 'Sélectionner un lot.'; return }
       if (!selectedNode.value) return
       modal.value.saving = true; modal.value.err = ''
       var node = selectedNode.value
       var res
-      if (node.type === 'cond' && node.equipement_id) {
-        // Production session (cond)
+
+      if (node.type === 'cond') {
+        // ── CONDITIONNEMENT ─────────────────────────────────────
+        var eqId = node.equipement_id
+        if (!eqId) {
+          // Auto-résolution depuis equipements_conditionnement par nom
+          var eqR = await supabase.from('equipements_conditionnement').select('id').ilike('nom_equipement','%'+node.label+'%').limit(1).maybeSingle()
+          if (!eqR.data) { modal.value.err = 'Équipement introuvable pour nœud '+node.code+'. Vérifier le nom dans Équipements.'; modal.value.saving=false; return }
+          eqId = eqR.data.id
+          await supabase.from('plan_rooms').upsert({code:node.code, equipement_id:eqId, atelier_id:null},{onConflict:'code'})
+        }
         res = await supabase.from('production_sessions').insert({
           lot_id: modal.value.selectedLot.id,
-          equipement_id: node.equipement_id,
+          equipement_id: eqId,
           date: modal.value.dateDebut.slice(0, 10),
           heure_debut: modal.value.dateDebut.slice(11) + ':00',
           statut: 'En cours',
           colis_produits: 0, colis_rebuts: 0
         })
-      } else if (node.atelier_id) {
-        // Suivi fabrication (fab)
-        // Get processus_id from ateliers
-        var atRes = await supabase.from('ateliers').select('processus_id').eq('id', node.atelier_id).single()
+      } else {
+        // ── FABRICATION ──────────────────────────────────────────
+        var atId = node.atelier_id
+        if (!atId) {
+          // Auto-résolution : cherche dans operations_master puis crée/trouve l'atelier
+          var omR = await supabase.from('operations_master').select('room_name,op_code').eq('room_code',node.code).limit(1).maybeSingle()
+          var roomName = omR.data ? omR.data.room_name : node.label
+          var opCode   = omR.data ? omR.data.op_code   : ''
+          var procName = OP_CODE_TO_PROC[opCode] || null
+          var procId = null
+          if (procName) {
+            var pR = await supabase.from('processus').select('id').ilike('nom_process',procName).limit(1).maybeSingle()
+            procId = pR.data ? pR.data.id : null
+          }
+          // Cherche l'atelier existant par nom de salle
+          var atR = await supabase.from('ateliers').select('id').eq('nom_atelier',roomName).limit(1).maybeSingle()
+          if (atR.data) {
+            atId = atR.data.id
+          } else {
+            // Crée l'atelier automatiquement
+            var insAt = await supabase.from('ateliers').insert({nom_atelier:roomName, processus_id:procId, actif:true}).select('id').single()
+            if (insAt.error) { modal.value.err = 'Erreur création atelier : '+insAt.error.message; modal.value.saving=false; return }
+            atId = insAt.data.id
+          }
+          // Mémorise dans plan_rooms pour les prochaines fois
+          await supabase.from('plan_rooms').upsert({code:node.code, atelier_id:atId, equipement_id:null},{onConflict:'code'})
+        }
+        var atRes = await supabase.from('ateliers').select('processus_id').eq('id',atId).single()
         var processusId = atRes.data?.processus_id || null
         res = await supabase.from('suivi_fabrication').insert({
           lot_id: modal.value.selectedLot.id,
-          atelier_id: node.atelier_id,
+          atelier_id: atId,
           processus_id: processusId,
           date_debut: modal.value.dateDebut || null,
           statut: 'En cours'
         })
-      } else {
-        modal.value.err = 'Atelier/équipement non configuré pour ce nœud.'
-        modal.value.saving = false; return
       }
       modal.value.saving = false
       if (res.error) { modal.value.err = res.error.message; return }

@@ -15,6 +15,7 @@
         <button class="btn-add" @click="openProc(null)">+ Nouveau processus</button>
       </div>
 
+      <div class="table-wrap">
       <table class="admin-table">
         <thead>
           <tr>
@@ -48,6 +49,7 @@
           <tr v-if="!processus.length"><td colspan="6" class="empty">Aucun processus — cliquez sur "+ Nouveau processus"</td></tr>
         </tbody>
       </table>
+      </div>
     </div>
 
     <!-- ══════════ ATELIERS ══════════ -->
@@ -69,6 +71,7 @@
         ⚠ Aucun processus trouvé. Créez d'abord des processus dans l'onglet <strong>Processus</strong>.
       </div>
 
+      <div class="table-wrap">
       <table class="admin-table" v-else>
         <thead>
           <tr>
@@ -113,6 +116,7 @@
           <tr v-if="!filteredProcForAteliers.length"><td colspan="5" class="empty">Aucun résultat</td></tr>
         </tbody>
       </table>
+      </div>
     </div>
 
     <!-- ══ MODAL PROCESSUS ══ -->
@@ -406,4 +410,21 @@ export default {
 .btn-save { padding:7px 20px; border:none; border-radius:4px; background:#0a0a0a; color:#fff; font-size:13px; cursor:pointer; font-weight:500; }
 .btn-save:hover { background:#333; }
 .btn-save:disabled { opacity:.5; cursor:not-allowed; }
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+@media(max-width:768px){
+  .admin-table{min-width:480px}
+  .sec-toolbar{flex-direction:column;align-items:flex-start;gap:8px}
+  .at-filters{flex-direction:column;gap:8px;width:100%}
+  .t-sel{width:100%;font-size:13px}
+  .ph-tabs{flex-wrap:wrap;gap:4px}
+  .tab-btn{flex:1;min-height:36px;font-size:12px}
+  .btn-add{min-height:44px;padding:8px 16px;font-size:13px}
+}
+@media(max-width:480px){
+  .admin-table{min-width:400px}
+  .modal{width:min(96vw,440px)}
+  .modal-body{padding:14px}
+  .inp{font-size:16px}
+  .btn-save,.btn-cancel{min-height:44px;font-size:14px}
+}
 </style>

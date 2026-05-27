@@ -97,7 +97,7 @@
         <button class="tb-btn-add" @click="openNewCad">+ Nouvelle cadence</button>
       </div>
 
-      <div class="cad-table-wrap">
+      <div class="cad-table-wrap table-wrap">
         <table class="cad-table">
           <thead>
             <tr>
@@ -137,6 +137,7 @@
 
     <!-- ── TAB : MASTER ATELIERS ── -->
     <div v-if="tab==='master'" class="tab-body">
+      <div class="table-wrap">
       <table class="cad-table">
         <thead>
           <tr>
@@ -159,6 +160,7 @@
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
 
     <!-- ── MODAL ÉTAPE FLUX ── -->
@@ -616,4 +618,24 @@ export default {
 .ld-item { padding:8px 12px; font-size:11px; color:#374151; cursor:pointer; border-bottom:1px solid #f3f4f6; }
 .ld-item:hover { background:#f5f3ff; }
 .lot-chip { font-size:11px; color:#059669; background:#d1fae5; border-radius:4px; padding:4px 10px; margin-top:4px; }
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+@media(max-width:768px){
+  .cad-table{min-width:560px}
+  .fa-tabs{flex-wrap:wrap;gap:4px}
+  .fa-tab{flex:1;min-height:40px;font-size:12px;padding:8px 10px}
+  .tb-toolbar{flex-direction:column;gap:8px}
+  .tb-filters{flex-direction:column;gap:6px;width:100%}
+  .tb-sel,.tb-search{width:100%;font-size:13px}
+  .tb-btn-add{width:100%;min-height:44px;text-align:center}
+  .products-grid{grid-template-columns:1fr}
+  .modal-box{width:min(96vw,460px)}
+  .mb-ok,.mb-cancel{min-height:44px}
+}
+@media(max-width:480px){
+  .cad-table{min-width:480px}
+  .fa-title{font-size:14px}
+  .mf-input{font-size:16px}
+  .modal-ft{flex-direction:column;gap:6px}
+  .mb-ok,.mb-cancel{width:100%}
+}
 </style>

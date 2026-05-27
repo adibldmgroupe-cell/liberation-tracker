@@ -96,9 +96,9 @@ export default {
     var searchTimeout = null
 
     onMounted(async function() {
-      // Récupère tous les numéros de lots et trouve le max numérique
-      // (pas de limit ni d'ORDER BY textuel qui donnerait "991" > "26001")
-      var res = await supabase.from('lots').select('numero_lot')
+      // Récupère les 500 lots les plus récemment créés (tri par id DESC)
+      // puis trouve le max numérique parmi eux — évite le problème de la limite PostgREST
+      var res = await supabase.from('lots').select('numero_lot').order('id',{ascending:false}).limit(500)
       if (res.data && res.data.length) {
         var maxNum = 0
         var maxLot = ''
