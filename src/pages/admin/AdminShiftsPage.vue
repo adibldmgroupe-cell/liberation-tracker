@@ -53,26 +53,60 @@
       </div>
     </div>
 
-    <!-- ══ PLANNING SHIFTS (vue hebdo) ══ -->
+    <!-- ══ PLANNING SHIFTS ══ -->
     <div class="card" style="margin-top:16px">
       <div class="card-hd">
-        <span class="card-title">Planning équipes — semaine du {{weekLabel}}</span>
-        <div class="week-nav">
-          <button class="wn-btn" @click="prevWeek">←</button>
-          <button class="wn-btn today" @click="goToday">Aujourd'hui</button>
-          <button class="wn-btn" @click="nextWeek">→</button>
+        <span class="card-title">Planning équipes</span>
+        <div class="cal-view-tabs">
+          <button class="cv-tab" :class="{active:calView==='jour'}" @click="calView='jour'">Jour</button>
+          <button class="cv-tab" :class="{active:calView==='semaine'}" @click="calView='semaine'">Semaine</button>
+          <button class="cv-tab" :class="{active:calView==='mois'}" @click="calView='mois'">Mois</button>
         </div>
       </div>
 
+      <!-- ── Navigation contextuelle ── -->
+      <div class="cal-nav">
+        <button class="wn-btn" @click="calPrev">←</button>
+        <button class="wn-btn today" @click="calToday">Aujourd'hui</button>
+        <button class="wn-btn" @click="calNext">→</button>
+        <span class="cal-period">{{calPeriodLabel}}</span>
+      </div>
+
       <div v-if="loadingP" class="loading">Chargement…</div>
-      <div v-else class="planning-grid" :style="{'--cols': equipements.length + 1}">
-        <!-- Header équipements -->
+
+      <!-- ── VUE JOUR ── -->
+      <div v-else-if="calView==='jour'" class="planning-grid" :style="{'--cols': equipements.length + 1}">
         <div class="pg-head pg-corner"></div>
         <div v-for="eq in equipements" :key="eq.id" class="pg-head pg-equip">
           <div class="pg-eq-nom">{{eq.nom_equipement}}</div>
           <div class="pg-eq-site">{{eq.site}}</div>
         </div>
-        <!-- Lignes : shift × jour -->
+        <template v-for="sh in shifts" :key="sh.id">
+          <div class="pg-label" :class="{today:true}">
+            <div class="sh-chip" :style="{background:sh.couleur+'22',color:sh.couleur,borderColor:sh.couleur+'44'}">
+              {{sh.nom}} <span class="sh-time">{{sh.heure_debut.slice(0,5)}}</span>
+            </div>
+          </div>
+          <div v-for="eq in equipements" :key="eq.id" class="pg-cell" :class="{today:true}">
+            <div v-if="getPlanCell(currentDayIso, sh.id, eq.id)" class="plan-chip"
+              :style="{background:getEquipeColor(getPlanCell(currentDayIso,sh.id,eq.id).equipe_id)+'22',borderColor:getEquipeColor(getPlanCell(currentDayIso,sh.id,eq.id).equipe_id)+'55'}">
+              <span class="pc-eq" :style="{color:getEquipeColor(getPlanCell(currentDayIso,sh.id,eq.id).equipe_id)}">
+                {{getEquipeNom(getPlanCell(currentDayIso,sh.id,eq.id).equipe_id)}}
+              </span>
+              <button class="pc-del" @click="deletePlan(getPlanCell(currentDayIso,sh.id,eq.id).id)">✕</button>
+            </div>
+            <button v-else class="pg-assign" @click="openAssignModal(currentDayIso, sh, eq)" title="Affecter une équipe">+</button>
+          </div>
+        </template>
+      </div>
+
+      <!-- ── VUE SEMAINE ── -->
+      <div v-else-if="calView==='semaine'" class="planning-grid" :style="{'--cols': equipements.length + 1}">
+        <div class="pg-head pg-corner"></div>
+        <div v-for="eq in equipements" :key="eq.id" class="pg-head pg-equip">
+          <div class="pg-eq-nom">{{eq.nom_equipement}}</div>
+          <div class="pg-eq-site">{{eq.site}}</div>
+        </div>
         <template v-for="day in weekDays" :key="day.iso">
           <template v-for="sh in shifts" :key="sh.id">
             <div class="pg-label" :class="{today:day.isToday}">
@@ -93,6 +127,24 @@
             </div>
           </template>
         </template>
+      </div>
+
+      <!-- ── VUE MOIS ── -->
+      <div v-else-if="calView==='mois'" class="month-grid">
+        <div class="mth-head" v-for="d in ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim']" :key="d">{{d}}</div>
+        <div v-for="cell in monthCells" :key="cell.iso||('empty-'+cell.idx)"
+             class="mth-cell" :class="{today:cell.isToday,'other-month':!cell.inMonth,'mth-empty':!cell.inMonth}">
+          <template v-if="cell.inMonth">
+            <div class="mth-day-num" :class="{today:cell.isToday}">{{cell.day}}</div>
+            <div class="mth-chips">
+              <div v-for="chip in getMontDayChips(cell.iso)" :key="chip.key"
+                   class="mth-chip" :style="{background:chip.color+'22',color:chip.color,borderColor:chip.color+'44'}">
+                {{chip.label}}
+              </div>
+              <div v-if="getMonthDayMore(cell.iso)>0" class="mth-more">+{{getMonthDayMore(cell.iso)}}</div>
+            </div>
+          </template>
+        </div>
       </div>
     </div>
 
@@ -189,7 +241,10 @@ export default {
     var loadingE = ref(false)
     var loadingP = ref(false)
 
+    var calView    = ref('semaine')
     var weekOffset = ref(0)
+    var dayOffset  = ref(0)
+    var monthOffset = ref(0)
     var colorPresets = ['#3B82F6','#F97316','#7C3AED','#10B981','#EF4444','#EAB308','#06B6D4','#EC4899','#6B7280','#0EA5E9']
 
     var shiftModal  = reactive({ show:false, editing:null, d:{}, error:'', saving:false })
@@ -225,6 +280,83 @@ export default {
     var nextWeek = function() { weekOffset.value++ }
     var goToday  = function() { weekOffset.value = 0 }
 
+    // ── Navigation calendrier ────────────────────────────────────
+    var calPrev = function() {
+      if (calView.value === 'jour') { dayOffset.value--; loadPlanning() }
+      else if (calView.value === 'semaine') { weekOffset.value--; loadPlanning() }
+      else if (calView.value === 'mois') { monthOffset.value--; loadPlanning() }
+    }
+    var calNext = function() {
+      if (calView.value === 'jour') { dayOffset.value++; loadPlanning() }
+      else if (calView.value === 'semaine') { weekOffset.value++; loadPlanning() }
+      else if (calView.value === 'mois') { monthOffset.value++; loadPlanning() }
+    }
+    var calToday = function() {
+      dayOffset.value = 0; weekOffset.value = 0; monthOffset.value = 0
+      loadPlanning()
+    }
+
+    // ── Vue Jour ────────────────────────────────────────────────
+    var currentDayIso = computed(function() {
+      var d = new Date()
+      d.setDate(d.getDate() + dayOffset.value)
+      return d.toISOString().slice(0,10)
+    })
+
+    // ── Vue Mois ────────────────────────────────────────────────
+    var monthCells = computed(function() {
+      var today = new Date()
+      var base = new Date(today.getFullYear(), today.getMonth() + monthOffset.value, 1)
+      var year = base.getFullYear(), month = base.getMonth()
+      var firstDow = (new Date(year, month, 1).getDay() + 6) % 7 // Mon=0
+      var daysInMonth = new Date(year, month + 1, 0).getDate()
+      var todayIso = today.toISOString().slice(0,10)
+      var cells = []
+      for (var i = 0; i < firstDow; i++) cells.push({ inMonth: false, idx: i })
+      for (var d = 1; d <= daysInMonth; d++) {
+        var dd = String(d).padStart(2,'0')
+        var mm = String(month + 1).padStart(2,'0')
+        var iso = year + '-' + mm + '-' + dd
+        cells.push({ inMonth: true, day: d, iso: iso, isToday: iso === todayIso })
+      }
+      while (cells.length % 7 !== 0) cells.push({ inMonth: false, idx: cells.length })
+      return cells
+    })
+
+    var calPeriodLabel = computed(function() {
+      if (calView.value === 'jour') {
+        var d = currentDayIso.value.split('-')
+        return d[2]+'/'+d[1]+'/'+d[0]
+      }
+      if (calView.value === 'semaine') {
+        return 'Semaine du ' + (weekDays.value[0]?.iso.split('-').reverse().join('/') || '')
+      }
+      if (calView.value === 'mois') {
+        var mois = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
+        var today = new Date()
+        var base = new Date(today.getFullYear(), today.getMonth() + monthOffset.value, 1)
+        return mois[base.getMonth()] + ' ' + base.getFullYear()
+      }
+      return ''
+    })
+
+    var MONTH_MAX_CHIPS = 3
+    var getMontDayChips = function(iso) {
+      var rows = planningRows.value.filter(function(p) { return p.date === iso })
+      return rows.slice(0, MONTH_MAX_CHIPS).map(function(p) {
+        var sh = shifts.value.find(function(s) { return s.id === p.shift_id })
+        return {
+          key: p.id,
+          label: (sh ? sh.nom.slice(0,4) : '?') + ' — ' + getEquipeNom(p.equipe_id).slice(0,3),
+          color: sh ? sh.couleur : '#999'
+        }
+      })
+    }
+    var getMonthDayMore = function(iso) {
+      var count = planningRows.value.filter(function(p) { return p.date === iso }).length
+      return Math.max(0, count - MONTH_MAX_CHIPS)
+    }
+
     var getPlanCell = function(date, shiftId, equipId) {
       return planningRows.value.find(function(p){ return p.date===date && p.shift_id===shiftId && p.equipement_id===equipId }) || null
     }
@@ -257,7 +389,14 @@ export default {
 
     var loadPlanning = async function() {
       loadingP.value = true
-      var dates = weekDays.value.map(function(d){ return d.iso })
+      var dates = []
+      if (calView.value === 'jour') {
+        dates = [currentDayIso.value]
+      } else if (calView.value === 'semaine') {
+        dates = weekDays.value.map(function(d){ return d.iso })
+      } else if (calView.value === 'mois') {
+        dates = monthCells.value.filter(function(c){ return c.inMonth }).map(function(c){ return c.iso })
+      }
       var r = await supabase.from('shift_planning')
         .select('*')
         .in('date', dates)
@@ -351,9 +490,12 @@ export default {
     return {
       shifts, equipes, equipements, planningRows, loadingS, loadingE, loadingP,
       weekDays, weekLabel, weekOffset, colorPresets,
+      calView, dayOffset, monthOffset, currentDayIso, monthCells, calPeriodLabel,
       shiftModal, equipeModal, assignModal,
       prevWeek, nextWeek, goToday,
+      calPrev, calNext, calToday,
       getPlanCell, getEquipeColor, getEquipeNom,
+      getMontDayChips, getMonthDayMore,
       openShiftModal, saveShift, deleteShift,
       openEquipeModal, saveEquipe, deleteEquipe,
       openAssignModal, saveAssign, deletePlan
@@ -445,8 +587,28 @@ export default {
 .btn-cancel{flex:1;padding:10px;background:#f5f5f5;color:#666;border:none;font-size:13px;cursor:pointer;border-radius:2px}
 .btn-cancel:hover{background:#eee}
 
+/* Calendar view tabs */
+.cal-view-tabs{display:flex;gap:0;border:1px solid #e0e0e0;border-radius:3px;overflow:hidden}
+.cv-tab{border:none;background:#f5f5f5;color:#666;font-size:11px;font-weight:600;padding:4px 12px;cursor:pointer;border-right:1px solid #e0e0e0}
+.cv-tab:last-child{border-right:none}
+.cv-tab.active{background:#0a0a0a;color:#fff}
+.cal-nav{display:flex;align-items:center;gap:6px;padding:8px 14px;background:#fafafa;border-bottom:1px solid #f0f0f0}
+.cal-period{font-size:12px;font-weight:600;margin-left:6px;color:#333}
+
+/* Month grid */
+.month-grid{display:grid;grid-template-columns:repeat(7,1fr);border-left:1px solid #e8e8e8;border-top:1px solid #e8e8e8}
+.mth-head{text-align:center;font-size:10px;font-weight:700;color:#999;text-transform:uppercase;padding:6px 0;background:#f8f8f8;border-right:1px solid #e8e8e8;border-bottom:2px solid #e0e0e0}
+.mth-cell{min-height:76px;border-right:1px solid #e8e8e8;border-bottom:1px solid #e8e8e8;padding:4px 5px;vertical-align:top;position:relative}
+.mth-cell.other-month{background:#f9f9f9}
+.mth-day-num{font-size:11px;font-weight:600;color:#555;margin-bottom:3px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;border-radius:50%}
+.mth-day-num.today{background:#0a0a0a;color:#fff}
+.mth-chips{display:flex;flex-direction:column;gap:2px}
+.mth-chip{font-size:9px;font-weight:600;padding:1px 5px;border-radius:8px;border:1px solid;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mth-more{font-size:9px;color:#aaa;margin-top:1px}
+
 @media(max-width:768px){
   .two-cols{grid-template-columns:1fr}
   .planning-grid{font-size:10px}
+  .mth-cell{min-height:52px}
 }
 </style>

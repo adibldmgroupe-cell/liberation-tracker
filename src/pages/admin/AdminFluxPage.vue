@@ -34,13 +34,60 @@
             <option value="CREME_POMMADE">CREME_POMMADE</option>
             <option value="OTC">OTC</option>
           </select>
+          <div class="view-toggle">
+            <button class="vt-btn" :class="{active:fluxView==='pivot'}" @click="fluxView='pivot'" title="Vue tableau croisé">⊞ Pivot</button>
+            <button class="vt-btn" :class="{active:fluxView==='cards'}" @click="fluxView='cards'" title="Vue fiches">▤ Fiches</button>
+          </div>
+          <button class="tb-btn-gs" @click="openGsImport">↑ Google Sheets</button>
           <button class="tb-btn-add" @click="openNewFlux">+ Nouveau flux</button>
         </div>
       </div>
 
       <div v-if="fluxLoading" class="loading-row">Chargement…</div>
 
-      <!-- Product cards -->
+      <!-- ── VUE PIVOT ── -->
+      <div class="table-wrap" v-else-if="fluxView==='pivot'">
+        <div v-if="!pivotRows.length" class="empty-row">Aucun flux configuré — cliquez "+ Nouveau flux"</div>
+        <table class="pivot-table" v-else>
+          <thead>
+            <tr>
+              <th class="pt-h-prod">Produit</th>
+              <th class="pt-h-type">Type</th>
+              <th class="pt-h-route">R</th>
+              <th v-for="col in pivotCols" :key="col.op_number" class="pt-h-op">
+                <div class="pto-num">{{col.op_number}}</div>
+                <div class="pto-code">{{col.op_code}}</div>
+              </th>
+              <th class="pt-h-acts"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <template v-for="row in pivotRows" :key="row.product_code+'_'+row.route">
+              <tr :class="{'pt-r2':row.route===2}">
+                <td class="pt-prod-cell">
+                  <div class="pt-pcode">{{row.product_code}}</div>
+                  <div class="pt-pname">{{row.product_name}}</div>
+                </td>
+                <td><span class="pc-type" :class="'pct-'+row.type_flux">{{row.type_flux}}</span></td>
+                <td class="pt-route-num">R{{row.route}}</td>
+                <td v-for="col in pivotCols" :key="col.op_number" class="pt-cell"
+                    @click="pivotCellClick(row, col)">
+                  <span v-if="row.stepMap[col.op_number]" class="pt-room-chip">
+                    {{row.stepMap[col.op_number].room_code || 'flex'}}
+                    <button class="pt-del-btn" @click.stop="deleteStep(row.stepMap[col.op_number])">✕</button>
+                  </span>
+                  <span v-else class="pt-cell-add">+</span>
+                </td>
+                <td class="pt-acts-cell">
+                  <button class="prs-btn" @click="openAddStep(row.product_code, row.product_name, row.route, null)" title="Ajouter étape">+ Étape</button>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ── VUE FICHES ── -->
       <div class="products-grid" v-else>
         <div class="prod-card" v-for="p in filteredProducts" :key="p.product_code">
           <div class="pc-hd">
@@ -53,8 +100,6 @@
               <span class="pc-routes" v-if="p.has_route_2">2 routes</span>
             </div>
           </div>
-
-          <!-- Routes -->
           <div class="pc-routes-wrap" v-for="route in p.routes" :key="route.route">
             <div class="pr-label">Route {{route.route}}</div>
             <div class="pr-steps">
@@ -73,14 +118,13 @@
                   <button class="prs-btn prs-del" @click="deleteStep(step)" title="Supprimer">✕</button>
                 </div>
               </div>
-              <button class="pr-add-step" @click="openAddStep(p.product_code, p.product_name, route.route)">
+              <button class="pr-add-step" @click="openAddStep(p.product_code, p.product_name, route.route, null)">
                 + Étape
               </button>
             </div>
           </div>
-
           <button class="pc-add-route" v-if="!p.has_route_2"
-            @click="openAddStep(p.product_code, p.product_name, 2)">
+            @click="openAddStep(p.product_code, p.product_name, 2, null)">
             + Ajouter Route 2
           </button>
         </div>
@@ -94,8 +138,14 @@
           <span class="ts-icon">🔍</span>
           <input class="tb-search" placeholder="Chercher équipement ou produit…" v-model="cadSearch"/>
         </div>
-        <button class="tb-btn-add" @click="openNewCad">+ Nouvelle cadence</button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="tb-btn-gs" @click="importFromEquipements" :disabled="cadImporting" title="Pré-remplir depuis les cadences nominales des équipements">
+            {{cadImporting ? '…' : '⬇ Depuis équipements'}}
+          </button>
+          <button class="tb-btn-add" @click="openNewCad">+ Nouvelle cadence</button>
+        </div>
       </div>
+      <div v-if="cadImportMsg" class="cad-import-msg" :class="cadImportMsg.type">{{cadImportMsg.text}}</div>
 
       <div class="cad-table-wrap table-wrap">
         <table class="cad-table">
@@ -207,6 +257,60 @@
       </div>
     </div>
 
+    <!-- ── MODAL GOOGLE SHEETS IMPORT ── -->
+    <div class="modal-overlay" v-if="gsModal.open" @click.self="gsModal.open=false">
+      <div class="modal-box modal-wide">
+        <div class="modal-hd">↑ Import Google Sheets / CSV
+          <span class="mh-sub">— product_flux</span>
+        </div>
+        <div class="modal-body">
+          <div class="mf-row">
+            <label>URL Google Sheets (export CSV public)</label>
+            <div style="display:flex;gap:8px">
+              <input class="mf-input" v-model="gsModal.url" placeholder="https://docs.google.com/spreadsheets/d/…/export?format=csv" style="flex:1"/>
+              <button class="mb-ok" @click="loadGsCsv" :disabled="gsModal.fetching" style="flex-shrink:0">
+                {{gsModal.fetching ? '…' : 'Charger'}}
+              </button>
+            </div>
+            <div class="mf-opt" style="font-size:10px;margin-top:4px">Format CSV attendu : <code>product_code,product_name,route,op_number,room_code</code></div>
+          </div>
+          <div class="mf-row">
+            <label>Ou collez le contenu CSV directement</label>
+            <textarea class="mf-input" v-model="gsModal.csvText" rows="6" placeholder="product_code,product_name,route,op_number,room_code&#10;PFABB10,Produit X,1,10,B102&#10;PFABB10,Produit X,1,20,"></textarea>
+          </div>
+          <button class="mb-ok" @click="parseGsCsv" style="margin-top:4px;width:auto;padding:6px 16px">Prévisualiser</button>
+          <div class="mf-err" v-if="gsModal.err">{{gsModal.err}}</div>
+
+          <!-- Preview -->
+          <div v-if="gsModal.preview.length" style="margin-top:12px">
+            <div style="font-size:11px;font-weight:700;color:#6b7280;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">
+              Aperçu — {{gsModal.preview.length}} ligne{{gsModal.preview.length!==1?'s':''}}
+            </div>
+            <div class="table-wrap" style="max-height:220px;overflow-y:auto">
+              <table class="cad-table">
+                <thead><tr><th>code_produit</th><th>nom_produit</th><th>Route</th><th>Op#</th><th>Salle</th></tr></thead>
+                <tbody>
+                  <tr v-for="(r,i) in gsModal.preview" :key="i" :class="r._err?'gs-row-err':''">
+                    <td><span class="cad-prod-code">{{r.product_code}}</span></td>
+                    <td style="font-size:11px;color:#6b7280">{{r.product_name}}</td>
+                    <td><span class="room-chip">R{{r.route}}</span></td>
+                    <td><span class="op-num">{{r.op_number}}</span></td>
+                    <td>{{r.room_code||'flexible'}}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="modal-ft">
+          <button class="mb-cancel" @click="gsModal.open=false">Annuler</button>
+          <button class="mb-ok" @click="confirmGsImport" :disabled="gsModal.saving||!gsModal.preview.length">
+            {{gsModal.saving ? 'Import en cours…' : 'Confirmer import ('+gsModal.preview.length+' lignes)'}}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- ── MODAL CADENCE ── -->
     <div class="modal-overlay" v-if="cadModal.open" @click.self="cadModal.open=false">
       <div class="modal-box">
@@ -276,13 +380,22 @@ export default {
     var tab          = ref('flux')
     var fluxSearch   = ref('')
     var fluxTypeFilter = ref('')
+    var fluxView     = ref('pivot')
     var cadSearch    = ref('')
     var fluxLoading  = ref(false)
+    var cadImporting = ref(false)
+    var cadImportMsg = ref(null)
 
     var productsSummary = ref([])   // from v_product_flux_summary
     var allFluxRows     = ref([])   // from product_flux
     var cadences        = ref([])
     var opMaster        = ref([])
+
+    // ── GOOGLE SHEETS MODAL ─────────────────────────────────────
+    var gsModal = reactive({
+      open: false, url: '', csvText: '', fetching: false, saving: false, err: '',
+      preview: []
+    })
 
     // ── STEP MODAL ──────────────────────────────────────────────
     var stepModal = reactive({
@@ -346,6 +459,43 @@ export default {
       })
     })
 
+    // ── PIVOT TABLE COMPUTED ─────────────────────────────────────
+    var pivotCols = computed(function() {
+      var ops = new Set()
+      filteredProducts.value.forEach(function(p) {
+        p.routes.forEach(function(r) {
+          r.steps.forEach(function(s) { ops.add(s.op_number) })
+        })
+      })
+      return Array.from(ops).sort(function(a, b) { return a - b }).map(function(n) {
+        var m = opMaster.value.find(function(x) { return x.op_number === n })
+        return { op_number: n, op_code: m ? m.op_code : 'OP' + n }
+      })
+    })
+
+    var pivotRows = computed(function() {
+      var rows = []
+      filteredProducts.value.forEach(function(p) {
+        p.routes.forEach(function(r) {
+          var stepMap = {}
+          r.steps.forEach(function(s) { stepMap[s.op_number] = s })
+          rows.push({
+            product_code: p.product_code, product_name: p.product_name,
+            type_flux: p.type_flux, route: r.route, stepMap: stepMap
+          })
+        })
+      })
+      return rows
+    })
+
+    var pivotCellClick = function(row, col) {
+      if (row.stepMap[col.op_number]) {
+        openEditStep(row.stepMap[col.op_number])
+      } else {
+        openAddStep(row.product_code, row.product_name, row.route, col.op_number)
+      }
+    }
+
     var opOptions = computed(function() {
       // Deduplicated list of unique op_numbers from opMaster
       var seen = new Set()
@@ -380,10 +530,10 @@ export default {
       stepModal.route = 1; stepModal.op_number = ''; stepModal.room_code = ''
     }
 
-    var openAddStep = function(code, name, route) {
+    var openAddStep = function(code, name, route, opNum) {
       stepModal.open = true; stepModal.id = null; stepModal.err = ''
       stepModal.product_code = code; stepModal.product_name = name
-      stepModal.route = route; stepModal.op_number = ''; stepModal.room_code = ''
+      stepModal.route = route; stepModal.op_number = opNum || ''; stepModal.room_code = ''
     }
 
     var openEditStep = function(step) {
@@ -497,6 +647,111 @@ export default {
       if (!res.error) await loadAll()
     }
 
+    // ─── GOOGLE SHEETS IMPORT ────────────────────────────────────
+    var openGsImport = function() {
+      Object.assign(gsModal, { open: true, url: '', csvText: '', fetching: false, saving: false, err: '', preview: [] })
+    }
+
+    var loadGsCsv = async function() {
+      if (!gsModal.url.trim()) { gsModal.err = 'URL requise.'; return }
+      gsModal.fetching = true; gsModal.err = ''
+      try {
+        var r = await fetch(gsModal.url.trim())
+        if (!r.ok) throw new Error('HTTP ' + r.status)
+        gsModal.csvText = await r.text()
+        gsModal.err = ''
+      } catch (e) {
+        gsModal.err = 'Impossible de charger l\'URL : ' + e.message + '. Copiez-collez le CSV directement.'
+      }
+      gsModal.fetching = false
+    }
+
+    var parseGsCsv = function() {
+      gsModal.err = ''; gsModal.preview = []
+      var text = gsModal.csvText.trim()
+      if (!text) { gsModal.err = 'Contenu CSV vide.'; return }
+      var lines = text.split(/\r?\n/).filter(function(l) { return l.trim() })
+      if (lines.length < 2) { gsModal.err = 'CSV trop court (pas de données).'; return }
+      // Detect header
+      var startIdx = 0
+      var header = lines[0].split(',').map(function(h) { return h.trim().toLowerCase() })
+      if (header.includes('product_code') || header.includes('code_produit')) { startIdx = 1 }
+      var rows = []
+      for (var i = startIdx; i < lines.length; i++) {
+        var cols = lines[i].split(',')
+        var pcode = (cols[0]||'').trim()
+        var pname = (cols[1]||'').trim()
+        var route = parseInt((cols[2]||'1').trim())
+        var opNum = parseInt((cols[3]||'').trim())
+        var room  = (cols[4]||'').trim() || null
+        if (!pcode || isNaN(opNum)) continue
+        rows.push({ product_code: pcode, product_name: pname, route: isNaN(route)?1:route, op_number: opNum, room_code: room })
+      }
+      if (!rows.length) { gsModal.err = 'Aucune ligne valide trouvée.'; return }
+      gsModal.preview = rows
+    }
+
+    var confirmGsImport = async function() {
+      if (!gsModal.preview.length) return
+      gsModal.saving = true; gsModal.err = ''
+      // Group by product_code+route, delete existing, then insert
+      var groups = {}
+      gsModal.preview.forEach(function(r) {
+        var k = r.product_code + '_' + r.route
+        if (!groups[k]) groups[k] = { product_code: r.product_code, route: r.route, rows: [] }
+        groups[k].rows.push(r)
+      })
+      var keys = Object.keys(groups)
+      for (var i = 0; i < keys.length; i++) {
+        var g = groups[keys[i]]
+        // Delete existing steps for this product+route
+        await supabase.from('product_flux').delete()
+          .eq('product_code', g.product_code).eq('route', g.route)
+        // Insert new steps
+        var toInsert = g.rows.map(function(r) {
+          return {
+            product_code: r.product_code,
+            product_name: r.product_name || r.product_code,
+            op_number: r.op_number,
+            route: r.route,
+            room_code: r.room_code || null
+          }
+        })
+        await supabase.from('product_flux').insert(toInsert)
+      }
+      gsModal.saving = false; gsModal.open = false
+      await loadAll()
+    }
+
+    // ─── CADENCES : PRÉ-REMPLISSAGE DEPUIS ÉQUIPEMENTS ───────────
+    var importFromEquipements = async function() {
+      if (!confirm('Importer les cadences nominales depuis les équipements de conditionnement ? Les cadences existantes NE seront PAS écrasées.')) return
+      cadImporting.value = true; cadImportMsg.value = null
+      // Load equipements with cadence_nominale_boite_min
+      var r = await supabase.from('equipements_conditionnement')
+        .select('id, nom_equipement, room_code, cadence_nominale_boite_min')
+        .not('cadence_nominale_boite_min', 'is', null)
+        .not('room_code', 'is', null)
+      if (r.error) { cadImportMsg.value = { type: 'err', text: r.error.message }; cadImporting.value = false; return }
+      var equips = r.data || []
+      // Load existing cadences to avoid duplicates
+      var existing = cadences.value.map(function(c) { return c.room_code })
+      var toInsert = equips.filter(function(e) { return !existing.includes(e.room_code) })
+        .map(function(e) {
+          return { room_code: e.room_code, product_code: '*', cadence_theorique: e.cadence_nominale_boite_min, unite: 'b/min', notes: 'Importé depuis équipements (' + e.nom_equipement + ')' }
+        })
+      if (!toInsert.length) {
+        cadImportMsg.value = { type: 'ok', text: 'Toutes les cadences sont déjà présentes (' + equips.length + ' équipements).' }
+        cadImporting.value = false; return
+      }
+      var ins = await supabase.from('equipment_cadences').insert(toInsert)
+      cadImporting.value = false
+      if (ins.error) { cadImportMsg.value = { type: 'err', text: ins.error.message }; return }
+      cadImportMsg.value = { type: 'ok', text: toInsert.length + ' cadences importées depuis les équipements.' }
+      await loadAll()
+      setTimeout(function() { cadImportMsg.value = null }, 4000)
+    }
+
     // ─── LOAD ─────────────────────────────────────────────────────
     var loadAll = async function() {
       fluxLoading.value = true
@@ -516,12 +771,17 @@ export default {
     onMounted(loadAll)
 
     return {
-      tab, fluxSearch, fluxTypeFilter, cadSearch, fluxLoading,
+      tab, fluxSearch, fluxTypeFilter, fluxView, cadSearch, fluxLoading,
+      cadImporting, cadImportMsg,
       filteredProducts, filteredCadences, opMaster, opOptions, roomsForOp,
-      stepModal, cadModal,
+      pivotCols, pivotRows,
+      stepModal, cadModal, gsModal,
       getRoomName, onOpChange,
       openNewFlux, openAddStep, openEditStep, saveStep, deleteStep,
       openNewCad, openEditCad, searchCadProds, selectCadProd, saveCad, deleteCad,
+      pivotCellClick,
+      openGsImport, loadGsCsv, parseGsCsv, confirmGsImport,
+      importFromEquipements,
     }
   }
 }
@@ -618,6 +878,47 @@ export default {
 .ld-item { padding:8px 12px; font-size:11px; color:#374151; cursor:pointer; border-bottom:1px solid #f3f4f6; }
 .ld-item:hover { background:#f5f3ff; }
 .lot-chip { font-size:11px; color:#059669; background:#d1fae5; border-radius:4px; padding:4px 10px; margin-top:4px; }
+/* View toggle */
+.view-toggle{display:flex;border:1px solid #e5e7eb;border-radius:5px;overflow:hidden}
+.vt-btn{border:none;background:#f9fafb;color:#6b7280;font-size:11px;padding:5px 10px;cursor:pointer;font-weight:600}
+.vt-btn.active{background:#7c3aed;color:#fff}
+.tb-btn-gs{background:#059669;border:none;border-radius:5px;color:#fff;padding:7px 12px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap}
+.tb-btn-gs:hover{background:#047857}
+.tb-btn-gs:disabled{opacity:.4;cursor:not-allowed}
+
+/* Pivot table */
+.pivot-table{width:100%;border-collapse:collapse;font-size:12px;min-width:600px}
+.pivot-table th{background:#f5f3ff;padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#6b7280;border-bottom:2px solid #ede9fe;border-right:1px solid #ede9fe;white-space:nowrap}
+.pivot-table td{padding:6px 8px;border-bottom:1px solid #f3f4f6;border-right:1px solid #f3f4f6;vertical-align:middle}
+.pt-h-prod{min-width:160px}
+.pt-h-type{min-width:90px}
+.pt-h-route{width:32px;text-align:center}
+.pt-h-op{min-width:72px;text-align:center}
+.pt-h-acts{width:80px}
+.pto-num{font-family:monospace;font-size:11px;font-weight:700;color:#7c3aed}
+.pto-code{font-size:9px;color:#9ca3af;margin-top:1px}
+.pt-prod-cell{min-width:160px}
+.pt-pcode{font-family:monospace;font-size:11px;font-weight:800;color:#7c3aed}
+.pt-pname{font-size:10px;color:#6b7280;margin-top:1px}
+.pt-route-num{text-align:center;font-family:monospace;font-size:11px;font-weight:700;color:#374151}
+.pt-r2{background:#fafafa}
+.pt-cell{text-align:center;cursor:pointer;min-width:72px}
+.pt-cell:hover{background:#faf5ff}
+.pt-room-chip{display:inline-flex;align-items:center;gap:3px;background:#ede9fe;color:#7c3aed;font-family:monospace;font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px}
+.pt-del-btn{background:none;border:none;color:#c4b5fd;cursor:pointer;font-size:9px;padding:0 1px;line-height:1}
+.pt-del-btn:hover{color:#ef4444}
+.pt-cell-add{color:#d1d5db;font-size:16px;line-height:1}
+.pt-cell:hover .pt-cell-add{color:#7c3aed}
+.pt-acts-cell{white-space:nowrap}
+
+/* Cadences import msg */
+.cad-import-msg{padding:8px 14px;border-radius:4px;font-size:12px;margin-bottom:12px}
+.cad-import-msg.ok{background:#d1fae5;color:#065f46;border:1px solid #6ee7b7}
+.cad-import-msg.err{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+
+/* GS modal */
+.modal-wide{width:min(95vw,640px)}
+.gs-row-err{background:#fef2f2}
 .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 @media(max-width:768px){
   .cad-table{min-width:560px}

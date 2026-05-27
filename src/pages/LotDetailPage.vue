@@ -111,18 +111,28 @@
         <button v-if="canPerform('demander_aql_cond') && canDemanderAql('conditionnement')" class="btn-action" @click="doRequestAql('conditionnement')">Demander AQL Conditionnement</button>
       </div>
       <div v-if="!aqls.length" class="em">Aucune demande AQL</div>
-      <div v-else style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table class="ct"><tr v-for="a in aqls" :key="a.id">
-        <td class="cs">AQL {{a.type}}</td>
-        <td><span class="sp2" :class="a.resultat==='conforme'?'sp2-ok':a.resultat==='non_conforme'?'sp2-ko':'sp2-wait'">{{a.resultat==='en_attente'?'En attente':a.resultat==='conforme'?'Conforme':'Non conforme'}}</span></td>
-        <td class="cdt">{{fmtDt(a.inspected_at||a.requested_at)}}</td>
-        <td class="cac">
-          <button v-if="a.request_ar_pending && ['aq','lcq'].includes(userService) && canPerform('accuser_reception_aql_demande')" class="btn bg" @click="doAcknowledgeAqlRequest(a.id)">✓ AR Demande</button>
-          <button v-if="a.result_ar_pending && ['fabrication','conditionnement'].includes(userService) && canPerform('accuser_reception_aql_resultat')" class="btn bg" @click="doAcknowledgeAqlResult(a.id)">✓ AR Résultat</button>
-          <button v-if="a.resultat==='en_attente' && !a.request_ar_pending && canPerform('realiser_aql')" class="btn bg" @click="doAqlConforme(a.id)">Conforme</button>
-          <button v-if="a.resultat==='en_attente' && !a.request_ar_pending && canPerform('realiser_aql')" class="btn br" @click="doAqlNonConforme(a.id)">Non conforme</button>
-          <button v-if="a.resultat==='non_conforme' && isLatestAql(a) && canRelanceAql(a)" class="btn" @click="doRelanceAql(a)">Relancer AQL</button>
-        </td>
-      </tr></table></div>
+      <div class="aql-list" v-else>
+        <div class="aql-row" v-for="a in aqls" :key="a.id">
+          <div class="aql-left">
+            <div class="aql-type-lbl">AQL <span class="aql-type-val">{{a.type}}</span></div>
+            <div class="aql-date">{{fmtDt(a.inspected_at||a.requested_at)}}</div>
+          </div>
+          <div class="aql-mid">
+            <span class="sp2" :class="a.resultat==='conforme'?'sp2-ok':a.resultat==='non_conforme'?'sp2-ko':'sp2-wait'">
+              {{a.resultat==='en_attente'?'En attente':a.resultat==='conforme'?'Conforme':'Non conforme'}}
+            </span>
+            <span v-if="a.request_ar_pending" class="aql-ar-badge">⏳ AR demande</span>
+            <span v-if="a.result_ar_pending" class="aql-ar-badge">⏳ AR résultat</span>
+          </div>
+          <div class="aql-acts">
+            <button v-if="a.request_ar_pending && ['aq','lcq'].includes(userService) && canPerform('accuser_reception_aql_demande')" class="btn bg" @click="doAcknowledgeAqlRequest(a.id)">✓ AR Demande</button>
+            <button v-if="a.result_ar_pending && ['fabrication','conditionnement'].includes(userService) && canPerform('accuser_reception_aql_resultat')" class="btn bg" @click="doAcknowledgeAqlResult(a.id)">✓ AR Résultat</button>
+            <button v-if="a.resultat==='en_attente' && !a.request_ar_pending && canPerform('realiser_aql')" class="btn bg" @click="doAqlConforme(a.id)">Conforme</button>
+            <button v-if="a.resultat==='en_attente' && !a.request_ar_pending && canPerform('realiser_aql')" class="btn br" @click="doAqlNonConforme(a.id)">Non conforme</button>
+            <button v-if="a.resultat==='non_conforme' && isLatestAql(a) && canRelanceAql(a)" class="btn" @click="doRelanceAql(a)">Relancer AQL</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Documents -->
@@ -684,6 +694,17 @@ export default {
 .input{width:100%;padding:8px 10px;border:1px solid #ddd;font-size:13px;outline:none;box-sizing:border-box}.input:focus{border-color:#185FA5}
 .auto-list{border:1px solid #ddd;border-radius:4px;margin-top:2px;max-height:160px;overflow-y:auto}.auto-item{padding:6px 10px;cursor:pointer;font-size:12px}.auto-item:hover{background:#f5f5f5}.auto-code{font-family:'SF Mono',monospace;font-weight:500;color:#185FA5;margin-right:8px}
 .modal-actions{display:flex;gap:8px}
+/* AQL harmonisé */
+.aql-list{display:flex;flex-direction:column;gap:0;border:1px solid #e8e8e8;border-radius:2px;overflow:hidden;margin-top:8px}
+.aql-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid #f0f0f0;flex-wrap:wrap}
+.aql-row:last-child{border-bottom:none}
+.aql-left{min-width:110px}
+.aql-type-lbl{font-size:12px;font-weight:500;color:#333}
+.aql-type-val{font-family:'SF Mono',monospace;font-size:11px;font-weight:600;color:#185FA5;margin-left:3px;text-transform:uppercase}
+.aql-date{font-family:'SF Mono',monospace;font-size:10px;color:#bbb;margin-top:2px}
+.aql-mid{display:flex;align-items:center;gap:6px;flex:1;flex-wrap:wrap}
+.aql-ar-badge{font-size:10px;color:#BA7517;background:#FFF8E1;border:1px solid #FFE082;padding:2px 6px;border-radius:8px}
+.aql-acts{display:flex;gap:4px;flex-wrap:wrap}
 @media(max-width:768px){
   .plan-grid{grid-template-columns:1fr}
   .plan-input{width:120px}
