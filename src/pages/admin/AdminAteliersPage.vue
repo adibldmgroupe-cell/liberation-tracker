@@ -71,8 +71,8 @@
         ⚠ Aucun processus trouvé. Créez d'abord des processus dans l'onglet <strong>Processus</strong>.
       </div>
 
-      <div class="table-wrap">
-      <table class="admin-table" v-else>
+      <div class="table-wrap" v-else>
+      <table class="admin-table">
         <thead>
           <tr>
             <th>Atelier</th>
