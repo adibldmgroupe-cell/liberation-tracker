@@ -4,6 +4,7 @@
     <div class="lh">
       <div><span class="ln">{{lot.numero_lot}}</span><span class="lp">{{prod.description}}</span></div>
       <div class="lh-right">
+        <span v-if="lot.phase_production_en_cours" class="sp-phase" :class="getPhaseClass(lot.phase_production_en_cours)">{{lot.phase_production_en_cours}}</span>
         <span class="sp" :class="'s-'+lot.statut_sap">{{statusLabels[lot.statut_sap]}}</span>
         <button v-if="isAdmin" class="btn-sm" @click="showModify=true">✏️ Modifier</button>
         <button v-if="isAdmin" class="btn-sm btn-del" @click="confirmDelete">🗑️ Supprimer</button>
@@ -531,6 +532,16 @@ export default {
       }
     }
 
+    var getPhaseClass = function(phase) {
+      if (!phase || phase === 'Planifié') return 'phase-planifie'
+      if (phase === 'Libéré') return 'phase-libere'
+      if (phase === 'Clôturé') return 'phase-cloture'
+      if (phase === 'Fabriqué — En attente conditionnement') return 'phase-attente-cond'
+      if (phase === 'Conditionné — En attente livraison PF') return 'phase-attente-pf'
+      if (phase.startsWith('Conditionnement —')) return 'phase-cond'
+      return 'phase-fab'
+    }
+
     onMounted(async function(){
       var u=await supabase.auth.getUser();userId.value=u.data.user.id
       var p=await supabase.from('profiles').select('service').eq('id',u.data.user.id).single()
@@ -550,7 +561,7 @@ export default {
       planning,planEdit,planSaving,savePlanning,
       doSetDaMicroApplicable,
       devEdits,saveDevField,SVC_LABELS,fmtDevDate,
-      devBloquanteOpen,devNonBloquanteOpen,devClosed}
+      devBloquanteOpen,devNonBloquanteOpen,devClosed,getPhaseClass}
   }
 }
 </script>
@@ -561,6 +572,8 @@ export default {
 .ln{font-size:22px;font-weight:500;font-family:'SF Mono',monospace}.lp{font-size:13px;color:#666;margin-left:10px}
 .sp{font-size:11px;font-weight:500;padding:3px 10px;border-radius:2px}
 .s-quarantaine{background:#FFA94D;color:#412402}.s-accepte{background:#1D9E75;color:#fff}.s-sous_investigation{background:#E24B4A;color:#fff}.s-vide{background:#e8e8e8;color:#666}.s-refuse{background:#666;color:#fff}
+.sp-phase{font-size:10px;font-weight:500;padding:3px 10px;border-radius:2px;white-space:nowrap}
+.phase-planifie{background:#f0f0f0;color:#999}.phase-fab{background:#EEE8FF;color:#5B3CC4}.phase-attente-cond{background:#FFF3CD;color:#856404}.phase-cond{background:#E0F7F4;color:#00695C}.phase-attente-pf{background:#FFF3CD;color:#856404}.phase-libere{background:#EAF3DE;color:#3B6D11}.phase-cloture{background:#e8e8e8;color:#333}
 .loading{text-align:center;padding:60px;color:#999}
 .btn-sm{font-size:11px;padding:3px 10px;border:1px solid #ddd;border-radius:3px;background:#fff;cursor:pointer;color:#666}.btn-sm:hover{background:#f5f5f5}
 .btn-del{border-color:#E24B4A;color:#E24B4A}.btn-del:hover{background:#FCEBEB}

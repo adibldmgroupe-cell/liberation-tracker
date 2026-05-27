@@ -81,6 +81,7 @@
           <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('numero_lot')">N° Lot <span class="sort-arrow">{{sortIcon('numero_lot')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['numero_lot']}" @click="openDropdown('numero_lot',$event)">⌄</button></div></th>
           <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('prod_desc')">Produit <span class="sort-arrow">{{sortIcon('prod_desc')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['prod_desc']}" @click="openDropdown('prod_desc',$event)">⌄</button></div></th>
           <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('statut_label')">Statut <span class="sort-arrow">{{sortIcon('statut_label')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['statut_label']}" @click="openDropdown('statut_label',$event)">⌄</button></div></th>
+          <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('phase')">Phase <span class="sort-arrow">{{sortIcon('phase')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['phase']}" @click="openDropdown('phase',$event)">⌄</button></div></th>
           <!-- Dynamic columns driven by visibleCols order -->
           <template v-for="ck in visibleCols" :key="'h-'+ck">
             <th><div class="th-i">
@@ -95,6 +96,7 @@
             <td class="mono bold">{{l.numero_lot}}</td>
             <td class="td-prod">{{l.prod_desc}}<span class="code">{{l.prod_code}}</span></td>
             <td><span class="sp" :class="l.statut_class">{{l.statut_label}}</span></td>
+            <td><span class="sp-phase" :class="getPhaseClass(l.phase)">{{l.phase}}</span></td>
             <!-- Dynamic columns -->
             <template v-for="ck in visibleCols" :key="'c-'+ck+'-'+l.id">
               <!-- OF/OC -->
@@ -620,8 +622,19 @@ export default {
           of_id:of?of.id:null,oc_id:oc?oc.id:null,docs:docs,aqls_raw:aqls,
           of_etape:of?of.etape_circuit:null,oc_etape:oc?oc.etape_circuit:null,
           of_statut:of?of.statut:null,oc_statut:oc?oc.statut:null,
+          phase:l.phase_production_en_cours||'Planifié',
         }
       })
+    }
+
+    var getPhaseClass = function(phase) {
+      if (!phase || phase === 'Planifié') return 'phase-planifie'
+      if (phase === 'Libéré') return 'phase-libere'
+      if (phase === 'Clôturé') return 'phase-cloture'
+      if (phase === 'Fabriqué — En attente conditionnement') return 'phase-attente-cond'
+      if (phase === 'Conditionné — En attente livraison PF') return 'phase-attente-pf'
+      if (phase.startsWith('Conditionnement —')) return 'phase-cond'
+      return 'phase-fab'
     }
 
     // ── Filtres par colonne ────────────────────────────────────────────
@@ -1456,7 +1469,7 @@ var loadCharge = async function() {
 
     var exportCols=[
       {key:'numero_lot',label:'N° Lot',width:12},{key:'prod_desc',label:'Produit',width:28},{key:'prod_code',label:'Code',width:12},
-      {key:'statut_label',label:'Statut',width:14},{key:'of_label',label:'OF',width:10},{key:'oc_label',label:'OC',width:10},
+      {key:'statut_label',label:'Statut',width:14},{key:'phase',label:'Phase',width:26},{key:'of_label',label:'OF',width:10},{key:'oc_label',label:'OC',width:10},
       {key:'aql_fab_label',label:'AQL Fab',width:10},{key:'aql_cond_label',label:'AQL Cond',width:10},
       {key:'if_label',label:'IF',width:10},{key:'ic_label',label:'IC',width:10},
       {key:'dapc_label',label:'DA PC',width:10},{key:'damicro_label',label:'DA Micro',width:10},
@@ -1837,7 +1850,7 @@ var loadCharge = async function() {
       inlineMenu,openInlineMenu,executeInline,confirmInlineMotif,toggleInlineHistory,closeAll,
       devPopup,openDevPopup,confirmDevPopup,closeDevInPopup,saveDevField,markBloquanteInPopup,canPerform,SVC_LABELS,fmtDevDate,
       bulkDevBloquante,bulkDevNumeroDn,bulkDevObs,
-      datePicker,dpInput,openDatePicker,savePlanning,getPlanClass,
+      datePicker,dpInput,openDatePicker,savePlanning,getPlanClass,getPhaseClass,
       chargeCount,chargeLoading,loadCharge,
       planHistory,planHistLoading}
   }
@@ -1874,6 +1887,8 @@ var loadCharge = async function() {
 .code{font-size:9px;color:#999;font-family:'SF Mono',monospace;margin-left:3px}
 .sp{font-size:9px;padding:2px 5px;border-radius:2px;font-weight:500;white-space:nowrap}
 .s-quarantaine{background:#FAEEDA;color:#854F0B}.s-accepte{background:#EAF3DE;color:#3B6D11}.s-sous_investigation{background:#FCEBEB;color:#A32D2D}.s-vide{background:#f5f5f5;color:#999}.s-enprod{background:#E6F1FB;color:#0C447C}.s-enprep{background:#F0EBFE;color:#5B3CC4}.s-refuse{background:#e8e8e8;color:#333}
+.sp-phase{font-size:9px;padding:2px 5px;border-radius:2px;font-weight:500;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;display:inline-block}
+.phase-planifie{background:#f5f5f5;color:#999}.phase-fab{background:#EEE8FF;color:#5B3CC4}.phase-attente-cond{background:#FFF3CD;color:#856404}.phase-cond{background:#E0F7F4;color:#00695C}.phase-attente-pf{background:#FFF3CD;color:#856404}.phase-libere{background:#EAF3DE;color:#3B6D11}.phase-cloture{background:#e8e8e8;color:#333}
 .doc-pip{font-size:9px;padding:2px 4px;border-radius:2px;font-weight:500}
 .dc-ok{background:#EAF3DE;color:#3B6D11}.dc-ret{background:#FCEBEB;color:#A32D2D}.dc-wait{background:#f5f5f5;color:#999}.dc-prog{background:#E6F1FB;color:#0C447C}.dc-na{background:transparent;color:#ccc}.dc-date{background:#fafafa;color:#666;font-family:'SF Mono',monospace}
 .pip-done-t{background:#EAF3DE;color:#3B6D11}.pip-prog-t{background:#FAEEDA;color:#854F0B}
