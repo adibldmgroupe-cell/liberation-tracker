@@ -5,7 +5,7 @@
 
 CREATE TABLE IF NOT EXISTS session_cadences (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  session_id  uuid NOT NULL REFERENCES production_sessions(id) ON DELETE CASCADE,
+  session_id  bigint NOT NULL REFERENCES production_sessions(id) ON DELETE CASCADE,
   cadence_bpm numeric(6,1) NOT NULL,   -- boîtes/min saisi par l'opérateur
   colisage    int,                     -- boîtes par colis (snapshot au moment de la saisie)
   started_at  timestamptz NOT NULL DEFAULT now(),
