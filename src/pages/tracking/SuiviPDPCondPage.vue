@@ -29,7 +29,10 @@
         <div class="card-hd" :style="{borderTopColor: cardColor(eq)}">
           <div>
             <div class="card-nom">{{eq.nom_equipement}}</div>
-            <div class="card-site">{{eq.site}}</div>
+            <div class="card-site">
+              {{eq.site}}
+              <span class="card-zone" v-if="eq.description_zone"> · {{eq.description_zone}}</span>
+            </div>
           </div>
           <div class="card-status" :style="{background:cardColor(eq)+'22',color:cardColor(eq)}">
             {{cardStatut(eq)}}
@@ -884,6 +887,7 @@ export default {
 .card-hd{display:flex;align-items:flex-start;justify-content:space-between;padding:10px 12px 6px}
 .card-nom{font-size:13px;font-weight:600}
 .card-site{font-size:9px;color:#aaa;text-transform:uppercase;letter-spacing:.5px;margin-top:1px}
+.card-zone{font-size:9px;color:#888;font-style:italic;text-transform:none;letter-spacing:0}
 .card-status{font-size:10px;font-weight:600;padding:2px 8px;border-radius:8px;white-space:nowrap}
 .card-lot{padding:6px 12px 2px}
 .lot-n{font-family:'SF Mono',monospace;font-size:13px;font-weight:600}

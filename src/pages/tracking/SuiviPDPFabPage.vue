@@ -439,8 +439,21 @@ export default {
           .is('deleted_at',null)
           .order('heure_debut',{ascending:false})
       ])
-      if (!r1.error) processus.value = r1.data
-      if (!r2.error) ateliers.value = r2.data
+      // Exclure le processus "Conditionnement" du PDP Fabrication
+      // (les salles de conditionnement primaire sont gérées dans PDP Conditionnement)
+      if (!r1.error) {
+        processus.value = r1.data.filter(function(p){
+          return p.nom_process !== 'Conditionnement'
+        })
+      }
+      if (!r2.error) {
+        // Garder uniquement les ateliers dont le processus est de type fabrication
+        var fabProcIds = {}
+        processus.value.forEach(function(p){ fabProcIds[p.id] = true })
+        ateliers.value = r2.data.filter(function(at){
+          return fabProcIds[at.processus_id]
+        })
+      }
       if (!r3.error) suiviFab.value = r3.data
       if (!r4.error) arretAtelier.value = r4.data
       loading.value = false
