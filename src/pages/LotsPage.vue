@@ -553,7 +553,7 @@ export default {
     var load = async function() {
       lotsLoading.value = true
       try {
-      var query = supabase.from('lots').select('*, products(code_article,description), orders_of(id,statut,etape_circuit,updated_at,pending_ar_service), orders_oc(id,statut,etape_circuit,updated_at,pending_ar_service), liberation_documents(id,type_document,statut,is_applicable,service_emetteur,emitted_at,approved_at,updated_at,pending_ar_service), deviations(id,statut,bloquante,numero_dn,description,declared_at,declared_service,profiles!declared_by(prenom,nom)), aql_inspections(id,type,resultat,requested_at,inspected_at,request_ar_pending,result_ar_pending), lot_planning(date_lcq_cible,date_lcq_revisee,date_aq_cible,date_aq_revisee,date_dt_cible,date_dt_revisee)', {count:'exact'})
+      var query = supabase.from('lots').select('*, products(code_article,description), orders_of(id,statut,etape_circuit,updated_at,pending_ar_service), orders_oc(id,statut,etape_circuit,updated_at,pending_ar_service), liberation_documents(id,type_document,statut,is_applicable,service_emetteur,emitted_at,approved_at,updated_at,pending_ar_service), deviations(id,statut,bloquante,numero_dn,description,declared_at,declared_service,profiles!declared_by(prenom,nom)), aql_inspections(id,type,resultat,requested_at,inspected_at,request_ar_pending,result_ar_pending), lot_planning(date_lcq_cible,date_lcq_revisee,date_aq_cible,date_aq_revisee,date_dt_cible,date_dt_revisee)')
 
       var q = route.query.q
       if(q){
@@ -565,8 +565,8 @@ export default {
 
       query=query.order('date_enregistrement',{ascending:false,nullsFirst:false}).range(0,499)
       var result=await query
-      total.value=result.count||(result.data?result.data.length:0)
-      lotsLoading.value = false
+      if(result.error){console.error('Erreur chargement lots:',result.error);return}
+      total.value=result.data?result.data.length:0
 
       lots.value=(result.data||[]).map(function(l){
         var docs=l.liberation_documents||[]

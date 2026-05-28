@@ -59,7 +59,7 @@
       </div>
       <div class="circ-act">
         <span v-if="of.pending_ar_service" class="circ-ar-pending">⏳ {{SVC_LABELS[of.pending_ar_service]||of.pending_ar_service}}</span>
-        <button v-if="of.pending_ar_service && of.pending_ar_service===userService && canPerform('accuser_reception_circuit')" class="btn bg" @click="doAcknowledgeOrderAR('of',of.id)">✓ Accuser réception</button>
+        <button v-if="of.pending_ar_service && (of.pending_ar_service===userService||isAdmin) && canPerform('accuser_reception_circuit')" class="btn bg" @click="doAcknowledgeOrderAR('of',of.id)">✓ Accuser réception</button>
         <button v-else-if="of.statut!=='termine' && !of.pending_ar_service && canValidateStep('of',of.etape_circuit)" class="btn bg" @click="doValidate('of',of.id,of.etape_circuit)">
           Valider — {{circuitSteps.find(function(e){return e.key===of.etape_circuit})?.label}}
         </button>
@@ -91,7 +91,7 @@
       </div>
       <div class="circ-act">
         <span v-if="oc.pending_ar_service" class="circ-ar-pending">⏳ {{SVC_LABELS[oc.pending_ar_service]||oc.pending_ar_service}}</span>
-        <button v-if="oc.pending_ar_service && oc.pending_ar_service===userService && canPerform('accuser_reception_circuit')" class="btn bg" @click="doAcknowledgeOrderAR('oc',oc.id)">✓ Accuser réception</button>
+        <button v-if="oc.pending_ar_service && (oc.pending_ar_service===userService||isAdmin) && canPerform('accuser_reception_circuit')" class="btn bg" @click="doAcknowledgeOrderAR('oc',oc.id)">✓ Accuser réception</button>
         <button v-else-if="oc.statut!=='termine' && !oc.pending_ar_service && canValidateStep('oc',oc.etape_circuit)" class="btn bg" @click="doValidate('oc',oc.id,oc.etape_circuit)">
           Valider — {{circuitSteps.find(function(e){return e.key===oc.etape_circuit})?.label}}
         </button>
