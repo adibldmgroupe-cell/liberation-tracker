@@ -51,6 +51,7 @@
             <th>Groupe</th>
             <th>DCI</th>
             <th>Code DCI</th>
+            <th>Colisage</th>
             <th>Durée de vie</th>
             <th>Fabricant</th>
             <th>Statut</th>
@@ -64,6 +65,7 @@
             <td>{{ p.groupe_article || '—' }}</td>
             <td>{{ p.dci || '—' }}</td>
             <td class="mono">{{ p.code_dci || '—' }}</td>
+            <td class="mono">{{ p.quantite_par_colis || '—' }}</td>
             <td>{{ p.duree_vie ? p.duree_vie + ' mois' : '—' }}</td>
             <td>{{ p.fabricant || '—' }}</td>
             <td>
@@ -119,6 +121,13 @@
           <div class="fi">
             <label>Fabricant</label>
             <input v-model="form.fabricant" class="inp" placeholder="Ex : PRODUCTION ABBOTT" />
+          </div>
+        </div>
+
+        <div class="fg">
+          <div class="fi">
+            <label>Colisage (boîtes/colis)</label>
+            <input v-model="form.quantite_par_colis" class="inp" placeholder="Ex : 30" type="number" min="1" />
           </div>
         </div>
 
@@ -186,7 +195,7 @@ export default {
     var saving = ref(false)
     var formErr = ref('')
     var editId = ref(null)
-    var form = ref({ code_article: '', description: '', groupe_article: '', dci: '', code_dci: '', duree_vie: '', fabricant: '' })
+    var form = ref({ code_article: '', description: '', groupe_article: '', dci: '', code_dci: '', duree_vie: '', fabricant: '', quantite_par_colis: '' })
 
     var filtered = computed(function() {
       var q = searchQ.value.trim().toLowerCase()
@@ -203,7 +212,7 @@ export default {
     var loadProducts = async function() {
       loading.value = true
       var res = await supabase.from('products')
-        .select('id, code_article, description, groupe_article, dci, code_dci, duree_vie, fabricant, actif')
+        .select('id, code_article, description, groupe_article, dci, code_dci, duree_vie, fabricant, actif, quantite_par_colis')
         .order('code_article')
       products.value = res.data || []
       loading.value = false
@@ -243,6 +252,7 @@ export default {
             code_dci: (r['Code DCI'] || r['code_dci'] || '').trim() || null,
             duree_vie: (r['Durée de vie'] || r['Duree de vie'] || r['duree_vie'] || '').trim() || null,
             fabricant: (r['Fabricant'] || r['fabricant'] || '').trim() || null,
+            quantite_par_colis: parseInt((r['quantite_par_colis'] || '').trim()) || null,
             actif: true
           }
         }).filter(function(r) { return r.code_article })
@@ -298,13 +308,13 @@ export default {
     // CRUD produits
     var openCreate = function() {
       isEdit.value = false; editId.value = null
-      form.value = { code_article: '', description: '', groupe_article: '', dci: '', code_dci: '', duree_vie: '', fabricant: '' }
+      form.value = { code_article: '', description: '', groupe_article: '', dci: '', code_dci: '', duree_vie: '', fabricant: '', quantite_par_colis: '' }
       formErr.value = ''; showModal.value = true
     }
 
     var openEdit = function(p) {
       isEdit.value = true; editId.value = p.id
-      form.value = { code_article: p.code_article, description: p.description, groupe_article: p.groupe_article || '', dci: p.dci || '', code_dci: p.code_dci || '', duree_vie: p.duree_vie || '', fabricant: p.fabricant || '' }
+      form.value = { code_article: p.code_article, description: p.description, groupe_article: p.groupe_article || '', dci: p.dci || '', code_dci: p.code_dci || '', duree_vie: p.duree_vie || '', fabricant: p.fabricant || '', quantite_par_colis: p.quantite_par_colis || '' }
       formErr.value = ''; showModal.value = true
     }
 
@@ -319,6 +329,7 @@ export default {
         code_dci: form.value.code_dci.trim() || null,
         duree_vie: form.value.duree_vie ? String(form.value.duree_vie).trim() : null,
         fabricant: form.value.fabricant.trim() || null,
+        quantite_par_colis: form.value.quantite_par_colis !== '' ? parseInt(form.value.quantite_par_colis) || null : null,
       }
       var res = isEdit.value
         ? await supabase.from('products').update(data).eq('id', editId.value)
@@ -436,6 +447,7 @@ export default {
   .fg { grid-template-columns:1fr }
   .pt-table th:nth-child(3), .pt-table td:nth-child(3),
   .pt-table th:nth-child(5), .pt-table td:nth-child(5),
-  .pt-table th:nth-child(7), .pt-table td:nth-child(7) { display:none }
+  .pt-table th:nth-child(6), .pt-table td:nth-child(6),
+  .pt-table th:nth-child(8), .pt-table td:nth-child(8) { display:none }
 }
 </style>
