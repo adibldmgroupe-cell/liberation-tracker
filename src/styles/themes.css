@@ -1,0 +1,49 @@
+/* ══════════════════════════════════════════
+   THEME SWITCH WIDGET — partagé entre pages
+══════════════════════════════════════════ */
+.theme-sw {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  background: rgba(255,255,255,.06);
+  border-radius: 6px;
+  padding: 2px;
+  border: 1px solid rgba(255,255,255,.08);
+}
+.tsw-btn {
+  background: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  opacity: .4;
+  transition: opacity .15s, background .15s, border-color .15s;
+  line-height: 1.2;
+}
+.tsw-btn:hover { opacity: .75; }
+.tsw-btn.active {
+  opacity: 1;
+  background: rgba(255,255,255,.14);
+  border-color: rgba(255,255,255,.22);
+}
+
+/* Jour — active state adapté fond clair */
+[data-theme="day"] .theme-sw {
+  background: rgba(0,0,0,.05);
+  border-color: rgba(0,0,0,.1);
+}
+[data-theme="day"] .tsw-btn.active {
+  background: rgba(0,0,0,.1);
+  border-color: rgba(0,0,0,.2);
+}
+
+/* Atelier — active state vert vif */
+[data-theme="workshop"] .theme-sw {
+  background: rgba(255,255,255,.04);
+  border-color: rgba(255,255,255,.08);
+}
+[data-theme="workshop"] .tsw-btn.active {
+  background: rgba(0,200,83,.15);
+  border-color: rgba(0,200,83,.4);
+}

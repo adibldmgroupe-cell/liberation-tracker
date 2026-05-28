@@ -1,5 +1,5 @@
 <template>
-  <div class="flow-page">
+  <div class="flow-page" :data-theme="theme">
 
     <!-- ── HEADER ── -->
     <div class="flow-header">
@@ -55,6 +55,11 @@
         <button class="fh-btn" :class="{spinning:loading}" @click="loadLive" title="Rafraîchir">↻</button>
         <button class="fh-btn" :class="{'fh-btn-trs-on': trsMode}" @click="toggleTrsMode" title="Mode TRS OEE">📊</button>
         <router-link to="/admin/flux" class="fh-btn fh-btn-admin" title="⚙ Paramétrer flux produits">⚙</router-link>
+        <div class="theme-sw">
+          <button class="tsw-btn" :class="{active:theme==='night'}" @click="theme='night'" title="Nuit">🌙</button>
+          <button class="tsw-btn" :class="{active:theme==='day'}" @click="theme='day'" title="Jour">☀️</button>
+          <button class="tsw-btn" :class="{active:theme==='workshop'}" @click="theme='workshop'" title="Atelier">🏭</button>
+        </div>
       </div>
     </div>
 
@@ -971,6 +976,7 @@
 import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '../../supabase'
+import { useTheme } from '../../composables/useTheme'
 
 // ── LAYOUT CONSTANTS ──────────────────────────────────────────────
 var SVG_W  = 1540
@@ -1151,6 +1157,7 @@ export default {
 
   setup() {
     var router = useRouter()
+    var { theme } = useTheme()
 
     var loading       = ref(false)
     var selectedNode  = ref(null)
@@ -2407,6 +2414,7 @@ export default {
     })
 
     return {
+      theme,
       SVG_W, SVG_H, NW, NH,
       TRACK_X, TRACKS_W, ZONE_FS_Y, ZONE_FS_H, ZONE_SS_Y, ZONE_SS_H,
       COND_X, COND_Y, COND_W, COND_H,
@@ -2808,4 +2816,93 @@ export default {
   .flow-svg { min-width:700px; min-height:440px; }
   .detail-panel, .trs-detail-panel { height:60vh; }
 }
+
+/* ══════════════════════════════════════════
+   THÈME JOUR ☀️
+══════════════════════════════════════════ */
+.flow-page[data-theme="day"] { background: #f0f2f5; }
+.flow-page[data-theme="day"] .flow-header { background: #ffffff; border-bottom-color: #d8dce8; }
+.flow-page[data-theme="day"] .fh-title { color: #4a4aaa; }
+.flow-page[data-theme="day"] .fh-sub   { color: #aaa; }
+.flow-page[data-theme="day"] .fh-btn { border-color: #c8ccd8; color: #888; }
+.flow-page[data-theme="day"] .fh-btn:hover { color: #333; border-color: #888; }
+.flow-page[data-theme="day"] .fl { color: #888; }
+.flow-page[data-theme="day"] .psi-wrap { background: #fff; border-color: #c8ccd8; }
+.flow-page[data-theme="day"] .prod-input { color: #1a1a2e; }
+.flow-page[data-theme="day"] .prod-input::placeholder { color: #bbb; }
+.flow-page[data-theme="day"] .psi-icon { color: #aaa; }
+.flow-page[data-theme="day"] .prod-dropdown { background: #fff; border-color: #c8ccd8; box-shadow: 0 8px 24px rgba(0,0,0,.1); }
+.flow-page[data-theme="day"] .pd-item { border-bottom-color: #f0f0f0; }
+.flow-page[data-theme="day"] .pd-item:hover { background: #f5f6f9; }
+.flow-page[data-theme="day"] .pd-name { color: #333; }
+.flow-page[data-theme="day"] .detail-panel { background: #fff; border-left-color: #d8dce8; }
+.flow-page[data-theme="day"] .dp-nom  { color: #777; }
+.flow-page[data-theme="day"] .dp-zone { color: #bbb; }
+.flow-page[data-theme="day"] .dp-close { color: #bbb; }
+.flow-page[data-theme="day"] .dp-close:hover { color: #333; }
+.flow-page[data-theme="day"] .dp-section { border-top-color: #eee; }
+.flow-page[data-theme="day"] .dp-sec-title { color: #aaa; }
+.flow-page[data-theme="day"] .dp-lot-num { color: #1a1a2e; }
+.flow-page[data-theme="day"] .dp-lot-prod { color: #888; }
+.flow-page[data-theme="day"] .dp-empty { color: #ccc; }
+/* TRS detail panel */
+.flow-page[data-theme="day"] .trs-detail-panel { background: #fff; border-left-color: #d8dce8; }
+/* SVG body */
+.flow-page[data-theme="day"] .flow-body { background: #eef0f5; }
+/* Modal */
+.flow-page[data-theme="day"] .modal-overlay { background: rgba(0,0,0,.4); }
+.flow-page[data-theme="day"] .modal-box { background: #fff; box-shadow: 0 16px 48px rgba(0,0,0,.2); }
+.flow-page[data-theme="day"] .modal-hd { color: #1a1a2e; border-bottom-color: #eee; }
+.flow-page[data-theme="day"] .mh-code { color: #185FA5; }
+.flow-page[data-theme="day"] .modal-body { color: #444; }
+.flow-page[data-theme="day"] .mf-row label { color: #888; }
+.flow-page[data-theme="day"] .mf-input { background: #fff; border-color: #c8ccd8; color: #1a1a2e; }
+.flow-page[data-theme="day"] .lot-dropdown { background: #fff; border-color: #c8ccd8; box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+.flow-page[data-theme="day"] .ld-item:hover { background: #f5f5f8; color: #1a1a2e; }
+.flow-page[data-theme="day"] .modal-ft { border-top-color: #eee; }
+
+/* ══════════════════════════════════════════
+   THÈME ATELIER 🏭
+══════════════════════════════════════════ */
+.flow-page[data-theme="workshop"] { background: #161616; }
+.flow-page[data-theme="workshop"] .flow-header { background: #0e0e0e; border-bottom-color: #2a2a2a; }
+.flow-page[data-theme="workshop"] .fh-title { color: #8080ff; letter-spacing: 4px; }
+.flow-page[data-theme="workshop"] .fh-sub   { color: #555; }
+.flow-page[data-theme="workshop"] .fh-btn { border-color: #2a2a2a; color: #666; }
+.flow-page[data-theme="workshop"] .fh-btn:hover { color: #fff; border-color: #555; }
+.flow-page[data-theme="workshop"] .fl { color: #666; }
+.flow-page[data-theme="workshop"] .psi-wrap { background: #1e1e1e; border-color: #2a2a2a; }
+.flow-page[data-theme="workshop"] .prod-input { color: #f0f0f0; }
+.flow-page[data-theme="workshop"] .prod-input::placeholder { color: #444; }
+.flow-page[data-theme="workshop"] .psi-icon { color: #555; }
+.flow-page[data-theme="workshop"] .prod-dropdown { background: #1c1c1c; border-color: #2a2a2a; box-shadow: 0 8px 24px rgba(0,0,0,.6); }
+.flow-page[data-theme="workshop"] .pd-item { border-bottom-color: #1e1e1e; }
+.flow-page[data-theme="workshop"] .pd-item:hover { background: #222; }
+.flow-page[data-theme="workshop"] .pd-name { color: #e0e0e0; }
+.flow-page[data-theme="workshop"] .detail-panel { background: #1a1a1a; border-left-color: #2a2a2a; }
+.flow-page[data-theme="workshop"] .dp-nom  { color: #888; }
+.flow-page[data-theme="workshop"] .dp-zone { color: #555; }
+.flow-page[data-theme="workshop"] .dp-close { color: #555; }
+.flow-page[data-theme="workshop"] .dp-close:hover { color: #fff; }
+.flow-page[data-theme="workshop"] .dp-section { border-top-color: #2a2a2a; }
+.flow-page[data-theme="workshop"] .dp-sec-title { color: #666; }
+.flow-page[data-theme="workshop"] .dp-lot-num { color: #fff; font-weight:700; }
+.flow-page[data-theme="workshop"] .dp-lot-prod { color: #777; }
+.flow-page[data-theme="workshop"] .dp-empty { color: #444; }
+.flow-page[data-theme="workshop"] .trs-detail-panel { background: #1a1a1a; border-left-color: #2a2a2a; }
+.flow-page[data-theme="workshop"] .flow-body { background: #111; }
+/* TRS bandeau */
+.flow-page[data-theme="workshop"] .trs-band { background: #001a08; border-bottom-color: #00c85333; }
+.flow-page[data-theme="workshop"] .trs-band-label { color: #00c853; }
+/* Modal */
+.flow-page[data-theme="workshop"] .modal-overlay { background: rgba(0,0,0,.7); }
+.flow-page[data-theme="workshop"] .modal-box { background: #1c1c1c; border: 1px solid #2a2a2a; box-shadow: 0 24px 60px rgba(0,0,0,.8); }
+.flow-page[data-theme="workshop"] .modal-hd { color: #fff; border-bottom-color: #2a2a2a; }
+.flow-page[data-theme="workshop"] .mh-code { color: #ff9800; }
+.flow-page[data-theme="workshop"] .modal-body { color: #e0e0e0; }
+.flow-page[data-theme="workshop"] .mf-row label { color: #666; }
+.flow-page[data-theme="workshop"] .mf-input { background: #111; border-color: #2a2a2a; color: #f0f0f0; }
+.flow-page[data-theme="workshop"] .lot-dropdown { background: #1c1c1c; border-color: #2a2a2a; }
+.flow-page[data-theme="workshop"] .ld-item:hover { background: #222; color: #fff; }
+.flow-page[data-theme="workshop"] .modal-ft { border-top-color: #2a2a2a; }
 </style>

@@ -1,5 +1,5 @@
 <template>
-  <div class="pdpc">
+  <div class="pdpc" :data-theme="theme">
 
     <!-- ── HEADER ── -->
     <div class="ph">
@@ -16,6 +16,11 @@
           <button v-for="s in ['Tous','PHARMA','OTC']" :key="s" class="stab" :class="{active:filterSite===s}" @click="filterSite=s">{{s}}</button>
         </div>
         <button class="btn-ref" @click="loadAll" :class="{spin:loading}">↻</button>
+        <div class="theme-sw">
+          <button class="tsw-btn" :class="{active:theme==='night'}" @click="theme='night'" title="Nuit">🌙</button>
+          <button class="tsw-btn" :class="{active:theme==='day'}" @click="theme='day'" title="Jour">☀️</button>
+          <button class="tsw-btn" :class="{active:theme==='workshop'}" @click="theme='workshop'" title="Atelier">🏭</button>
+        </div>
       </div>
     </div>
 
@@ -323,9 +328,12 @@
 <script>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { supabase } from '../../supabase'
+import { useTheme } from '../../composables/useTheme'
 
 export default {
   setup() {
+    var { theme } = useTheme()
+
     // ─── STATE ─────────────────────────────────────────────────
     var activeView    = ref('tableau')
     var loading       = ref(false)
@@ -678,6 +686,7 @@ export default {
     onMounted(loadAll)
 
     return {
+      theme,
       activeView, loading, views, PERIODS,
       equipements, shifts, allSessions, allPlanning,
       filterSite, filterEquipId, filterPlanStatut,
@@ -899,4 +908,184 @@ export default {
   .tc-srch { width:100%; }
   .form-row { flex-direction:column; }
 }
+
+/* ══════════════════════════════════════════
+   THÈME JOUR ☀️
+══════════════════════════════════════════ */
+.pdpc[data-theme="day"] { background:#f0f2f5; color:#1a1a2e; }
+.pdpc[data-theme="day"] .ph { border-bottom-color:#d8dce8; }
+.pdpc[data-theme="day"] .pt { color:#5a5a8a; }
+.pdpc[data-theme="day"] .vtab { background:#e4e7f0; color:#555; border-color:#c8ccd8; }
+.pdpc[data-theme="day"] .vtab:hover { background:#d8dcea; color:#333; }
+.pdpc[data-theme="day"] .vtab.active { background:#1e3a6e; color:#fff; border-color:#1e3a6e; }
+.pdpc[data-theme="day"] .stab { background:#e4e7f0; color:#555; border-color:#c8ccd8; }
+.pdpc[data-theme="day"] .stab.active { background:#1e3a6e; color:#fff; border-color:#1e3a6e; }
+.pdpc[data-theme="day"] .btn-ref { background:#e4e7f0; color:#666; border-color:#c8ccd8; }
+.pdpc[data-theme="day"] .tn { background:#e4e7f0; color:#555; border-color:#c8ccd8; }
+.pdpc[data-theme="day"] .tn:hover { background:#d8dcea; color:#333; }
+.pdpc[data-theme="day"] .tn-now { color:#185FA5; border-color:#185fa533; }
+.pdpc[data-theme="day"] .tc-range { color:#777; }
+.pdpc[data-theme="day"] .tpd { background:#e4e7f0; color:#555; border-color:#c8ccd8; }
+.pdpc[data-theme="day"] .tpd.active { background:#1e3a6e; color:#fff; border-color:#1e3a6e; }
+.pdpc[data-theme="day"] .tc-srch { background:#fff; color:#1a1a2e; border-color:#c8ccd8; }
+.pdpc[data-theme="day"] .tc-sel { background:#fff; color:#555; border-color:#c8ccd8; }
+.pdpc[data-theme="day"] .btn-add { background:#1e3a6e; color:#fff; border-color:#1e3a6e; }
+.pdpc[data-theme="day"] .tc-leg .tl-vide { color:#bbb; }
+.pdpc[data-theme="day"] .tc-scroll { border-color:#d8dce8; }
+/* Tableau croisé — en-têtes */
+.pdpc[data-theme="day"] .th-date { background:#e8eaf3; color:#888; border-right-color:#d8dce8; border-bottom-color:#d8dce8; }
+.pdpc[data-theme="day"] .th-eq { background:#e8eaf3; border-bottom-color:#d8dce8; border-right-color:#dde1ec; }
+.pdpc[data-theme="day"] .the-nom { color:#333; }
+.pdpc[data-theme="day"] .the-sub { color:#aaa; }
+/* Tableau croisé — lignes */
+.pdpc[data-theme="day"] .tc-tbl tbody tr:hover td { background:#e0e5f0 !important; }
+.pdpc[data-theme="day"] .tr-today td { background:#deeafa !important; }
+.pdpc[data-theme="day"] .tr-today .td-date { border-left-color:#185FA5; }
+.pdpc[data-theme="day"] .tr-we td { background:#ebebf3 !important; }
+.pdpc[data-theme="day"] .td-date { background:#eceef5; border-right-color:#d8dce8; border-bottom-color:#e4e7f0; }
+.pdpc[data-theme="day"] .tdd-today { background:#deeafa !important; }
+.pdpc[data-theme="day"] .dj { color:#bbb; }
+.pdpc[data-theme="day"] .dd { color:#333; }
+/* Tableau croisé — cellules */
+.pdpc[data-theme="day"] .tc-cell { border-bottom-color:#e4e7f0; border-right-color:#e4e7f0; }
+.pdpc[data-theme="day"] .c-vide { background:#f5f6f9; }
+.pdpc[data-theme="day"] .c-planifie { background:#dbeafe; border-left-color:#3b82f6; }
+.pdpc[data-theme="day"] .c-encours  { background:#fef3c7; border-left-color:#f59e0b; }
+.pdpc[data-theme="day"] .c-cloture  { background:#d1fae5; border-left-color:#10b981; }
+.pdpc[data-theme="day"] .c-retard   { background:#fee2e2; border-left-color:#ef4444; }
+.pdpc[data-theme="day"] .ci-lot { color:#1a1a2e; }
+.pdpc[data-theme="day"] .ci-more { color:#bbb; }
+/* Panneau détail */
+.pdpc[data-theme="day"] .dp { background:#fff; border-color:#d8dce8; box-shadow:0 12px 40px rgba(0,0,0,.15); }
+.pdpc[data-theme="day"] .dp-hd { border-bottom-color:#eee; }
+.pdpc[data-theme="day"] .dp-eq { color:#1a1a2e; }
+.pdpc[data-theme="day"] .dp-date { color:#aaa; }
+.pdpc[data-theme="day"] .dp-x { color:#ccc; }
+.pdpc[data-theme="day"] .dp-x:hover { color:#333; }
+.pdpc[data-theme="day"] .dp-stitle { color:#bbb; }
+.pdpc[data-theme="day"] .dp-item { background:#f5f6f9; border-color:#e4e7f0; }
+.pdpc[data-theme="day"] .dpi-lot { color:#1a1a2e; }
+.pdpc[data-theme="day"] .dpi-prod { color:#777; }
+.pdpc[data-theme="day"] .dpi-meta { color:#bbb; }
+.pdpc[data-theme="day"] .dpi-btn { background:#eee; color:#555; border-color:#ddd; }
+.pdpc[data-theme="day"] .dpi-btn:hover { background:#e0e0e0; color:#333; }
+.pdpc[data-theme="day"] .dp-empty { color:#ccc; }
+/* Tables dark → light */
+.pdpc[data-theme="day"] .dt-wrap { border-color:#d8dce8; }
+.pdpc[data-theme="day"] .dt th { background:#e8eaf3; color:#888; border-bottom-color:#d8dce8; }
+.pdpc[data-theme="day"] .dt th.srt:hover { background:#dde1ec; color:#555; }
+.pdpc[data-theme="day"] .dt td { color:#444; border-bottom-color:#eee; }
+.pdpc[data-theme="day"] .dt tr:hover td { background:#eceff5; }
+.pdpc[data-theme="day"] .t-srch { background:#fff; color:#1a1a2e; border-color:#c8ccd8; }
+.pdpc[data-theme="day"] .t-sel { background:#fff; color:#555; border-color:#c8ccd8; }
+.pdpc[data-theme="day"] .empty { color:#ccc; }
+.pdpc[data-theme="day"] .si { color:#aaa; }
+.pdpc[data-theme="day"] .sm { color:#888; }
+/* Modal */
+.pdpc[data-theme="day"] .modal { background:#fff; border-color:#d8dce8; box-shadow:0 16px 48px rgba(0,0,0,.18); }
+.pdpc[data-theme="day"] .modal-hd { color:#1a1a2e; }
+.pdpc[data-theme="day"] .inp { background:#fff; border-color:#c8ccd8; color:#1a1a2e; }
+.pdpc[data-theme="day"] .inp:focus { border-color:#185FA5; }
+.pdpc[data-theme="day"] .lbl { color:#999; }
+.pdpc[data-theme="day"] .btn-save { background:#1e3a6e; color:#fff; border-color:#1e3a6e; }
+.pdpc[data-theme="day"] .btn-cancel { background:#f0f0f0; color:#666; border-color:#ccc; }
+.pdpc[data-theme="day"] .btn-cancel:hover { background:#e0e0e0; }
+.pdpc[data-theme="day"] .auto-list { background:#fff; border-color:#c8ccd8; box-shadow:0 4px 16px rgba(0,0,0,.1); }
+.pdpc[data-theme="day"] .auto-item { border-bottom-color:#f0f0f0; }
+.pdpc[data-theme="day"] .auto-item:hover { background:#f5f5f8; }
+.pdpc[data-theme="day"] .err { background:#FEF2F2; color:#c53030; border-color:#fca5a5; }
+.pdpc[data-theme="day"] .ldg { color:#ccc; }
+
+/* ══════════════════════════════════════════
+   THÈME ATELIER 🏭
+══════════════════════════════════════════ */
+.pdpc[data-theme="workshop"] { background:#161616; color:#f0f0f0; }
+.pdpc[data-theme="workshop"] .ph { border-bottom-color:#2a2a2a; }
+.pdpc[data-theme="workshop"] .pt { color:#aaaaaa; letter-spacing:2px; }
+.pdpc[data-theme="workshop"] .vtab { background:#1e1e1e; color:#aaa; border-color:#2a2a2a; }
+.pdpc[data-theme="workshop"] .vtab:hover { background:#252525; color:#fff; }
+.pdpc[data-theme="workshop"] .vtab.active { background:#ff9800; color:#000; border-color:#ff9800; font-weight:700; }
+.pdpc[data-theme="workshop"] .stab { background:#1e1e1e; color:#aaa; border-color:#2a2a2a; }
+.pdpc[data-theme="workshop"] .stab.active { background:#00c853; color:#000; font-weight:700; border-color:#00c853; }
+.pdpc[data-theme="workshop"] .btn-ref { background:#1e1e1e; color:#aaa; border-color:#2a2a2a; }
+.pdpc[data-theme="workshop"] .tn { background:#1e1e1e; color:#ccc; border-color:#2a2a2a; }
+.pdpc[data-theme="workshop"] .tn:hover { background:#252525; color:#fff; }
+.pdpc[data-theme="workshop"] .tn-now { color:#00c853; border-color:#00c85344; }
+.pdpc[data-theme="workshop"] .tc-range { color:#888; }
+.pdpc[data-theme="workshop"] .tpd { background:#1e1e1e; color:#aaa; border-color:#2a2a2a; }
+.pdpc[data-theme="workshop"] .tpd.active { background:#ff9800; color:#000; border-color:#ff9800; font-weight:700; }
+.pdpc[data-theme="workshop"] .tc-srch { background:#1e1e1e; color:#f0f0f0; border-color:#2a2a2a; }
+.pdpc[data-theme="workshop"] .tc-sel { background:#1e1e1e; color:#ccc; border-color:#2a2a2a; }
+.pdpc[data-theme="workshop"] .btn-add { background:#152200; color:#00c853; border-color:#00c85333; }
+.pdpc[data-theme="workshop"] .btn-add:hover { background:#1c2e00; }
+.pdpc[data-theme="workshop"] .tc-leg .tl-planifie { color:#29b6f6; }
+.pdpc[data-theme="workshop"] .tc-leg .tl-encours  { color:#ff9800; }
+.pdpc[data-theme="workshop"] .tc-leg .tl-cloture  { color:#00c853; }
+.pdpc[data-theme="workshop"] .tc-leg .tl-retard   { color:#ff3d3d; }
+.pdpc[data-theme="workshop"] .tc-leg .tl-vide { color:#444; }
+.pdpc[data-theme="workshop"] .tc-scroll { border-color:#2a2a2a; }
+/* Tableau croisé — en-têtes */
+.pdpc[data-theme="workshop"] .th-date { background:#0e0e0e; color:#555; border-right-color:#2a2a2a; border-bottom-color:#2a2a2a; }
+.pdpc[data-theme="workshop"] .th-eq { background:#0e0e0e; border-bottom-color:#2a2a2a; border-right-color:#1e1e1e; }
+.pdpc[data-theme="workshop"] .the-nom { color:#f0f0f0; font-weight:700; }
+.pdpc[data-theme="workshop"] .the-sub { color:#555; }
+/* Tableau croisé — lignes */
+.pdpc[data-theme="workshop"] .tc-tbl tbody tr:hover td { background:#1e1e1e !important; }
+.pdpc[data-theme="workshop"] .tr-today td { background:#1a1200 !important; }
+.pdpc[data-theme="workshop"] .tr-today .td-date { border-left-color:#ff9800; }
+.pdpc[data-theme="workshop"] .tr-we td { background:#111 !important; }
+.pdpc[data-theme="workshop"] .td-date { background:#131313; border-right-color:#2a2a2a; border-bottom-color:#1e1e1e; }
+.pdpc[data-theme="workshop"] .tdd-today { background:#1a1200 !important; }
+.pdpc[data-theme="workshop"] .dj { color:#555; }
+.pdpc[data-theme="workshop"] .dd { color:#f0f0f0; font-weight:700; }
+/* Tableau croisé — cellules */
+.pdpc[data-theme="workshop"] .tc-cell { border-bottom-color:#1e1e1e; border-right-color:#1e1e1e; }
+.pdpc[data-theme="workshop"] .c-vide { background:#161616; }
+.pdpc[data-theme="workshop"] .c-planifie { background:#002030; border-left-color:#29b6f6; }
+.pdpc[data-theme="workshop"] .c-encours  { background:#1f1000; border-left-color:#ff9800; }
+.pdpc[data-theme="workshop"] .c-cloture  { background:#001a08; border-left-color:#00c853; }
+.pdpc[data-theme="workshop"] .c-retard   { background:#1a0000; border-left-color:#ff3d3d; }
+.pdpc[data-theme="workshop"] .ci-lot { color:#ffffff; font-weight:700; }
+.pdpc[data-theme="workshop"] .ci-more { color:#555; }
+/* Panneau détail */
+.pdpc[data-theme="workshop"] .dp { background:#1c1c1c; border-color:#2a2a2a; box-shadow:0 24px 60px rgba(0,0,0,.8); }
+.pdpc[data-theme="workshop"] .dp-hd { border-bottom-color:#2a2a2a; }
+.pdpc[data-theme="workshop"] .dp-eq { color:#fff; }
+.pdpc[data-theme="workshop"] .dp-date { color:#666; }
+.pdpc[data-theme="workshop"] .dp-x { color:#666; }
+.pdpc[data-theme="workshop"] .dp-x:hover { color:#fff; }
+.pdpc[data-theme="workshop"] .dp-stitle { color:#666; }
+.pdpc[data-theme="workshop"] .dp-item { background:#111; border-color:#2a2a2a; }
+.pdpc[data-theme="workshop"] .dpi-lot { color:#fff; font-weight:700; }
+.pdpc[data-theme="workshop"] .dpi-prod { color:#888; }
+.pdpc[data-theme="workshop"] .dpi-meta { color:#555; }
+.pdpc[data-theme="workshop"] .dpi-btn { background:#222; color:#ccc; border-color:#333; }
+.pdpc[data-theme="workshop"] .dpi-btn:hover { background:#2a2a2a; color:#fff; }
+.pdpc[data-theme="workshop"] .dp-empty { color:#444; }
+/* Tables */
+.pdpc[data-theme="workshop"] .dt-wrap { border-color:#2a2a2a; }
+.pdpc[data-theme="workshop"] .dt th { background:#0e0e0e; color:#00c853; border-bottom-color:#2a2a2a; font-weight:700; }
+.pdpc[data-theme="workshop"] .dt th.srt:hover { background:#171717; }
+.pdpc[data-theme="workshop"] .dt td { color:#e0e0e0; border-bottom-color:#1e1e1e; }
+.pdpc[data-theme="workshop"] .dt tr:hover td { background:#1c1c1c; }
+.pdpc[data-theme="workshop"] .t-srch { background:#1e1e1e; color:#f0f0f0; border-color:#2a2a2a; }
+.pdpc[data-theme="workshop"] .t-sel { background:#1e1e1e; color:#ccc; border-color:#2a2a2a; }
+.pdpc[data-theme="workshop"] .empty { color:#444; }
+.pdpc[data-theme="workshop"] .si { color:#555; }
+.pdpc[data-theme="workshop"] .sm { color:#777; }
+/* Modal */
+.pdpc[data-theme="workshop"] .modal { background:#1c1c1c; border-color:#2a2a2a; }
+.pdpc[data-theme="workshop"] .modal-hd { color:#fff; }
+.pdpc[data-theme="workshop"] .inp { background:#111; border-color:#2a2a2a; color:#f0f0f0; }
+.pdpc[data-theme="workshop"] .inp:focus { border-color:#ff9800; }
+.pdpc[data-theme="workshop"] .lbl { color:#666; }
+.pdpc[data-theme="workshop"] .btn-save { background:#152200; color:#00c853; border-color:#00c85333; }
+.pdpc[data-theme="workshop"] .btn-save:hover { background:#1c2e00; }
+.pdpc[data-theme="workshop"] .btn-cancel { background:#1e1e1e; color:#888; border-color:#2a2a2a; }
+.pdpc[data-theme="workshop"] .btn-cancel:hover { background:#252525; }
+.pdpc[data-theme="workshop"] .auto-list { background:#1c1c1c; border-color:#2a2a2a; box-shadow:0 8px 24px rgba(0,0,0,.6); }
+.pdpc[data-theme="workshop"] .auto-item { border-bottom-color:#1e1e1e; }
+.pdpc[data-theme="workshop"] .auto-item:hover { background:#222; }
+.pdpc[data-theme="workshop"] .err { background:#2a0000; color:#ff6b6b; border-color:#ff3d3d44; }
+.pdpc[data-theme="workshop"] .ldg { color:#444; }
 </style>

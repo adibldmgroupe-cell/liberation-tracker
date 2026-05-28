@@ -1,5 +1,5 @@
 <template>
-  <div class="pdpf">
+  <div class="pdpf" :data-theme="theme">
 
     <!-- ── HEADER ── -->
     <div class="ph">
@@ -17,6 +17,11 @@
             :class="{active:filterProc===p}" @click="filterProc=p">{{p}}</button>
         </div>
         <button class="btn-ref" @click="loadAll" :class="{spin:loading}">↻</button>
+        <div class="theme-sw">
+          <button class="tsw-btn" :class="{active:theme==='night'}" @click="theme='night'" title="Nuit">🌙</button>
+          <button class="tsw-btn" :class="{active:theme==='day'}" @click="theme='day'" title="Jour">☀️</button>
+          <button class="tsw-btn" :class="{active:theme==='workshop'}" @click="theme='workshop'" title="Atelier">🏭</button>
+        </div>
       </div>
     </div>
 
@@ -339,9 +344,12 @@
 <script>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { supabase } from '../../supabase'
+import { useTheme } from '../../composables/useTheme'
 
 export default {
   setup() {
+    var { theme } = useTheme()
+
     // ─── STATE ─────────────────────────────────────────────────
     var loading = ref(false)
     var activeView = ref('tableau')
@@ -749,6 +757,7 @@ export default {
     onBeforeUnmount(function() { clearInterval(tickInt) })
 
     return {
+      theme,
       loading, activeView, views, PERIODS,
       processus, ateliers, suiviFab, arretAtelier,
       filterProc, filterAtelier, sfSearch, sfStatut, sfProc,
@@ -960,4 +969,182 @@ export default {
   .form-row-2 { grid-template-columns:1fr; }
   .arr-stats { margin-left:0; }
 }
+
+/* ══════════════════════════════════════════
+   THÈME JOUR ☀️
+══════════════════════════════════════════ */
+.pdpf[data-theme="day"] { background:#f0f2f5; color:#1a1a2e; }
+.pdpf[data-theme="day"] .ph { border-bottom-color:#d8dce8; }
+.pdpf[data-theme="day"] .pt { color:#5a5a8a; }
+.pdpf[data-theme="day"] .vtab { background:#e4e7f0; color:#555; border-color:#c8ccd8; }
+.pdpf[data-theme="day"] .vtab:hover { background:#d8dcea; color:#333; }
+.pdpf[data-theme="day"] .vtab.active { background:#7c3aed; color:#fff; border-color:#7c3aed; }
+.pdpf[data-theme="day"] .proc-tab { background:#e4e7f0; color:#555; border-color:#c8ccd8; }
+.pdpf[data-theme="day"] .proc-tab.active { background:#7c3aed; color:#fff; border-color:#7c3aed; }
+.pdpf[data-theme="day"] .btn-ref { background:#e4e7f0; color:#666; border-color:#c8ccd8; }
+.pdpf[data-theme="day"] .tn { background:#e4e7f0; color:#555; border-color:#c8ccd8; }
+.pdpf[data-theme="day"] .tn:hover { background:#d8dcea; color:#333; }
+.pdpf[data-theme="day"] .tn-now { color:#7c3aed; border-color:#7c3aed33; }
+.pdpf[data-theme="day"] .tc-range { color:#777; }
+.pdpf[data-theme="day"] .tpd { background:#e4e7f0; color:#555; border-color:#c8ccd8; }
+.pdpf[data-theme="day"] .tpd.active { background:#7c3aed; color:#fff; border-color:#7c3aed; }
+.pdpf[data-theme="day"] .tc-srch { background:#fff; color:#1a1a2e; border-color:#c8ccd8; }
+.pdpf[data-theme="day"] .tc-sel { background:#fff; color:#555; border-color:#c8ccd8; }
+.pdpf[data-theme="day"] .btn-add { background:#7c3aed; color:#fff; border-color:#7c3aed; }
+.pdpf[data-theme="day"] .tc-leg .tl-vide { color:#bbb; }
+.pdpf[data-theme="day"] .tc-scroll { border-color:#d8dce8; }
+.pdpf[data-theme="day"] .th-date { background:#e8eaf3; color:#888; border-right-color:#d8dce8; border-bottom-color:#d8dce8; }
+.pdpf[data-theme="day"] .th-eq { background:#e8eaf3; border-bottom-color:#d8dce8; border-right-color:#dde1ec; }
+.pdpf[data-theme="day"] .the-nom { color:#333; }
+.pdpf[data-theme="day"] .the-sub { color:#aaa; }
+.pdpf[data-theme="day"] .tc-tbl tbody tr:hover td { background:#e0e5f0 !important; }
+.pdpf[data-theme="day"] .tr-today td { background:#f0eaff !important; }
+.pdpf[data-theme="day"] .tr-today .td-date { border-left-color:#7c3aed; }
+.pdpf[data-theme="day"] .tr-we td { background:#ebebf3 !important; }
+.pdpf[data-theme="day"] .td-date { background:#eceef5; border-right-color:#d8dce8; border-bottom-color:#e4e7f0; }
+.pdpf[data-theme="day"] .tdd-today { background:#f0eaff !important; }
+.pdpf[data-theme="day"] .dj { color:#bbb; }
+.pdpf[data-theme="day"] .dd { color:#333; }
+.pdpf[data-theme="day"] .tc-cell { border-bottom-color:#e4e7f0; border-right-color:#e4e7f0; }
+.pdpf[data-theme="day"] .c-vide { background:#f5f6f9; }
+.pdpf[data-theme="day"] .c-planifie { background:#dbeafe; border-left-color:#3b82f6; }
+.pdpf[data-theme="day"] .c-encours  { background:#fef3c7; border-left-color:#f59e0b; }
+.pdpf[data-theme="day"] .c-cloture  { background:#d1fae5; border-left-color:#10b981; }
+.pdpf[data-theme="day"] .c-retard   { background:#fee2e2; border-left-color:#ef4444; }
+.pdpf[data-theme="day"] .ci-lot { color:#1a1a2e; }
+.pdpf[data-theme="day"] .ci-more { color:#bbb; }
+.pdpf[data-theme="day"] .dp { background:#fff; border-color:#d8dce8; box-shadow:0 12px 40px rgba(0,0,0,.15); }
+.pdpf[data-theme="day"] .dp-hd { border-bottom-color:#eee; }
+.pdpf[data-theme="day"] .dp-eq { color:#1a1a2e; }
+.pdpf[data-theme="day"] .dp-date { color:#aaa; }
+.pdpf[data-theme="day"] .dp-x { color:#ccc; }
+.pdpf[data-theme="day"] .dp-x:hover { color:#333; }
+.pdpf[data-theme="day"] .dp-stitle { color:#bbb; }
+.pdpf[data-theme="day"] .dp-item { background:#f5f6f9; border-color:#e4e7f0; }
+.pdpf[data-theme="day"] .dpi-lot { color:#1a1a2e; }
+.pdpf[data-theme="day"] .dpi-prod { color:#777; }
+.pdpf[data-theme="day"] .dpi-meta { color:#bbb; }
+.pdpf[data-theme="day"] .dpi-btn { background:#eee; color:#555; border-color:#ddd; }
+.pdpf[data-theme="day"] .dpi-btn:hover { background:#e0e0e0; color:#333; }
+.pdpf[data-theme="day"] .dpi-btn-ok { background:#d1fae5; color:#059669; border-color:#6ee7b744; }
+.pdpf[data-theme="day"] .dp-empty { color:#ccc; }
+.pdpf[data-theme="day"] .dt-wrap { border-color:#d8dce8; }
+.pdpf[data-theme="day"] .dt th { background:#e8eaf3; color:#888; border-bottom-color:#d8dce8; }
+.pdpf[data-theme="day"] .dt th.srt:hover { background:#dde1ec; color:#555; }
+.pdpf[data-theme="day"] .dt td { color:#444; border-bottom-color:#eee; }
+.pdpf[data-theme="day"] .dt tr:hover td { background:#eceff5; }
+.pdpf[data-theme="day"] .t-srch { background:#fff; color:#1a1a2e; border-color:#c8ccd8; }
+.pdpf[data-theme="day"] .t-sel { background:#fff; color:#555; border-color:#c8ccd8; }
+.pdpf[data-theme="day"] .empty { color:#ccc; }
+.pdpf[data-theme="day"] .si { color:#aaa; }
+.pdpf[data-theme="day"] .sm { color:#888; }
+.pdpf[data-theme="day"] .modal { background:#fff; border-color:#d8dce8; box-shadow:0 16px 48px rgba(0,0,0,.18); }
+.pdpf[data-theme="day"] .modal-hd { color:#1a1a2e; border-bottom-color:#eee; }
+.pdpf[data-theme="day"] .modal-body { background:#fff; }
+.pdpf[data-theme="day"] .modal-ft { border-top-color:#eee; }
+.pdpf[data-theme="day"] .inp { background:#fff; border-color:#c8ccd8; color:#1a1a2e; }
+.pdpf[data-theme="day"] .inp:focus { border-color:#7c3aed; }
+.pdpf[data-theme="day"] .lbl { color:#999; }
+.pdpf[data-theme="day"] .btn-save { background:#7c3aed; color:#fff; }
+.pdpf[data-theme="day"] .btn-save:hover { background:#6d28d9; }
+.pdpf[data-theme="day"] .btn-cancel { background:#f0f0f0; color:#666; border-color:#ccc; }
+.pdpf[data-theme="day"] .btn-cancel:hover { background:#e0e0e0; }
+.pdpf[data-theme="day"] .auto-list { background:#fff; border-color:#c8ccd8; box-shadow:0 4px 16px rgba(0,0,0,.1); }
+.pdpf[data-theme="day"] .auto-item { border-bottom-color:#f0f0f0; }
+.pdpf[data-theme="day"] .auto-item:hover { background:#f5f5f8; }
+.pdpf[data-theme="day"] .err { background:#FEF2F2; color:#c53030; border-color:#fca5a5; }
+.pdpf[data-theme="day"] .ldg { color:#ccc; }
+.pdpf[data-theme="day"] .arr-badge { background:#fef3c744; color:#b45309; }
+.pdpf[data-theme="day"] .arr-none { color:#ccc; }
+.pdpf[data-theme="day"] .arr-stat { color:#aaa; }
+
+/* ══════════════════════════════════════════
+   THÈME ATELIER 🏭
+══════════════════════════════════════════ */
+.pdpf[data-theme="workshop"] { background:#161616; color:#f0f0f0; }
+.pdpf[data-theme="workshop"] .ph { border-bottom-color:#2a2a2a; }
+.pdpf[data-theme="workshop"] .pt { color:#aaaaaa; letter-spacing:2px; }
+.pdpf[data-theme="workshop"] .vtab { background:#1e1e1e; color:#aaa; border-color:#2a2a2a; }
+.pdpf[data-theme="workshop"] .vtab:hover { background:#252525; color:#fff; }
+.pdpf[data-theme="workshop"] .vtab.active { background:#ff9800; color:#000; border-color:#ff9800; font-weight:700; }
+.pdpf[data-theme="workshop"] .proc-tab { background:#1e1e1e; color:#aaa; border-color:#2a2a2a; }
+.pdpf[data-theme="workshop"] .proc-tab.active { background:#00c853; color:#000; font-weight:700; border-color:#00c853; }
+.pdpf[data-theme="workshop"] .btn-ref { background:#1e1e1e; color:#aaa; border-color:#2a2a2a; }
+.pdpf[data-theme="workshop"] .tn { background:#1e1e1e; color:#ccc; border-color:#2a2a2a; }
+.pdpf[data-theme="workshop"] .tn:hover { background:#252525; color:#fff; }
+.pdpf[data-theme="workshop"] .tn-now { color:#00c853; border-color:#00c85344; }
+.pdpf[data-theme="workshop"] .tc-range { color:#888; }
+.pdpf[data-theme="workshop"] .tpd { background:#1e1e1e; color:#aaa; border-color:#2a2a2a; }
+.pdpf[data-theme="workshop"] .tpd.active { background:#ff9800; color:#000; border-color:#ff9800; font-weight:700; }
+.pdpf[data-theme="workshop"] .tc-srch { background:#1e1e1e; color:#f0f0f0; border-color:#2a2a2a; }
+.pdpf[data-theme="workshop"] .tc-sel { background:#1e1e1e; color:#ccc; border-color:#2a2a2a; }
+.pdpf[data-theme="workshop"] .btn-add { background:#152200; color:#00c853; border-color:#00c85333; }
+.pdpf[data-theme="workshop"] .tc-leg .tl-planifie { color:#29b6f6; }
+.pdpf[data-theme="workshop"] .tc-leg .tl-encours  { color:#ff9800; }
+.pdpf[data-theme="workshop"] .tc-leg .tl-cloture  { color:#00c853; }
+.pdpf[data-theme="workshop"] .tc-leg .tl-retard   { color:#ff3d3d; }
+.pdpf[data-theme="workshop"] .tc-leg .tl-vide { color:#444; }
+.pdpf[data-theme="workshop"] .tc-scroll { border-color:#2a2a2a; }
+.pdpf[data-theme="workshop"] .th-date { background:#0e0e0e; color:#555; border-right-color:#2a2a2a; border-bottom-color:#2a2a2a; }
+.pdpf[data-theme="workshop"] .th-eq { background:#0e0e0e; border-bottom-color:#2a2a2a; border-right-color:#1e1e1e; }
+.pdpf[data-theme="workshop"] .the-nom { color:#f0f0f0; font-weight:700; }
+.pdpf[data-theme="workshop"] .the-sub { color:#555; }
+.pdpf[data-theme="workshop"] .tc-tbl tbody tr:hover td { background:#1e1e1e !important; }
+.pdpf[data-theme="workshop"] .tr-today td { background:#1a1200 !important; }
+.pdpf[data-theme="workshop"] .tr-today .td-date { border-left-color:#ff9800; }
+.pdpf[data-theme="workshop"] .tr-we td { background:#111 !important; }
+.pdpf[data-theme="workshop"] .td-date { background:#131313; border-right-color:#2a2a2a; border-bottom-color:#1e1e1e; }
+.pdpf[data-theme="workshop"] .tdd-today { background:#1a1200 !important; }
+.pdpf[data-theme="workshop"] .dj { color:#555; }
+.pdpf[data-theme="workshop"] .dd { color:#f0f0f0; font-weight:700; }
+.pdpf[data-theme="workshop"] .tc-cell { border-bottom-color:#1e1e1e; border-right-color:#1e1e1e; }
+.pdpf[data-theme="workshop"] .c-vide { background:#161616; }
+.pdpf[data-theme="workshop"] .c-planifie { background:#002030; border-left-color:#29b6f6; }
+.pdpf[data-theme="workshop"] .c-encours  { background:#1f1000; border-left-color:#ff9800; }
+.pdpf[data-theme="workshop"] .c-cloture  { background:#001a08; border-left-color:#00c853; }
+.pdpf[data-theme="workshop"] .c-retard   { background:#1a0000; border-left-color:#ff3d3d; }
+.pdpf[data-theme="workshop"] .ci-lot { color:#ffffff; font-weight:700; }
+.pdpf[data-theme="workshop"] .ci-more { color:#555; }
+.pdpf[data-theme="workshop"] .dp { background:#1c1c1c; border-color:#2a2a2a; box-shadow:0 24px 60px rgba(0,0,0,.8); }
+.pdpf[data-theme="workshop"] .dp-hd { border-bottom-color:#2a2a2a; }
+.pdpf[data-theme="workshop"] .dp-eq { color:#fff; }
+.pdpf[data-theme="workshop"] .dp-date { color:#666; }
+.pdpf[data-theme="workshop"] .dp-x { color:#666; }
+.pdpf[data-theme="workshop"] .dp-x:hover { color:#fff; }
+.pdpf[data-theme="workshop"] .dp-stitle { color:#666; }
+.pdpf[data-theme="workshop"] .dp-item { background:#111; border-color:#2a2a2a; }
+.pdpf[data-theme="workshop"] .dpi-lot { color:#fff; font-weight:700; }
+.pdpf[data-theme="workshop"] .dpi-prod { color:#888; }
+.pdpf[data-theme="workshop"] .dpi-meta { color:#555; }
+.pdpf[data-theme="workshop"] .dpi-btn { background:#222; color:#ccc; border-color:#333; }
+.pdpf[data-theme="workshop"] .dpi-btn:hover { background:#2a2a2a; color:#fff; }
+.pdpf[data-theme="workshop"] .dpi-btn-ok { background:#001a08; color:#00c853; border-color:#00c85333; }
+.pdpf[data-theme="workshop"] .dp-empty { color:#444; }
+.pdpf[data-theme="workshop"] .dt-wrap { border-color:#2a2a2a; }
+.pdpf[data-theme="workshop"] .dt th { background:#0e0e0e; color:#00c853; border-bottom-color:#2a2a2a; font-weight:700; }
+.pdpf[data-theme="workshop"] .dt th.srt:hover { background:#171717; }
+.pdpf[data-theme="workshop"] .dt td { color:#e0e0e0; border-bottom-color:#1e1e1e; }
+.pdpf[data-theme="workshop"] .dt tr:hover td { background:#1c1c1c; }
+.pdpf[data-theme="workshop"] .t-srch { background:#1e1e1e; color:#f0f0f0; border-color:#2a2a2a; }
+.pdpf[data-theme="workshop"] .t-sel { background:#1e1e1e; color:#ccc; border-color:#2a2a2a; }
+.pdpf[data-theme="workshop"] .empty { color:#444; }
+.pdpf[data-theme="workshop"] .si { color:#555; }
+.pdpf[data-theme="workshop"] .sm { color:#777; }
+.pdpf[data-theme="workshop"] .modal { background:#1c1c1c; border-color:#2a2a2a; }
+.pdpf[data-theme="workshop"] .modal-hd { color:#fff; border-bottom-color:#2a2a2a; }
+.pdpf[data-theme="workshop"] .modal-ft { border-top-color:#2a2a2a; }
+.pdpf[data-theme="workshop"] .inp { background:#111; border-color:#2a2a2a; color:#f0f0f0; }
+.pdpf[data-theme="workshop"] .inp:focus { border-color:#ff9800; }
+.pdpf[data-theme="workshop"] .lbl { color:#666; }
+.pdpf[data-theme="workshop"] .btn-save { background:#152200; color:#00c853; }
+.pdpf[data-theme="workshop"] .btn-save:hover { background:#1c2e00; }
+.pdpf[data-theme="workshop"] .btn-cancel { background:#1e1e1e; color:#888; border-color:#2a2a2a; }
+.pdpf[data-theme="workshop"] .auto-list { background:#1c1c1c; border-color:#2a2a2a; }
+.pdpf[data-theme="workshop"] .auto-item { border-bottom-color:#1e1e1e; }
+.pdpf[data-theme="workshop"] .auto-item:hover { background:#222; }
+.pdpf[data-theme="workshop"] .err { background:#2a0000; color:#ff6b6b; border-color:#ff3d3d44; }
+.pdpf[data-theme="workshop"] .ldg { color:#444; }
+.pdpf[data-theme="workshop"] .arr-badge { background:#1f100033; color:#ff9800; }
+.pdpf[data-theme="workshop"] .arr-ec { color:#ff3d3d; }
+.pdpf[data-theme="workshop"] .arr-stat { color:#666; }
 </style>
