@@ -31,6 +31,9 @@
       </div>
     </div>
 
+    <!-- Indicateur rechargement après action -->
+    <div v-if="detailLoading" class="detail-reloading">⟳ Actualisation…</div>
+
     <!-- KPI -->
     <div class="ks">
       <div class="k"><div class="kv">{{ofV}}/6</div><div class="kl">OF</div></div>
@@ -328,6 +331,7 @@ export default {
     var devEdits = ref({})
     var editNumLot = ref(''), editCodeProd = ref(''), editProductId = ref(null), prodSuggestions = ref([])
     var aqlFabConforme = ref(false), aqlCondConforme = ref(false)
+    var detailLoading = ref(false)
     var planning = ref(null), planSaving = ref(false)
     var planEdit = ref({date_lcq_cible:'',date_lcq_revisee:'',date_aq_cible:'',date_aq_revisee:'',date_dt_cible:'',date_dt_revisee:''})
 
@@ -391,25 +395,25 @@ export default {
       router.push({path:'/lots',query:query})
     }
 
-    var doValidate = async function(type,orderId,etape){await validateOrder(type,orderId,etape,userId.value,lot.value.id);loadLot()}
-    var doLiberer = async function(){await libererLot(lot.value.id,userId.value);loadLot()}
-    var doDeclareDeviation = async function(){await declareDeviation(lot.value.id,devObs.value,devBloquante.value,devNumeroDn.value,userId.value,userService.value);devObs.value='';devNumeroDn.value='';devBloquante.value=false;showDevForm.value=false;loadLot()}
-    var doCloseDeviation = async function(id){await closeDeviation(id,lot.value.id,userId.value);loadLot()}
+    var doValidate = async function(type,orderId,etape){await validateOrder(type,orderId,etape,userId.value,lot.value.id);await loadLot()}
+    var doLiberer = async function(){await libererLot(lot.value.id,userId.value);await loadLot()}
+    var doDeclareDeviation = async function(){await declareDeviation(lot.value.id,devObs.value,devBloquante.value,devNumeroDn.value,userId.value,userService.value);devObs.value='';devNumeroDn.value='';devBloquante.value=false;showDevForm.value=false;await loadLot()}
+    var doCloseDeviation = async function(id){await closeDeviation(id,lot.value.id,userId.value);await loadLot()}
     var doMarkBloquante = async function(id){
       await supabase.from('deviations').update({bloquante:true}).eq('id',id)
       await supabase.from('lot_events').insert({lot_id:lot.value.id,event_type:'deviation_bloquante',description:'Déviation marquée bloquante',triggered_by:userId.value,created_at:new Date().toISOString()})
-      loadLot()
+      await loadLot()
     }
-    var doDeclareRvp = async function(type){await declareRVP(lot.value.id,type,userId.value);loadLot()}
+    var doDeclareRvp = async function(type){await declareRVP(lot.value.id,type,userId.value);await loadLot()}
     var docErrMsg = ref('')
     var doDeclareMajDoc = async function(type){
       docErrMsg.value=''
-      try{await declareMajDoc(lot.value.id,type,userId.value);loadLot()}
+      try{await declareMajDoc(lot.value.id,type,userId.value);await loadLot()}
       catch(e){docErrMsg.value='Erreur : '+e.message;console.error('declareMajDoc',e)}
     }
     var doDeclareClotureSap = async function(type){
       docErrMsg.value=''
-      try{await declareClotureSap(lot.value.id,type,userId.value);loadLot()}
+      try{await declareClotureSap(lot.value.id,type,userId.value);await loadLot()}
       catch(e){docErrMsg.value='Erreur : '+e.message;console.error('declareClotureSap',e)}
     }
     var majDocLabel = function(d){var map={maj_if:'MàJ IF',maj_ic:'MàJ IC',maj_nmcl_of:'MàJ Nmcl OF',maj_nmcl_oc:'MàJ Nmcl OC'};return map[d.type_document]||d.type_document}
@@ -418,12 +422,12 @@ export default {
     var clotStatLabel = function(d){return clotStatLabels[d.statut]||d.statut}
     var clotIndClass = function(d){if(d.statut==='cloture')return'ind-done';if(d.statut==='non_emis')return'ind-wait';return'ind-prog'}
     var clotDsClass = function(d){if(d.statut==='cloture')return'ds-ok';return''}
-    var doRequestAql = async function(type){await requestAql(lot.value.id,type,userId.value);loadLot()}
-    var doAqlConforme = async function(id){await respondAql(id,'conforme','',userId.value,lot.value.id);loadLot()}
-    var doAqlNonConforme = async function(id){var reco=prompt('Recommandations :');await respondAql(id,'non_conforme',reco||'',userId.value,lot.value.id);loadLot()}
+    var doRequestAql = async function(type){await requestAql(lot.value.id,type,userId.value);await loadLot()}
+    var doAqlConforme = async function(id){await respondAql(id,'conforme','',userId.value,lot.value.id);await loadLot()}
+    var doAqlNonConforme = async function(id){var reco=prompt('Recommandations :');await respondAql(id,'non_conforme',reco||'',userId.value,lot.value.id);await loadLot()}
     var isLatestAql = function(a){var sameType=aqls.value.filter(function(x){return x.type===a.type});return sameType.length>0&&sameType[0].id===a.id}
     var canRelanceAql = function(a){return canPerform('demander_aql_'+(a.type==='fabrication'?'fab':'cond'))}
-    var doRelanceAql = async function(a){await requestAql(lot.value.id,a.type,userId.value);loadLot()}
+    var doRelanceAql = async function(a){await requestAql(lot.value.id,a.type,userId.value);await loadLot()}
 
     var doAcknowledgeOrderAR = async function(orderType, orderId) {
       var now = new Date().toISOString()
@@ -431,21 +435,21 @@ export default {
       var res = await supabase.from(tbl).update({pending_ar_service:null,updated_at:now}).eq('id',orderId)
       if(res.error){alert('Erreur AR : '+res.error.message);return}
       await supabase.from('lot_events').insert({lot_id:lot.value.id,event_type:'ar_circuit',description:'AR circuit '+orderType.toUpperCase(),triggered_by:userId.value,created_at:now})
-      loadLot()
+      await loadLot()
     }
     var doAcknowledgeAqlRequest = async function(aqlId) {
       var now = new Date().toISOString()
       var res = await supabase.from('aql_inspections').update({request_ar_pending:false,updated_at:now}).eq('id',aqlId)
       if(res.error){alert('Erreur AR demande AQL : '+res.error.message);return}
       await supabase.from('lot_events').insert({lot_id:lot.value.id,event_type:'ar_aql_demande',description:'AR demande AQL',triggered_by:userId.value,created_at:now})
-      loadLot()
+      await loadLot()
     }
     var doAcknowledgeAqlResult = async function(aqlId) {
       var now = new Date().toISOString()
       var res = await supabase.from('aql_inspections').update({result_ar_pending:false,updated_at:now}).eq('id',aqlId)
       if(res.error){alert('Erreur AR résultat AQL : '+res.error.message);return}
       await supabase.from('lot_events').insert({lot_id:lot.value.id,event_type:'ar_aql_resultat',description:'AR résultat AQL',triggered_by:userId.value,created_at:now})
-      loadLot()
+      await loadLot()
     }
     // Masquer "Demander AQL" si le dernier AQL de ce type est en attente ou non_conforme (relancer via bouton per-ligne)
     var canDemanderAql = function(type) {
@@ -462,7 +466,7 @@ export default {
       await supabase.from('liberation_documents').update({is_applicable:true,is_required:true,updated_at:now}).eq('id',docId)
       await supabase.from('liberation_dossiers').update({da_micro_applicable:true,updated_at:now}).eq('lot_id',lot.value.id)
       await supabase.from('lot_events').insert({lot_id:lot.value.id,event_type:'da_micro_applicable',description:'DA Microbiologie déclarée applicable',triggered_by:userId.value,created_at:now})
-      loadLot()
+      await loadLot()
     }
 
     var SVC_LABELS = {planification:'Planification',stock:'Stock',aq:'AQ',aq_dap:'AQ DAP',dt:'DT',fabrication:'Fabrication',conditionnement:'Conditionnement',lcq:'LCQ',admin:'Admin'}
@@ -514,7 +518,7 @@ export default {
     var doModify = async function(){
       if(!editNumLot.value)return
       await modifyLot(lot.value.id, editNumLot.value, editProductId.value || lot.value.product_id)
-      showModify.value=false;loadLot()
+      showModify.value=false;await loadLot()
     }
     var confirmDelete = async function(){
       if(!confirm('Supprimer le lot '+lot.value.numero_lot+' ? Cette action est irréversible.'))return
@@ -522,27 +526,57 @@ export default {
     }
 
     var loadLot = async function(){
-      var l=(await supabase.from('lots').select('*').eq('id',route.params.id).single()).data;lot.value=l
-      prod.value=(await supabase.from('products').select('*').eq('id',l.product_id).single()).data||{}
-      editNumLot.value=l.numero_lot;editCodeProd.value=prod.value.code_article||''
-      of.value=(await supabase.from('orders_of').select('*').eq('lot_id',l.id).maybeSingle()).data
-      oc.value=(await supabase.from('orders_oc').select('*').eq('lot_id',l.id).maybeSingle()).data
-      if(of.value){var ov=(await supabase.from('order_validations').select('*,profiles(prenom,nom)').eq('order_type','of').eq('order_id',of.value.id).order('validated_at')).data;ofVals.value=(ov||[]).map(function(v){return{etape:v.etape,validated_at:v.validated_at,user:v.profiles?v.profiles.prenom+' '+v.profiles.nom:''}})}
-      if(oc.value){var ov2=(await supabase.from('order_validations').select('*,profiles(prenom,nom)').eq('order_type','oc').eq('order_id',oc.value.id).order('validated_at')).data;ocVals.value=(ov2||[]).map(function(v){return{etape:v.etape,validated_at:v.validated_at,user:v.profiles?v.profiles.prenom+' '+v.profiles.nom:''}})}
-      docs.value=(await supabase.from('liberation_documents').select('*').eq('lot_id',l.id)).data||[]
-      devs.value=(await supabase.from('deviations').select('*,profiles!declared_by(prenom,nom)').eq('lot_id',l.id).order('declared_at')).data||[]
-      devEdits.value={}; devs.value.forEach(function(d){ devEdits.value[d.id]={editNumeroDn:d.numero_dn||'',editObs:d.description||''} })
-      aqls.value=(await supabase.from('aql_inspections').select('*').eq('lot_id',l.id).order('created_at',{ascending:false})).data||[]
-      dossier.value=(await supabase.from('liberation_dossiers').select('*').eq('lot_id',l.id).maybeSingle()).data
-      aqlFabConforme.value=await isAqlConforme(l.id,'fabrication')
-      aqlCondConforme.value=await isAqlConforme(l.id,'conditionnement')
-      var planRes=(await supabase.from('lot_planning').select('*').eq('lot_id',l.id).maybeSingle()).data
-      planning.value=planRes
-      var toDate=function(d){return d?d.split('T')[0]:''}
-      planEdit.value={
-        date_lcq_cible:toDate(planRes?.date_lcq_cible),date_lcq_revisee:toDate(planRes?.date_lcq_revisee),
-        date_aq_cible:toDate(planRes?.date_aq_cible),date_aq_revisee:toDate(planRes?.date_aq_revisee),
-        date_dt_cible:toDate(planRes?.date_dt_cible),date_dt_revisee:toDate(planRes?.date_dt_revisee),
+      detailLoading.value = true
+      try {
+        var lotId = route.params.id
+        // Round 1 — toutes les requêtes indépendantes en parallèle
+        var r1 = await Promise.all([
+          supabase.from('lots').select('*').eq('id',lotId).single(),
+          supabase.from('orders_of').select('*').eq('lot_id',lotId).maybeSingle(),
+          supabase.from('orders_oc').select('*').eq('lot_id',lotId).maybeSingle(),
+          supabase.from('liberation_documents').select('*').eq('lot_id',lotId),
+          supabase.from('deviations').select('*,profiles!declared_by(prenom,nom)').eq('lot_id',lotId).order('declared_at'),
+          supabase.from('aql_inspections').select('*').eq('lot_id',lotId).order('created_at',{ascending:false}),
+          supabase.from('liberation_dossiers').select('*').eq('lot_id',lotId).maybeSingle(),
+          supabase.from('lot_planning').select('*').eq('lot_id',lotId).maybeSingle(),
+          isAqlConforme(lotId,'fabrication'),
+          isAqlConforme(lotId,'conditionnement'),
+        ])
+        var l = r1[0].data
+        if(!l){console.error('loadLot: lot introuvable',lotId);return}
+        lot.value=l
+        of.value=r1[1].data
+        oc.value=r1[2].data
+        docs.value=r1[3].data||[]
+        devs.value=r1[4].data||[]
+        devEdits.value={};devs.value.forEach(function(d){devEdits.value[d.id]={editNumeroDn:d.numero_dn||'',editObs:d.description||''}})
+        aqls.value=r1[5].data||[]
+        dossier.value=r1[6].data
+        var planRes=r1[7].data
+        aqlFabConforme.value=r1[8]
+        aqlCondConforme.value=r1[9]
+        planning.value=planRes
+        editNumLot.value=l.numero_lot
+        // Round 2 — requêtes qui dépendent des résultats du round 1
+        var r2 = await Promise.all([
+          supabase.from('products').select('*').eq('id',l.product_id).single(),
+          of.value?supabase.from('order_validations').select('*,profiles(prenom,nom)').eq('order_type','of').eq('order_id',of.value.id).order('validated_at'):Promise.resolve({data:[]}),
+          oc.value?supabase.from('order_validations').select('*,profiles(prenom,nom)').eq('order_type','oc').eq('order_id',oc.value.id).order('validated_at'):Promise.resolve({data:[]}),
+        ])
+        prod.value=r2[0].data||{}
+        editCodeProd.value=prod.value.code_article||''
+        ofVals.value=(r2[1].data||[]).map(function(v){return{etape:v.etape,validated_at:v.validated_at,user:v.profiles?v.profiles.prenom+' '+v.profiles.nom:''}})
+        ocVals.value=(r2[2].data||[]).map(function(v){return{etape:v.etape,validated_at:v.validated_at,user:v.profiles?v.profiles.prenom+' '+v.profiles.nom:''}})
+        var toDate=function(d){return d?d.split('T')[0]:''}
+        planEdit.value={
+          date_lcq_cible:toDate(planRes?.date_lcq_cible),date_lcq_revisee:toDate(planRes?.date_lcq_revisee),
+          date_aq_cible:toDate(planRes?.date_aq_cible),date_aq_revisee:toDate(planRes?.date_aq_revisee),
+          date_dt_cible:toDate(planRes?.date_dt_cible),date_dt_revisee:toDate(planRes?.date_dt_revisee),
+        }
+      } catch(e) {
+        console.error('loadLot erreur:',e)
+      } finally {
+        detailLoading.value = false
       }
     }
 
@@ -560,10 +594,10 @@ export default {
       var u=await supabase.auth.getUser();userId.value=u.data.user.id
       var p=await supabase.from('profiles').select('service').eq('id',u.data.user.id).single()
       if(p.data){userService.value=p.data.service;await loadPermissions(p.data.service)}
-      await loadLot()
+      await await loadLot()
     })
 
-    return{lot,prod,of,oc,ofVals,ocVals,docs,devs,aqls,dossier,statusLabels,circuitSteps,isAdmin,
+    return{lot,prod,of,oc,ofVals,ocVals,docs,devs,aqls,dossier,detailLoading,statusLabels,circuitSteps,isAdmin,
       showDevForm,devObs,devBloquante,devNumeroDn,showModify,editNumLot,editCodeProd,prodSuggestions,rvpDocs,mainDocs,
       getVal,pipClass,stepIndClass,circuitFlowClass,fmtDt,ofV,ocV,docsOk,docsReq,devsOpen,leadTime,dossierComplete,canValidateStep,
       docTypeLabel,docStatLabel,indClass,dsClass,rvpServiceLabel,isDocBlocked,goBack,
@@ -589,6 +623,8 @@ export default {
 .sp-phase{font-size:10px;font-weight:500;padding:3px 10px;border-radius:2px;white-space:nowrap}
 .phase-planifie{background:#f0f0f0;color:#999}.phase-fab{background:#EEE8FF;color:#5B3CC4}.phase-attente-cond{background:#FFF3CD;color:#856404}.phase-cond{background:#E0F7F4;color:#00695C}.phase-attente-pf{background:#FFF3CD;color:#856404}.phase-libere{background:#EAF3DE;color:#3B6D11}.phase-cloture{background:#e8e8e8;color:#333}
 .loading{text-align:center;padding:60px;color:#999}
+.detail-reloading{font-size:11px;color:#999;padding:4px 0 6px;letter-spacing:.3px;animation:spin-txt 1s linear infinite}
+@keyframes spin-txt{0%{opacity:1}50%{opacity:.4}100%{opacity:1}}
 .btn-sm{font-size:11px;padding:3px 10px;border:1px solid #ddd;border-radius:3px;background:#fff;cursor:pointer;color:#666}.btn-sm:hover{background:#f5f5f5}
 .btn-del{border-color:#E24B4A;color:#E24B4A}.btn-del:hover{background:#FCEBEB}
 .ks{display:grid;grid-template-columns:repeat(5,1fr);border:1px solid #e8e8e8;margin:10px 0}
