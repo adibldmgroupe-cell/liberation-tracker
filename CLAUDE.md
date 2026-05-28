@@ -230,6 +230,58 @@ Quand une étape est validée → `pending_ar_service = AR_NEXT[etape]` + `etape
 
 ---
 
+## RÈGLE CRITIQUE N°11 — INTERDICTION ABSOLUE de `--theirs` / `--ours` lors d'un merge
+
+### Bug commis (27 mai 2026 — commit 0564697)
+Un merge entre la branche worktree `claude/heuristic-lewin-3d4125` et `main` a utilisé
+`git checkout --theirs` pour résoudre les conflits. La branche worktree contenait des versions
+**simplistes et anciennes** des fichiers. Résultat : toutes les fonctionnalités développées
+sur `main` ont été **silencieusement écrasées** :
+
+| Fichier | Lignes main (correct) | Lignes après merge (écrasé) | Perdu |
+|---|---|---|---|
+| `LotDetailPage.vue` | 717 | 323 | −394 lignes de fonctionnalités |
+| `LotsPage.vue` | 1977 | 664 | −1313 lignes de fonctionnalités |
+| `DocumentDetailPage.vue` | 367 | 240 | −127 lignes |
+| `permissions.js` | 83 | 59 | −24 lignes |
+
+### Règle à respecter ABSOLUMENT
+
+```
+❌ JAMAIS :
+  git checkout --theirs <fichier>
+  git checkout --ours <fichier>
+  git merge -X theirs
+  git merge -X ours
+
+✅ TOUJOURS en cas de conflit :
+  1. git diff <fichier>  — lire et comprendre chaque conflit
+  2. Garder TOUTES les fonctionnalités des deux côtés (merge manuel)
+  3. Si un fichier a été enrichi sur main (plus de lignes), main gagne TOUJOURS
+  4. Vérifier le nombre de lignes avant/après : si ça diminue fortement → DANGER
+```
+
+### Vérification obligatoire avant tout commit de merge
+
+```bash
+# Avant de committer un merge, vérifier que les fichiers clés n'ont pas rétréci :
+git diff HEAD~1 --stat
+# Si un fichier perd plus de 50 lignes → STOP, investiguer avant de committer
+```
+
+### Comment détecter et corriger
+```bash
+# Trouver le merge base et comparer les versions
+git merge-base <parent1> <parent2>
+git show <mergebase>:<fichier> | wc -l   # taille d'origine
+git show <parent1>:<fichier> | wc -l     # taille branche A
+git show <parent2>:<fichier> | wc -l     # taille branche B
+# Restaurer la bonne version :
+git checkout <bon_commit> -- <fichier>
+```
+
+---
+
 ## Déploiement
 
 - Push sur `main` → GitHub Actions build + deploy GitHub Pages automatiquement
