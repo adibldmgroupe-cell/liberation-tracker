@@ -330,7 +330,14 @@
 
         <!-- No panel / no session -->
         <div v-if="!selectedTrsPanel" class="tdp-empty">
-          <div class="tdp-empty-msg">Équipement non trouvé dans le conditionnement</div>
+          <div v-if="!selectedNode.equipement_id" class="tdp-empty-msg">
+            Salle non liée à un équipement.<br>
+            <span style="font-size:11px;color:#4b5563">Configurer dans Admin → Flux → Paramétrer les salles.</span>
+          </div>
+          <div v-else class="tdp-empty-msg">
+            Équipement non trouvé dans le référentiel.<br>
+            <span style="font-size:11px;color:#4b5563">Vérifier que l'équipement est actif dans le référentiel.</span>
+          </div>
         </div>
 
         <template v-else>
@@ -2367,11 +2374,20 @@ export default {
     }
 
     // ─── ACTIONS ─────────────────────────────────────────────────
-    var selectNode = function(node) {
+    var selectNode = async function(node) {
       selectedNode.value = node
       modalLotPreselect.value = null
       if (trsMode.value && node.type === 'cond') {
+        // 1. Chercher dans trsPanels déjà chargés
         var panel = trsPanels.value.find(function(p){ return p.equip.id === node.equipement_id }) || null
+        // 2. Si pas trouvé mais equipement_id existe → fetch direct (équipement inactif ou non encore chargé)
+        if (!panel && node.equipement_id) {
+          var rEqDirect = await supabase.from('equipements_conditionnement').select('*').eq('id', node.equipement_id).maybeSingle()
+          if (rEqDirect.data) {
+            panel = { equip: rEqDirect.data, session: null, activeArret: null, arrets: [], cadences: [], lastComptage: null, lotNum: null, lotProd: null, shiftNom: '', shiftCouleur: '#3B82F6', equipeNom: '', equipeCouleur: '#8B5CF6', rendPct: 0 }
+            trsPanels.value = trsPanels.value.concat([panel])
+          }
+        }
         selectedTrsPanel.value = panel
       } else {
         selectedTrsPanel.value = null
