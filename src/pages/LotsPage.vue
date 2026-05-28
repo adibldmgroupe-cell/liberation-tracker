@@ -73,8 +73,9 @@
       <button class="cf-clear" @click="clearColumnFilters">Tout effacer</button>
     </div>
 
-    <div v-if="!filteredLots.length" class="empty">Aucun lot trouvé</div>
-    <div v-else class="table-wrap">
+    <div v-if="lotsLoading" class="lots-loading">⟳ Chargement des lots…</div>
+    <div v-else-if="!filteredLots.length" class="empty">Aucun lot trouvé</div>
+    <div v-else-if="!lotsLoading" class="table-wrap">
       <table class="tb">
         <thead><tr>
           <th class="th-chk"><input type="checkbox" :checked="allVisibleChecked" @change="toggleAll" /></th>
@@ -290,6 +291,7 @@ export default {
   setup() {
     var route = useRoute(), router = useRouter()
     var lots = ref([]), total = ref(0), activeFilters = ref([])
+    var lotsLoading = ref(false)
     var sortCol = ref(''), sortDir = ref('asc'), showDates = ref(false)
     var hideAccepted = ref(localStorage.getItem('lots_hide_accepted') !== 'false')
     var toggleHideAccepted = function() { hideAccepted.value = !hideAccepted.value; localStorage.setItem('lots_hide_accepted', String(hideAccepted.value)) }
@@ -542,6 +544,8 @@ export default {
     }
 
     var load = async function() {
+      lotsLoading.value = true
+      try {
       var query = supabase.from('lots').select('*, products(code_article,description), orders_of(id,statut,etape_circuit,updated_at,pending_ar_service), orders_oc(id,statut,etape_circuit,updated_at,pending_ar_service), liberation_documents(id,type_document,statut,is_applicable,service_emetteur,emitted_at,approved_at,updated_at,pending_ar_service), deviations(id,statut,bloquante,numero_dn,description,declared_at,declared_service,profiles!declared_by(prenom,nom)), aql_inspections(id,type,resultat,requested_at,inspected_at,request_ar_pending,result_ar_pending), lot_planning(date_lcq_cible,date_lcq_revisee,date_aq_cible,date_aq_revisee,date_dt_cible,date_dt_revisee)', {count:'exact'})
 
       var q = route.query.q
@@ -552,9 +556,10 @@ export default {
         else{query=query.ilike('numero_lot','%'+q+'%')}
       }
 
-      query=query.order('date_enregistrement',{ascending:false,nullsFirst:false}).range(0,9999)
+      query=query.order('date_enregistrement',{ascending:false,nullsFirst:false}).range(0,499)
       var result=await query
       total.value=result.count||(result.data?result.data.length:0)
+      lotsLoading.value = false
 
       lots.value=(result.data||[]).map(function(l){
         var docs=l.liberation_documents||[]
@@ -630,6 +635,7 @@ export default {
           phase:l.phase_production_en_cours||'Planifié',
         }
       })
+      } catch(e) { console.error('Erreur chargement lots:', e) } finally { lotsLoading.value = false }
     }
 
     var getPhaseClass = function(phase) {
@@ -1935,7 +1941,7 @@ var loadCharge = async function() {
     onUnmounted(function(){document.removeEventListener('click', closeAll)})
     watch(function(){return route.query},load,{deep:true})
 
-    return{lots,total,activeFilters,showDates,hideAccepted,toggleHideAccepted,filteredLots,filterOptions,
+    return{lots,total,lotsLoading,activeFilters,showDates,hideAccepted,toggleHideAccepted,filteredLots,filterOptions,
       toggleFilter,sortBy,sortIcon,goToLot,doExportExcel,doExportPDF,
       selected,actionType,showConfirm,executing,progress,execResult,bulkDate,
       actionLabel,canExecute,allVisibleChecked,someVisibleChecked,
@@ -1971,6 +1977,7 @@ var loadCharge = async function() {
 .col-item-dragging{opacity:.35;background:#f5f5f5}
 .col-item-over{background:#E6F1FB;border-color:#185FA5}
 .col-reset{margin-top:8px;width:100%;padding:5px;font-size:11px;border:1px solid #ddd;border-radius:3px;background:#fafafa;cursor:pointer;color:#666}.col-reset:hover{background:#f0f0f0}
+.lots-loading{text-align:center;padding:40px 0;color:#999;font-size:13px;letter-spacing:.3px}
 .filters{display:flex;gap:4px;padding:8px 0;flex-wrap:wrap}
 .fbtn{display:flex;align-items:center;gap:4px;padding:5px 10px;min-height:32px;font-size:11px;border:1px solid #e8e8e8;border-radius:3px;background:#fff;cursor:pointer;color:#666;font-family:inherit;transition:.15s}
 .fbtn:hover{border-color:#ccc}.fbtn.active{border-color:#185FA5;background:#E6F1FB;color:#0C447C}
