@@ -282,6 +282,52 @@ git checkout <bon_commit> -- <fichier>
 
 ---
 
+## RÈGLE CRITIQUE N°12 — Migrations SQL : enum PostgreSQL en 2 transactions séparées
+
+### Bug rencontré (mai 2026 — migration 011_ccl_circuit.sql)
+
+```
+ERROR: 55P04: unsafe use of new value "ccl" of enum type doc_type
+HINT: New enum values must be committed before they can be used.
+```
+
+### Cause
+
+PostgreSQL **interdit** d'utiliser une valeur d'enum ajoutée par `ALTER TYPE ADD VALUE`
+dans la **même transaction** que des `INSERT`/`UPDATE`/`SELECT` qui l'utilisent.
+Dans Supabase SQL Editor, tout le contenu d'un seul bloc d'exécution est une transaction.
+
+### Règle à respecter ABSOLUMENT
+
+Quand une migration ajoute une valeur à un type enum **ET** utilise cette valeur,
+**toujours la séparer en 2 fichiers / 2 exécutions distinctes** :
+
+```sql
+-- Fichier NNN_xxx_enum.sql  (exécuter EN PREMIER, seul)
+ALTER TYPE mon_enum ADD VALUE IF NOT EXISTS 'nouvelle_valeur';
+
+-- Fichier NNN+1_xxx_data.sql  (exécuter APRÈS, dans une 2e exécution)
+INSERT INTO ma_table (..., type_col) VALUES (..., 'nouvelle_valeur');
+UPDATE ma_table SET type_col = 'nouvelle_valeur' WHERE ...;
+```
+
+### Procédure dans Supabase SQL Editor
+
+1. **Exécution 1** — coller et lancer uniquement l'`ALTER TYPE`
+2. **Exécution 2** — coller et lancer le reste (permissions, INSERT, UPDATE)
+
+### Nommage des fichiers de migration
+
+```
+011_ccl_circuit.sql   ← ALTER TYPE uniquement
+012_ccl_data.sql      ← Permissions + INSERT + UPDATE
+```
+
+Ne jamais combiner `ALTER TYPE ADD VALUE` et des DML qui utilisent la nouvelle valeur
+dans un même fichier SQL exécuté d'un seul coup.
+
+---
+
 ## Déploiement
 
 - Push sur `main` → GitHub Actions build + deploy GitHub Pages automatiquement
