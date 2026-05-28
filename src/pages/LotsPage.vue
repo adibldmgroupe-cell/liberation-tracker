@@ -869,8 +869,10 @@ export default {
                 await createNotification('planification',lot.id,null,'Lot '+lot.numero_lot+' — AQL '+aLabel+' : conforme','aql_resultat')
               }})
               actions.push({label:'AQL Non conforme', fn: async function(){
+                var avis=prompt('Remarque AQ (obligatoire) :')
+                if(!avis||!avis.trim()){alert('Remarque obligatoire pour non conforme.');return}
                 var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
-                await supabase.from('aql_inspections').update({resultat:'non_conforme',inspected_at:n,inspected_by:uid,request_ar_pending:false,result_ar_pending:true}).eq('id',latest.id)
+                await supabase.from('aql_inspections').update({resultat:'non_conforme',avis_aq:avis.trim(),inspected_at:n,inspected_by:uid,request_ar_pending:false,result_ar_pending:true}).eq('id',latest.id)
                 await createNotification('planification',lot.id,null,'Lot '+lot.numero_lot+' — AQL '+aLabel+' : non conforme','aql_resultat')
               }})
             }
@@ -1542,6 +1544,7 @@ var loadCharge = async function() {
       var userRes = await supabase.auth.getUser()
       var userId = userRes.data.user.id
       var flow = ['planification','stock','aq','dt','aq_dap','production']
+      var bulkAqlAvis = ''
 
       for (var i=0; i<selected.value.length; i++) {
         var lotId = selected.value[i]
@@ -1622,10 +1625,15 @@ var loadCharge = async function() {
               await createNotification('aq',lotId,null,'Lot '+lot.numero_lot+' — AQL '+aqlSvcLabel+(aqlOp==='relancer'?' relancé':' demandé'),'aql_demande')
               result.ok++
             } else if(aqlOp==='conforme'||aqlOp==='non_conforme'){
+              var avisBulk=''
+              if(aqlOp==='non_conforme'){
+                if(!bulkAqlAvis){bulkAqlAvis=prompt('Remarque AQ pour tous les lots non conformes (obligatoire) :');if(!bulkAqlAvis||!bulkAqlAvis.trim()){alert('Remarque obligatoire pour non conforme.');return}}
+                avisBulk=bulkAqlAvis.trim()
+              }
               var aqlRes=await supabase.from('aql_inspections').select('id').eq('lot_id',lotId).eq('type',aqlTypeVal).or('resultat.is.null,resultat.eq.en_attente').order('requested_at',{ascending:false}).limit(1)
               var latestAql=aqlRes.data&&aqlRes.data[0]
               if(!latestAql){result.errors.push(lot.numero_lot+': pas d\'AQL '+aqlSvcLabel+' en attente');result.fail++;continue}
-              await supabase.from('aql_inspections').update({resultat:aqlOp,inspected_at:now,inspected_by:userId,request_ar_pending:false,result_ar_pending:true}).eq('id',latestAql.id)
+              await supabase.from('aql_inspections').update({resultat:aqlOp,avis_aq:avisBulk,inspected_at:now,inspected_by:userId,request_ar_pending:false,result_ar_pending:true}).eq('id',latestAql.id)
               await supabase.from('lot_events').insert({lot_id:lotId,event_type:'aql_resultat',description:'AQL '+aqlSvcLabel+' — '+aqlOp.replace('_',' ')+' (masse)',triggered_by:userId,created_at:now})
               await createNotification('planification',lotId,null,'Lot '+lot.numero_lot+' — AQL '+aqlSvcLabel+' : '+aqlOp.replace('_',' '),'aql_resultat')
               result.ok++

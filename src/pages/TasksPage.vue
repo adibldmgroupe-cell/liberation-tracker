@@ -124,6 +124,22 @@
 
       </div>
     </div>
+
+    <!-- ── MODAL AVIS AQL NON CONFORME ── -->
+    <div class="tp-ov" v-if="aqlAvisModal.show" @click.self="aqlAvisModal.show=false">
+      <div class="tp-modal">
+        <div class="tp-modal-hd">✗ AQL Non conforme — Remarque AQ</div>
+        <div class="tp-modal-ctx">{{aqlAvisModal.lotNum}} — AQL {{aqlAvisModal.aqlType==='fabrication'?'Fabrication':'Conditionnement'}}</div>
+        <label class="tp-modal-lbl">Remarque (obligatoire)</label>
+        <textarea class="tp-modal-ta" v-model="aqlAvisModal.avis" placeholder="Saisir la remarque AQ…" rows="3" autofocus></textarea>
+        <div class="tp-modal-err" v-if="aqlAvisModal.err">{{aqlAvisModal.err}}</div>
+        <div class="tp-modal-acts">
+          <button class="tp-btn-nok" @click="confirmAqlNonConforme" :disabled="aqlAvisModal.saving">{{aqlAvisModal.saving?'…':'Confirmer Non conforme'}}</button>
+          <button class="tp-btn-cancel" @click="aqlAvisModal.show=false">Annuler</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -465,14 +481,33 @@ export default {
       removeCatItem(item, cat)
     }
 
+    var aqlAvisModal = ref({ show:false, item:null, cat:null, avis:'', aqlType:'', lotNum:'', err:'', saving:false })
+
     var doAqlSaisir = async function(item, cat, resultat) {
+      if (resultat === 'non_conforme') {
+        aqlAvisModal.value = { show:true, item, cat, avis:'', aqlType:item.aqlType, lotNum:item.lotNum, err:'', saving:false }
+        return
+      }
       item.acting = true
       var u = await supabase.auth.getUser(); var uid = u.data.user.id; var n = new Date().toISOString()
-      var res = await supabase.from('aql_inspections').update({resultat:resultat,inspected_at:n,inspected_by:uid,request_ar_pending:false,result_ar_pending:true}).eq('id',item.aqlId)
+      var res = await supabase.from('aql_inspections').update({resultat:'conforme',avis_aq:'',inspected_at:n,inspected_by:uid,request_ar_pending:false,result_ar_pending:true}).eq('id',item.aqlId)
       if (res.error) { alert('Erreur : '+res.error.message); item.acting=false; return }
       var aLabel = item.aqlType==='fabrication'?'Fabrication':'Conditionnement'
-      await createNotification('planification',item.lotId,null,'Lot '+item.lotNum+' — AQL '+aLabel+' : '+resultat.replace('_',' '),'aql_resultat')
+      await createNotification('planification',item.lotId,null,'Lot '+item.lotNum+' — AQL '+aLabel+' : conforme','aql_resultat')
       removeCatItem(item, cat)
+    }
+
+    var confirmAqlNonConforme = async function() {
+      var m = aqlAvisModal.value
+      if (!m.avis.trim()) { m.err = 'La remarque est obligatoire.'; return }
+      m.saving = true; m.err = ''
+      var u = await supabase.auth.getUser(); var uid = u.data.user.id; var n = new Date().toISOString()
+      var res = await supabase.from('aql_inspections').update({resultat:'non_conforme',avis_aq:m.avis.trim(),inspected_at:n,inspected_by:uid,request_ar_pending:false,result_ar_pending:true}).eq('id',m.item.aqlId)
+      if (res.error) { m.err = res.error.message; m.saving=false; return }
+      var aLabel = m.aqlType==='fabrication'?'Fabrication':'Conditionnement'
+      await createNotification('planification',m.item.lotId,null,'Lot '+m.item.lotNum+' — AQL '+aLabel+' : non conforme','aql_resultat')
+      removeCatItem(m.item, m.cat)
+      m.show = false
     }
 
     // ── LOAD ─────────────────────────────────────────────────────────────
@@ -716,7 +751,7 @@ export default {
       svcLabel, isAdmin, selectedSvc, totalCount, loading, categories, load, SVC_LABELS_ALL,
       searchQuery, searchResultCount, isCatVisible, visibleGroups, getItemsForCat, getDocsForGroup,
       toggleSort, sortIcon, SAP_SHORT,
-      doDocAction, doDocReturn, doItemAction, doAqlSaisir
+      doDocAction, doDocReturn, doItemAction, doAqlSaisir, aqlAvisModal, confirmAqlNonConforme
     }
   }
 }
@@ -874,4 +909,18 @@ export default {
   .tp-grp-action{display:none}
   .tp-grp-sep{display:none}
 }
+
+/* ── MODAL AVIS AQL ── */
+.tp-ov{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:300}
+.tp-modal{background:#fff;border-radius:8px;padding:22px 24px;width:420px;max-width:96vw;box-shadow:0 12px 40px rgba(0,0,0,.18)}
+.tp-modal-hd{font-size:14px;font-weight:600;color:#A32D2D;margin-bottom:10px}
+.tp-modal-ctx{font-size:11px;color:#666;background:#f5f5f5;padding:5px 10px;border-radius:3px;margin-bottom:12px}
+.tp-modal-lbl{display:block;font-size:11px;color:#555;font-weight:500;margin-bottom:4px}
+.tp-modal-ta{width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;font-family:inherit;resize:vertical;outline:none}
+.tp-modal-ta:focus{border-color:#A32D2D}
+.tp-modal-err{font-size:12px;color:#A32D2D;margin-top:6px}
+.tp-modal-acts{display:flex;gap:8px;margin-top:14px}
+.tp-btn-nok{flex:1;padding:9px;background:#A32D2D;color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:500;cursor:pointer}
+.tp-btn-nok:hover:not(:disabled){background:#8a2020}
+.tp-btn-nok:disabled{opacity:.5;cursor:not-allowed}
 </style>
