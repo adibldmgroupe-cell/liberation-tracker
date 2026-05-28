@@ -3,7 +3,7 @@
     <div class="ph">
       <span class="pt">LOTS</span>
       <div class="ph-right">
-        <span class="pc" v-if="total">{{total}} lots</span>
+        <span class="pc" v-if="lots.length">{{filteredLots.length}} lot{{filteredLots.length!==1?'s':''}}<span class="pc-sub" v-if="filteredLots.length<lots.length"> / {{lots.length}}</span></span>
         <button class="btn-toggle" @click="showDates=!showDates">{{showDates?'Voir statuts':'Voir dates'}}</button>
         <button class="btn-exp" @click="doExportExcel">📥 Excel</button>
         <button class="btn-exp" @click="doExportPDF">📄 PDF</button>
@@ -608,7 +608,7 @@ export default {
 </script>
 <style scoped>
 .ph{display:flex;align-items:baseline;justify-content:space-between;padding-bottom:10px;border-bottom:2px solid #0a0a0a;margin-bottom:2px;flex-wrap:wrap;gap:8px}
-.pt{font-size:11px;font-weight:500;letter-spacing:1.5px}.pc{font-size:11px;color:#999;font-family:'SF Mono',monospace}
+.pt{font-size:11px;font-weight:500;letter-spacing:1.5px}.pc{font-size:11px;color:#999;font-family:'SF Mono',monospace}.pc-sub{font-size:10px;color:#bbb;margin-left:2px}
 .ph-right{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .btn-exp{font-size:11px;padding:4px 10px;border:1px solid #ddd;border-radius:3px;background:#fff;cursor:pointer;color:#666;font-family:inherit}.btn-exp:hover{background:#f5f5f5}
 .btn-toggle{font-size:11px;padding:4px 10px;border:1px solid #185FA5;border-radius:3px;background:#E6F1FB;cursor:pointer;color:#0C447C;font-family:inherit}.btn-toggle:hover{background:#d0e3f5}
