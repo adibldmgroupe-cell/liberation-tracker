@@ -1,326 +1,301 @@
 <template>
-  <div class="pdp-fab">
+  <div class="pdpf">
+
     <!-- ── HEADER ── -->
     <div class="ph">
-      <div class="ph-left">
+      <div class="ph-l">
         <span class="pt">PDP FABRICATION</span>
-        <div class="view-tabs">
+        <div class="vtabs">
           <button v-for="v in views" :key="v.key" class="vtab" :class="{active:activeView===v.key}" @click="activeView=v.key">
-            <span class="vtab-icon">{{v.icon}}</span>{{v.label}}
+            <span class="vtab-ic">{{v.icon}}</span>{{v.label}}
           </button>
         </div>
       </div>
-      <div class="ph-right">
+      <div class="ph-r">
         <div class="proc-tabs">
-          <button v-for="p in ['Tous',...processus.map(x=>x.nom_process)]" :key="p" class="proc-tab"
+          <button v-for="p in ['Tous',...processus.map(function(x){return x.nom_process})]" :key="p" class="proc-tab"
             :class="{active:filterProc===p}" @click="filterProc=p">{{p}}</button>
         </div>
-        <button class="btn-refresh" @click="loadAll" :class="{spinning:loading}">↻</button>
+        <button class="btn-ref" @click="loadAll" :class="{spin:loading}">↻</button>
       </div>
     </div>
 
-    <div v-if="loading && !ateliers.length" class="loading">Chargement…</div>
+    <!-- ════════════════════════════════════════════
+         VUE 1 — TABLEAU CROISÉ Date × Atelier
+    ════════════════════════════════════════════ -->
+    <div v-show="activeView==='tableau'">
 
-    <!-- ════════════════════════════════════════
-         VUE 1 — ATELIERS (cards)
-    ════════════════════════════════════════ -->
-    <div v-show="activeView==='ateliers'" class="ateliers-grid">
-      <div v-for="at in filteredAteliers" :key="at.id" class="at-card" :class="atClass(at)">
-        <div class="at-hd" :style="{borderTopColor: procColor(at.processus_id)}">
-          <div>
-            <div class="at-nom">{{at.nom_atelier}}</div>
-            <div class="at-proc">{{getProcNom(at.processus_id)}}</div>
-          </div>
-          <div class="at-badge" :style="{background:procColor(at.processus_id)+'22',color:procColor(at.processus_id)}">
-            {{getActiveCount(at.id)}} lot{{getActiveCount(at.id)>1?'s':''}} actif{{getActiveCount(at.id)>1?'s':''}}
-          </div>
+      <!-- Toolbar -->
+      <div class="tc-bar">
+        <div class="tc-nav">
+          <button class="tn" @click="navPeriod(-1)">◀</button>
+          <button class="tn tn-now" @click="goToday">Auj.</button>
+          <button class="tn" @click="navPeriod(1)">▶</button>
+          <span class="tc-range">{{rangeLabel}}</span>
         </div>
-
-        <!-- Lots actifs dans cet atelier -->
-        <div class="at-lots">
-          <div v-for="sf in getActiveFab(at.id)" :key="sf.id" class="at-lot-row">
-            <div class="alr-left">
-              <div class="alr-num">Lot {{sf.lots?.numero_lot||sf.lot_id}}</div>
-              <div class="alr-prod">{{sf.lots?.products?.description||'—'}}</div>
-            </div>
-            <div class="alr-mid">
-              <span class="alr-statut" :class="'st-'+sf.statut.toLowerCase().replace(/\s/g,'-')">{{sf.statut}}</span>
-              <span class="alr-dur">{{elapsedFab(sf)}}</span>
-            </div>
-            <div class="alr-right">
-              <button class="btn-sm" @click="openArretAtelier(sf)" title="Déclarer arrêt">⏸</button>
-              <button class="btn-sm btn-ok" @click="clotureAtelier(sf)" title="Clôturer">✓</button>
-            </div>
-          </div>
-          <div v-if="!getActiveFab(at.id).length" class="at-empty">Aucun lot en cours</div>
+        <div class="tc-pds">
+          <button v-for="p in PERIODS" :key="p.k" class="tpd" :class="{active:periode===p.k}" @click="setPeriode(p.k)">{{p.l}}</button>
         </div>
-
-        <!-- Arrêts actifs -->
-        <div class="at-arrets" v-if="getActiveArrets(at.id).length">
-          <div class="at-arrets-title">⚠ Arrêts en cours</div>
-          <div v-for="arr in getActiveArrets(at.id)" :key="arr.id" class="arr-row">
-            <span class="arr-motif">{{arr.motif}}</span>
-            <span class="arr-dur">{{elapsedArret(arr)}}</span>
-            <button class="btn-sm btn-ok" @click="closeArretAtelier(arr)">✓ Lever</button>
-          </div>
-        </div>
-
-        <!-- Actions -->
-        <div class="at-actions">
-          <button class="btn-act" @click="openFabModal(null, at.id)">+ Suivi lot</button>
-          <button class="btn-act btn-sec" @click="activeView='lotfab'; filterAtelier=at.id">Historique</button>
-        </div>
+        <input v-model="filterLot" class="tc-srch" placeholder="Lot ou produit…" />
+        <select v-model="filterStatutTC" class="tc-sel">
+          <option value="">Tous statuts</option>
+          <option value="encours">En cours</option>
+          <option value="cloture">Clôturé</option>
+          <option value="arret">Arrêt</option>
+        </select>
+        <button class="btn-add" @click="openFabModal(null,null)">+ Nouveau suivi</button>
       </div>
+
+      <!-- Légende -->
+      <div class="tc-leg">
+        <span class="tl tl-encours">■ En cours</span>
+        <span class="tl tl-cloture">■ Clôturé</span>
+        <span class="tl tl-arret">■ Arrêt</span>
+        <span class="tl tl-vide">■ Vide</span>
+      </div>
+
+      <!-- Tableau -->
+      <div class="tc-scroll" v-if="!loading||tableRows.length">
+        <table class="tc-tbl">
+          <thead>
+            <tr>
+              <th class="th-date">Date</th>
+              <th v-for="at in filteredAteliers" :key="at.id" class="th-at">
+                <div class="tha-nom">{{at.nom_atelier}}</div>
+                <div class="tha-sub">{{getProcNom(at.processus_id)}}</div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in tableRows" :key="row.iso" :class="{tr-today:row.isToday,'tr-we':row.isWeekend}">
+              <td class="td-date" :class="{tdd-today:row.isToday}">
+                <div class="dj">{{row.dayLabel}}</div>
+                <div class="dd">{{row.dateLabel}}</div>
+              </td>
+              <td v-for="cell in row.cells" :key="cell.at.id"
+                class="tc-cell"
+                :class="['c-'+cell.status, cell.dimmed?'c-dim':'', (cell.status!=='vide'&&!cell.dimmed)?'c-click':'']"
+                @click="cell.status!=='vide'&&!cell.dimmed&&openDetail(cell,row)">
+                <template v-if="cell.status!=='vide'&&!cell.dimmed">
+                  <div v-for="sf in cell.suivis.slice(0,3)" :key="sf.id" class="ci-sf">
+                    <span class="ci-dot" :class="'cid-'+sf.statut.toLowerCase().replace(/\s/g,'-')"></span>
+                    <span class="ci-lot">{{sf.lots&&sf.lots.numero_lot||sf.lot_id}}</span>
+                  </div>
+                  <div v-if="cell.suivis.length>3" class="ci-more">+{{cell.suivis.length-3}}</div>
+                </template>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div v-if="loading&&!tableRows.length" class="ldg">Chargement…</div>
+      <div v-if="!loading&&!filteredAteliers.length" class="ldg">Aucun atelier pour ce filtre</div>
     </div>
 
-    <!-- ════════════════════════════════════════
-         VUE 2 — GANTT PDP FABRICATION
-    ════════════════════════════════════════ -->
-    <div v-show="activeView==='gantt'" class="gantt-wrap">
-      <div class="gantt-toolbar">
-        <div class="gantt-period-btns">
-          <button v-for="p in ganttPeriods" :key="p.key" class="gp-btn" :class="{active:ganttPeriod===p.key}" @click="ganttPeriod=p.key;buildGantt()">{{p.label}}</button>
-        </div>
-        <div class="gantt-nav">
-          <button class="gnav" @click="ganttOffset--;buildGantt()">◀</button>
-          <button class="gnav gnav-today" @click="ganttOffset=0;buildGantt()">Aujourd'hui</button>
-          <button class="gnav" @click="ganttOffset++;buildGantt()">▶</button>
-        </div>
-        <div class="gantt-legend">
-          <span class="gl-item"><span class="gl-dot" style="background:#3b82f6"></span>Planifié</span>
-          <span class="gl-item"><span class="gl-dot" style="background:#10b981"></span>En cours</span>
-          <span class="gl-item"><span class="gl-dot" style="background:#6366f1"></span>Clôturé</span>
-          <span class="gl-item"><span class="gl-dot" style="background:#ef4444"></span>Arrêt</span>
-        </div>
-      </div>
-
-      <div class="gantt-body" ref="ganttEl">
-        <!-- Header dates -->
-        <div class="gantt-hd-row">
-          <div class="gantt-label-cell">Lot / Atelier</div>
-          <div class="gantt-dates-cell">
-            <div class="gantt-dates" :style="{width: ganttTotalW+'px'}">
-              <div v-for="grp in ganttGroups" :key="grp.label" class="gantt-grp-hd"
-                :style="{left:grp.left+'px',width:grp.width+'px'}">{{grp.label}}</div>
-              <div v-for="(d,i) in ganttDays" :key="i" class="gantt-day-hd"
-                :style="{left:i*ganttDayW+'px',width:ganttDayW+'px'}"
-                :class="{today:d.isToday,weekend:d.isWeekend}">{{d.label}}</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Rows par lot en fab -->
-        <div v-for="sf in ganttSuivis" :key="sf.id" class="gantt-row">
-          <div class="gantt-label-cell">
-            <div class="gantt-lot-nom">Lot {{sf.lots?.numero_lot||sf.lot_id}}</div>
-            <div class="gantt-lot-sub">{{sf.lots?.products?.description||'—'}} · {{getAtelierNom(sf.atelier_id)}}</div>
-          </div>
-          <div class="gantt-dates-cell">
-            <div class="gantt-track" :style="{width: ganttTotalW+'px'}">
-              <!-- Today line -->
-              <div class="gantt-today-line" v-if="todayOffset>=0" :style="{left:todayOffset*ganttDayW+'px'}"></div>
-              <!-- Bars -->
-              <div v-for="bar in getFabBars(sf)" :key="bar.key"
-                class="gantt-bar"
-                :style="{left:bar.left+'px',width:bar.width+'px',background:bar.color}"
-                :title="bar.title">
-                <span class="gantt-bar-lbl">{{bar.label}}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div v-if="!ganttSuivis.length" class="gantt-empty">Aucun suivi fabrication sur la période</div>
-      </div>
-    </div>
-
-    <!-- ════════════════════════════════════════
-         VUE 3 — SUIVI LOTS FAB (table)
-    ════════════════════════════════════════ -->
-    <div v-show="activeView==='lotfab'" class="lotfab-wrap">
-      <div class="sf-toolbar">
-        <input class="sf-search" v-model="sfSearch" placeholder="Rechercher lot, produit…">
-        <select class="sf-sel" v-model="filterAtelier">
+    <!-- ════════════════════════════════════════════
+         VUE 2 — SUIVI LOTS FAB (tableau)
+    ════════════════════════════════════════════ -->
+    <div v-show="activeView==='lotfab'">
+      <div class="t-bar">
+        <input class="t-srch" v-model="sfSearch" placeholder="Lot, produit…">
+        <select class="t-sel" v-model="filterAtelier">
           <option value="">Tous les ateliers</option>
           <option v-for="at in ateliers" :key="at.id" :value="at.id">{{at.nom_atelier}}</option>
         </select>
-        <select class="sf-sel" v-model="sfStatut">
+        <select class="t-sel" v-model="sfStatut">
           <option value="">Tous statuts</option>
-          <option>En cours</option>
-          <option>Clôturé</option>
-          <option>Arrêt</option>
+          <option>En cours</option><option>Clôturé</option><option>Arrêt</option>
         </select>
-        <select class="sf-sel" v-model="sfProc">
+        <select class="t-sel" v-model="sfProc">
           <option value="">Tous processus</option>
           <option v-for="p in processus" :key="p.id" :value="p.id">{{p.nom_process}}</option>
         </select>
-        <button class="btn-act" @click="openFabModal(null, null)">+ Nouveau suivi</button>
+        <button class="btn-add" @click="openFabModal(null,null)">+ Nouveau suivi</button>
       </div>
-
-      <div class="sf-table-wrap">
-      <table class="sf-table">
-        <thead>
-          <tr>
-            <th @click="sfSort('lots.numero_lot')" class="sortable">Lot <span class="sort-ic">{{sfSortIc('lots.numero_lot')}}</span></th>
-            <th @click="sfSort('lots.products.description')" class="sortable">Produit <span class="sort-ic">{{sfSortIc('lots.products.description')}}</span></th>
-            <th @click="sfSort('nom_atelier')" class="sortable">Atelier <span class="sort-ic">{{sfSortIc('nom_atelier')}}</span></th>
-            <th>Processus</th>
-            <th @click="sfSort('date_debut')" class="sortable">Début <span class="sort-ic">{{sfSortIc('date_debut')}}</span></th>
-            <th @click="sfSort('date_fin')" class="sortable">Fin <span class="sort-ic">{{sfSortIc('date_fin')}}</span></th>
-            <th>Durée</th>
-            <th @click="sfSort('statut')" class="sortable">Statut <span class="sort-ic">{{sfSortIc('statut')}}</span></th>
-            <th>Arrêts</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="sf in filteredSuivis" :key="sf.id" :class="'row-'+sf.statut.toLowerCase().replace(/\s/g,'-')">
-            <td class="td-mono">{{sf.lots?.numero_lot||sf.lot_id}}</td>
-            <td>{{sf.lots?.products?.description||'—'}}</td>
-            <td>{{getAtelierNom(sf.atelier_id)}}</td>
-            <td><span class="proc-chip" :style="{background:procColor(sf.processus_id)+'22',color:procColor(sf.processus_id)}">{{getProcNom(sf.processus_id)}}</span></td>
-            <td class="td-mono">{{fmtDate(sf.date_debut)}}</td>
-            <td class="td-mono">{{fmtDate(sf.date_fin)||'—'}}</td>
-            <td class="td-mono">{{calcDuree(sf)}}</td>
-            <td><span class="statut-chip" :class="'sc-'+sf.statut.toLowerCase().replace(/\s/g,'-')">{{sf.statut}}</span></td>
-            <td>
-              <span v-if="getArretCount(sf.id)" class="arr-badge">{{getArretCount(sf.id)}} arrêt{{getArretCount(sf.id)>1?'s':''}}</span>
-              <span v-else class="arr-none">—</span>
-            </td>
-            <td class="td-acts">
-              <button class="btn-sm" @click="openFabModal(sf, sf.atelier_id)" title="Modifier">✏</button>
-              <button class="btn-sm" @click="openArretAtelier(sf)" title="Arrêt" v-if="sf.statut==='En cours'">⏸</button>
-              <button class="btn-sm btn-ok" @click="clotureAtelier(sf)" title="Clôturer" v-if="sf.statut==='En cours'||sf.statut==='Arrêt'">✓</button>
-              <button class="btn-sm btn-del" @click="deleteFab(sf)" title="Supprimer">✕</button>
-            </td>
-          </tr>
-          <tr v-if="!filteredSuivis.length"><td colspan="10" class="no-data">Aucun suivi trouvé</td></tr>
-        </tbody>
-      </table>
+      <div class="dt-wrap">
+        <table class="dt">
+          <thead>
+            <tr>
+              <th class="srt" @click="sfSort('lots.numero_lot')">Lot <span class="si">{{sfSortIc('lots.numero_lot')}}</span></th>
+              <th class="srt" @click="sfSort('lots.products.description')">Produit <span class="si">{{sfSortIc('lots.products.description')}}</span></th>
+              <th class="srt" @click="sfSort('nom_atelier')">Atelier <span class="si">{{sfSortIc('nom_atelier')}}</span></th>
+              <th>Processus</th>
+              <th class="srt" @click="sfSort('date_debut')">Début <span class="si">{{sfSortIc('date_debut')}}</span></th>
+              <th class="srt" @click="sfSort('date_fin')">Fin <span class="si">{{sfSortIc('date_fin')}}</span></th>
+              <th>Durée</th>
+              <th class="srt" @click="sfSort('statut')">Statut <span class="si">{{sfSortIc('statut')}}</span></th>
+              <th>Arrêts</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="sf in filteredSuivis" :key="sf.id" :class="'row-'+sf.statut.toLowerCase().replace(/\s/g,'-')">
+              <td class="mono">{{sf.lots&&sf.lots.numero_lot||sf.lot_id}}</td>
+              <td class="sm">{{sf.lots&&sf.lots.products&&sf.lots.products.description||'—'}}</td>
+              <td class="sm">{{getAtelierNom(sf.atelier_id)}}</td>
+              <td><span class="prc-chip" :style="{background:procColor(sf.processus_id)+'33',color:procColor(sf.processus_id)}">{{getProcNom(sf.processus_id)}}</span></td>
+              <td class="mono">{{fmtDate(sf.date_debut)}}</td>
+              <td class="mono">{{fmtDate(sf.date_fin)||'—'}}</td>
+              <td class="mono">{{calcDuree(sf)}}</td>
+              <td><span class="schip" :class="'sc-'+sf.statut.toLowerCase().replace(/\s/g,'-')">{{sf.statut}}</span></td>
+              <td>
+                <span v-if="getArretCount(sf.id)" class="arr-badge">{{getArretCount(sf.id)}} arrêt{{getArretCount(sf.id)>1?'s':''}}</span>
+                <span v-else class="arr-none">—</span>
+              </td>
+              <td class="acts">
+                <button class="ia" @click="openFabModal(sf,sf.atelier_id)" title="Modifier">✏</button>
+                <button class="ia" @click="openArretAtelier(sf)" title="Arrêt" v-if="sf.statut==='En cours'">⏸</button>
+                <button class="ia ok" @click="clotureAtelier(sf)" title="Clôturer" v-if="sf.statut==='En cours'||sf.statut==='Arrêt'">✓</button>
+                <button class="ia del" @click="deleteFab(sf)" title="Supprimer">✕</button>
+              </td>
+            </tr>
+            <tr v-if="!filteredSuivis.length"><td colspan="10" class="empty">Aucun suivi trouvé</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
-    <!-- ════════════════════════════════════════
-         VUE 4 — ARRÊTS ATELIERS
-    ════════════════════════════════════════ -->
-    <div v-show="activeView==='arrets'" class="arrets-wrap">
-      <div class="arr-toolbar">
-        <input class="sf-search" v-model="arrSearch" placeholder="Rechercher motif, lot…">
-        <select class="sf-sel" v-model="arrFilterAt">
+    <!-- ════════════════════════════════════════════
+         VUE 3 — ARRÊTS ATELIERS
+    ════════════════════════════════════════════ -->
+    <div v-show="activeView==='arrets'">
+      <div class="t-bar">
+        <input class="t-srch" v-model="arrSearch" placeholder="Motif, lot…">
+        <select class="t-sel" v-model="arrFilterAt">
           <option value="">Tous les ateliers</option>
           <option v-for="at in ateliers" :key="at.id" :value="at.id">{{at.nom_atelier}}</option>
         </select>
-        <select class="sf-sel" v-model="arrFilterStatut">
+        <select class="t-sel" v-model="arrFilterStatut">
           <option value="">Tous</option>
           <option value="actif">En cours</option>
           <option value="cloture">Clôturés</option>
         </select>
         <div class="arr-stats">
           <span class="arr-stat">Total : <b>{{arretAtelier.length}}</b></span>
-          <span class="arr-stat arr-en-cours">En cours : <b>{{arretAtelier.filter(a=>!a.heure_fin).length}}</b></span>
+          <span class="arr-stat arr-ec">En cours : <b>{{arretAtelier.filter(function(a){return !a.heure_fin}).length}}</b></span>
           <span class="arr-stat">Durée moy. : <b>{{avgArretDuree}}</b></span>
         </div>
       </div>
-
-      <div class="sf-table-wrap">
-      <table class="sf-table">
-        <thead>
-          <tr>
-            <th>Lot</th>
-            <th>Atelier</th>
-            <th @click="arrSort('motif')" class="sortable">Motif <span class="sort-ic">{{arrSortIc('motif')}}</span></th>
-            <th @click="arrSort('heure_debut')" class="sortable">Début <span class="sort-ic">{{arrSortIc('heure_debut')}}</span></th>
-            <th>Fin</th>
-            <th @click="arrSort('duree')" class="sortable">Durée <span class="sort-ic">{{arrSortIc('duree')}}</span></th>
-            <th>Statut</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="arr in filteredArrets" :key="arr.id" :class="arr.heure_fin?'':'row-actif'">
-            <td class="td-mono">{{getLotNum(arr.lot_id)}}</td>
-            <td>{{getAtelierNom(arr.atelier_id)}}</td>
-            <td>{{arr.motif}}</td>
-            <td class="td-mono">{{fmtDateTime(arr.heure_debut)}}</td>
-            <td class="td-mono">{{arr.heure_fin?fmtDateTime(arr.heure_fin):'En cours'}}</td>
-            <td class="td-mono">{{arretDuree(arr)}}</td>
-            <td>
-              <span :class="arr.heure_fin?'statut-chip sc-cloture':'statut-chip sc-en-cours'">{{arr.heure_fin?'Clôturé':'En cours'}}</span>
-            </td>
-            <td class="td-acts">
-              <button v-if="!arr.heure_fin" class="btn-sm btn-ok" @click="closeArretAtelier(arr)">✓ Lever</button>
-              <button class="btn-sm btn-del" @click="deleteArret(arr)">✕</button>
-            </td>
-          </tr>
-          <tr v-if="!filteredArrets.length"><td colspan="8" class="no-data">Aucun arrêt trouvé</td></tr>
-        </tbody>
-      </table>
+      <div class="dt-wrap">
+        <table class="dt">
+          <thead>
+            <tr>
+              <th>Lot</th>
+              <th>Atelier</th>
+              <th class="srt" @click="arrSort('motif')">Motif <span class="si">{{arrSortIc('motif')}}</span></th>
+              <th class="srt" @click="arrSort('heure_debut')">Début <span class="si">{{arrSortIc('heure_debut')}}</span></th>
+              <th>Fin</th>
+              <th>Durée</th>
+              <th>Statut</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="arr in filteredArrets" :key="arr.id" :class="arr.heure_fin?'':'row-actif'">
+              <td class="mono">{{getLotNum(arr.lot_id)}}</td>
+              <td class="sm">{{getAtelierNom(arr.atelier_id)}}</td>
+              <td class="sm">{{arr.motif}}</td>
+              <td class="mono">{{fmtDateTime(arr.heure_debut)}}</td>
+              <td class="mono">{{arr.heure_fin?fmtDateTime(arr.heure_fin):'En cours'}}</td>
+              <td class="mono">{{arretDuree(arr)}}</td>
+              <td><span :class="arr.heure_fin?'schip sc-clôturé':'schip sc-en-cours'">{{arr.heure_fin?'Clôturé':'En cours'}}</span></td>
+              <td class="acts">
+                <button v-if="!arr.heure_fin" class="ia ok" @click="closeArretAtelier(arr)">✓ Lever</button>
+                <button class="ia del" @click="deleteArret(arr)">✕</button>
+              </td>
+            </tr>
+            <tr v-if="!filteredArrets.length"><td colspan="8" class="empty">Aucun arrêt</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
-    <!-- ══════════════════════════════════════════════
-         MODAL — NOUVEAU / EDIT SUIVI FAB
-    ══════════════════════════════════════════════ -->
-    <div v-if="fabModal.open" class="modal-overlay" @click.self="fabModal.open=false">
+    <!-- ═══ MODAL DÉTAIL CELLULE ═══ -->
+    <div class="ov" v-if="detailPanel.show" @click.self="detailPanel.show=false">
+      <div class="dp">
+        <div class="dp-hd">
+          <div>
+            <div class="dp-eq">{{detailPanel.atNom}}</div>
+            <div class="dp-date">{{detailPanel.dayLabel}} {{detailPanel.dateLabel}} · {{detailPanel.procNom}}</div>
+          </div>
+          <button class="dp-x" @click="detailPanel.show=false">✕</button>
+        </div>
+        <div class="dp-body">
+          <div v-if="detailPanel.suivis&&detailPanel.suivis.length" class="dp-sec">
+            <div class="dp-stitle">🏭 Réalisé (suivi fabrication)</div>
+            <div v-for="sf in detailPanel.suivis" :key="sf.id" class="dp-item">
+              <div class="dpi-row">
+                <span class="dpi-lot">{{sf.lots&&sf.lots.numero_lot||sf.lot_id}}</span>
+                <span class="dpi-chip" :class="'dchip-'+sf.statut.toLowerCase().replace(/\s/g,'-')">{{sf.statut}}</span>
+              </div>
+              <div class="dpi-prod">{{sf.lots&&sf.lots.products&&sf.lots.products.description||'—'}}</div>
+              <div class="dpi-meta">Début : {{fmtDate(sf.date_debut)}}<span v-if="sf.date_fin"> · Fin : {{fmtDate(sf.date_fin)}}</span><span v-else> · En cours</span></div>
+              <div class="dpi-meta">Durée : {{calcDuree(sf)}}</div>
+              <div class="dpi-meta" v-if="getArretCount(sf.id)">⚠ {{getArretCount(sf.id)}} arrêt(s)</div>
+              <div class="dpi-acts">
+                <button class="dpi-btn" @click="openFabModal(sf,sf.atelier_id);detailPanel.show=false">Modifier</button>
+                <button class="dpi-btn" @click="openArretAtelier(sf);detailPanel.show=false" v-if="sf.statut==='En cours'">Arrêt</button>
+                <button class="dpi-btn dpi-btn-ok" @click="clotureAtelier(sf);detailPanel.show=false" v-if="sf.statut==='En cours'||sf.statut==='Arrêt'">Clôturer</button>
+              </div>
+            </div>
+          </div>
+          <div v-else class="dp-empty">Aucun suivi pour cette cellule</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ MODAL NOUVEAU/EDIT SUIVI FAB ═══ -->
+    <div v-if="fabModal.open" class="ov" @click.self="fabModal.open=false">
       <div class="modal modal-fab">
         <div class="modal-hd">
-          <span>{{fabModal.id?'Modifier suivi':'Nouveau suivi fabrication'}}</span>
-          <button class="modal-close" @click="fabModal.open=false">✕</button>
+          {{fabModal.id?'Modifier suivi':'Nouveau suivi fabrication'}}
+          <button class="dp-x" @click="fabModal.open=false">✕</button>
         </div>
         <div class="modal-body">
           <div class="form-row">
-            <label>Lot *</label>
+            <label class="lbl">Lot *</label>
             <div class="lot-ac">
-              <input class="form-inp" v-model="fabModal.lotSearch" @input="searchLots" placeholder="N° lot ou produit…">
-              <div class="lot-suggestions" v-if="lotSuggestions.length">
-                <div v-for="l in lotSuggestions" :key="l.id" class="lot-sug" @click="selectLot(l)">
-                  <span class="ls-num">{{l.numero_lot}}</span>
-                  <span class="ls-prod">{{l.products?.description}}</span>
-                  <span class="ls-qty">{{l.quantite}} u.</span>
+              <input class="inp" v-model="fabModal.lotSearch" @input="searchLots" placeholder="N° lot ou produit…">
+              <div class="auto-list" v-if="lotSuggestions.length">
+                <div v-for="l in lotSuggestions" :key="l.id" class="auto-item" @mousedown.prevent="selectLot(l)">
+                  <span class="auto-code">{{l.numero_lot}}</span>
+                  <span class="auto-desc">{{l.products&&l.products.description||''}}</span>
                 </div>
               </div>
             </div>
-            <div v-if="fabModal.lotId" class="lot-selected">
-              ✓ Lot {{fabModal.lotNum}} — {{fabModal.lotProd}}
-            </div>
+            <div v-if="fabModal.lotId" class="sel-lot-info">✓ {{fabModal.lotNum}} — {{fabModal.lotProd}}</div>
           </div>
-
           <div class="form-row">
-            <label>Atelier *</label>
-            <select class="form-inp" v-model="fabModal.atelierId" @change="onAtelierChange">
+            <label class="lbl">Atelier *</label>
+            <select class="inp" v-model="fabModal.atelierId" @change="onAtelierChange">
               <option value="">— Choisir —</option>
               <option v-for="at in ateliers" :key="at.id" :value="at.id">{{at.nom_atelier}} ({{getProcNom(at.processus_id)}})</option>
             </select>
           </div>
-
           <div class="form-row">
-            <label>Processus *</label>
-            <select class="form-inp" v-model="fabModal.processusId">
+            <label class="lbl">Processus *</label>
+            <select class="inp" v-model="fabModal.processusId">
               <option value="">— Choisir —</option>
               <option v-for="p in processus" :key="p.id" :value="p.id">{{p.nom_process}}</option>
             </select>
           </div>
-
           <div class="form-row-2">
-            <div class="form-row">
-              <label>Date/heure début *</label>
-              <input type="datetime-local" class="form-inp" v-model="fabModal.dateDebut">
+            <div class="form-fld">
+              <label class="lbl">Date/heure début *</label>
+              <input type="datetime-local" class="inp" v-model="fabModal.dateDebut">
             </div>
-            <div class="form-row">
-              <label>Date/heure fin</label>
-              <input type="datetime-local" class="form-inp" v-model="fabModal.dateFin">
+            <div class="form-fld">
+              <label class="lbl">Date/heure fin</label>
+              <input type="datetime-local" class="inp" v-model="fabModal.dateFin">
             </div>
           </div>
-
           <div class="form-row">
-            <label>Statut</label>
-            <select class="form-inp" v-model="fabModal.statut">
-              <option>En cours</option>
-              <option>Clôturé</option>
-              <option>Arrêt</option>
+            <label class="lbl">Statut</label>
+            <select class="inp" v-model="fabModal.statut">
+              <option>En cours</option><option>Clôturé</option><option>Arrêt</option>
             </select>
           </div>
-
-          <div v-if="fabModal.err" class="form-err">{{fabModal.err}}</div>
+          <div v-if="fabModal.err" class="err">{{fabModal.err}}</div>
         </div>
         <div class="modal-ft">
           <button class="btn-cancel" @click="fabModal.open=false">Annuler</button>
@@ -329,29 +304,27 @@
       </div>
     </div>
 
-    <!-- ══════════════════════════════════════════════
-         MODAL — ARRÊT ATELIER
-    ══════════════════════════════════════════════ -->
-    <div v-if="arretModal.open" class="modal-overlay" @click.self="arretModal.open=false">
+    <!-- ═══ MODAL ARRÊT ATELIER ═══ -->
+    <div v-if="arretModal.open" class="ov" @click.self="arretModal.open=false">
       <div class="modal modal-arret">
         <div class="modal-hd">
-          <span>Déclarer arrêt — {{getAtelierNom(arretModal.atelierId)}}</span>
-          <button class="modal-close" @click="arretModal.open=false">✕</button>
+          Déclarer arrêt — {{getAtelierNom(arretModal.atelierId)}}
+          <button class="dp-x" @click="arretModal.open=false">✕</button>
         </div>
         <div class="modal-body">
           <div class="arr-lot-info">
-            <span class="alr-num">Lot {{arretModal.lotNum}}</span>
-            <span class="alr-prod">{{arretModal.lotProd}}</span>
+            <span class="mono">{{arretModal.lotNum}}</span>
+            <span class="sm">{{arretModal.lotProd}}</span>
           </div>
           <div class="form-row">
-            <label>Motif de l'arrêt *</label>
-            <textarea class="form-inp form-ta" v-model="arretModal.motif" rows="3" placeholder="Décrire la cause de l'arrêt…"></textarea>
+            <label class="lbl">Motif de l'arrêt *</label>
+            <textarea class="inp form-ta" v-model="arretModal.motif" rows="3" placeholder="Décrire la cause de l'arrêt…"></textarea>
           </div>
           <div class="form-row">
-            <label>Heure de début</label>
-            <input type="datetime-local" class="form-inp" v-model="arretModal.heureDebut">
+            <label class="lbl">Heure de début</label>
+            <input type="datetime-local" class="inp" v-model="arretModal.heureDebut">
           </div>
-          <div v-if="arretModal.err" class="form-err">{{arretModal.err}}</div>
+          <div v-if="arretModal.err" class="err">{{arretModal.err}}</div>
         </div>
         <div class="modal-ft">
           <button class="btn-cancel" @click="arretModal.open=false">Annuler</button>
@@ -369,9 +342,9 @@ import { supabase } from '../../supabase'
 
 export default {
   setup() {
-    // ─── STATE ────────────────────────────────────────────────
+    // ─── STATE ─────────────────────────────────────────────────
     var loading = ref(false)
-    var activeView = ref('ateliers')
+    var activeView = ref('tableau')
     var filterProc = ref('Tous')
     var filterAtelier = ref('')
     var sfSearch = ref('')
@@ -391,40 +364,37 @@ export default {
     var suiviFab = ref([])
     var arretAtelier = ref([])
 
-    // Gantt
-    var ganttPeriod = ref('1mois')
-    var ganttOffset = ref(0)
-    var ganttDays = ref([])
-    var ganttGroups = ref([])
-    var ganttDayW = 28
-    var ganttTotalW = ref(0)
-    var todayOffset = ref(-1)
-    var ganttEl = ref(null)
-    var ganttPeriods = [
-      { key:'2sem', label:'2 semaines' },
-      { key:'1mois', label:'1 mois' },
-      { key:'3mois', label:'3 mois' },
+    // Tableau croisé
+    var periode = ref('2sem')
+    var baseDate = ref(new Date().toISOString().slice(0,10))
+    var filterLot = ref('')
+    var filterStatutTC = ref('')
+
+    var PERIODS = [
+      { k:'1sem', l:'1 sem' },
+      { k:'2sem', l:'2 sem' },
+      { k:'1mois', l:'1 mois' }
     ]
 
-    // Timers
-    var fabTimers = ref({})
-    var arretTimers = ref({})
+    // Tick pour temps écoulés
     var now = ref(Date.now())
     var tickInt = null
 
+    // Detail panel
+    var detailPanel = ref({ show:false, atNom:'', procNom:'', dateLabel:'', dayLabel:'', suivis:[] })
+
     // Modals
-    var fabModal = ref({
-      open:false, id:null, lotId:null, lotNum:'', lotProd:'', lotSearch:'',
-      atelierId:'', processusId:'', dateDebut:'', dateFin:'', statut:'En cours',
-      err:'', saving:false
-    })
-    var arretModal = ref({
-      open:false, fabId:null, lot_id:null, lotNum:'', lotProd:'',
-      atelierId:null, motif:'', heureDebut:'', err:'', saving:false
-    })
+    var fabModal = ref({ open:false, id:null, lotId:null, lotNum:'', lotProd:'', lotSearch:'', atelierId:'', processusId:'', dateDebut:'', dateFin:'', statut:'En cours', err:'', saving:false })
+    var arretModal = ref({ open:false, fabId:null, lot_id:null, lotNum:'', lotProd:'', atelierId:null, motif:'', heureDebut:'', err:'', saving:false })
     var lotSuggestions = ref([])
 
-    // ─── LOAD ─────────────────────────────────────────────────
+    var views = [
+      { key:'tableau', icon:'⊞', label:'Planning' },
+      { key:'lotfab',  icon:'▥', label:'Suivi lots' },
+      { key:'arrets',  icon:'⚠', label:'Arrêts' }
+    ]
+
+    // ─── LOAD ──────────────────────────────────────────────────
     var loadAll = async function() {
       loading.value = true
       var [r1,r2,r3,r4] = await Promise.all([
@@ -439,147 +409,176 @@ export default {
           .is('deleted_at',null)
           .order('heure_debut',{ascending:false})
       ])
-      // Exclure le processus "Conditionnement" du PDP Fabrication
-      // (les salles de conditionnement primaire sont gérées dans PDP Conditionnement)
       if (!r1.error) {
-        processus.value = r1.data.filter(function(p){
-          return p.nom_process !== 'Conditionnement'
-        })
+        processus.value = r1.data.filter(function(p){ return p.nom_process !== 'Conditionnement' })
       }
       if (!r2.error) {
-        // Garder uniquement les ateliers dont le processus est de type fabrication
         var fabProcIds = {}
         processus.value.forEach(function(p){ fabProcIds[p.id] = true })
-        ateliers.value = r2.data.filter(function(at){
-          return fabProcIds[at.processus_id]
-        })
+        ateliers.value = r2.data.filter(function(at){ return fabProcIds[at.processus_id] })
       }
       if (!r3.error) suiviFab.value = r3.data
       if (!r4.error) arretAtelier.value = r4.data
       loading.value = false
-      buildGantt()
     }
 
-    // ─── GANTT ────────────────────────────────────────────────
-    var buildGantt = function() {
-      var periods = {'2sem':14,'1mois':30,'3mois':90}
-      var numDays = periods[ganttPeriod.value] || 30
-      var offset = ganttOffset.value
+    // ─── HELPERS ───────────────────────────────────────────────
+    var fmtDate = function(dt) {
+      if (!dt) return ''
+      return new Date(dt).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})
+    }
+    var fmtDateTime = function(dt) {
+      if (!dt) return ''
+      return new Date(dt).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})
+    }
+    var nowDate = function() { return new Date().toISOString().slice(0,10) }
 
-      var baseDate = new Date()
-      baseDate.setDate(baseDate.getDate() + offset * numDays)
-      // Align to monday for 2sem, first of month for others
-      if (ganttPeriod.value === '2sem') {
-        var dow = baseDate.getDay(); var diff = (dow===0?-6:1-dow)
-        baseDate.setDate(baseDate.getDate() + diff)
-      } else if (ganttPeriod.value !== '2sem') {
-        baseDate.setDate(1)
-      }
+    var getAtelierNom = function(id) {
+      var at = ateliers.value.find(function(a){ return a.id===id })
+      return at?at.nom_atelier:'—'
+    }
+    var getProcNom = function(id) {
+      var p = processus.value.find(function(x){ return x.id===id })
+      return p?p.nom_process:'—'
+    }
+    var procColor = function(id) {
+      var p = processus.value.find(function(x){ return x.id===id })
+      return p&&p.couleur?p.couleur:'#888'
+    }
+    var getLotNum = function(id) {
+      var sf = suiviFab.value.find(function(s){ return s.lot_id===id })
+      return sf&&sf.lots?sf.lots.numero_lot:String(id)
+    }
+    var getArretCount = function(fabId) {
+      var fab = suiviFab.value.find(function(s){ return s.id===fabId })
+      if (!fab) return 0
+      return arretAtelier.value.filter(function(a){ return a.lot_id===fab.lot_id && a.atelier_id===fab.atelier_id }).length
+    }
+    var calcDuree = function(sf) {
+      if (!sf.date_debut) return '—'
+      var start = new Date(sf.date_debut)
+      var end = sf.date_fin?new Date(sf.date_fin):new Date()
+      var diff = end-start
+      var h = Math.floor(diff/3600000)
+      var m = Math.floor((diff%3600000)/60000)
+      return h+'h'+String(m).padStart(2,'0')
+    }
+    var arretDuree = function(arr) {
+      if (!arr.heure_debut) return '—'
+      var start = new Date(arr.heure_debut)
+      var end = arr.heure_fin?new Date(arr.heure_fin):new Date()
+      var diff = end-start
+      var h = Math.floor(diff/3600000)
+      var m = Math.floor((diff%3600000)/60000)
+      return h>0?(h+'h'+String(m).padStart(2,'0')+'min'):(m+'min')
+    }
 
-      var days = []
-      var today = new Date(); today.setHours(0,0,0,0)
-      todayOffset.value = -1
-      for (var i=0; i<numDays; i++) {
-        var d = new Date(baseDate); d.setDate(baseDate.getDate()+i)
-        var dow2 = d.getDay()
-        var isToday = d.toDateString()===today.toDateString()
-        if (isToday) todayOffset.value = i
-        days.push({
-          iso: d.toISOString().slice(0,10),
-          label: ganttPeriod.value==='3mois' ? (i%7===0?d.getDate()+'':'') : d.getDate()+'',
-          isToday, isWeekend: dow2===0||dow2===6
+    // ─── TABLEAU CROISÉ ────────────────────────────────────────
+    var periodeNbDays = function() {
+      if (periode.value === '1sem') return 7
+      if (periode.value === '2sem') return 14
+      return 31
+    }
+    var setPeriode = function(k) { periode.value = k }
+    var navPeriod = function(dir) {
+      var n = periodeNbDays()
+      var d = new Date(baseDate.value)
+      d.setDate(d.getDate() + dir * n)
+      baseDate.value = d.toISOString().slice(0,10)
+    }
+    var goToday = function() { baseDate.value = nowDate() }
+
+    var dates = computed(function() {
+      var start = new Date(baseDate.value)
+      var n = periodeNbDays()
+      var today = nowDate()
+      var JOURS = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam']
+      var arr = []
+      for (var i = 0; i < n; i++) {
+        var d = new Date(start)
+        d.setDate(start.getDate() + i)
+        var iso = d.toISOString().slice(0,10)
+        var dow = d.getDay()
+        arr.push({
+          iso,
+          dayLabel: JOURS[dow],
+          dateLabel: String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'),
+          isToday: iso === today,
+          isWeekend: dow === 0 || dow === 6
         })
       }
-      ganttDays.value = days
-      ganttTotalW.value = numDays * ganttDayW
-
-      // Groups
-      var groups = []
-      if (ganttPeriod.value === '2sem') {
-        // Group by day name
-        days.forEach(function(d,i) {
-          var dt = new Date(d.iso)
-          var label = dt.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'})
-          groups.push({label, left:i*ganttDayW, width:ganttDayW})
-        })
-      } else if (ganttPeriod.value === '1mois') {
-        // Group by week
-        var weekStart = -1, weekLabel = ''
-        days.forEach(function(d,i) {
-          var dt = new Date(d.iso); var dow3 = dt.getDay()
-          if (dow3===1||i===0) {
-            if (weekStart>=0) groups.push({label:weekLabel,left:weekStart*ganttDayW,width:(i-weekStart)*ganttDayW})
-            weekStart=i
-            var wn = Math.ceil((dt.getDate()+(new Date(dt.getFullYear(),dt.getMonth(),1).getDay()||7)-1)/7)
-            weekLabel='S'+wn
-          }
-          if (i===days.length-1) groups.push({label:weekLabel,left:weekStart*ganttDayW,width:(i-weekStart+1)*ganttDayW})
-        })
-      } else {
-        // Group by month
-        var curMonth = -1, monthStart = 0
-        days.forEach(function(d,i) {
-          var dt = new Date(d.iso); var m = dt.getMonth()
-          if (m!==curMonth) {
-            if (curMonth>=0) groups.push({label:new Date(dt.getFullYear(),curMonth,1).toLocaleDateString('fr-FR',{month:'short'}),left:monthStart*ganttDayW,width:(i-monthStart)*ganttDayW})
-            curMonth=m; monthStart=i
-          }
-          if (i===days.length-1) groups.push({label:dt.toLocaleDateString('fr-FR',{month:'short'}),left:monthStart*ganttDayW,width:(i-monthStart+1)*ganttDayW})
-        })
-      }
-      ganttGroups.value = groups
-    }
-
-    var dayOffset = function(isoDate) {
-      if (!isoDate) return -1
-      return ganttDays.value.findIndex(function(d){ return d.iso===isoDate.slice(0,10) })
-    }
-
-    var getFabBars = function(sf) {
-      var bars = []
-      var colorMap = {'En cours':'#10b981','Clôturé':'#6366f1','Arrêt':'#ef4444'}
-      var color = colorMap[sf.statut] || '#3b82f6'
-      if (!sf.date_debut) return bars
-      var startOff = dayOffset(sf.date_debut)
-      var endOff = sf.date_fin ? dayOffset(sf.date_fin) : dayOffset(new Date().toISOString())
-      if (startOff < 0 && endOff < 0) return bars
-      var left = Math.max(0, startOff) * ganttDayW
-      var right = Math.min(ganttDays.value.length-1, endOff) * ganttDayW + ganttDayW - 2
-      if (right < 0) return bars
-      bars.push({
-        key:'fab-'+sf.id, left, width:Math.max(4,right-left),
-        color, label: 'Lot '+(sf.lots?.numero_lot||sf.lot_id),
-        title: (sf.lots?.numero_lot||sf.lot_id)+' · '+sf.statut
-      })
-      return bars
-    }
-
-    var ganttSuivis = computed(function() {
-      return suiviFab.value.filter(function(sf) {
-        if (!sf.date_debut) return false
-        var start = sf.date_debut.slice(0,10)
-        var end = sf.date_fin ? sf.date_fin.slice(0,10) : new Date().toISOString().slice(0,10)
-        var gStart = ganttDays.value[0]?.iso
-        var gEnd = ganttDays.value[ganttDays.value.length-1]?.iso
-        return gStart && gEnd && start <= gEnd && end >= gStart
-      })
+      return arr
     })
 
-    // ─── COMPUTED ─────────────────────────────────────────────
+    var rangeLabel = computed(function() {
+      if (!dates.value.length) return ''
+      return dates.value[0].dateLabel + ' — ' + dates.value[dates.value.length-1].dateLabel
+    })
+
     var filteredAteliers = computed(function() {
       return ateliers.value.filter(function(at) {
-        if (filterProc.value==='Tous') return true
+        if (filterProc.value === 'Tous') return true
         var p = processus.value.find(function(x){ return x.id===at.processus_id })
-        return p && p.nom_process===filterProc.value
+        return p && p.nom_process === filterProc.value
       })
     })
 
+    var getCellStatus = function(suivis) {
+      if (!suivis.length) return 'vide'
+      if (suivis.some(function(s){ return s.statut==='Arrêt' })) return 'arret'
+      if (suivis.some(function(s){ return s.statut==='En cours' })) return 'encours'
+      if (suivis.some(function(s){ return s.statut==='Clôturé' })) return 'cloture'
+      return 'vide'
+    }
+
+    var tableRows = computed(function() {
+      return dates.value.map(function(d) {
+        var cells = filteredAteliers.value.map(function(at) {
+          // Suivis qui couvrent cette date pour cet atelier
+          var allSf = suiviFab.value.filter(function(sf) {
+            if (sf.atelier_id !== at.id) return false
+            if (!sf.date_debut) return false
+            var debut = sf.date_debut.slice(0,10)
+            var fin = sf.date_fin ? sf.date_fin.slice(0,10) : nowDate()
+            return debut <= d.iso && d.iso <= fin
+          })
+          var suivis
+          if (filterLot.value) {
+            var q = filterLot.value.toLowerCase()
+            suivis = allSf.filter(function(sf) {
+              var num = (sf.lots&&sf.lots.numero_lot||'').toLowerCase()
+              var desc = (sf.lots&&sf.lots.products&&sf.lots.products.description||'').toLowerCase()
+              return num.includes(q) || desc.includes(q)
+            })
+          } else {
+            suivis = allSf
+          }
+          var status = getCellStatus(suivis)
+          var dimmed = !!(filterStatutTC.value && filterStatutTC.value !== status && status !== 'vide')
+          return { at, suivis, status, dimmed }
+        })
+        return { iso:d.iso, dayLabel:d.dayLabel, dateLabel:d.dateLabel, isToday:d.isToday, isWeekend:d.isWeekend, cells }
+      })
+    })
+
+    var openDetail = function(cell, row) {
+      detailPanel.value = {
+        show:    true,
+        atNom:   cell.at.nom_atelier,
+        procNom: getProcNom(cell.at.processus_id),
+        dateLabel: row.dateLabel,
+        dayLabel:  row.dayLabel,
+        suivis:  cell.suivis
+      }
+    }
+
+    // ─── COMPUTED LISTES ───────────────────────────────────────
     var filteredSuivis = computed(function() {
       var list = suiviFab.value.filter(function(sf) {
         if (sfSearch.value) {
           var q = sfSearch.value.toLowerCase()
-          var num = (sf.lots?.numero_lot||'').toLowerCase()
-          var prod = (sf.lots?.products?.description||'').toLowerCase()
+          var num = (sf.lots&&sf.lots.numero_lot||'').toLowerCase()
+          var prod = (sf.lots&&sf.lots.products&&sf.lots.products.description||'').toLowerCase()
           if (!num.includes(q)&&!prod.includes(q)) return false
         }
         if (filterAtelier.value && sf.atelier_id!=filterAtelier.value) return false
@@ -589,8 +588,8 @@ export default {
       })
       list = list.slice().sort(function(a,b) {
         var va='', vb=''
-        if (sfSortCol.value==='lots.numero_lot') { va=a.lots?.numero_lot||''; vb=b.lots?.numero_lot||'' }
-        else if (sfSortCol.value==='lots.products.description') { va=a.lots?.products?.description||''; vb=b.lots?.products?.description||'' }
+        if (sfSortCol.value==='lots.numero_lot') { va=a.lots&&a.lots.numero_lot||''; vb=b.lots&&b.lots.numero_lot||'' }
+        else if (sfSortCol.value==='lots.products.description') { va=a.lots&&a.lots.products&&a.lots.products.description||''; vb=b.lots&&b.lots.products&&b.lots.products.description||'' }
         else if (sfSortCol.value==='nom_atelier') { va=getAtelierNom(a.atelier_id); vb=getAtelierNom(b.atelier_id) }
         else { va=a[sfSortCol.value]||''; vb=b[sfSortCol.value]||'' }
         var cmp = va<vb?-1:va>vb?1:0
@@ -603,7 +602,7 @@ export default {
       var list = arretAtelier.value.filter(function(arr) {
         if (arrSearch.value) {
           var q = arrSearch.value.toLowerCase()
-          if (!(arr.motif||'').toLowerCase().includes(q) && !getLotNum(arr.lot_id).toLowerCase().includes(q)) return false
+          if (!(arr.motif||'').toLowerCase().includes(q)&&!getLotNum(arr.lot_id).toLowerCase().includes(q)) return false
         }
         if (arrFilterAt.value && arr.atelier_id!=arrFilterAt.value) return false
         if (arrFilterStatut.value==='actif' && arr.heure_fin) return false
@@ -625,101 +624,13 @@ export default {
     var avgArretDuree = computed(function() {
       var closed = arretAtelier.value.filter(function(a){ return a.heure_fin })
       if (!closed.length) return '—'
-      var total = closed.reduce(function(acc,a){ return acc + (new Date(a.heure_fin)-new Date(a.heure_debut)) },0)
-      var avg = total/closed.length/60000
-      return Math.round(avg)+'min'
+      var total = closed.reduce(function(acc,a){ return acc+(new Date(a.heure_fin)-new Date(a.heure_debut)) },0)
+      return Math.round(total/closed.length/60000)+'min'
     })
 
-    // ─── HELPERS ──────────────────────────────────────────────
-    var getActiveFab = function(atelierId) {
-      return suiviFab.value.filter(function(sf){ return sf.atelier_id===atelierId && (sf.statut==='En cours'||sf.statut==='Arrêt') })
-    }
-    var getActiveCount = function(atelierId) { return getActiveFab(atelierId).length }
-    var getActiveArrets = function(atelierId) {
-      return arretAtelier.value.filter(function(a){ return a.atelier_id===atelierId && !a.heure_fin })
-    }
-    var getArretCount = function(fabId) {
-      var fab = suiviFab.value.find(function(s){ return s.id === fabId })
-      if (!fab) return 0
-      return arretAtelier.value.filter(function(a){ return a.lot_id === fab.lot_id && a.atelier_id === fab.atelier_id }).length
-    }
-    var getAtelierNom = function(id) {
-      var at = ateliers.value.find(function(a){ return a.id===id })
-      return at?at.nom_atelier:'—'
-    }
-    var getProcNom = function(id) {
-      var p = processus.value.find(function(x){ return x.id===id })
-      return p?p.nom_process:'—'
-    }
-    var procColor = function(id) {
-      var p = processus.value.find(function(x){ return x.id===id })
-      return p&&p.couleur?p.couleur:'#888'
-    }
-    var getLotNum = function(id) {
-      var sf = suiviFab.value.find(function(s){ return s.lot_id===id })
-      return sf&&sf.lots?sf.lots.numero_lot:String(id)
-    }
-
-    var atClass = function(at) {
-      var hasArret = getActiveArrets(at.id).length>0
-      var hasActive = getActiveCount(at.id)>0
-      if (hasArret) return 'at-arret'
-      if (hasActive) return 'at-active'
-      return 'at-idle'
-    }
-
-    var elapsedFab = function(sf) {
-      if (!sf.date_debut) return ''
-      var start = new Date(sf.date_debut)
-      var end = sf.date_fin?new Date(sf.date_fin):new Date(now.value)
-      var diff = Math.max(0, end-start)
-      var h = Math.floor(diff/3600000)
-      var m = Math.floor((diff%3600000)/60000)
-      return h>0?(h+'h'+String(m).padStart(2,'0')):(m+'min')
-    }
-
-    var elapsedArret = function(arr) {
-      if (!arr.heure_debut) return ''
-      var start = new Date(arr.heure_debut)
-      var diff = Math.max(0, new Date(now.value)-start)
-      var h = Math.floor(diff/3600000)
-      var m = Math.floor((diff%3600000)/60000)
-      var s = Math.floor((diff%60000)/1000)
-      return h>0?(h+'h'+String(m).padStart(2,'0')):(m+'min'+String(s).padStart(2,'0')+'s')
-    }
-
-    var arretDuree = function(arr) {
-      if (!arr.heure_debut) return '—'
-      var start = new Date(arr.heure_debut)
-      var end = arr.heure_fin?new Date(arr.heure_fin):new Date()
-      var diff = end-start
-      var h = Math.floor(diff/3600000)
-      var m = Math.floor((diff%3600000)/60000)
-      return h>0?(h+'h'+String(m).padStart(2,'0')+'min'):(m+'min')
-    }
-
-    var calcDuree = function(sf) {
-      if (!sf.date_debut) return '—'
-      var start = new Date(sf.date_debut)
-      var end = sf.date_fin?new Date(sf.date_fin):new Date()
-      var diff = end-start
-      var h = Math.floor(diff/3600000)
-      var m = Math.floor((diff%3600000)/60000)
-      return h+'h'+String(m).padStart(2,'0')
-    }
-
-    var fmtDate = function(dt) {
-      if (!dt) return ''
-      return new Date(dt).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})
-    }
-    var fmtDateTime = function(dt) {
-      if (!dt) return ''
-      return new Date(dt).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})
-    }
-
-    // Sort helpers
+    // ─── SORTS ─────────────────────────────────────────────────
     var sfSort = function(col) {
-      if (sfSortCol.value===col) sfSortDir.value = sfSortDir.value==='asc'?'desc':'asc'
+      if (sfSortCol.value===col) sfSortDir.value=sfSortDir.value==='asc'?'desc':'asc'
       else { sfSortCol.value=col; sfSortDir.value='asc' }
     }
     var sfSortIc = function(col) {
@@ -727,7 +638,7 @@ export default {
       return sfSortDir.value==='asc'?'↑':'↓'
     }
     var arrSort = function(col) {
-      if (arrSortCol.value===col) arrSortDir.value = arrSortDir.value==='asc'?'desc':'asc'
+      if (arrSortCol.value===col) arrSortDir.value=arrSortDir.value==='asc'?'desc':'asc'
       else { arrSortCol.value=col; arrSortDir.value='asc' }
     }
     var arrSortIc = function(col) {
@@ -744,64 +655,39 @@ export default {
       lotAcTimer = setTimeout(async function() {
         var res = await supabase.from('lots')
           .select('id,numero_lot,quantite,products(description)')
-          .or('numero_lot.ilike.%'+q+'%')
-          .limit(8)
+          .or('numero_lot.ilike.%'+q+'%').limit(8)
         if (!res.error) lotSuggestions.value = res.data
       }, 250)
     }
     var selectLot = function(l) {
       fabModal.value.lotId = l.id
       fabModal.value.lotNum = l.numero_lot
-      fabModal.value.lotProd = l.products?.description||''
+      fabModal.value.lotProd = l.products&&l.products.description||''
       fabModal.value.lotSearch = l.numero_lot
       lotSuggestions.value = []
     }
 
-    // ─── MODALS ───────────────────────────────────────────────
+    // ─── FAB CRUD ──────────────────────────────────────────────
     var openFabModal = function(sf, atelierId) {
-      var now2 = new Date()
-      var local = now2.toISOString().slice(0,16)
+      var now2 = new Date().toISOString().slice(0,16)
       if (sf) {
-        fabModal.value = {
-          open:true, id:sf.id,
-          lotId:sf.lot_id, lotNum:sf.lots?.numero_lot||'', lotProd:sf.lots?.products?.description||'',
-          lotSearch:sf.lots?.numero_lot||'',
-          atelierId:sf.atelier_id, processusId:sf.processus_id,
-          dateDebut:sf.date_debut?sf.date_debut.slice(0,16):'',
-          dateFin:sf.date_fin?sf.date_fin.slice(0,16):'',
-          statut:sf.statut, err:'', saving:false
-        }
+        fabModal.value = { open:true, id:sf.id, lotId:sf.lot_id, lotNum:sf.lots&&sf.lots.numero_lot||'', lotProd:sf.lots&&sf.lots.products&&sf.lots.products.description||'', lotSearch:sf.lots&&sf.lots.numero_lot||'', atelierId:sf.atelier_id, processusId:sf.processus_id, dateDebut:sf.date_debut?sf.date_debut.slice(0,16):'', dateFin:sf.date_fin?sf.date_fin.slice(0,16):'', statut:sf.statut, err:'', saving:false }
       } else {
-        fabModal.value = {
-          open:true, id:null,
-          lotId:null, lotNum:'', lotProd:'', lotSearch:'',
-          atelierId:atelierId||'',
-          processusId:'', dateDebut:local, dateFin:'', statut:'En cours',
-          err:'', saving:false
-        }
+        fabModal.value = { open:true, id:null, lotId:null, lotNum:'', lotProd:'', lotSearch:'', atelierId:atelierId||'', processusId:'', dateDebut:now2, dateFin:'', statut:'En cours', err:'', saving:false }
         if (atelierId) onAtelierChange()
       }
       lotSuggestions.value = []
     }
-
     var onAtelierChange = function() {
       var at = ateliers.value.find(function(a){ return a.id==fabModal.value.atelierId })
       if (at) fabModal.value.processusId = at.processus_id
     }
-
     var saveFab = async function() {
       if (!fabModal.value.lotId) { fabModal.value.err='Lot requis'; return }
       if (!fabModal.value.atelierId) { fabModal.value.err='Atelier requis'; return }
       if (!fabModal.value.processusId) { fabModal.value.err='Processus requis'; return }
       fabModal.value.saving = true; fabModal.value.err = ''
-      var payload = {
-        lot_id: fabModal.value.lotId,
-        atelier_id: fabModal.value.atelierId,
-        processus_id: fabModal.value.processusId,
-        date_debut: fabModal.value.dateDebut||null,
-        date_fin: fabModal.value.dateFin||null,
-        statut: fabModal.value.statut
-      }
+      var payload = { lot_id:fabModal.value.lotId, atelier_id:fabModal.value.atelierId, processus_id:fabModal.value.processusId, date_debut:fabModal.value.dateDebut||null, date_fin:fabModal.value.dateFin||null, statut:fabModal.value.statut }
       var res
       if (fabModal.value.id) {
         res = await supabase.from('suivi_fabrication').update(payload).eq('id',fabModal.value.id)
@@ -809,65 +695,38 @@ export default {
         res = await supabase.from('suivi_fabrication').insert(payload)
       }
       fabModal.value.saving = false
-      if (res.error) { fabModal.value.err = res.error.message; return }
+      if (res.error) { fabModal.value.err=res.error.message; return }
       fabModal.value.open = false
       await loadAll()
     }
-
     var clotureAtelier = async function(sf) {
-      var now2 = new Date().toISOString()
-      var res = await supabase.from('suivi_fabrication')
-        .update({ statut:'Clôturé', date_fin:now2 })
-        .eq('id', sf.id)
+      var res = await supabase.from('suivi_fabrication').update({ statut:'Clôturé', date_fin:new Date().toISOString() }).eq('id',sf.id)
       if (!res.error) await loadAll()
     }
-
     var deleteFab = async function(sf) {
       if (!confirm('Supprimer ce suivi ?')) return
-      var res = await supabase.from('suivi_fabrication')
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', sf.id)
+      var res = await supabase.from('suivi_fabrication').update({ deleted_at:new Date().toISOString() }).eq('id',sf.id)
       if (!res.error) await loadAll()
     }
 
-    // ─── ARRÊTS ATELIER ───────────────────────────────────────
+    // ─── ARRÊTS ────────────────────────────────────────────────
     var openArretAtelier = function(sf) {
       var now2 = new Date().toISOString().slice(0,16)
-      arretModal.value = {
-        open:true, fabId:sf.id, lot_id:sf.lot_id,
-        lotNum:sf.lots?.numero_lot||sf.lot_id,
-        lotProd:sf.lots?.products?.description||'',
-        atelierId:sf.atelier_id,
-        motif:'', heureDebut:now2,
-        err:'', saving:false
-      }
-      // Also set suivi to Arrêt
+      arretModal.value = { open:true, fabId:sf.id, lot_id:sf.lot_id, lotNum:sf.lots&&sf.lots.numero_lot||sf.lot_id, lotProd:sf.lots&&sf.lots.products&&sf.lots.products.description||'', atelierId:sf.atelier_id, motif:'', heureDebut:now2, err:'', saving:false }
     }
-
     var saveArret = async function() {
       if (!arretModal.value.motif.trim()) { arretModal.value.err='Motif requis'; return }
       arretModal.value.saving = true; arretModal.value.err = ''
-      var payload = {
-        atelier_id: arretModal.value.atelierId,
-        lot_id: arretModal.value.lot_id,
-        motif: arretModal.value.motif,
-        heure_debut: arretModal.value.heureDebut||new Date().toISOString()
-      }
+      var payload = { atelier_id:arretModal.value.atelierId, lot_id:arretModal.value.lot_id, motif:arretModal.value.motif, heure_debut:arretModal.value.heureDebut||new Date().toISOString() }
       var res = await supabase.from('atelier_arrets').insert(payload)
       if (res.error) { arretModal.value.err=res.error.message; arretModal.value.saving=false; return }
-      // Update suivi statut to Arrêt
       await supabase.from('suivi_fabrication').update({statut:'Arrêt'}).eq('id',arretModal.value.fabId)
-      arretModal.value.saving = false
-      arretModal.value.open = false
+      arretModal.value.saving = false; arretModal.value.open = false
       await loadAll()
     }
-
     var closeArretAtelier = async function(arr) {
-      var res = await supabase.from('atelier_arrets')
-        .update({ heure_fin: new Date().toISOString() })
-        .eq('id', arr.id)
+      var res = await supabase.from('atelier_arrets').update({ heure_fin:new Date().toISOString() }).eq('id',arr.id)
       if (!res.error) {
-        // If no more active arrets on this lot, restore suivi to En cours
         var remaining = arretAtelier.value.filter(function(a){ return a.lot_id===arr.lot_id && !a.heure_fin && a.id!==arr.id })
         if (!remaining.length) {
           var sf = suiviFab.value.find(function(s){ return s.lot_id===arr.lot_id && s.atelier_id===arr.atelier_id })
@@ -876,262 +735,229 @@ export default {
         await loadAll()
       }
     }
-
     var deleteArret = async function(arr) {
       if (!confirm('Supprimer cet arrêt ?')) return
       var res = await supabase.from('atelier_arrets').update({deleted_at:new Date().toISOString()}).eq('id',arr.id)
       if (!res.error) await loadAll()
     }
 
-    // ─── TICK ─────────────────────────────────────────────────
-    var tick = function() { now.value = Date.now() }
-
-    // ─── LIFECYCLE ────────────────────────────────────────────
+    // ─── LIFECYCLE ─────────────────────────────────────────────
     onMounted(function() {
       loadAll()
-      tickInt = setInterval(tick, 1000)
+      tickInt = setInterval(function(){ now.value = Date.now() }, 1000)
     })
-    onBeforeUnmount(function() {
-      clearInterval(tickInt)
-    })
+    onBeforeUnmount(function() { clearInterval(tickInt) })
 
     return {
-      loading, activeView, filterProc, filterAtelier, sfSearch, sfStatut, sfProc,
-      sfSortCol, sfSortDir, arrSearch, arrFilterAt, arrFilterStatut, arrSortCol, arrSortDir,
+      loading, activeView, views, PERIODS,
       processus, ateliers, suiviFab, arretAtelier,
-      ganttPeriod, ganttOffset, ganttDays, ganttGroups, ganttDayW, ganttTotalW, todayOffset,
-      ganttEl, ganttPeriods, fabTimers, arretTimers, now,
-      fabModal, arretModal, lotSuggestions,
-      filteredAteliers, filteredSuivis, filteredArrets, ganttSuivis, avgArretDuree,
-      views: [
-        {key:'ateliers', icon:'🏭', label:'Ateliers'},
-        {key:'gantt',    icon:'▦',  label:'Gantt Fab'},
-        {key:'lotfab',   icon:'▥',  label:'Suivi lots'},
-        {key:'arrets',   icon:'⚠',  label:'Arrêts'},
-      ],
-      loadAll, buildGantt, getFabBars,
-      getActiveFab, getActiveCount, getActiveArrets, getArretCount,
-      getAtelierNom, getProcNom, procColor, getLotNum,
-      atClass, elapsedFab, elapsedArret, arretDuree, calcDuree, fmtDate, fmtDateTime,
+      filterProc, filterAtelier, sfSearch, sfStatut, sfProc,
+      sfSortCol, sfSortDir, arrSearch, arrFilterAt, arrFilterStatut, arrSortCol, arrSortDir,
+      periode, baseDate, filterLot, filterStatutTC,
+      filteredAteliers, filteredSuivis, filteredArrets, avgArretDuree,
+      tableRows, rangeLabel, dates, detailPanel,
+      fabModal, arretModal, lotSuggestions, now,
+      fmtDate, fmtDateTime,
+      getAtelierNom, getProcNom, procColor, getLotNum, getArretCount, calcDuree, arretDuree,
+      setPeriode, navPeriod, goToday, openDetail,
       sfSort, sfSortIc, arrSort, arrSortIc,
       searchLots, selectLot,
       openFabModal, onAtelierChange, saveFab, clotureAtelier, deleteFab,
-      openArretAtelier, saveArret, closeArretAtelier, deleteArret,
+      openArretAtelier, saveArret, closeArretAtelier, deleteArret
     }
   }
 }
 </script>
 
 <style scoped>
-/* ── Base ── */
-.pdp-fab { font-family:'Inter',sans-serif; font-size:13px; padding:0 0 40px; }
+/* ── BASE ── */
+.pdpf { min-height:100%; background:#0b0b1c; color:#e0e0f0; font-family:'Inter',sans-serif; font-size:13px; }
 
-/* ── Header ── */
-.ph { display:flex; align-items:center; justify-content:space-between; padding-bottom:10px; border-bottom:2px solid #0a0a0a; margin-bottom:16px; flex-wrap:wrap; gap:8px; }
-.ph-left { display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
-.ph-right { display:flex; align-items:center; gap:8px; }
-.pt { font-size:11px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; }
+/* ── HEADER ── */
+.ph { display:flex; align-items:center; justify-content:space-between; padding-bottom:10px; border-bottom:2px solid #1a1a38; margin-bottom:14px; flex-wrap:wrap; gap:8px; }
+.ph-l { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.ph-r { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.pt { font-size:11px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:#a0a0c8; }
 
-/* ── View tabs ── */
-.view-tabs { display:flex; gap:4px; }
-.vtab { display:flex; align-items:center; gap:5px; padding:5px 12px; border:1px solid #d1d5db; border-radius:4px; background:#fff; font-size:12px; cursor:pointer; color:#555; transition:all .15s; }
-.vtab:hover { background:#f3f4f6; }
-.vtab.active { background:#0a0a0a; color:#fff; border-color:#0a0a0a; }
-.vtab-icon { font-size:13px; }
+.vtabs { display:flex; gap:3px; }
+.vtab { display:flex; align-items:center; gap:5px; padding:5px 12px; font-size:11px; border:1px solid #252545; background:#12122a; color:#8888b0; border-radius:3px; cursor:pointer; transition:.15s; }
+.vtab:hover { background:#1a1a35; color:#c0c0e8; }
+.vtab.active { background:#1e3a6e; color:#93c5fd; border-color:#3b82f6; }
+.vtab-ic { font-size:12px; }
 
-/* ── Proc tabs ── */
 .proc-tabs { display:flex; gap:3px; flex-wrap:wrap; }
-.proc-tab { padding:4px 10px; border-radius:3px; border:1px solid #e5e7eb; background:#fff; font-size:11px; cursor:pointer; color:#555; }
-.proc-tab.active { background:#0a0a0a; color:#fff; border-color:#0a0a0a; }
+.proc-tab { padding:4px 10px; font-size:11px; border:1px solid #252545; background:#12122a; color:#8888b0; border-radius:3px; cursor:pointer; }
+.proc-tab.active { background:#2d1f6e; color:#a78bfa; border-color:#7c3aed44; }
+.btn-ref { padding:4px 10px; font-size:16px; border:1px solid #252545; background:#12122a; color:#8888b0; border-radius:3px; cursor:pointer; }
+.btn-ref.spin { animation:spin .7s linear infinite; }
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 
-.btn-refresh { padding:5px 10px; border:1px solid #d1d5db; border-radius:4px; background:#fff; cursor:pointer; font-size:15px; line-height:1; transition:transform .3s; }
-.btn-refresh.spinning { animation:spin 1s linear infinite; }
-@keyframes spin { to{transform:rotate(360deg)} }
+/* ── TOOLBAR TC ── */
+.tc-bar { display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
+.tc-nav { display:flex; align-items:center; gap:4px; }
+.tn { padding:5px 10px; border:1px solid #252545; background:#12122a; color:#a0a0c8; border-radius:3px; cursor:pointer; font-size:11px; }
+.tn:hover { background:#1a1a35; color:#e0e0f0; }
+.tn-now { font-weight:600; color:#a78bfa; border-color:#7c3aed33; }
+.tc-range { font-size:12px; font-family:monospace; color:#a0a0c8; margin-left:6px; white-space:nowrap; }
+.tc-pds { display:flex; gap:3px; }
+.tpd { padding:5px 10px; font-size:11px; border:1px solid #252545; background:#12122a; color:#8888b0; border-radius:3px; cursor:pointer; }
+.tpd.active { background:#2d1f6e; color:#a78bfa; border-color:#7c3aed44; }
+.tc-srch { flex:1; min-width:150px; padding:6px 10px; border:1px solid #252545; background:#12122a; color:#e0e0f0; border-radius:3px; font-size:12px; outline:none; }
+.tc-srch:focus { border-color:#7c3aed; }
+.tc-sel { padding:6px 10px; border:1px solid #252545; background:#12122a; color:#a0a0c8; border-radius:3px; font-size:12px; cursor:pointer; }
+.btn-add { padding:6px 14px; background:#2d1f6e; color:#a78bfa; border:1px solid #7c3aed44; font-size:12px; border-radius:3px; cursor:pointer; white-space:nowrap; }
+.btn-add:hover { background:#3d2a8a; }
 
-.loading { text-align:center; padding:60px; color:#999; font-size:14px; }
+/* ── LÉGENDE ── */
+.tc-leg { display:flex; gap:14px; margin-bottom:10px; flex-wrap:wrap; }
+.tl { font-size:11px; display:flex; align-items:center; gap:4px; }
+.tl-encours { color:#fbbf24; }
+.tl-cloture { color:#34d399; }
+.tl-arret   { color:#f87171; }
+.tl-vide    { color:#3a3a5c; }
 
-/* ════ VUE 1 — ATELIERS ════ */
-.ateliers-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; }
+/* ── TABLEAU CROISÉ ── */
+.tc-scroll { overflow:auto; max-height:calc(100vh - 240px); border:1px solid #1a1a38; border-radius:6px; }
+.tc-tbl { border-collapse:collapse; min-width:max-content; width:100%; }
 
-.at-card { border:1px solid #e5e7eb; border-radius:6px; background:#fff; overflow:hidden; display:flex; flex-direction:column; }
-.at-card.at-active { border-color:#10b981; box-shadow:0 0 0 1px #10b98133; }
-.at-card.at-arret { border-color:#ef4444; box-shadow:0 0 0 1px #ef444433; }
-.at-card.at-idle { opacity:.85; }
+.tc-tbl thead tr { position:sticky; top:0; z-index:5; }
+.th-date { position:sticky; left:0; top:0; z-index:6; background:#07071a; padding:8px 12px; text-align:left; font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.5px; color:#606090; border-right:2px solid #1a1a38; border-bottom:2px solid #1a1a38; min-width:72px; }
+.th-at { background:#07071a; padding:8px 10px; text-align:left; border-bottom:2px solid #1a1a38; border-right:1px solid #151530; min-width:140px; max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tha-nom { font-size:11px; font-weight:600; color:#c8c8e8; }
+.tha-sub { font-size:9px; color:#5a5a80; margin-top:1px; }
 
-.at-hd { display:flex; align-items:center; justify-content:space-between; padding:12px 14px 10px; border-top:3px solid #888; }
-.at-nom { font-size:13px; font-weight:600; }
-.at-proc { font-size:11px; color:#888; margin-top:1px; }
-.at-badge { font-size:11px; font-weight:500; padding:3px 9px; border-radius:20px; }
+.tc-tbl tbody tr:hover td { background:#101028 !important; }
+.tr-today td { background:#111130 !important; }
+.tr-today .td-date { border-left:3px solid #7c3aed; }
+.tr-we td { background:#0c0c20 !important; }
 
-.at-lots { padding:0 14px 10px; display:flex; flex-direction:column; gap:6px; }
-.at-empty { color:#bbb; font-size:12px; padding:6px 0; text-align:center; font-style:italic; }
+.td-date { position:sticky; left:0; z-index:2; background:#0d0d22; padding:6px 10px; border-right:2px solid #1a1a38; border-bottom:1px solid #141430; white-space:nowrap; }
+.tdd-today { background:#121230 !important; }
+.dj { font-size:9px; color:#5a5a80; text-transform:uppercase; letter-spacing:.5px; }
+.dd { font-size:12px; font-weight:600; color:#c0c0e0; font-family:monospace; }
 
-.at-lot-row { display:flex; align-items:center; gap:8px; padding:7px 10px; background:#f9fafb; border-radius:4px; border:1px solid #f0f0f0; }
-.alr-left { flex:1; min-width:0; }
-.alr-num { font-size:12px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.alr-prod { font-size:11px; color:#666; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.alr-mid { display:flex; flex-direction:column; align-items:flex-end; gap:2px; }
-.alr-statut { font-size:10px; padding:2px 7px; border-radius:3px; font-weight:500; }
-.alr-statut.st-en-cours { background:#d1fae5; color:#065f46; }
-.alr-statut.st-arrêt, .alr-statut.st-arret { background:#fee2e2; color:#991b1b; }
-.alr-statut.st-clôturé, .alr-statut.st-cloture { background:#e0e7ff; color:#3730a3; }
-.alr-dur { font-size:10px; color:#888; font-variant-numeric:tabular-nums; }
-.alr-right { display:flex; gap:4px; }
+.tc-cell { padding:4px 6px; border-bottom:1px solid #141430; border-right:1px solid #151530; vertical-align:top; min-height:36px; height:36px; transition:background .12s; }
+.c-vide    { background:#0b0b1c; }
+.c-encours { background:#78350f22; border-left:2px solid #f59e0b; }
+.c-cloture { background:#064e3b22; border-left:2px solid #10b981; }
+.c-arret   { background:#7f1d1d22; border-left:2px solid #ef4444; }
+.c-click { cursor:pointer; }
+.c-click:hover { filter:brightness(1.3); }
+.c-dim { opacity:.2; }
 
-.at-arrets { padding:0 14px 10px; border-top:1px solid #fee2e2; background:#fff5f5; }
-.at-arrets-title { font-size:10px; font-weight:600; color:#ef4444; padding:6px 0 4px; text-transform:uppercase; letter-spacing:.5px; }
-.arr-row { display:flex; align-items:center; gap:6px; padding:4px 0; border-bottom:1px solid #fee2e2; }
-.arr-row:last-child { border-bottom:none; }
-.arr-motif { flex:1; font-size:11px; color:#374151; }
-.arr-dur { font-size:11px; font-weight:600; color:#ef4444; font-variant-numeric:tabular-nums; }
+.ci-sf { display:flex; align-items:center; gap:3px; }
+.ci-lot { font-size:10px; font-family:monospace; font-weight:600; color:#e0e0f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:120px; }
+.ci-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+.cid-en-cours { background:#fbbf24; }
+.cid-clôturé, .cid-cloture { background:#34d399; }
+.cid-arrêt, .cid-arret { background:#f87171; }
+.ci-more { font-size:9px; color:#6060a0; }
 
-.at-actions { padding:10px 14px; border-top:1px solid #f0f0f0; display:flex; gap:6px; margin-top:auto; }
-.btn-act { padding:6px 12px; border-radius:4px; border:none; background:#0a0a0a; color:#fff; font-size:12px; cursor:pointer; }
-.btn-act:hover { background:#333; }
-.btn-act.btn-sec { background:#f3f4f6; color:#374151; border:1px solid #d1d5db; }
-.btn-act.btn-sec:hover { background:#e5e7eb; }
+.ldg { padding:40px; text-align:center; color:#4a4a70; font-size:13px; }
 
-/* ════ GANTT ════ */
-.gantt-wrap { background:#fff; border:1px solid #e5e7eb; border-radius:6px; overflow:hidden; }
-.gantt-toolbar { display:flex; align-items:center; gap:12px; padding:10px 16px; border-bottom:1px solid #e5e7eb; flex-wrap:wrap; }
-.gantt-period-btns { display:flex; gap:3px; }
-.gp-btn { padding:4px 10px; border:1px solid #d1d5db; border-radius:3px; background:#fff; font-size:11px; cursor:pointer; color:#555; }
-.gp-btn.active { background:#0a0a0a; color:#fff; border-color:#0a0a0a; }
-.gantt-nav { display:flex; gap:3px; }
-.gnav { padding:4px 10px; border:1px solid #d1d5db; border-radius:3px; background:#fff; font-size:11px; cursor:pointer; }
-.gnav:hover { background:#f3f4f6; }
-.gnav-today { font-weight:600; }
-.gantt-legend { display:flex; gap:10px; margin-left:auto; flex-wrap:wrap; }
-.gl-item { display:flex; align-items:center; gap:4px; font-size:11px; color:#555; }
-.gl-dot { width:10px; height:10px; border-radius:2px; }
+/* ── TOOLBAR TABLES ── */
+.t-bar { display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
+.t-srch { flex:1; min-width:150px; padding:6px 10px; border:1px solid #252545; background:#12122a; color:#e0e0f0; border-radius:3px; font-size:12px; outline:none; }
+.t-srch:focus { border-color:#7c3aed; }
+.t-sel { padding:6px 10px; border:1px solid #252545; background:#12122a; color:#a0a0c8; border-radius:3px; font-size:12px; cursor:pointer; }
+.arr-stats { display:flex; gap:10px; margin-left:auto; flex-wrap:wrap; align-items:center; }
+.arr-stat { font-size:11px; color:#6060a0; }
+.arr-ec { color:#f87171; }
 
-.gantt-body { overflow-x:auto; }
-.gantt-hd-row, .gantt-row { display:flex; border-bottom:1px solid #f0f0f0; }
-.gantt-hd-row { background:#f9fafb; position:sticky; top:0; z-index:2; }
-.gantt-label-cell { width:200px; min-width:200px; padding:8px 12px; border-right:1px solid #e5e7eb; }
-.gantt-dates-cell { flex:1; position:relative; overflow:hidden; }
-.gantt-dates, .gantt-track { position:relative; height:100%; }
-.gantt-grp-hd { position:absolute; top:0; height:20px; line-height:20px; font-size:10px; font-weight:600; text-align:center; border-right:1px solid #d1d5db; color:#555; overflow:hidden; background:#f9fafb; }
-.gantt-day-hd { position:absolute; top:20px; height:20px; line-height:20px; font-size:9px; text-align:center; border-right:1px solid #f0f0f0; color:#888; overflow:hidden; }
-.gantt-day-hd.today { background:#eff6ff; color:#2563eb; font-weight:700; }
-.gantt-day-hd.weekend { background:#fafafa; color:#bbb; }
-.gantt-hd-row .gantt-dates-cell { min-height:40px; }
-.gantt-lot-nom { font-size:12px; font-weight:600; }
-.gantt-lot-sub { font-size:10px; color:#888; margin-top:1px; }
-.gantt-row { min-height:40px; }
-.gantt-track { min-height:40px; }
-.gantt-today-line { position:absolute; top:0; bottom:0; width:2px; background:#2563eb44; z-index:1; }
-.gantt-bar { position:absolute; top:8px; height:24px; border-radius:3px; overflow:hidden; display:flex; align-items:center; z-index:2; }
-.gantt-bar-lbl { font-size:10px; color:#fff; padding:0 6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:500; text-shadow:0 1px 2px rgba(0,0,0,.3); }
-.gantt-empty { padding:40px; text-align:center; color:#bbb; }
+/* ── DARK TABLES ── */
+.dt-wrap { overflow-x:auto; border:1px solid #1a1a38; border-radius:6px; }
+.dt { width:100%; border-collapse:collapse; font-size:12px; min-width:700px; }
+.dt thead tr { position:sticky; top:0; z-index:2; }
+.dt th { background:#07071a; padding:8px 10px; text-align:left; font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.4px; color:#6060a0; border-bottom:2px solid #1a1a38; white-space:nowrap; }
+.dt th.srt { cursor:pointer; user-select:none; }
+.dt th.srt:hover { background:#0f0f28; color:#a0a0c8; }
+.dt td { padding:8px 10px; border-bottom:1px solid #131330; color:#c0c0e0; vertical-align:middle; }
+.dt tr:hover td { background:#0f0f28; }
+.dt tr.row-en-cours td { background:#1a130022; }
+.dt tr.row-arrêt td, .dt tr.row-arret td { background:#1a060622; }
+.dt tr.row-clôturé td, .dt tr.row-cloture td { opacity:.7; }
+.dt tr.row-actif td { background:#1a060622; }
+.si { font-size:9px; color:#4a4a70; }
+.mono { font-family:monospace; font-size:11px; }
+.sm { font-size:11px; color:#9090b8; max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.acts { white-space:nowrap; }
+.empty { text-align:center; padding:30px; color:#3a3a60; font-size:13px; }
 
-/* ════ VUE 3 — LOT FAB ════ */
-.lotfab-wrap { }
-.sf-toolbar { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; align-items:center; }
-.sf-search { padding:6px 10px; border:1px solid #d1d5db; border-radius:4px; font-size:12px; flex:1; min-width:160px; }
-.sf-sel { padding:6px 10px; border:1px solid #d1d5db; border-radius:4px; font-size:12px; background:#fff; }
+.prc-chip { font-size:10px; padding:2px 7px; border-radius:3px; font-weight:500; }
+.schip { font-size:10px; padding:2px 7px; border-radius:8px; font-weight:500; }
+.sc-en-cours { background:#065f4622; color:#34d399; }
+.sc-clôturé, .sc-cloture { background:#30303055; color:#9090b8; }
+.sc-arrêt, .sc-arret { background:#7f1d1d33; color:#f87171; }
+.arr-badge { font-size:10px; background:#78350f33; color:#fbbf24; padding:2px 7px; border-radius:3px; }
+.arr-none { color:#3a3a60; }
 
-.sf-table { width:100%; border-collapse:collapse; font-size:12px; }
-.sf-table th { padding:8px 10px; text-align:left; background:#f9fafb; border-bottom:2px solid #e5e7eb; font-weight:600; font-size:11px; color:#374151; white-space:nowrap; }
-.sf-table td { padding:7px 10px; border-bottom:1px solid #f0f0f0; vertical-align:middle; }
-.sf-table tr:hover td { background:#f9fafb; }
-.sf-table tr.row-en-cours td { background:#f0fdf4; }
-.sf-table tr.row-arrêt td, .sf-table tr.row-arret td { background:#fff5f5; }
-.sf-table tr.row-clôturé td, .sf-table tr.row-cloture td { opacity:.75; }
-.no-data { text-align:center; padding:40px; color:#bbb; }
-.sortable { cursor:pointer; user-select:none; }
-.sortable:hover { background:#f0f0f0; }
-.sort-ic { color:#aaa; font-size:10px; }
-.td-mono { font-family:monospace; font-size:11px; }
-.td-acts { display:flex; gap:4px; white-space:nowrap; }
+.ia { background:none; border:none; cursor:pointer; font-size:12px; padding:3px 6px; border-radius:2px; opacity:.7; color:#a0a0c8; }
+.ia:hover { background:#1e1e3c; opacity:1; }
+.ia.ok { color:#34d399; }
+.ia.ok:hover { background:#064e3b33; }
+.ia.del { color:#f87171; }
+.ia.del:hover { background:#7f1d1d33; }
 
-.proc-chip { font-size:10px; padding:2px 7px; border-radius:3px; font-weight:500; }
-.statut-chip { font-size:10px; padding:2px 7px; border-radius:3px; font-weight:500; }
-.sc-en-cours { background:#d1fae5; color:#065f46; }
-.sc-arrêt, .sc-arret { background:#fee2e2; color:#991b1b; }
-.sc-clôturé, .sc-cloture { background:#e0e7ff; color:#3730a3; }
-.arr-badge { font-size:10px; background:#fef9c3; color:#92400e; padding:2px 7px; border-radius:3px; }
-.arr-none { color:#ccc; }
+/* ── MODAL DÉTAIL ── */
+.ov { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; z-index:200; }
+.dp { background:#14142e; border:1px solid #2a2a52; border-radius:10px; width:480px; max-width:96vw; max-height:88vh; display:flex; flex-direction:column; box-shadow:0 24px 60px rgba(0,0,0,.6); }
+.dp-hd { display:flex; align-items:flex-start; justify-content:space-between; padding:18px 20px 14px; border-bottom:1px solid #1e1e40; }
+.dp-eq { font-size:15px; font-weight:700; color:#e0e0f8; }
+.dp-date { font-size:12px; color:#7070a0; margin-top:2px; font-family:monospace; }
+.dp-x { background:none; border:none; color:#6060a0; font-size:18px; cursor:pointer; line-height:1; padding:2px 6px; }
+.dp-x:hover { color:#e0e0f0; }
+.dp-body { overflow-y:auto; padding:16px 20px 20px; display:flex; flex-direction:column; gap:12px; }
+.dp-sec { }
+.dp-stitle { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.8px; color:#6060a0; margin-bottom:8px; }
+.dp-item { background:#0e0e28; border:1px solid #1c1c3c; border-radius:6px; padding:12px; display:flex; flex-direction:column; gap:5px; margin-bottom:6px; }
+.dpi-row { display:flex; align-items:center; justify-content:space-between; }
+.dpi-lot { font-family:monospace; font-size:13px; font-weight:700; color:#e0e0f8; }
+.dpi-chip { font-size:10px; padding:2px 8px; border-radius:8px; font-weight:500; }
+.dchip-en-cours { background:#06402a44; color:#34d399; }
+.dchip-clôturé, .dchip-cloture { background:#30303055; color:#9090b8; }
+.dchip-arrêt, .dchip-arret { background:#5a050544; color:#f87171; }
+.dpi-prod { font-size:11px; color:#8080b0; }
+.dpi-meta { font-size:10px; font-family:monospace; color:#5a5a80; }
+.dpi-acts { display:flex; gap:6px; margin-top:4px; flex-wrap:wrap; }
+.dpi-btn { padding:4px 12px; border:1px solid #252545; background:#1a1a35; color:#a0a0c8; font-size:11px; border-radius:3px; cursor:pointer; }
+.dpi-btn:hover { background:#242445; color:#e0e0f0; }
+.dpi-btn-ok { border-color:#064e3b44; background:#064e3b22; color:#34d399; }
+.dpi-btn-ok:hover { background:#064e3b44; }
+.dp-empty { text-align:center; padding:20px; color:#4a4a70; font-size:13px; }
 
-/* ════ VUE 4 — ARRÊTS ════ */
-.arrets-wrap { }
-.arr-toolbar { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; align-items:center; }
-.arr-stats { display:flex; gap:12px; margin-left:auto; flex-wrap:wrap; }
-.arr-stat { font-size:11px; color:#555; }
-.arr-en-cours { color:#ef4444; }
-.row-actif td { background:#fff5f5; }
-
-/* ── Buttons ── */
-.btn-sm { padding:3px 7px; border:1px solid #d1d5db; border-radius:3px; background:#fff; font-size:11px; cursor:pointer; }
-.btn-sm:hover { background:#f3f4f6; }
-.btn-sm.btn-ok { border-color:#10b981; color:#10b981; }
-.btn-sm.btn-ok:hover { background:#d1fae5; }
-.btn-sm.btn-del { border-color:#ef4444; color:#ef4444; }
-.btn-sm.btn-del:hover { background:#fee2e2; }
-
-/* ════ MODALS ════ */
-.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; display:flex; align-items:center; justify-content:center; }
-.modal { background:#fff; border-radius:8px; box-shadow:0 20px 60px rgba(0,0,0,.3); display:flex; flex-direction:column; max-height:90vh; overflow:hidden; }
-.modal-fab { width:540px; max-width:95vw; }
-.modal-arret { width:460px; max-width:95vw; }
-.modal-hd { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid #e5e7eb; font-weight:600; font-size:13px; }
-.modal-close { background:none; border:none; font-size:18px; cursor:pointer; color:#888; line-height:1; }
-.modal-body { padding:20px; overflow-y:auto; display:flex; flex-direction:column; gap:14px; }
-.modal-ft { padding:14px 20px; border-top:1px solid #e5e7eb; display:flex; justify-content:flex-end; gap:8px; }
-
+/* ── MODALS FAB / ARRET ── */
+.modal { background:#14142e; border:1px solid #2a2a52; border-radius:10px; max-width:96vw; max-height:90vh; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 24px 60px rgba(0,0,0,.6); }
+.modal-fab { width:540px; }
+.modal-arret { width:460px; }
+.modal-hd { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid #1e1e40; font-weight:600; font-size:13px; color:#e0e0f8; }
+.modal-body { padding:20px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; }
+.modal-ft { padding:14px 20px; border-top:1px solid #1e1e40; display:flex; justify-content:flex-end; gap:8px; }
 .form-row { display:flex; flex-direction:column; gap:4px; }
 .form-row-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-.form-row label { font-size:11px; font-weight:600; color:#374151; text-transform:uppercase; letter-spacing:.5px; }
-.form-inp { padding:7px 10px; border:1px solid #d1d5db; border-radius:4px; font-size:13px; }
-.form-inp:focus { outline:none; border-color:#0a0a0a; }
-.form-ta { resize:vertical; font-family:inherit; }
-.form-err { color:#ef4444; font-size:12px; padding:6px 10px; background:#fff5f5; border-radius:4px; border:1px solid #fecaca; }
-
+.form-fld { display:flex; flex-direction:column; gap:4px; }
+.lbl { font-size:10px; font-weight:600; color:#6060a0; text-transform:uppercase; letter-spacing:.5px; }
+.inp { padding:7px 10px; border:1px solid #252545; background:#0e0e28; color:#e0e0f0; border-radius:3px; font-size:13px; font-family:inherit; width:100%; box-sizing:border-box; outline:none; }
+.inp:focus { border-color:#7c3aed; }
+.form-ta { resize:vertical; }
+.err { color:#f87171; font-size:12px; padding:6px 10px; background:#7f1d1d22; border-radius:3px; border:1px solid #f8717133; }
+.sel-lot-info { font-size:11px; color:#34d399; padding:4px 8px; background:#064e3b22; border-radius:3px; border:1px solid #34d39933; }
 .lot-ac { position:relative; }
-.lot-suggestions { position:absolute; top:100%; left:0; right:0; z-index:20; background:#fff; border:1px solid #d1d5db; border-radius:4px; box-shadow:0 4px 12px rgba(0,0,0,.1); max-height:180px; overflow-y:auto; }
-.lot-sug { display:flex; gap:8px; align-items:center; padding:8px 12px; cursor:pointer; border-bottom:1px solid #f0f0f0; }
-.lot-sug:hover { background:#f9fafb; }
-.ls-num { font-weight:600; font-size:12px; }
-.ls-prod { flex:1; color:#555; font-size:12px; }
-.ls-qty { font-size:11px; color:#888; }
-.lot-selected { font-size:12px; color:#10b981; font-weight:500; padding:4px 8px; background:#d1fae5; border-radius:3px; }
+.auto-list { position:absolute; top:100%; left:0; right:0; background:#14142e; border:1px solid #2a2a52; border-radius:4px; box-shadow:0 8px 24px rgba(0,0,0,.5); z-index:10; max-height:180px; overflow-y:auto; }
+.auto-item { display:flex; gap:8px; padding:7px 10px; cursor:pointer; font-size:12px; border-bottom:1px solid #1a1a38; }
+.auto-item:hover { background:#1a1a38; }
+.auto-code { font-family:monospace; font-weight:600; color:#a78bfa; min-width:70px; }
+.auto-desc { color:#8080b0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.arr-lot-info { display:flex; gap:8px; align-items:center; padding:8px 12px; background:#0e0e28; border-radius:4px; border:1px solid #1c1c3c; }
+.btn-cancel { padding:7px 16px; border:1px solid #252545; border-radius:3px; background:#1a1a35; color:#8080b0; font-size:13px; cursor:pointer; }
+.btn-cancel:hover { background:#222240; }
+.btn-save { padding:7px 20px; border:none; border-radius:3px; background:#2d1f6e; color:#a78bfa; font-size:13px; cursor:pointer; font-weight:500; }
+.btn-save:hover { background:#3d2a8a; }
+.btn-save:disabled { opacity:.4; cursor:not-allowed; }
 
-.arr-lot-info { display:flex; gap:8px; align-items:center; padding:8px 12px; background:#f9fafb; border-radius:4px; border:1px solid #e5e7eb; }
-
-.btn-cancel { padding:7px 16px; border:1px solid #d1d5db; border-radius:4px; background:#fff; font-size:13px; cursor:pointer; }
-.btn-cancel:hover { background:#f3f4f6; }
-.btn-save { padding:7px 20px; border:none; border-radius:4px; background:#0a0a0a; color:#fff; font-size:13px; cursor:pointer; font-weight:500; }
-.btn-save:hover { background:#333; }
-.btn-save:disabled { opacity:.5; cursor:not-allowed; }
-
-/* ── Table scroll wrapper ── */
-.sf-table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
-.sf-table { min-width:640px; }
-
-/* ══ RESPONSIVE MOBILE ══ */
 @media(max-width:768px){
-  .ph { flex-direction:column; align-items:flex-start; }
-  .ph-right { width:100%; justify-content:flex-start; }
-  .view-tabs { flex-wrap:wrap; }
-  .vtab { min-height:44px; flex:1; justify-content:center; }
-  .ateliers-grid { grid-template-columns:1fr; }
-  .at-actions { flex-wrap:wrap; }
-  .btn-act { min-height:44px; flex:1; }
-  .sf-toolbar { flex-direction:column; align-items:stretch; }
-  .sf-search, .sf-sel { width:100%; font-size:16px; min-height:40px; }
-  .arr-toolbar { flex-direction:column; align-items:stretch; }
-  .arr-stats { margin-left:0; justify-content:space-between; }
-  .btn-sm { min-height:36px; padding:5px 10px; }
-  .gantt-toolbar { flex-direction:column; align-items:flex-start; gap:8px; }
-  .gantt-legend { margin-left:0; }
-  .gantt-label-cell { width:140px; min-width:140px; }
+  .tc-bar { flex-direction:column; align-items:flex-start; }
+  .tc-srch { width:100%; }
   .form-row-2 { grid-template-columns:1fr; }
-  .modal-ft { flex-direction:column-reverse; }
-  .btn-save, .btn-cancel { width:100%; min-height:44px; }
-}
-@media(max-width:480px){
-  .sf-table { min-width:500px; font-size:11px; }
-  .sf-table th { padding:6px 7px; font-size:10px; }
-  .sf-table td { padding:5px 7px; }
+  .arr-stats { margin-left:0; }
 }
 </style>
