@@ -68,8 +68,8 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in tableRows" :key="row.iso" :class="{tr-today:row.isToday,'tr-we':row.isWeekend}">
-              <td class="td-date" :class="{tdd-today:row.isToday}">
+            <tr v-for="row in tableRows" :key="row.iso" :class="{'tr-today':row.isToday,'tr-we':row.isWeekend}">
+              <td class="td-date" :class="{'tdd-today':row.isToday}">
                 <div class="dj">{{row.dayLabel}}</div>
                 <div class="dd">{{row.dateLabel}}</div>
               </td>
