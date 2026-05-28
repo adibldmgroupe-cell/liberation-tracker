@@ -285,5 +285,6 @@ git checkout <bon_commit> -- <fichier>
 ## Déploiement
 
 - Push sur `main` → GitHub Actions build + deploy GitHub Pages automatiquement
-- Toujours push sans demander après chaque modification
+- **Toujours commiter ET pusher automatiquement** après chaque modification, sans demander de confirmation
+- Ne jamais attendre la validation de l'utilisateur pour `git add / git commit / git push`
 - Après push, attendre ~2 min et faire Ctrl+Shift+R pour vider le cache navigateur
