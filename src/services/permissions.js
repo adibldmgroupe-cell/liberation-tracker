@@ -45,6 +45,8 @@ export function getPermissionForBulkAction(action) {
     doc_da_pc_verifier:'verifier_da_pc', doc_da_micro_verifier:'verifier_da_micro',
     doc_if_approuver:'approuver_if', doc_ic_approuver:'approuver_ic',
     doc_da_pc_approuver:'approuver_da_pc', doc_da_micro_approuver:'approuver_da_micro',
+    ccl_transmettre:'emettre_ccl', ccl_liberer:'approuver_ccl', ccl_retourner:'retourner_document', ccl_reemettre:'emettre_ccl',
+    ar_doc_ccl:'accuser_reception_document',
     doc_if_retour_emetteur:'retourner_document', doc_ic_retour_emetteur:'retourner_document',
     doc_da_pc_retour_emetteur:'retourner_document', doc_da_micro_retour_emetteur:'retourner_document',
     doc_if_retour_aq:'retourner_document', doc_ic_retour_aq:'retourner_document',

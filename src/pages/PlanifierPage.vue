@@ -180,6 +180,7 @@ export default {
             { lot_id: lotId, type_document: 'ic', is_applicable: true, is_required: true, service_emetteur: 'conditionnement' },
             { lot_id: lotId, type_document: 'da_pc', is_applicable: true, is_required: true, service_emetteur: 'lcq' },
             { lot_id: lotId, type_document: 'da_micro', is_applicable: false, is_required: false, service_emetteur: 'lcq' },
+            { lot_id: lotId, type_document: 'ccl', is_applicable: true, is_required: true, service_emetteur: 'aq' },
           ])
           await supabase.from('liberation_dossiers').insert({ lot_id: lotId, da_micro_applicable: false })
           await supabase.from('orders_of').insert({ lot_id: lotId, statut: 'planifie', etape_circuit: 'planification' })

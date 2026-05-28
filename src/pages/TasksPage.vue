@@ -160,7 +160,7 @@ export default {
     var SVC_LABELS = {planification:'Planification',stock:'Stock',aq:'Assurance Qualité',aq_dap:'AQ DAP',dt:'Direction Technique',fabrication:'Fabrication',conditionnement:'Conditionnement',lcq:'Laboratoire CQ',admin:'Administration'}
     var SVC_LABELS_ALL = {aq:'Assurance Qualité',dt:'Direction Technique',planification:'Planification',stock:'Stock',fabrication:'Fabrication',conditionnement:'Conditionnement',lcq:'Laboratoire CQ',aq_dap:'AQ DAP'}
     var SAP_SHORT = {quarantaine:'Quarantaine',sous_investigation:'Sous investigation',refuse:'Refusé',vide:''}
-    var DOC_TYPE_LABELS = {if:'IF',ic:'IC',da_pc:'DA Physico',da_micro:'DA Micro',rvp:'RVP',maj_if:'MàJ IF',maj_ic:'MàJ IC',maj_nmcl_of:'MàJ N. OF',maj_nmcl_oc:'MàJ N. OC',cloture_sap_of:'Clôt. OF',cloture_sap_oc:'Clôt. OC'}
+    var DOC_TYPE_LABELS = {if:'IF',ic:'IC',da_pc:'DA Physico',da_micro:'DA Micro',ccl:'CCL',rvp:'RVP',maj_if:'MàJ IF',maj_ic:'MàJ IC',maj_nmcl_of:'MàJ N. OF',maj_nmcl_oc:'MàJ N. OC',cloture_sap_of:'Clôt. OF',cloture_sap_oc:'Clôt. OC'}
     var SVC_MAP = {'if':'fabrication',ic:'conditionnement',da_pc:'lcq',da_micro:'lcq',maj_if:'fabrication',maj_ic:'conditionnement',maj_nmcl_of:'planification',maj_nmcl_oc:'planification'}
     var FLOW = ['planification','stock','aq','dt','aq_dap']
     var AR_NEXT = {planification:'stock',stock:'aq',aq:'dt',dt:'aq_dap'}
@@ -362,9 +362,16 @@ export default {
       var typeKey = arItem.typeDocument
       var typeLabel = DOC_TYPE_LABELS[typeKey] || typeKey
       var action, actionClass, btnLabel, statut, canReturn, returnBtnLabel, returnLabel
-      if (svc==='aq') {
+      if (svc==='aq' && typeKey==='ccl') {
+        // CCL : AQ doit transmettre (non applicable ici car CCL AR vient du DT, mais par sécurité)
+        action='Transmettre au DT'; actionClass='act-blue'; btnLabel='↑ Transmettre'; statut='emis'
+        canReturn=false
+      } else if (svc==='aq') {
         action='Vérifier AQ → DT'; actionClass='act-blue'; btnLabel='✓ Valider'; statut='emis'
         canReturn=isAdm||canPerform('retourner_document'); returnBtnLabel='↩ Retourner'; returnLabel='Retourner à l\'émetteur'
+      } else if (svc==='dt' && typeKey==='ccl') {
+        action='Libérer le lot'; actionClass='act-purple'; btnLabel='✓ Libérer'; statut='emis'
+        canReturn=isAdm||canPerform('retourner_document'); returnBtnLabel='↩ Retour AQ'; returnLabel="Retourner à l'AQ"
       } else if (svc==='dt') {
         action='Approuver DT'; actionClass='act-purple'; btnLabel='✓ Approuver'; statut='approuve_aq'
         canReturn=isAdm||canPerform('retourner_document'); returnBtnLabel='↩ Retour AQ'; returnLabel='Retourner à l\'AQ'
@@ -372,7 +379,7 @@ export default {
         action='Rectifier et réémettre'; actionClass='act-red'; btnLabel='↑ Réémettre'; statut='retour_emetteur'
         canReturn=false
       }
-      var canAct = svc==='aq'?(isAdm||canPerform('verifier_'+typeKey)):svc==='dt'?(isAdm||canPerform('approuver_'+typeKey)):(isAdm||canPerform('emettre_'+typeKey))
+      var canAct = (svc==='aq'&&typeKey==='ccl')?(isAdm||canPerform('emettre_ccl')):svc==='aq'?(isAdm||canPerform('verifier_'+typeKey)):(svc==='dt'&&typeKey==='ccl')?(isAdm||canPerform('approuver_ccl')):svc==='dt'?(isAdm||canPerform('approuver_'+typeKey)):(isAdm||canPerform('emettre_'+typeKey))
       var newDoc = {key:'doc_'+arItem.docId,docId:arItem.docId,typeDocument:typeKey,statut:statut,
         lotId:arItem.lotId,lotNum:arItem.lotNum,prodDesc:arItem.prodDesc,prodCode:arItem.prodCode||'',statutSap:arItem.statutSap||'',
         action:action,actionClass:actionClass,sinceText:null,sinceClass:'',
@@ -406,7 +413,8 @@ export default {
         await supabase.from('document_movements').insert({document_id:d.docId,action:'retour',from_service:'aq',to_service:emSvc,motif_retour:motif,performed_by:uid,performed_at:n})
         if (emSvc) await createNotification(emSvc,d.lotId,d.docId,'Lot '+d.lotNum+' — '+d.typeDocument.toUpperCase()+' retourné pour rectification','document_retourne')
       } else if (svc==='dt') {
-        res = await supabase.from('liberation_documents').update({statut:'verification_aq',pending_ar_service:'aq',updated_at:n}).eq('id',d.docId)
+        var dtRetStatut = d.typeDocument === 'ccl' ? 'retour_emetteur' : 'verification_aq'
+        res = await supabase.from('liberation_documents').update({statut:dtRetStatut,pending_ar_service:'aq',updated_at:n}).eq('id',d.docId)
         if (res.error) { alert('Erreur : '+res.error.message); d.acting=false; return }
         await supabase.from('document_movements').insert({document_id:d.docId,action:'retour',from_service:'dt',to_service:'aq',motif_retour:motif,performed_by:uid,performed_at:n})
         await createNotification('aq',d.lotId,d.docId,'Lot '+d.lotNum+' — '+d.typeDocument.toUpperCase()+' retourné par DT','document_retourne')
@@ -419,7 +427,13 @@ export default {
       var u = await supabase.auth.getUser(); var uid = u.data.user.id; var n = new Date().toISOString()
       var svc = selectedSvc.value
       var res
-      if (svc==='aq') {
+      if (svc==='aq' && d.typeDocument==='ccl') {
+        // CCL : AQ transmet directement au DT
+        res = await supabase.from('liberation_documents').update({statut:'emis',emitted_at:n,emitted_by:uid,pending_ar_service:'dt',updated_at:n}).eq('id',d.docId)
+        if (res.error) { alert('Erreur : '+res.error.message); d.acting=false; return }
+        await supabase.from('document_movements').insert({document_id:d.docId,action:'emission',from_service:'aq',to_service:'dt',performed_by:uid,performed_at:n})
+        await createNotification('dt',d.lotId,d.docId,'Lot '+d.lotNum+' — CCL transmis au DT','document_transmis')
+      } else if (svc==='aq') {
         res = await supabase.from('liberation_documents').update({statut:'approuve_aq',pending_ar_service:'dt',updated_at:n}).eq('id',d.docId)
         if (res.error) { alert('Erreur : '+res.error.message); d.acting=false; return }
         await supabase.from('document_movements').insert({document_id:d.docId,action:'approbation',from_service:'aq',to_service:'dt',performed_by:uid,performed_at:n})
@@ -428,13 +442,21 @@ export default {
         res = await supabase.from('liberation_documents').update({statut:'approuve_dt',approved_at:n,pending_ar_service:null,updated_at:n}).eq('id',d.docId)
         if (res.error) { alert('Erreur : '+res.error.message); d.acting=false; return }
         await supabase.from('document_movements').insert({document_id:d.docId,action:'approbation',from_service:'dt',performed_by:uid,performed_at:n})
-        await createNotification('aq',d.lotId,d.docId,'Lot '+d.lotNum+' — '+d.typeDocument.toUpperCase()+' approuvé DT','document_approuve')
-        if (SVC_MAP[d.typeDocument]) await createNotification(SVC_MAP[d.typeDocument],d.lotId,d.docId,'Lot '+d.lotNum+' — '+d.typeDocument.toUpperCase()+' approuvé DT','document_approuve')
+        if (d.typeDocument === 'ccl') {
+          await supabase.from('lots').update({statut_sap:'accepte',date_liberation:n,updated_at:n}).eq('id',d.lotId)
+          await supabase.from('liberation_dossiers').update({statut:'libere',if_approved:true,ic_approved:true,da_pc_approved:true,deviations_closed:true,pieces_complementaires_ok:true,updated_at:n}).eq('lot_id',d.lotId)
+          await createNotification('aq',d.lotId,d.docId,'Lot '+d.lotNum+' — Lot libéré par le DT','lot_libere')
+        } else {
+          await createNotification('aq',d.lotId,d.docId,'Lot '+d.lotNum+' — '+d.typeDocument.toUpperCase()+' approuvé DT','document_approuve')
+          if (SVC_MAP[d.typeDocument]) await createNotification(SVC_MAP[d.typeDocument],d.lotId,d.docId,'Lot '+d.lotNum+' — '+d.typeDocument.toUpperCase()+' approuvé DT','document_approuve')
+        }
       } else {
-        res = await supabase.from('liberation_documents').update({statut:'emis',emitted_at:n,emitted_by:uid,pending_ar_service:'aq',updated_at:n}).eq('id',d.docId)
+        var pendingAfterRect = d.typeDocument === 'ccl' ? 'dt' : 'aq'
+        var toSvcRect = d.typeDocument === 'ccl' ? 'dt' : 'aq'
+        res = await supabase.from('liberation_documents').update({statut:'emis',emitted_at:n,emitted_by:uid,pending_ar_service:pendingAfterRect,updated_at:n}).eq('id',d.docId)
         if (res.error) { alert('Erreur : '+res.error.message); d.acting=false; return }
-        await supabase.from('document_movements').insert({document_id:d.docId,action:'rectification',from_service:SVC_MAP[d.typeDocument]||'',to_service:'aq',performed_by:uid,performed_at:n})
-        await createNotification('aq',d.lotId,d.docId,'Lot '+d.lotNum+' — '+d.typeDocument.toUpperCase().replace('_',' ')+' rectifié et réémis','document_transmis')
+        await supabase.from('document_movements').insert({document_id:d.docId,action:'rectification',from_service:SVC_MAP[d.typeDocument]||'',to_service:toSvcRect,performed_by:uid,performed_at:n})
+        await createNotification(toSvcRect,d.lotId,d.docId,'Lot '+d.lotNum+' — '+d.typeDocument.toUpperCase().replace('_',' ')+' rectifié et réémis','document_transmis')
       }
       removeDocItem(d, grp, cat)
     }
@@ -567,7 +589,7 @@ export default {
       if (svc==='aq') {
         var daqRes = await supabase.from('liberation_documents')
           .select('id,type_document,statut,lot_id,updated_at')
-          .in('statut',['emis','verification_aq']).eq('is_applicable',true).is('pending_ar_service',null).limit(500)
+          .in('statut',['emis','verification_aq']).eq('is_applicable',true).is('pending_ar_service',null).neq('type_document','ccl').limit(500)
         docRaw = daqRes.data||[]
         var daqMap = await getLotsMap(docRaw.map(function(d){return d.lot_id}))
         var grpMap = {}
@@ -586,6 +608,23 @@ export default {
             action:lbl,actionClass:actCls,sinceText:since?since.text:null,sinceClass:since?since.cls:'',
             canAct:canAct,btnLabel:'✓ Valider',
             canReturn:canReturn,returnBtnLabel:'↩ Retourner',returnLabel:'Retourner à l\'émetteur',
+            showReturnInput:false,returnMotif:'',acting:false})
+        })
+        // CCL non émis (AQ doit transmettre au DT)
+        var cclAqRes = await supabase.from('liberation_documents')
+          .select('id,type_document,statut,lot_id,updated_at')
+          .eq('type_document','ccl').eq('statut','non_emis').eq('is_applicable',true).limit(200)
+        var cclAqMap = await getLotsMap((cclAqRes.data||[]).map(function(d){return d.lot_id}))
+        ;(cclAqRes.data||[]).forEach(function(d){
+          var l=cclAqMap[d.lot_id]; if(!l) return
+          var since=fmtSince(d.updated_at)
+          var canAct=isAdm||canPerform('emettre_ccl')
+          docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',statutSap:l.statut_sap||''})
+          if(!grpMap['ccl']) grpMap['ccl']=makeGrp('ccl','CCL','Transmettre au DT')
+          grpMap['ccl'].docs.push({key:'doc_'+d.id,docId:d.id,typeDocument:'ccl',statut:d.statut,
+            lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',statutSap:l.statut_sap||'',
+            action:'Transmettre au DT',actionClass:'act-blue',sinceText:since?since.text:null,sinceClass:since?since.cls:'',
+            canAct:canAct,btnLabel:'↑ Transmettre',canReturn:false,
             showReturnInput:false,returnMotif:'',acting:false})
         })
         docCat.groups = Object.values(grpMap)
@@ -609,6 +648,25 @@ export default {
             action:'Approuver DT',actionClass:'act-purple',sinceText:since?since.text:null,sinceClass:since?since.cls:'',
             canAct:canAct,btnLabel:'✓ Approuver',
             canReturn:canReturn,returnBtnLabel:'↩ Retour AQ',returnLabel:'Retourner à l\'AQ',
+            showReturnInput:false,returnMotif:'',acting:false})
+        })
+        // CCL émis en attente de libération DT
+        var cclDtRes = await supabase.from('liberation_documents')
+          .select('id,type_document,statut,lot_id,updated_at')
+          .eq('type_document','ccl').eq('statut','emis').eq('is_applicable',true).is('pending_ar_service',null).limit(200)
+        var cclDtMap = await getLotsMap((cclDtRes.data||[]).map(function(d){return d.lot_id}))
+        ;(cclDtRes.data||[]).forEach(function(d){
+          var l=cclDtMap[d.lot_id]; if(!l) return
+          var since=fmtSince(d.updated_at)
+          var canAct=isAdm||canPerform('approuver_ccl')
+          var canReturn=isAdm||canPerform('retourner_document')
+          docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',statutSap:l.statut_sap||''})
+          if(!grpMapDt['ccl']) grpMapDt['ccl']=makeGrp('ccl','CCL','Libérer le lot')
+          grpMapDt['ccl'].docs.push({key:'doc_'+d.id,docId:d.id,typeDocument:'ccl',statut:d.statut,
+            lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',statutSap:l.statut_sap||'',
+            action:'Libérer le lot',actionClass:'act-purple',sinceText:since?since.text:null,sinceClass:since?since.cls:'',
+            canAct:canAct,btnLabel:'✓ Libérer',
+            canReturn:canReturn,returnBtnLabel:'↩ Retour AQ',returnLabel:"Retourner à l'AQ",
             showReturnInput:false,returnMotif:'',acting:false})
         })
         docCat.groups = Object.values(grpMapDt)

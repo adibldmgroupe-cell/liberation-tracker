@@ -311,6 +311,7 @@ export default {
     var actionGroupDefs = [
       {label:'Circuit OF',actions:[{value:'of_planification',label:'OF — Mise en circuit'},{value:'of_stock',label:'OF — Validation Stock'},{value:'of_aq',label:'OF — Validation AQ'},{value:'of_dt',label:'OF — Autorisation DT'},{value:'of_aq_dap',label:'OF — Remise AQ DAP'},{value:'of_production',label:'OF — Accusé réception'}]},
       {label:'Circuit OC',actions:[{value:'oc_planification',label:'OC — Mise en circuit'},{value:'oc_stock',label:'OC — Validation Stock'},{value:'oc_aq',label:'OC — Validation AQ'},{value:'oc_dt',label:'OC — Autorisation DT'},{value:'oc_aq_dap',label:'OC — Remise AQ DAP'},{value:'oc_production',label:'OC — Accusé réception'}]},
+      {label:'CCL',actions:[{value:'ccl_transmettre',label:'CCL — Transmettre au DT'},{value:'ccl_liberer',label:'CCL — Libérer le lot (DT)'},{value:'ccl_retourner',label:"CCL — Retourner à l'AQ (DT)"},{value:'ccl_reemettre',label:'CCL — Retransmettre au DT (AQ)'}]},
       {label:'Documents — Émission',actions:[{value:'doc_if',label:'IF — Émettre'},{value:'doc_ic',label:'IC — Émettre'},{value:'doc_da_pc',label:'DA Physico — Émettre'},{value:'doc_da_micro',label:'DA Micro — Émettre'}]},
       {label:'Documents — Vérification AQ → DT',actions:[{value:'doc_if_verifier',label:'IF — Vérifier AQ → DT'},{value:'doc_ic_verifier',label:'IC — Vérifier AQ → DT'},{value:'doc_da_pc_verifier',label:'DA Physico — Vérifier AQ → DT'},{value:'doc_da_micro_verifier',label:'DA Micro — Vérifier AQ → DT'}]},
       {label:'Documents — Approbation DT',actions:[{value:'doc_if_approuver',label:'IF — Approuver DT'},{value:'doc_ic_approuver',label:'IC — Approuver DT'},{value:'doc_da_pc_approuver',label:'DA Physico — Approuver DT'},{value:'doc_da_micro_approuver',label:'DA Micro — Approuver DT'}]},
@@ -331,6 +332,7 @@ export default {
         {value:'ar_doc_ic',label:'AR — Document IC'},
         {value:'ar_doc_da_pc',label:'AR — Document DA PC'},
         {value:'ar_doc_da_micro',label:'AR — Document DA Micro'},
+        {value:'ar_doc_ccl',label:'AR — Document CCL'},
         {value:'ar_doc_rvp_fab',label:'AR — RVP Fabrication'},
         {value:'ar_doc_rvp_cond',label:'AR — RVP Conditionnement'},
         {value:'ar_doc_rvp_lcq',label:'AR — RVP LCQ'},
@@ -358,6 +360,7 @@ export default {
       ic:{l:'IC',s:'ic_label',f:'ic_label',r:'doc',lp:'ic_label',cp:'ic_class',dp:'ic_date'},
       da_pc:{l:'DA PC',s:null,f:'dapc_label',r:'doc',lp:'dapc_label',cp:'dapc_class',dp:'dapc_date'},
       da_micro:{l:'DA Micro',s:null,f:'damicro_label',r:'doc',lp:'damicro_label',cp:'damicro_class',dp:'damicro_date'},
+      ccl:{l:'CCL',s:null,f:'ccl_label',r:'doc',lp:'ccl_label',cp:'ccl_class',dp:'ccl_date'},
       dev:{l:'Dév.',s:null,f:'dev_label',r:'dev'},
       rvp_fab:{l:'RVP Fab',s:null,f:'rvp_fab_label',r:'doc',lp:'rvp_fab_label',cp:'rvp_fab_class',dp:'rvp_fab_date'},
       rvp_cond:{l:'RVP Cond',s:null,f:'rvp_cond_label',r:'doc',lp:'rvp_cond_label',cp:'rvp_cond_class',dp:'rvp_cond_date'},
@@ -374,7 +377,7 @@ export default {
       plan_dt2:{l:'Lib. DT2',s:'plan_dt2_raw',f:'plan_dt2',r:'plan',pt:'dt',rv:true},
       date:{l:'Date',l2:'Libération',s:'date_fmt',f:'date_fmt',r:'date'},
     }
-    var ALL_COLS = ['of','oc','aql_fab','aql_cond','if','ic','da_pc','da_micro','dev','rvp_fab','rvp_cond','rvp_lcq','maj_if','maj_ic','maj_nmcl_of','maj_nmcl_oc','cloture_sap_of','cloture_sap_oc','plan_lcq','plan_aq','plan_dt1','plan_dt2','date']
+    var ALL_COLS = ['of','oc','aql_fab','aql_cond','if','ic','da_pc','da_micro','ccl','dev','rvp_fab','rvp_cond','rvp_lcq','maj_if','maj_ic','maj_nmcl_of','maj_nmcl_oc','cloture_sap_of','cloture_sap_oc','plan_lcq','plan_aq','plan_dt1','plan_dt2','date']
     var COL_LABELS = {};ALL_COLS.forEach(function(k){COL_LABELS[k]=CC[k].l})
     // ── Colonnes : ordre (colOrder) + visibilité (hiddenCols) séparés ──
     var savedOrder = null, savedHidden = []
@@ -457,7 +460,7 @@ export default {
     }
 
     // Correspondance type de doc → service émetteur court
-    var DOC_SVC_SHORT = {'if':'Fab.','ic':'Cond.','da_pc':'LCQ','da_micro':'LCQ','maj_if':'Fab.','maj_ic':'Cond.','maj_nmcl_of':'Planif.','maj_nmcl_oc':'Planif.'}
+    var DOC_SVC_SHORT = {'if':'Fab.','ic':'Cond.','da_pc':'LCQ','da_micro':'LCQ','ccl':'AQ','maj_if':'Fab.','maj_ic':'Cond.','maj_nmcl_of':'Planif.','maj_nmcl_oc':'Planif.'}
     var SVC_SHORT = {fabrication:'Fab.',conditionnement:'Cond.',lcq:'LCQ',planification:'Planif.',aq:'AQ',aq_dap:'AQ DAP',dt:'DT',stock:'Stock'}
 
     // Retourne le service qui détient actuellement le document
@@ -568,6 +571,7 @@ export default {
         var icInfo=getDocInfo(docs,'ic')
         var dapcInfo=getDocInfo(docs,'da_pc')
         var damicroInfo=getDocInfo(docs,'da_micro')
+        var cclInfo=getDocInfo(docs,'ccl')
         var aqlFab=getAqlInfo(aqls,'fabrication')
         var aqlCond=getAqlInfo(aqls,'conditionnement')
         var rvpFab=getRvpInfo(docs,'fabrication')
@@ -603,6 +607,7 @@ export default {
           ic_label:icInfo.label,ic_class:icInfo.cls,ic_date:icInfo.date,ic_pending_ar:icInfo.pendingAr,ic_doc_id:icInfo.docId,
           dapc_label:dapcInfo.label,dapc_class:dapcInfo.cls,dapc_date:dapcInfo.date,dapc_pending_ar:dapcInfo.pendingAr,dapc_doc_id:dapcInfo.docId,
           damicro_label:damicroInfo.label,damicro_class:damicroInfo.cls,damicro_date:damicroInfo.date,damicro_pending_ar:damicroInfo.pendingAr,damicro_doc_id:damicroInfo.docId,
+          ccl_label:cclInfo.label,ccl_class:cclInfo.cls,ccl_date:cclInfo.date,ccl_pending_ar:cclInfo.pendingAr,ccl_doc_id:cclInfo.docId,
           aql_fab_label:aqlFab.label,aql_fab_class:aqlFab.cls,aql_fab_date:aqlFab.date,aql_fab_req_ar:aqlFab.reqArPending,aql_fab_res_ar:aqlFab.resArPending,aql_fab_id:aqlFab.aqlId,
           aql_cond_label:aqlCond.label,aql_cond_class:aqlCond.cls,aql_cond_date:aqlCond.date,aql_cond_req_ar:aqlCond.reqArPending,aql_cond_res_ar:aqlCond.resArPending,aql_cond_id:aqlCond.aqlId,
           rvp_fab_label:rvpFab.label,rvp_fab_class:rvpFab.cls,rvp_fab_date:rvpFab.date,rvp_fab_pending_ar:rvpFab.pendingAr,rvp_fab_doc_id:rvpFab.docId,
@@ -672,8 +677,8 @@ export default {
     var inlineMenu = ref(null)
     var FLOW = ['planification','stock','aq','dt','aq_dap','production']
     var ETAPE_LABELS_LONG = {planification:'Mise en circuit',stock:'Valid. Stock',aq:'Valid. AQ',dt:'Autor. DT',aq_dap:'Remise AQ DAP',production:'Accusé récp.'}
-    var SVC_MAP = {'if':'fabrication',ic:'conditionnement',da_pc:'lcq',da_micro:'lcq',maj_if:'fabrication',maj_ic:'conditionnement',maj_nmcl_of:'planification',maj_nmcl_oc:'planification'}
-    var COL_LABELS2 = {of:'OF',oc:'OC','if':'IF',ic:'IC',da_pc:'DA PC',da_micro:'DA Micro',aql_fab:'AQL Fab',aql_cond:'AQL Cond',dev:'Déviation',rvp_fab:'RVP Fab',rvp_cond:'RVP Cond',rvp_lcq:'RVP LCQ',maj_if:'MàJ IF',maj_ic:'MàJ IC',maj_nmcl_of:'MàJ Nmcl OF',maj_nmcl_oc:'MàJ Nmcl OC',cloture_sap_of:'Clôt. SAP OF',cloture_sap_oc:'Clôt. SAP OC'}
+    var SVC_MAP = {'if':'fabrication',ic:'conditionnement',da_pc:'lcq',da_micro:'lcq',ccl:'aq',maj_if:'fabrication',maj_ic:'conditionnement',maj_nmcl_of:'planification',maj_nmcl_oc:'planification'}
+    var COL_LABELS2 = {of:'OF',oc:'OC','if':'IF',ic:'IC',da_pc:'DA PC',da_micro:'DA Micro',ccl:'CCL',aql_fab:'AQL Fab',aql_cond:'AQL Cond',dev:'Déviation',rvp_fab:'RVP Fab',rvp_cond:'RVP Cond',rvp_lcq:'RVP LCQ',maj_if:'MàJ IF',maj_ic:'MàJ IC',maj_nmcl_of:'MàJ Nmcl OF',maj_nmcl_oc:'MàJ Nmcl OC',cloture_sap_of:'Clôt. SAP OF',cloture_sap_oc:'Clôt. SAP OC'}
     var CLOT_SVC = {cloture_sap_of:'fabrication',cloture_sap_oc:'conditionnement'}
 
     var buildInlineActions = function(lot, col) {
@@ -727,6 +732,63 @@ export default {
               })(etape, orderId, col, nextEtape)
             }
           }
+        }
+
+      } else if (col==='ccl') {
+        var cclDoc = null
+        if (lot.docs) { for (var ic2=0;ic2<lot.docs.length;ic2++){if(lot.docs[ic2].type_document==='ccl'){cclDoc=lot.docs[ic2];break}} }
+        if (cclDoc && cclDoc.is_applicable) {
+          ;(function(d) {
+            // AR en attente
+            if (d.pending_ar_service) {
+              if (isAdmin || (d.pending_ar_service === userService.value && canPerform('accuser_reception_document'))) {
+                actions.push({label:'✅ Accuser réception — '+(SVC_SHORT[d.pending_ar_service]||d.pending_ar_service), fn: async function(){
+                  var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+                  await supabase.from('liberation_documents').update({pending_ar_service:null,updated_at:n}).eq('id',d.id)
+                  await supabase.from('lot_events').insert({lot_id:lot.id,event_type:'ar_document',description:'CCL — Accusé réception',triggered_by:uid,created_at:n})
+                }})
+              }
+              return
+            }
+            // AQ transmet
+            if (d.statut==='non_emis' && (isAdmin||canPerform('emettre_ccl'))) {
+              actions.push({label:'Transmettre CCL au DT', fn: async function(){
+                var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+                await supabase.from('liberation_documents').update({statut:'emis',emitted_at:n,emitted_by:uid,pending_ar_service:'dt',updated_at:n}).eq('id',d.id)
+                await supabase.from('document_movements').insert({document_id:d.id,action:'emission',from_service:'aq',to_service:'dt',performed_by:uid,performed_at:n})
+                await createNotification('dt',lot.id,d.id,'Lot '+lot.numero_lot+' — CCL transmis au DT','document_transmis')
+              }})
+            }
+            // DT libère
+            if (d.statut==='emis' && (isAdmin||canPerform('approuver_ccl'))) {
+              actions.push({label:'Libérer le lot (CCL)', fn: async function(){
+                var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+                await supabase.from('liberation_documents').update({statut:'approuve_dt',approved_at:n,pending_ar_service:null,updated_at:n}).eq('id',d.id)
+                await supabase.from('document_movements').insert({document_id:d.id,action:'approbation',from_service:'dt',performed_by:uid,performed_at:n})
+                await supabase.from('lots').update({statut_sap:'accepte',date_liberation:n,updated_at:n}).eq('id',lot.id)
+                await supabase.from('liberation_dossiers').update({statut:'libere',if_approved:true,ic_approved:true,da_pc_approved:true,deviations_closed:true,pieces_complementaires_ok:true,updated_at:n}).eq('lot_id',lot.id)
+                await createNotification('aq',lot.id,d.id,'Lot '+lot.numero_lot+' — Lot libéré par le DT','lot_libere')
+              }})
+            }
+            // DT retourne à l'AQ
+            if (d.statut==='emis' && (isAdmin||canPerform('retourner_document'))) {
+              actions.push({label:"Retourner CCL à l'AQ", needsMotif:true, fn: async function(motif){
+                var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+                await supabase.from('liberation_documents').update({statut:'retour_emetteur',pending_ar_service:'aq',updated_at:n}).eq('id',d.id)
+                await supabase.from('document_movements').insert({document_id:d.id,action:'retour',from_service:'dt',to_service:'aq',motif_retour:motif,performed_by:uid,performed_at:n})
+                await createNotification('aq',lot.id,d.id,'Lot '+lot.numero_lot+' — CCL retourné par le DT','document_retourne')
+              }})
+            }
+            // AQ retransmet après retour
+            if (d.statut==='retour_emetteur' && (isAdmin||canPerform('emettre_ccl'))) {
+              actions.push({label:'Retransmettre CCL au DT', fn: async function(){
+                var u=await supabase.auth.getUser();var uid=u.data.user.id;var n=new Date().toISOString()
+                await supabase.from('liberation_documents').update({statut:'emis',emitted_at:n,emitted_by:uid,pending_ar_service:'dt',updated_at:n}).eq('id',d.id)
+                await supabase.from('document_movements').insert({document_id:d.id,action:'rectification',from_service:'aq',to_service:'dt',performed_by:uid,performed_at:n})
+                await createNotification('dt',lot.id,d.id,'Lot '+lot.numero_lot+' — CCL retransmis au DT','document_transmis')
+              }})
+            }
+          })(cclDoc)
         }
 
       } else if (col==='if'||col==='ic'||col==='da_pc'||col==='da_micro') {
@@ -1490,6 +1552,7 @@ var loadCharge = async function() {
       of_dt:'OF — Autorisation DT',of_aq_dap:'OF — Remise AQ DAP',of_production:'OF — Accusé réception',
       oc_planification:'OC — Mise en circuit',oc_stock:'OC — Validation Stock',oc_aq:'OC — Validation AQ',
       oc_dt:'OC — Autorisation DT',oc_aq_dap:'OC — Remise AQ DAP',oc_production:'OC — Accusé réception',
+      ccl_transmettre:'CCL — Transmettre au DT',ccl_liberer:'CCL — Libérer le lot (DT)',ccl_retourner:"CCL — Retourner à l'AQ (DT)",ccl_reemettre:'CCL — Retransmettre au DT (AQ)',
       doc_if:'IF — Émettre',doc_ic:'IC — Émettre',doc_da_pc:'DA Physico — Émettre',doc_da_micro:'DA Micro — Émettre',
       doc_if_verifier:'IF — Vérifier',doc_ic_verifier:'IC — Vérifier',doc_da_pc_verifier:'DA Physico — Vérifier',doc_da_micro_verifier:'DA Micro — Vérifier',
       doc_if_approuver:'IF — Approuver',doc_ic_approuver:'IC — Approuver',doc_da_pc_approuver:'DA Physico — Approuver',doc_da_micro_approuver:'DA Micro — Approuver',
@@ -1511,7 +1574,7 @@ var loadCharge = async function() {
       dev_declarer:'Déviation — Déclarer',dev_bloquer:'Déviation — Marquer bloquante',dev_cloture:'Déviation — Clôturer',
       plan_lcq:'Lib. LCQ',plan_aq:'Lib. AQ',plan_dt1:'Lib. DT1',plan_dt2:'Lib. DT2',
       ar_circuit_of:'AR — Circuit OF',ar_circuit_oc:'AR — Circuit OC',
-      ar_doc_if:'AR — IF',ar_doc_ic:'AR — IC',ar_doc_da_pc:'AR — DA PC',ar_doc_da_micro:'AR — DA Micro',
+      ar_doc_if:'AR — IF',ar_doc_ic:'AR — IC',ar_doc_da_pc:'AR — DA PC',ar_doc_da_micro:'AR — DA Micro',ar_doc_ccl:'AR — CCL',
       ar_doc_rvp_fab:'AR — RVP Fab',ar_doc_rvp_cond:'AR — RVP Cond',ar_doc_rvp_lcq:'AR — RVP LCQ',
       ar_aql_fab_demande:'AR — Dem. AQL Fab',ar_aql_cond_demande:'AR — Dem. AQL Cond',
       ar_aql_fab_resultat:'AR — Rés. AQL Fab',ar_aql_cond_resultat:'AR — Rés. AQL Cond',
@@ -1613,6 +1676,32 @@ var loadCharge = async function() {
             else if(isRetourEmetteur){var s4={'if':'fabrication',ic:'conditionnement',da_pc:'lcq',da_micro:'lcq'};if(s4[docType])await createNotification(s4[docType],lotId,doc2.id,'Lot '+lot.numero_lot+' — '+typeLabel+' retourné','document_retourne')}
             else if(isRetourAQ){await createNotification('aq',lotId,doc2.id,'Lot '+lot.numero_lot+' — '+typeLabel+' retourné par DT','document_retourne')}
             else if(isApprouver){await createNotification('aq',lotId,doc2.id,'Lot '+lot.numero_lot+' — '+typeLabel+' approuvé DT','document_approuve')}
+            result.ok++
+
+          } else if (action.startsWith('ccl_')) {
+            var cclOp=action.replace('ccl_','')
+            var cclD=null;if(lot.docs){for(var cc4=0;cc4<lot.docs.length;cc4++){if(lot.docs[cc4].type_document==='ccl'){cclD=lot.docs[cc4];break}}}
+            if(!cclD){result.errors.push(lot.numero_lot+': CCL non trouvé');result.fail++;continue}
+            if(cclOp==='transmettre'){
+              await supabase.from('liberation_documents').update({statut:'emis',emitted_at:now,emitted_by:userId,pending_ar_service:'dt',updated_at:now}).eq('id',cclD.id)
+              await supabase.from('document_movements').insert({document_id:cclD.id,action:'emission',from_service:'aq',to_service:'dt',performed_by:userId,performed_at:now})
+              await createNotification('dt',lotId,cclD.id,'Lot '+lot.numero_lot+' — CCL transmis au DT','document_transmis')
+            } else if(cclOp==='liberer'){
+              await supabase.from('liberation_documents').update({statut:'approuve_dt',approved_at:now,pending_ar_service:null,updated_at:now}).eq('id',cclD.id)
+              await supabase.from('document_movements').insert({document_id:cclD.id,action:'approbation',from_service:'dt',performed_by:userId,performed_at:now})
+              await supabase.from('lots').update({statut_sap:'accepte',date_liberation:now,updated_at:now}).eq('id',lotId)
+              await supabase.from('liberation_dossiers').update({statut:'libere',if_approved:true,ic_approved:true,da_pc_approved:true,deviations_closed:true,pieces_complementaires_ok:true,updated_at:now}).eq('lot_id',lotId)
+              await createNotification('aq',lotId,cclD.id,'Lot '+lot.numero_lot+' — Lot libéré par le DT','lot_libere')
+            } else if(cclOp==='retourner'){
+              await supabase.from('liberation_documents').update({statut:'retour_emetteur',pending_ar_service:'aq',updated_at:now}).eq('id',cclD.id)
+              await supabase.from('document_movements').insert({document_id:cclD.id,action:'retour',from_service:'dt',to_service:'aq',motif_retour:'Retour en masse',performed_by:userId,performed_at:now})
+              await createNotification('aq',lotId,cclD.id,'Lot '+lot.numero_lot+' — CCL retourné par le DT','document_retourne')
+            } else if(cclOp==='reemettre'){
+              await supabase.from('liberation_documents').update({statut:'emis',emitted_at:now,emitted_by:userId,pending_ar_service:'dt',updated_at:now}).eq('id',cclD.id)
+              await supabase.from('document_movements').insert({document_id:cclD.id,action:'rectification',from_service:'aq',to_service:'dt',performed_by:userId,performed_at:now})
+              await createNotification('dt',lotId,cclD.id,'Lot '+lot.numero_lot+' — CCL retransmis au DT','document_transmis')
+            } else {result.errors.push(lot.numero_lot+': action CCL inconnue');result.fail++;continue}
+            await supabase.from('lot_events').insert({lot_id:lotId,event_type:'ccl_masse',description:'CCL — '+cclOp+' (masse)',triggered_by:userId,created_at:now})
             result.ok++
 
           } else if (action.startsWith('aql_')) {

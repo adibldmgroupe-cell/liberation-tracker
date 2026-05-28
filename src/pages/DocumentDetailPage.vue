@@ -5,14 +5,16 @@
     <div class="info"><div class="ic"><span class="il">Émetteur</span>{{doc.service_emetteur}}</div><div class="ic"><span class="il">Émis le</span><span class="mono">{{fmtDt(doc.emitted_at)}}</span></div><div class="ic"><span class="il">Approuvé le</span><span class="mono">{{fmtDt(doc.approved_at)}}</span></div></div>
 
     <div class="flow">
-      <div class="flow-step" :class="flowClass(1)"><span class="fs-num">1</span><span class="fs-label">{{isClotSap?'Demande valid.':'Émission'}}</span></div>
+      <div class="flow-step" :class="flowClass(1)"><span class="fs-num">1</span><span class="fs-label">{{isClotSap?'Demande valid.':isCCL?'Transmission AQ':'Émission'}}</span></div>
       <div class="flow-arrow">→</div>
-      <div class="flow-step" :class="flowClass(2)"><span class="fs-num">2</span><span class="fs-label">{{isClotSap?'Validation Planif.':'Vérif. AQ'}}</span></div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-step" :class="flowClass(3)"><span class="fs-num">3</span><span class="fs-label">{{isClotSap?'Demande clôture':'Approbation DT'}}</span></div>
-      <template v-if="isClotSap">
+      <div class="flow-step" :class="flowClass(2)"><span class="fs-num">2</span><span class="fs-label">{{isClotSap?'Validation Planif.':isCCL?'Libération DT':'Vérif. AQ'}}</span></div>
+      <template v-if="!isCCL">
         <div class="flow-arrow">→</div>
-        <div class="flow-step" :class="flowClass(4)"><span class="fs-num">4</span><span class="fs-label">Clôture</span></div>
+        <div class="flow-step" :class="flowClass(3)"><span class="fs-num">3</span><span class="fs-label">{{isClotSap?'Demande clôture':'Approbation DT'}}</span></div>
+        <template v-if="isClotSap">
+          <div class="flow-arrow">→</div>
+          <div class="flow-step" :class="flowClass(4)"><span class="fs-num">4</span><span class="fs-label">Clôture</span></div>
+        </template>
       </template>
     </div>
 
@@ -38,23 +40,35 @@
 
       <!-- Actions normales — bloquées si AR en attente pour ce service -->
       <template v-if="!doc.pending_ar_service || isClotSap || isMajDoc">
-        <!-- ÉMETTEUR : émettre -->
-        <button v-if="doc.statut==='non_emis' && canEmit" class="btn" @click="doAct('emettre')">Émettre le document</button>
+        <!-- ÉMETTEUR : émettre (docs standard) -->
+        <button v-if="doc.statut==='non_emis' && canEmit && !isClotSap && !isCCL" class="btn" @click="doAct('emettre')">Émettre le document</button>
 
         <!-- ÉMETTEUR : rectifier après retour (docs standard seulement) -->
-        <button v-if="doc.statut==='retour_emetteur' && canRectifier && !isClotSap" class="btn" @click="doAct('rectifier')">Rectifier et renvoyer à l'AQ</button>
+        <button v-if="doc.statut==='retour_emetteur' && canRectifier && !isClotSap && !isCCL" class="btn" @click="doAct('rectifier')">Rectifier et renvoyer à l'AQ</button>
 
         <!-- AQ : vérifier et transmettre au DT (docs standard) -->
-        <button v-if="(doc.statut==='emis' || doc.statut==='verification_aq') && canVerify && !isClotSap" class="btn" @click="doAct('verifier_aq')">Vérifier et transmettre au DT</button>
+        <button v-if="(doc.statut==='emis' || doc.statut==='verification_aq') && canVerify && !isClotSap && !isCCL" class="btn" @click="doAct('verifier_aq')">Vérifier et transmettre au DT</button>
 
         <!-- AQ : retourner à l'émetteur (docs standard) -->
-        <button v-if="(doc.statut==='emis' || doc.statut==='verification_aq') && canRetourner && !isClotSap" class="btn br" @click="prepareRetour('emetteur')">Retourner à l'émetteur</button>
+        <button v-if="(doc.statut==='emis' || doc.statut==='verification_aq') && canRetourner && !isClotSap && !isCCL" class="btn br" @click="prepareRetour('emetteur')">Retourner à l'émetteur</button>
 
         <!-- DT : approuver (docs standard) -->
-        <button v-if="doc.statut==='approuve_aq' && canApprove && !isClotSap" class="btn bg" @click="doAct('approuver_dt')">Approuver (DT)</button>
+        <button v-if="doc.statut==='approuve_aq' && canApprove && !isClotSap && !isCCL" class="btn bg" @click="doAct('approuver_dt')">Approuver (DT)</button>
 
         <!-- DT : retourner à l'AQ (docs standard) -->
-        <button v-if="doc.statut==='approuve_aq' && canRetourner && !isClotSap" class="btn br" @click="prepareRetour('aq')">Retourner à l'AQ</button>
+        <button v-if="doc.statut==='approuve_aq' && canRetourner && !isClotSap && !isCCL" class="btn br" @click="prepareRetour('aq')">Retourner à l'AQ</button>
+
+        <!-- CCL : AQ transmet au DT -->
+        <button v-if="isCCL && doc.statut==='non_emis' && canEmit" class="btn bg" @click="doAct('emettre')">Transmettre au DT</button>
+
+        <!-- CCL : AQ retransmet après retour DT -->
+        <button v-if="isCCL && doc.statut==='retour_emetteur' && canRectifier" class="btn" @click="doAct('rectifier')">Retransmettre au DT</button>
+
+        <!-- CCL : DT libère le lot -->
+        <button v-if="isCCL && doc.statut==='emis' && canApprove" class="btn bg" @click="doAct('approuver_dt')">Libérer le lot (DT)</button>
+
+        <!-- CCL : DT retourne à l'AQ -->
+        <button v-if="isCCL && doc.statut==='emis' && canRetourner" class="btn br" @click="prepareRetour('aq')">Retourner à l'AQ</button>
 
         <!-- CLÔTURE SAP : Planif valide -->
         <button v-if="doc.statut==='emis' && canVerify && isClotSap" class="btn bg" @click="doAct('valider_planif')">Valider (Planification)</button>
@@ -104,12 +118,13 @@ export default {
   setup() {
     var route = useRoute()
     var doc = ref(null), movements = ref([]), showRetour = ref(false), motif = ref(''), userId = ref(null), retourDest = ref(''), userService = ref('')
-    var typeLabels = { if:'IF (Instruction de fabrication)', ic:'IC (Instruction de conditionnement)', da_pc:'DA Physico-chimie', da_micro:'DA Microbiologie', rvp:'RVP', deviation:'Déviation', analyse_risque:'Analyse de risque', autorisation_partenaire:'Autorisation partenaire', autre:'Autre', maj_if:'MàJ IF', maj_ic:'MàJ IC', maj_nmcl_of:'MàJ Nomenclature OF', maj_nmcl_oc:'MàJ Nomenclature OC', cloture_sap_of:'Clôture SAP OF', cloture_sap_oc:'Clôture SAP OC' }
+    var typeLabels = { if:'IF (Instruction de fabrication)', ic:'IC (Instruction de conditionnement)', da_pc:'DA Physico-chimie', da_micro:'DA Microbiologie', ccl:'CCL (Certificat de Conformité du Lot)', rvp:'RVP', deviation:'Déviation', analyse_risque:'Analyse de risque', autorisation_partenaire:'Autorisation partenaire', autre:'Autre', maj_if:'MàJ IF', maj_ic:'MàJ IC', maj_nmcl_of:'MàJ Nomenclature OF', maj_nmcl_oc:'MàJ Nomenclature OC', cloture_sap_of:'Clôture SAP OF', cloture_sap_oc:'Clôture SAP OC' }
     var actionLabelsMap = { emission:'Émission', transmission:'Transmission', reception:'Réception', retour:'Retour pour rectification', rectification:'Rectification et renvoi', approbation:'Approbation', validation:'Validation Planification', cloture:'Demande de clôture', cloture_confirmee:'Clôture confirmée' }
     var statusMap = { non_emis:'Non émis', emis:'Émis — en attente', verification_aq:'En cours de vérification AQ', retour_emetteur:'Retourné à l\'émetteur', rectification:'En cours de rectification', approuve_aq:'Vérifié AQ — en attente DT', approbation_dt:'En cours d\'approbation DT', approuve_dt:'Approuvé DT', valide_planif:'Validé Planif. — en attente demande clôture', cloture_demandee:'Clôture demandée — en attente confirmation', cloture:'Clôturé' }
     var statusLabel = computed(function() { return statusMap[doc.value ? doc.value.statut : ''] || '' })
     var isClotSap = computed(function(){ return doc.value && doc.value.type_document && doc.value.type_document.startsWith('cloture_sap_') })
     var isMajDoc = computed(function(){ return doc.value && doc.value.type_document && doc.value.type_document.startsWith('maj_') })
+    var isCCL = computed(function(){ return doc.value && doc.value.type_document === 'ccl' })
     var spClass = computed(function() {
       var s = doc.value ? doc.value.statut : ''
       if (s === 'approuve_dt' || s === 'cloture') return 'sp-ok'
@@ -122,12 +137,18 @@ export default {
     var flowClass = function(step) {
       var s = doc.value ? doc.value.statut : ''
       var clot = isClotSap.value
+      var ccl = isCCL.value
       if (step === 1) {
         if (s === 'non_emis') return 'fs-active'
         if (s === 'retour_emetteur') return 'fs-ret'
         return 'fs-done'
       }
       if (step === 2) {
+        if (ccl) {
+          if (s === 'emis') return 'fs-active'
+          if (s === 'approuve_dt') return 'fs-done'
+          return 'fs-wait'
+        }
         if (clot) {
           if (s === 'emis') return 'fs-active'
           if (s === 'valide_planif' || s === 'cloture_demandee' || s === 'cloture') return 'fs-done'
@@ -169,6 +190,7 @@ export default {
       if (t === 'maj_nmcl_oc') return canPerform('emettre_maj_nmcl_oc')
       if (t === 'cloture_sap_of') return canPerform('emettre_cloture_sap_of')
       if (t === 'cloture_sap_oc') return canPerform('emettre_cloture_sap_oc')
+      if (t === 'ccl') return canPerform('emettre_ccl')
       return canPerform('emettre_' + t)
     })
     var canVerify = computed(function(){
@@ -185,6 +207,7 @@ export default {
       if (t.startsWith('maj_')) return canPerform('approuver_maj_doc')
       if (t === 'cloture_sap_of') return canPerform('demander_cloture_sap_of')
       if (t === 'cloture_sap_oc') return canPerform('demander_cloture_sap_oc')
+      if (t === 'ccl') return canPerform('approuver_ccl')
       return canPerform('approuver_' + t)
     })
     var canConfirmClot = computed(function(){
@@ -219,9 +242,10 @@ export default {
       var t = doc.value.type_document
       var clot = t.startsWith('cloture_sap_')
 
+      var ccl = isCCL.value
       if (action === 'emettre') {
-        var toSvc = clot ? 'planification' : 'aq'
-        var arSvcEmit = clot ? null : 'aq'
+        var toSvc = clot ? 'planification' : ccl ? 'dt' : 'aq'
+        var arSvcEmit = clot ? null : ccl ? 'dt' : 'aq'
         await supabase.from('liberation_documents').update({ statut: 'emis', emitted_at: now, emitted_by: userId.value, pending_ar_service: arSvcEmit, updated_at: now }).eq('id', docId)
         await supabase.from('document_movements').insert({ document_id: docId, action: 'emission', from_service: doc.value.service_emetteur, to_service: toSvc, performed_by: userId.value, performed_at: now })
       } else if (action === 'verifier_aq') {
@@ -231,14 +255,24 @@ export default {
         await supabase.from('liberation_documents').update({ statut: 'valide_planif', updated_at: now }).eq('id', docId)
         await supabase.from('document_movements').insert({ document_id: docId, action: 'validation', from_service: 'planification', to_service: doc.value.service_emetteur, performed_by: userId.value, performed_at: now })
       } else if (action === 'rectifier') {
-        await supabase.from('liberation_documents').update({ statut: 'verification_aq', pending_ar_service: 'aq', updated_at: now }).eq('id', docId)
-        await supabase.from('document_movements').insert({ document_id: docId, action: 'rectification', from_service: doc.value.service_emetteur, to_service: 'aq', performed_by: userId.value, performed_at: now })
+        var rectToSvc = ccl ? 'dt' : 'aq'
+        var rectPending = ccl ? 'dt' : 'aq'
+        var rectStatut = ccl ? 'emis' : 'verification_aq'
+        var rectUpdate = { statut: rectStatut, pending_ar_service: rectPending, updated_at: now }
+        if (ccl) { rectUpdate.emitted_at = now; rectUpdate.emitted_by = userId.value }
+        await supabase.from('liberation_documents').update(rectUpdate).eq('id', docId)
+        await supabase.from('document_movements').insert({ document_id: docId, action: 'rectification', from_service: doc.value.service_emetteur, to_service: rectToSvc, performed_by: userId.value, performed_at: now })
       } else if (action === 'approuver_dt') {
         await supabase.from('liberation_documents').update({ statut: 'approuve_dt', approved_at: now, pending_ar_service: null, updated_at: now }).eq('id', docId)
         await supabase.from('document_movements').insert({ document_id: docId, action: 'approbation', from_service: 'dt', performed_by: userId.value, performed_at: now })
-        var fieldMap = { 'if': 'if_approved', ic: 'ic_approved', da_pc: 'da_pc_approved', da_micro: 'da_micro_approved' }
-        var field = fieldMap[t]
-        if (field) { await supabase.from('liberation_dossiers').update({ [field]: true, updated_at: now }).eq('lot_id', lotId) }
+        if (ccl) {
+          await supabase.from('lots').update({ statut_sap: 'accepte', date_liberation: now, updated_at: now }).eq('id', lotId)
+          await supabase.from('liberation_dossiers').update({ statut: 'libere', if_approved: true, ic_approved: true, da_pc_approved: true, deviations_closed: true, pieces_complementaires_ok: true, updated_at: now }).eq('lot_id', lotId)
+        } else {
+          var fieldMap = { 'if': 'if_approved', ic: 'ic_approved', da_pc: 'da_pc_approved', da_micro: 'da_micro_approved' }
+          var field = fieldMap[t]
+          if (field) { await supabase.from('liberation_dossiers').update({ [field]: true, updated_at: now }).eq('lot_id', lotId) }
+        }
       } else if (action === 'demander_cloture') {
         await supabase.from('liberation_documents').update({ statut: 'cloture_demandee', updated_at: now }).eq('id', docId)
         await supabase.from('document_movements').insert({ document_id: docId, action: 'cloture', from_service: doc.value.service_emetteur, to_service: 'planification', performed_by: userId.value, performed_at: now })
@@ -255,18 +289,18 @@ export default {
       var typeLabel = typeLabels[t] || t.toUpperCase().replace(/_/g, ' ')
       var svc = doc.value.service_emetteur
       if (action === 'emettre') {
-        var notifSvc = clot ? 'planification' : 'aq'
+        var notifSvc = clot ? 'planification' : ccl ? 'dt' : 'aq'
         await createNotification(notifSvc, lotId, doc.value.id, 'Lot ' + lotNum + ' — ' + typeLabel + ' émis, en attente', 'document_transmis')
       } else if (action === 'verifier_aq') {
         await createNotification('dt', lotId, doc.value.id, 'Lot ' + lotNum + ' — ' + typeLabel + ' vérifié AQ, en attente approbation DT', 'document_transmis')
       } else if (action === 'valider_planif') {
         if (svc) await createNotification(svc, lotId, doc.value.id, 'Lot ' + lotNum + ' — ' + typeLabel + ' validé Planif., demande clôture possible', 'document_transmis')
       } else if (action === 'rectifier') {
-        await createNotification('aq', lotId, doc.value.id, 'Lot ' + lotNum + ' — ' + typeLabel + ' rectifié, en attente de vérification', 'document_transmis')
+        var rectNotifSvc = ccl ? 'dt' : 'aq'
+        await createNotification(rectNotifSvc, lotId, doc.value.id, 'Lot ' + lotNum + ' — ' + typeLabel + (ccl ? ' retransmis au DT' : ' rectifié, en attente de vérification'), 'document_transmis')
       } else if (action === 'approuver_dt') {
-        await createNotification('aq', lotId, doc.value.id, 'Lot ' + lotNum + ' — ' + typeLabel + ' approuvé par le DT', 'document_approuve')
-        var svcMap = { fabrication: 'fabrication', conditionnement: 'conditionnement', lcq: 'lcq' }
-        if (svcMap[svc]) { await createNotification(svcMap[svc], lotId, doc.value.id, 'Lot ' + lotNum + ' — ' + typeLabel + ' approuvé par le DT', 'document_approuve') }
+        await createNotification('aq', lotId, doc.value.id, 'Lot ' + lotNum + ' — ' + (ccl ? 'Lot libéré par le DT' : typeLabel + ' approuvé par le DT'), ccl ? 'lot_libere' : 'document_approuve')
+        if (!ccl) { var svcMap = { fabrication: 'fabrication', conditionnement: 'conditionnement', lcq: 'lcq' }; if (svcMap[svc]) { await createNotification(svcMap[svc], lotId, doc.value.id, 'Lot ' + lotNum + ' — ' + typeLabel + ' approuvé par le DT', 'document_approuve') } }
       } else if (action === 'demander_cloture') {
         await createNotification('planification', lotId, doc.value.id, 'Lot ' + lotNum + ' — ' + typeLabel + ' : clôture demandée, en attente confirmation', 'document_approuve')
       } else if (action === 'cloturer') {
@@ -281,14 +315,21 @@ export default {
       var docId = doc.value.id
       var lotId = parseInt(route.params.lotId)
 
+      var docIsCCL = doc.value && doc.value.type_document === 'ccl'
       if (retourDest.value === 'emetteur') {
         // AQ retourne à l'émetteur
         await supabase.from('liberation_documents').update({ statut: 'retour_emetteur', pending_ar_service: doc.value.service_emetteur || null, updated_at: now }).eq('id', docId)
         await supabase.from('document_movements').insert({ document_id: docId, action: 'retour', from_service: 'aq', to_service: doc.value.service_emetteur, motif_retour: motif.value, performed_by: userId.value, performed_at: now })
       } else if (retourDest.value === 'aq') {
-        // DT retourne à l'AQ
-        await supabase.from('liberation_documents').update({ statut: 'verification_aq', pending_ar_service: 'aq', updated_at: now }).eq('id', docId)
-        await supabase.from('document_movements').insert({ document_id: docId, action: 'retour', from_service: 'dt', to_service: 'aq', motif_retour: motif.value, performed_by: userId.value, performed_at: now })
+        if (docIsCCL) {
+          // DT retourne le CCL à l'AQ (émetteur) → retour_emetteur avec AR pour AQ
+          await supabase.from('liberation_documents').update({ statut: 'retour_emetteur', pending_ar_service: 'aq', updated_at: now }).eq('id', docId)
+          await supabase.from('document_movements').insert({ document_id: docId, action: 'retour', from_service: 'dt', to_service: 'aq', motif_retour: motif.value, performed_by: userId.value, performed_at: now })
+        } else {
+          // DT retourne à l'AQ (docs standard)
+          await supabase.from('liberation_documents').update({ statut: 'verification_aq', pending_ar_service: 'aq', updated_at: now }).eq('id', docId)
+          await supabase.from('document_movements').insert({ document_id: docId, action: 'retour', from_service: 'dt', to_service: 'aq', motif_retour: motif.value, performed_by: userId.value, performed_at: now })
+        }
       }
 
       await supabase.from('lot_events').insert({ lot_id: lotId, event_type: 'document_retour', description: doc.value.type_document.toUpperCase() + ' — retourné vers ' + retourDest.value, triggered_by: userId.value, created_at: now })
@@ -342,7 +383,7 @@ export default {
       loadDoc()
     })
 
-    return { doc, movements, showRetour, motif, retourDest, userService, typeLabels, actionLabelsMap, statusLabel, spClass, flowClass, fmtDt, dotClass, prepareRetour, doAct, doRetour, doSetApplicable, doAR, canAR, canEmit, canVerify, canApprove, canConfirmClot, canRetourner, canRectifier, isClotSap, isMajDoc }
+    return { doc, movements, showRetour, motif, retourDest, userService, typeLabels, actionLabelsMap, statusLabel, spClass, flowClass, fmtDt, dotClass, prepareRetour, doAct, doRetour, doSetApplicable, doAR, canAR, canEmit, canVerify, canApprove, canConfirmClot, canRetourner, canRectifier, isClotSap, isMajDoc, isCCL }
   }
 }
 </script>
