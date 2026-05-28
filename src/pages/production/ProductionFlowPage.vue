@@ -92,6 +92,7 @@
         </div>
       </div>
       <button class="trs-band-refresh" :class="{spinning:trsLoading}" @click="loadTrsData" title="Actualiser TRS">↻</button>
+      <button class="trs-band-histo" @click="openTrsHisto" title="Historique sessions">📅</button>
     </div>
 
     <!-- ── CORPS SVG ── -->
@@ -187,8 +188,8 @@
             :opacity="nodeDim(node)"
             :filter="nodeIsFlux(node)?'url(#glow-strong)':''"
           />
-          <!-- Barre statut -->
-          <rect v-if="nodeStatus(node).label!=='Libre'"
+          <!-- Barre statut (PDP uniquement) -->
+          <rect v-if="nodeStatus(node).label!=='Libre' && !trsMode"
             :x="node.x+2" :y="node.y+node.h-5" :width="node.w-4" height="5"
             :fill="nodeStatus(node).color" rx="0"
             :opacity="nodeDim(node)*0.9"/>
@@ -211,22 +212,28 @@
             :opacity="nodeDim(node)">
             {{node.line2}}
           </text>
-          <!-- Dot statut -->
-          <circle v-if="nodeStatus(node).label!=='Libre'"
+          <!-- Dot statut PDP (masqué en mode TRS) -->
+          <circle v-if="nodeStatus(node).label!=='Libre' && !trsMode"
             :cx="node.x+node.w-10" :cy="node.y+10" r="6"
             :fill="nodeStatus(node).color" stroke="rgba(255,255,255,.5)" stroke-width="1"
             filter="url(#glow)" :opacity="nodeDim(node)"/>
-          <!-- Count lots -->
-          <text v-if="activeLotCount(node)>0"
+          <!-- Count lots PDP (masqué en mode TRS) -->
+          <text v-if="activeLotCount(node)>0 && !trsMode"
             :x="node.x+10" :y="node.y+12"
             fill="rgba(255,255,255,.8)" font-size="9" font-weight="700"
             :opacity="nodeDim(node)">
             {{activeLotCount(node)}}L
           </text>
-          <!-- Flux badge -->
-          <rect v-if="nodeIsFlux(node)"
+          <!-- Flux badge PDP (masqué en mode TRS) -->
+          <rect v-if="nodeIsFlux(node) && !trsMode"
             :x="node.x" :y="node.y" :width="node.w" :height="node.h"
             rx="8" fill="none" stroke="#fbbf24" stroke-width="2.5"/>
+          <!-- Dot TRS (mode TRS uniquement) -->
+          <circle v-if="trsMode && node.type==='cond'"
+            :cx="node.x+node.w-10" :cy="node.y+10" r="6"
+            :fill="nodeTrs(node) && nodeTrs(node).statut==='En cours' ? '#10b981' : nodeTrs(node) && (nodeTrs(node).statut==='Arrêt'||nodeTrs(node).statut==='Pause') ? '#f59e0b' : '#374151'"
+            stroke="rgba(255,255,255,.4)" stroke-width="1"
+            filter="url(#glow)" :opacity="nodeDim(node)"/>
 
           <!-- ── TRS OVERLAY (mode TRS uniquement) ── -->
           <template v-if="trsMode">
@@ -831,6 +838,71 @@
       </div>
     </div>
 
+    <!-- ══ TRS MODAL : HISTORIQUE ══ -->
+    <div class="trs-overlay trs-histo-overlay" v-if="trsHistoModal.show" @click.self="trsHistoModal.show=false">
+      <div class="trs-modal trs-modal-lg">
+        <div class="trs-modal-hd">📅 Historique des sessions TRS</div>
+
+        <!-- Filtres -->
+        <div class="trs-histo-filters">
+          <div class="trs-form-field">
+            <label class="trs-lbl">Date</label>
+            <input type="date" v-model="trsHistoModal.date" class="trs-inp" @change="loadTrsHistoData" />
+          </div>
+          <div class="trs-form-field">
+            <label class="trs-lbl">Machine</label>
+            <select v-model="trsHistoModal.equip_id" class="trs-inp" @change="loadTrsHistoData">
+              <option :value="null">Toutes</option>
+              <option v-for="e in trsEquipes_list" :key="e.id" :value="e.id">{{e.nom_equipement}}</option>
+            </select>
+          </div>
+          <button class="trs-btn-save" style="align-self:flex-end" @click="loadTrsHistoData" :disabled="trsHistoModal.loading">
+            {{trsHistoModal.loading ? '…' : '🔍 Chercher'}}
+          </button>
+        </div>
+
+        <!-- Tableau -->
+        <div v-if="trsHistoModal.loading" style="text-align:center;padding:24px;color:#6b7280">Chargement…</div>
+        <div v-else-if="!trsHistoModal.sessions.length" style="text-align:center;padding:24px;color:#6b7280">Aucune session trouvée.</div>
+        <div v-else class="trs-histo-wrap">
+          <table class="trs-histo-table">
+            <thead>
+              <tr>
+                <th>Machine</th>
+                <th>Lot</th>
+                <th>Shift</th>
+                <th>Début</th>
+                <th>Fin</th>
+                <th>Boîtes</th>
+                <th>D%</th>
+                <th>P%</th>
+                <th>Q%</th>
+                <th class="trs-h-trs">TRS%</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="s in trsHistoModal.sessions" :key="s.id">
+                <td>{{s._equipNom || '—'}}</td>
+                <td class="mono">{{s._lotNum || '—'}}</td>
+                <td>{{s._shiftNom || '—'}}</td>
+                <td class="mono">{{s.heure_debut ? s.heure_debut.slice(0,5) : '—'}}</td>
+                <td class="mono">{{s.heure_fin ? s.heure_fin.slice(0,5) : '—'}}</td>
+                <td class="mono">{{s.colis_produits && s._colisage ? (s.colis_produits * s._colisage).toLocaleString('fr-FR') : (s.colis_produits || '—')}}</td>
+                <td :style="{color: s.disponibilite!=null ? trsColor(s.disponibilite) : '#4b5563'}">{{s.disponibilite != null ? s.disponibilite+'%' : '—'}}</td>
+                <td :style="{color: s.performance!=null ? trsColor(s.performance) : '#4b5563'}">{{s.performance != null ? s.performance+'%' : '—'}}</td>
+                <td :style="{color: s.qualite!=null ? trsColor(s.qualite) : '#4b5563'}">{{s.qualite != null ? s.qualite+'%' : '—'}}</td>
+                <td class="trs-h-trs" :style="{color: s.trs!=null ? trsColor(s.trs) : '#4b5563', fontWeight:'800'}">{{s.trs != null ? s.trs+'%' : s.statut==='En cours' ? '⏱' : '—'}}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="trs-modal-acts" style="margin-top:12px">
+          <button class="trs-btn-cancel" @click="trsHistoModal.show=false">Fermer</button>
+        </div>
+      </div>
+    </div>
+
     <!-- ══ TRS MODAL : COMPTAGE ══ -->
     <div class="trs-overlay" v-if="trsComptageModal.show" @click.self="trsComptageModal.show=false">
       <div class="trs-modal trs-modal-sm">
@@ -1208,6 +1280,8 @@ export default {
     var trsComptageModal = reactive({ show:false, panel:null, heure:'', boites:null, rebuts:0, saving:false })
     var trsCloseModal    = reactive({ show:false, panel:null, heure_fin:'', colis_produits:null, colis_rebuts:0, observation:'', error:'', saving:false })
     var trsCadenceModal  = reactive({ show:false, panel:null, cadence:null, saving:false })
+    var trsHistoModal    = reactive({ show:false, loading:false, date:'', equip_id:null, sessions:[] })
+    var trsEquipes_list  = ref([])
     var trsTheoCounters  = ref({})
 
     var trsNowTime = function() {
@@ -1621,6 +1695,55 @@ export default {
       if (r.error) { trsCadenceModal.saving = false; return }
       trsCadenceModal.show = false; trsCadenceModal.saving = false
       await loadTrsFull()
+    }
+
+    var openTrsHisto = async function() {
+      trsHistoModal.date     = new Date().toISOString().slice(0,10)
+      trsHistoModal.equip_id = null
+      trsHistoModal.sessions = []
+      trsHistoModal.show     = true
+      // Charger la liste des machines si pas encore fait
+      if (!trsEquipes_list.value.length) {
+        var rEqH = await supabase.from('equipements_conditionnement').select('id,nom_equipement').eq('actif', true).order('ordre_affichage')
+        if (!rEqH.error) trsEquipes_list.value = rEqH.data || []
+      }
+      await loadTrsHistoData()
+    }
+
+    var loadTrsHistoData = async function() {
+      trsHistoModal.loading = true
+      var q = supabase.from('production_sessions')
+        .select('id,equipement_id,lot_id,shift_id,statut,date,heure_debut,heure_fin,colis_produits,colis_rebuts,colisage_confirme,disponibilite,performance,qualite,trs,objectif_boites')
+        .eq('date', trsHistoModal.date)
+        .order('heure_debut', { ascending: true })
+      if (trsHistoModal.equip_id) q = q.eq('equipement_id', trsHistoModal.equip_id)
+      var r = await q
+      var sessions = r.data || []
+      // Enrichir avec nom machine, lot, shift
+      var equipIds = [...new Set(sessions.map(function(s){ return s.equipement_id }).filter(Boolean))]
+      var lotIds   = [...new Set(sessions.map(function(s){ return s.lot_id }).filter(Boolean))]
+      var shiftIds = [...new Set(sessions.map(function(s){ return s.shift_id }).filter(Boolean))]
+      var equipMap = {}, lotMap = {}, shiftMap = {}
+      if (equipIds.length) {
+        var rEq = await supabase.from('equipements_conditionnement').select('id,nom_equipement').in('id', equipIds)
+        ;(rEq.data||[]).forEach(function(e){ equipMap[e.id] = e.nom_equipement })
+      }
+      if (lotIds.length) {
+        var rLt = await supabase.from('lots').select('id,numero_lot').in('id', lotIds)
+        ;(rLt.data||[]).forEach(function(l){ lotMap[l.id] = l.numero_lot })
+      }
+      if (shiftIds.length) {
+        var rSh2 = await supabase.from('shifts').select('id,nom').in('id', shiftIds)
+        ;(rSh2.data||[]).forEach(function(s){ shiftMap[s.id] = s.nom })
+      }
+      sessions.forEach(function(s) {
+        s._equipNom  = equipMap[s.equipement_id] || '—'
+        s._lotNum    = lotMap[s.lot_id]   || '—'
+        s._shiftNom  = shiftMap[s.shift_id] || '—'
+        s._colisage  = s.colisage_confirme || null
+      })
+      trsHistoModal.sessions = sessions
+      trsHistoModal.loading  = false
     }
 
     var trsOpenComptage = function(p) {
@@ -2300,6 +2423,7 @@ export default {
       trsOpenArret, trsOnFamilleChange, trsOnSFChange, trsOnTypeChange, trsDoArret,
       trsClotureArret, trsOpenRequalif, trsOnRequalFamilleChange, trsOnRequalSFChange, trsDoRequalif,
       trsTheoCounters, trsCadenceModal, trsOpenCadence, trsDoChangeCadence,
+      trsHistoModal, trsEquipes_list, openTrsHisto, loadTrsHistoData,
       trsOpenComptage, trsDoComptage,
       trsOpenClose, trsDoClose,
     }
@@ -2468,6 +2592,19 @@ export default {
 .trs-cad-real-row { margin-top:10px; padding-top:10px; border-top:1px solid #0d2e20; }
 .trs-lbl-unit { font-size:9px; color:#4b5563; margin-left:4px; font-weight:400; }
 .tdp-cad-fb { font-size:9px; color:#6b7280; font-style:italic; margin-left:2px; }
+/* Bandeau TRS — bouton historique */
+.trs-band-histo { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); color:#d1d5db; border-radius:4px; padding:6px 10px; cursor:pointer; font-size:14px; margin-left:6px; }
+.trs-band-histo:hover { background:rgba(255,255,255,.16); }
+/* Modal historique */
+.trs-modal-lg { max-width:860px; width:95vw; }
+.trs-histo-filters { display:flex; gap:12px; margin-bottom:14px; align-items:flex-end; flex-wrap:wrap; }
+.trs-histo-wrap { overflow-x:auto; max-height:55vh; overflow-y:auto; border:1px solid #1f2937; border-radius:4px; }
+.trs-histo-table { width:100%; border-collapse:collapse; font-size:12px; }
+.trs-histo-table th { text-align:left; padding:8px 10px; background:#111827; color:#9ca3af; font-size:10px; text-transform:uppercase; letter-spacing:.5px; font-weight:600; white-space:nowrap; position:sticky; top:0; z-index:1; }
+.trs-histo-table td { padding:8px 10px; border-bottom:1px solid #1f2937; color:#e5e7eb; white-space:nowrap; }
+.trs-histo-table tr:last-child td { border-bottom:none; }
+.trs-histo-table tr:hover td { background:rgba(255,255,255,.04); }
+.trs-h-trs { font-weight:800; text-align:right; }
 .trs-lbl-src  { font-size:9px; color:#10b981; margin-left:6px; }
 
 /* ── Comptage théo/réel dans le panel TRS ── */
