@@ -359,8 +359,8 @@
           <!-- Métriques -->
           <div class="tdp-metrics" v-if="selectedTrsPanel.session">
             <div class="tdp-metric">
-              <div class="tdp-metric-val">{{selectedTrsPanel.session.colis_produits || 0}}</div>
-              <div class="tdp-metric-lbl">Colis prod.</div>
+              <div class="tdp-metric-val">{{selectedTrsPanel.session.colisage_confirme && selectedTrsPanel.session.colis_produits ? (selectedTrsPanel.session.colis_produits * selectedTrsPanel.session.colisage_confirme).toLocaleString('fr-FR') : (selectedTrsPanel.session.colis_produits || 0)}}</div>
+              <div class="tdp-metric-lbl">{{selectedTrsPanel.session.colisage_confirme ? 'Boîtes prod.' : 'Colis prod.'}}</div>
             </div>
             <div class="tdp-metric">
               <div class="tdp-metric-val">{{selectedTrsPanel.session.objectif_boites || '—'}}</div>
@@ -385,10 +385,11 @@
           </div>
 
           <!-- ── Comptage théorique vs réel ── -->
-          <div class="tdp-comptage-bloc" v-if="selectedTrsPanel.session && selectedTrsPanel.cadences && selectedTrsPanel.cadences.length">
+          <div class="tdp-comptage-bloc" v-if="selectedTrsPanel.session && trsTheoCounters[selectedTrsPanel.equip.id]">
             <div class="tdp-cad-line">
               <span class="tdp-cad-ic">⚙</span>
-              <span class="tdp-cad-val">{{trsTheoCounters[selectedTrsPanel.equip.id]?.currentCadence || selectedTrsPanel.cadences[selectedTrsPanel.cadences.length-1]?.cadence_bpm || '—'}} b/min</span>
+              <span class="tdp-cad-val">{{trsTheoCounters[selectedTrsPanel.equip.id]?.currentCadence || '—'}} b/min</span>
+              <span v-if="trsTheoCounters[selectedTrsPanel.equip.id]?.isFallback" class="tdp-cad-fb"> (obj.)</span>
               <span v-if="selectedTrsPanel.session.colisage_confirme" class="tdp-cad-col"> · {{selectedTrsPanel.session.colisage_confirme}} btes/colis</span>
               <button class="tdp-cad-edit" @click="trsOpenCadence(selectedTrsPanel)" v-if="selectedTrsPanel.session.statut==='En cours'">✎</button>
             </div>
@@ -834,20 +835,20 @@
     <div class="trs-overlay" v-if="trsComptageModal.show" @click.self="trsComptageModal.show=false">
       <div class="trs-modal trs-modal-sm">
         <div class="trs-modal-hd">+ Saisie comptage — {{trsComptageModal.panel?.equip.nom_equipement}}</div>
-        <div class="trs-modal-ctx" v-if="trsComptageModal.panel?.session">Session en cours · Colis : <strong>{{trsComptageModal.panel.session.colis_produits}}</strong></div>
+        <div class="trs-modal-ctx" v-if="trsComptageModal.panel?.session">Session en cours · Boîtes déclarées : <strong>{{trsComptageModal.panel.session.colis_produits && trsComptageModal.panel.session.colisage_confirme ? trsComptageModal.panel.session.colis_produits * trsComptageModal.panel.session.colisage_confirme : (trsComptageModal.panel.session.colis_produits || 0)}}</strong></div>
         <div class="trs-form-row">
           <div class="trs-form-field"><label class="trs-lbl">Heure relevé</label><input type="time" v-model="trsComptageModal.heure" class="trs-inp" step="60" /></div>
-          <div class="trs-form-field"><label class="trs-lbl">Colis cumulés *</label><input type="number" v-model.number="trsComptageModal.colis" class="trs-inp" placeholder="ex: 1250" min="0" /></div>
+          <div class="trs-form-field"><label class="trs-lbl">Boîtes cumulées * <span class="trs-lbl-unit">btes</span></label><input type="number" v-model.number="trsComptageModal.boites" class="trs-inp" placeholder="ex: 37500" min="0" /></div>
         </div>
         <div class="trs-form-row">
           <div class="trs-form-field"><label class="trs-lbl">Rebuts cumulés</label><input type="number" v-model.number="trsComptageModal.rebuts" class="trs-inp" placeholder="0" min="0" /></div>
         </div>
-        <div class="trs-cad-calc" v-if="trsComptageModal.panel?.session && trsComptageModal.colis">
+        <div class="trs-cad-calc" v-if="trsComptageModal.panel?.session && trsComptageModal.boites">
           <div class="trs-cc-row"><span class="trs-cp-lbl">Cadence calculée</span><span class="trs-cp-val">{{trsComputeCadence(trsComptageModal)}} b/min</span></div>
           <div class="trs-cc-row"><span class="trs-cp-lbl">vs objectif</span><span class="trs-cp-val" :class="trsComputeCadenceVsObj(trsComptageModal) >= 100 ? 'trs-ok' : 'trs-bad'">{{trsComputeCadenceVsObj(trsComptageModal)}}%</span></div>
         </div>
         <div class="trs-modal-acts">
-          <button class="trs-btn-save" @click="trsDoComptage" :disabled="trsComptageModal.saving || !trsComptageModal.colis">{{trsComptageModal.saving ? '…' : 'Enregistrer'}}</button>
+          <button class="trs-btn-save" @click="trsDoComptage" :disabled="trsComptageModal.saving || !trsComptageModal.boites">{{trsComptageModal.saving ? '…' : 'Enregistrer'}}</button>
           <button class="trs-btn-cancel" @click="trsComptageModal.show=false">Annuler</button>
         </div>
       </div>
@@ -860,10 +861,10 @@
         <div class="trs-modal-ctx" v-if="trsCloseModal.panel?.session">Lot {{trsCloseModal.panel.lotNum}} · Démarré à {{trsCloseModal.panel.session.heure_debut}}</div>
         <div class="trs-form-row">
           <div class="trs-form-field"><label class="trs-lbl">Heure fin *</label><input type="time" v-model="trsCloseModal.heure_fin" class="trs-inp" step="60" /></div>
-          <div class="trs-form-field"><label class="trs-lbl">Colis produits *</label><input type="number" v-model.number="trsCloseModal.colis_produits" class="trs-inp" min="0" /></div>
+          <div class="trs-form-field"><label class="trs-lbl">Boîtes produites * <span class="trs-lbl-unit">btes</span></label><input type="number" v-model.number="trsCloseModal.colis_produits" class="trs-inp" min="0" /></div>
         </div>
         <div class="trs-form-row">
-          <div class="trs-form-field"><label class="trs-lbl">Colis rebuts</label><input type="number" v-model.number="trsCloseModal.colis_rebuts" class="trs-inp" min="0" /></div>
+          <div class="trs-form-field"><label class="trs-lbl">Boîtes rebuts <span class="trs-lbl-unit">btes</span></label><input type="number" v-model.number="trsCloseModal.colis_rebuts" class="trs-inp" min="0" /></div>
         </div>
         <label class="trs-lbl">Observation</label>
         <input v-model="trsCloseModal.observation" class="trs-inp" placeholder="Optionnel…" />
@@ -1204,7 +1205,7 @@ export default {
     var trsStartModal    = reactive({ show:false, equip:null, lotSearch:'', lotSuggestions:[], lot:null, shift_id:null, equipe_id:null, date:'', heure_debut:'', cadenceObj:null, cadenceReel:null, colisage:null, colisageSrc:'', error:'', saving:false })
     var trsArretModal    = reactive({ show:false, panel:null, famille_id:null, sf_id:null, type_id:null, sousFamilles:[], types:[], selectedType:null, familleCouleur:'#EF4444', heure_debut:'', commentaire:'', error:'', saving:false })
     var trsRequalModal   = reactive({ show:false, panel:null, famille_id:null, sf_id:null, type_id:null, sousFamilles:[], types:[], saving:false })
-    var trsComptageModal = reactive({ show:false, panel:null, heure:'', colis:null, rebuts:0, saving:false })
+    var trsComptageModal = reactive({ show:false, panel:null, heure:'', boites:null, rebuts:0, saving:false })
     var trsCloseModal    = reactive({ show:false, panel:null, heure_fin:'', colis_produits:null, colis_rebuts:0, observation:'', error:'', saving:false })
     var trsCadenceModal  = reactive({ show:false, panel:null, cadence:null, saving:false })
     var trsTheoCounters  = ref({})
@@ -1253,12 +1254,12 @@ export default {
 
     var trsComputeCadence = function(m) {
       var s = m.panel && m.panel.session
-      if (!s || !m.colis || !s.heure_debut || !s.date) return '—'
+      if (!s || !m.boites || !s.heure_debut || !s.date) return '—'
       var start = trsToDateTime(s.date, s.heure_debut)
       if (!start) return '—'
       var minElapsed = (new Date() - start) / 60000
       if (minElapsed <= 0) return '—'
-      return (m.colis / minElapsed).toFixed(1)
+      return (m.boites / minElapsed).toFixed(1)
     }
 
     var trsComputeCadenceVsObj = function(m) {
@@ -1301,6 +1302,15 @@ export default {
           if (start) newT[p.equip.id] = trsFormatElapsed(n - start)
           // ── Compteur théorique (cadence × temps_net segmenté) ──
           var cads = p.cadences || []
+          var isFallbackCad = false
+          if (cads.length === 0) {
+            var fallCad = p.session.cadence_objectif_snapshot || (p.equip && p.equip.cadence_objectif_boite_min)
+            var fallStart = trsToDateTime(p.session.date, p.session.heure_debut)
+            if (fallCad && fallStart) {
+              cads = [{ cadence_bpm: fallCad, started_at: fallStart.toISOString() }]
+              isFallbackCad = true
+            }
+          }
           if (cads.length > 0) {
             var colisage  = p.session.colisage_confirme || null
             var arrets    = p.arrets || []
@@ -1338,7 +1348,8 @@ export default {
               colis: colisTheo,
               currentCadence: cads[cads.length - 1].cadence_bpm,
               needsComptage: needsComptage,
-              minsSinceCpt: minsSinceCpt
+              minsSinceCpt: minsSinceCpt,
+              isFallback: isFallbackCad
             }
           }
         }
@@ -1398,8 +1409,10 @@ export default {
           if (eq2) { equipeNom = eq2.nom; equipeCouleur = eq2.couleur }
         }
         var rendPct = 0
-        if (session && session.objectif_boites && session.colis_produits)
-          rendPct = Math.round((session.colis_produits / session.objectif_boites) * 100)
+        if (session && session.objectif_boites && session.colis_produits) {
+          var boitesProdR = session.colisage_confirme ? session.colis_produits * session.colisage_confirme : session.colis_produits
+          rendPct = Math.round((boitesProdR / session.objectif_boites) * 100)
+        }
         newPanels.push({ equip: eq, session, activeArret, arrets: panelArrets, cadences, lastComptage, lotNum, lotProd, shiftNom, shiftCouleur, equipeNom, equipeCouleur, rendPct })
       }
       trsPanels.value = newPanels
@@ -1612,28 +1625,35 @@ export default {
 
     var trsOpenComptage = function(p) {
       trsComptageModal.panel  = p; trsComptageModal.heure  = trsNowTime()
-      trsComptageModal.colis  = p.session ? p.session.colis_produits : null
-      trsComptageModal.rebuts = p.session ? p.session.colis_rebuts   : 0
+      var colisageCpt = p.session ? p.session.colisage_confirme : null
+      trsComptageModal.boites = p.session ? (colisageCpt && p.session.colis_produits ? p.session.colis_produits * colisageCpt : p.session.colis_produits) : null
+      trsComptageModal.rebuts = p.session ? (colisageCpt && p.session.colis_rebuts ? p.session.colis_rebuts * colisageCpt : (p.session.colis_rebuts || 0)) : 0
       trsComptageModal.saving = false; trsComptageModal.show = true
     }
 
     var trsDoComptage = async function() {
-      if (!trsComptageModal.colis) return
+      if (!trsComptageModal.boites) return
       trsComptageModal.saving = true
       var s = trsComptageModal.panel.session
+      var colisageCpt2 = s.colisage_confirme || null
+      var boitesCpt = trsComptageModal.boites
+      var colisCpt  = (colisageCpt2 && colisageCpt2 > 0) ? Math.floor(boitesCpt / colisageCpt2) : boitesCpt
+      var rebutsBte = trsComptageModal.rebuts || 0
+      var rebuts    = (colisageCpt2 && colisageCpt2 > 0) ? Math.floor(rebutsBte / colisageCpt2) : rebutsBte
       var start = trsToDateTime(s.date, s.heure_debut)
       var minEl = start ? (new Date() - start) / 60000 : null
-      var cadInst = (minEl && minEl > 0) ? parseFloat((trsComptageModal.colis / minEl).toFixed(2)) : null
-      await supabase.from('production_comptages').insert({ session_id: s.id, heure: trsComptageModal.heure+':00', colis_cumules: trsComptageModal.colis, rebuts_cumules: trsComptageModal.rebuts||0, cadence_instantanee: cadInst })
-      await supabase.from('production_sessions').update({ colis_produits: trsComptageModal.colis, colis_rebuts: trsComptageModal.rebuts||0, cadence_reelle_boite_min: cadInst, updated_at: new Date().toISOString() }).eq('id', s.id)
+      var cadInst = (minEl && minEl > 0) ? parseFloat((boitesCpt / minEl).toFixed(2)) : null
+      await supabase.from('production_comptages').insert({ session_id: s.id, heure: trsComptageModal.heure+':00', colis_cumules: colisCpt, rebuts_cumules: rebuts, cadence_instantanee: cadInst })
+      await supabase.from('production_sessions').update({ colis_produits: colisCpt, colis_rebuts: rebuts, cadence_reelle_boite_min: cadInst, updated_at: new Date().toISOString() }).eq('id', s.id)
       trsComptageModal.show = false; trsComptageModal.saving = false
       await loadTrsFull()
     }
 
     var trsOpenClose = function(p) {
       trsCloseModal.panel = p; trsCloseModal.heure_fin = trsNowTime()
-      trsCloseModal.colis_produits = p.session ? p.session.colis_produits : null
-      trsCloseModal.colis_rebuts   = p.session ? p.session.colis_rebuts   : 0
+      var colisageClose = p.session ? p.session.colisage_confirme : null
+      trsCloseModal.colis_produits = p.session ? (colisageClose && p.session.colis_produits ? p.session.colis_produits * colisageClose : p.session.colis_produits) : null
+      trsCloseModal.colis_rebuts   = p.session ? (colisageClose && p.session.colis_rebuts ? p.session.colis_rebuts * colisageClose : (p.session.colis_rebuts || 0)) : 0
       trsCloseModal.observation = ''; trsCloseModal.error = ''; trsCloseModal.saving = false; trsCloseModal.show = true
     }
 
@@ -1647,11 +1667,17 @@ export default {
       var arretPlan  = arrs.reduce(function(a,x){ return x.est_planifie && !x.est_pause ? a+(x.duree_minutes||0) : a }, 0)
       var pauses     = arrs.reduce(function(a,x){ return x.est_pause ? a+(x.duree_minutes||0) : a }, 0)
       var to = totalMin - pauses; var tf = to - arretImpro
-      var total = trsCloseModal.colis_produits||0; var good = total - (trsCloseModal.colis_rebuts||0)
+      // colis_produits ici contient des BOITES (l'opérateur saisit des boites)
+      var boitesClose = trsCloseModal.colis_produits||0
+      var rebuts_bte  = trsCloseModal.colis_rebuts||0
+      var colisageClose2 = s.colisage_confirme || null
+      var colisClose  = (colisageClose2 && colisageClose2 > 0) ? Math.floor(boitesClose / colisageClose2) : boitesClose
+      var colisRbtClose = (colisageClose2 && colisageClose2 > 0) ? Math.floor(rebuts_bte / colisageClose2) : rebuts_bte
+      var total = boitesClose; var good = total - rebuts_bte
       var cadNom = s.cadence_nominale_snapshot || eq.cadence_nominale_boite_min || 0
       var cadReelle = (totalMin>0 && total>0) ? parseFloat((total/totalMin).toFixed(2)) : null
       var D   = to>0 ? Math.round((tf/to)*100) : null
-      // Performance = colisTotal / (cadNom × tf) — identique à la preview OEE
+      // Performance = boitesTotal / (cadNom × tf) — cadNom en b/min, tf en min
       var P   = (tf>0 && cadNom>0) ? Math.min(100, Math.round((total/(cadNom*tf))*100)) : null
       var Q   = total>0 ? Math.round((good/total)*100) : null
       var TRS = (D!=null && P!=null && Q!=null) ? Math.round((D/100)*(P/100)*(Q/100)*100) : null
@@ -1664,7 +1690,7 @@ export default {
       }
       var r = await supabase.from('production_sessions').update({
         heure_fin: trsCloseModal.heure_fin+':00', statut: 'Clôturé',
-        colis_produits: total, colis_rebuts: trsCloseModal.colis_rebuts||0,
+        colis_produits: colisClose, colis_rebuts: colisRbtClose,
         cadence_reelle_boite_min: cadReelle, rendement_pct: rendPct,
         temps_ouverture_min: to, temps_fonctionnement_min: tf,
         temps_arret_planifie_min: arretPlan, temps_arret_impro_min: arretImpro, temps_pause_min: pauses,
@@ -2441,6 +2467,7 @@ export default {
 /* ── TRS Start modal extras ── */
 .trs-cad-real-row { margin-top:10px; padding-top:10px; border-top:1px solid #0d2e20; }
 .trs-lbl-unit { font-size:9px; color:#4b5563; margin-left:4px; font-weight:400; }
+.tdp-cad-fb { font-size:9px; color:#6b7280; font-style:italic; margin-left:2px; }
 .trs-lbl-src  { font-size:9px; color:#10b981; margin-left:6px; }
 
 /* ── Comptage théo/réel dans le panel TRS ── */
