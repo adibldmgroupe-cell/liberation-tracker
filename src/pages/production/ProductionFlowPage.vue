@@ -401,7 +401,7 @@
               <div class="tdp-cpt-row">
                 <div class="tdp-cpt-cell tdp-cpt-lbl">Boîtes</div>
                 <div class="tdp-cpt-cell tdp-cpt-theo">{{trsTheoCounters[selectedTrsPanel.equip.id]?.boites != null ? trsTheoCounters[selectedTrsPanel.equip.id].boites.toLocaleString('fr-FR') : '—'}}</div>
-                <div class="tdp-cpt-cell tdp-cpt-reel">—</div>
+                <div class="tdp-cpt-cell tdp-cpt-reel">{{selectedTrsPanel.session.colis_produits && selectedTrsPanel.session.colisage_confirme ? (selectedTrsPanel.session.colis_produits * selectedTrsPanel.session.colisage_confirme).toLocaleString('fr-FR') : '—'}}</div>
               </div>
               <div class="tdp-cpt-row">
                 <div class="tdp-cpt-cell tdp-cpt-lbl">Colis</div>
