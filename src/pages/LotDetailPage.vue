@@ -125,7 +125,7 @@
             <span v-if="a.result_ar_pending" class="aql-ar-badge">⏳ AR résultat</span>
           </div>
           <div class="aql-acts">
-            <button v-if="a.request_ar_pending && ['aq','lcq'].includes(userService) && canPerform('accuser_reception_aql_demande')" class="btn bg" @click="doAcknowledgeAqlRequest(a.id)">✓ AR Demande</button>
+            <button v-if="a.request_ar_pending && userService==='aq' && canPerform('accuser_reception_aql_demande')" class="btn bg" @click="doAcknowledgeAqlRequest(a.id)">✓ AR Demande</button>
             <button v-if="a.result_ar_pending && ['fabrication','conditionnement'].includes(userService) && canPerform('accuser_reception_aql_resultat')" class="btn bg" @click="doAcknowledgeAqlResult(a.id)">✓ AR Résultat</button>
             <button v-if="a.resultat==='en_attente' && !a.request_ar_pending && canPerform('realiser_aql')" class="btn bg" @click="doAqlConforme(a.id)">Conforme</button>
             <button v-if="a.resultat==='en_attente' && !a.request_ar_pending && canPerform('realiser_aql')" class="btn br" @click="doAqlNonConforme(a.id)">Non conforme</button>
