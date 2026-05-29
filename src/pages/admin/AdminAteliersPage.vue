@@ -5,7 +5,10 @@
       <div class="ph-tabs">
         <button class="tab-btn" :class="{active:tab==='processus'}" @click="tab='processus'">Processus ({{processus.length}})</button>
         <button class="tab-btn" :class="{active:tab==='ateliers'}" @click="tab='ateliers'">Ateliers ({{ateliers.length}})</button>
+        <button class="tab-btn tab-btn-gs" :class="{active:tab==='gs-ref'}" @click="switchGsTab('gs-ref')">📋 GS Référentiel ({{gsRows.length}})</button>
+        <button class="tab-btn tab-btn-gs" :class="{active:tab==='gs-cad'}" @click="switchGsTab('gs-cad')">⚡ GS Cadences ({{gsCadences.length}})</button>
       </div>
+      <button class="btn-gs-reload" v-if="tab==='gs-ref'||tab==='gs-cad'" @click="reloadGs" :disabled="gsLoading" :class="{spinning:gsLoading}">↻</button>
     </div>
 
     <!-- ══════════ PROCESSUS ══════════ -->
@@ -119,6 +122,99 @@
       </div>
     </div>
 
+    <!-- ══════════ GS RÉFÉRENTIEL ══════════ -->
+    <div v-show="tab==='gs-ref'">
+      <div class="gs-filters">
+        <select class="t-sel" v-model="gsFilterProc">
+          <option value="">Tous les processus</option>
+          <option v-for="p in gsProcessusUniques" :key="p" :value="p">{{p}}</option>
+        </select>
+        <input class="t-inp" v-model="gsSearch" placeholder="Chercher nom, équipement, N°…" />
+      </div>
+      <div v-if="gsLoading" class="gs-loading">Chargement GS…</div>
+      <template v-else>
+        <div v-for="bloc in gsRefGrouped" :key="bloc.nom" style="margin-bottom:20px">
+          <div class="gs-proc-hd">
+            <span class="proc-dot" :style="{background:bloc.couleur}"></span>
+            {{bloc.nom}}
+            <span class="proc-count">({{bloc.rows.length}})</span>
+          </div>
+          <div class="table-wrap">
+            <table class="admin-table gs-table">
+              <thead>
+                <tr>
+                  <th>N° salle</th><th>id Supabase</th><th>Désignation</th>
+                  <th>N° Op.</th><th>Opération</th><th>Équipement</th>
+                  <th class="gs-r">TRS cible</th><th class="gs-r">TO shift</th>
+                  <th class="gs-r">Pause</th><th class="gs-r">VDLP</th>
+                  <th class="gs-r">VDLC</th><th class="gs-r">Chgt fmt</th>
+                  <th class="gs-r">Régl.</th><th class="gs-r">Micro-arr.</th><th class="gs-r">Maint.</th>
+                  <th>Code SVG</th><th>Dans schéma</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="r in bloc.rows" :key="r.room_code">
+                  <td class="gs-mono">{{r.atelier_id}}</td>
+                  <td class="gs-mono" :class="{'gs-missing':!r.id_supabase}">{{r.id_supabase||'—'}}</td>
+                  <td>{{r.atelier_nom}}</td>
+                  <td class="gs-mono">{{r.op_number||'—'}}</td>
+                  <td>{{r.op_code||'—'}}</td>
+                  <td>{{r.equipment_name||'—'}}</td>
+                  <td class="gs-r">{{r.trs_cible_pct!=null?r.trs_cible_pct+'%':'—'}}</td>
+                  <td class="gs-r">{{r.to_shift_min!=null?r.to_shift_min+' min':'—'}}</td>
+                  <td class="gs-r">{{r.pause_min!=null?r.pause_min+' min':'—'}}</td>
+                  <td class="gs-r">{{r.vdlp_min!=null?r.vdlp_min+' min':'—'}}</td>
+                  <td class="gs-r">{{r.vdlc_min!=null?r.vdlc_min+' min':'—'}}</td>
+                  <td class="gs-r">{{r.chgt_format_min!=null?r.chgt_format_min+' min':'—'}}</td>
+                  <td class="gs-r">{{r.reglage_lancement_min!=null?r.reglage_lancement_min+' min':'—'}}</td>
+                  <td class="gs-r">{{r.micro_arrets_shift_min!=null?r.micro_arrets_shift_min+' min':'—'}}</td>
+                  <td class="gs-r">{{r.maint_curative_shift_min!=null?r.maint_curative_shift_min+' min':'—'}}</td>
+                  <td class="gs-mono">{{r.room_code}}</td>
+                  <td>
+                    <span v-if="r.inSchema" class="badge badge-on">✓ Schéma</span>
+                    <span v-else class="badge badge-off">⚠ Absent</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div v-if="gsRefGrouped.length===0" class="empty">Aucun atelier.</div>
+      </template>
+    </div>
+
+    <!-- ══════════ GS CADENCES ══════════ -->
+    <div v-show="tab==='gs-cad'">
+      <div class="gs-filters">
+        <input class="t-inp" v-model="gsCadSalle"   placeholder="N° salle…" style="max-width:120px" />
+        <input class="t-inp" v-model="gsCadArticle" placeholder="Code article…" />
+        <input class="t-inp" v-model="gsCadDesc"    placeholder="Description…" />
+      </div>
+      <div v-if="gsLoading" class="gs-loading">Chargement GS…</div>
+      <div class="table-wrap" v-else>
+        <table class="admin-table gs-table">
+          <thead>
+            <tr>
+              <th>N° salle</th><th>Code article</th><th>Description</th>
+              <th>Équipement</th><th class="gs-r">Taille lot</th><th class="gs-r">Cadence obj. (b/min)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(c,i) in gsCadencesFiltrees" :key="i">
+              <td class="gs-mono">{{c.numero_atelier}}</td>
+              <td class="gs-mono">{{c.code_article}}</td>
+              <td>{{c.description}}</td>
+              <td>{{c.equipment_name}}</td>
+              <td class="gs-r">{{c.taille_lot!=null?c.taille_lot.toLocaleString('fr-FR'):'—'}}</td>
+              <td class="gs-r gs-cad-val">{{c.cadence_objectif_b_min!=null?c.cadence_objectif_b_min:'—'}}</td>
+            </tr>
+            <tr v-if="!gsCadencesFiltrees.length"><td colspan="6" class="empty">Aucune cadence.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="gs-footer">{{gsCadencesFiltrees.length}} / {{gsCadences.length}} entrée(s)</div>
+    </div>
+
     <!-- ══ MODAL PROCESSUS ══ -->
     <div class="overlay" v-if="procModal.show" @click.self="procModal.show=false">
       <div class="modal">
@@ -185,6 +281,28 @@
 <script>
 import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../../supabase'
+import { getAll as gsGetAll, clearCache as gsClearCache } from '../../services/googleSheets'
+
+// Codes présents dans NODES_DEF de ProductionFlowPage (source de vérité schéma SVG)
+var SCHEMA_CODES_SET = new Set([
+  'p464','p471',
+  'n140','n138','n131','n143',
+  'n137','n134','n136','n128',
+  'n425','n448','n445','n429',
+  'n442','n436',
+  'n200','n206',
+  'c149','c148','c147','c146','c220','c222','c223',
+  'n416','n155',
+  'n101','n102','n103','n104','n105',
+])
+
+var GS_PROC_COLORS = {
+  'Fabrication':                      '#7c3aed',
+  'Conditionnement':                  '#059669',
+  'PF en attente de livraison':       '#d97706',
+  'SF en attente de conditionnement': '#2563eb',
+}
+var GS_PROC_ORDER = ['Fabrication','Conditionnement','PF en attente de livraison','SF en attente de conditionnement']
 
 export default {
   setup() {
@@ -317,6 +435,102 @@ export default {
       await loadAll()
     }
 
+    // ─── GS DATA ──────────────────────────────────────────────────
+    var gsLoading  = ref(false)
+    var gsRows     = ref([])      // onglet 1
+    var gsCadences = ref([])      // onglet 2
+
+    // Filtres GS onglet 1
+    var gsFilterProc = ref('')
+    var gsSearch     = ref('')
+
+    // Filtres GS onglet 2
+    var gsCadSalle   = ref('')
+    var gsCadArticle = ref('')
+    var gsCadDesc    = ref('')
+
+    var loadGs = async function() {
+      gsLoading.value = true
+      var gsData = await gsGetAll()
+      gsRows.value = (gsData.operationsMaster || []).map(function(om) {
+        return {
+          processus_nom:            om.processus,
+          atelier_id:               parseInt((om.room_code || '').replace(/^[a-z]/, '')),
+          id_supabase:              om.id,
+          atelier_nom:              om.room_name,
+          op_number:                om.op_number,
+          op_code:                  om.op_code,
+          equipment_name:           om.equipment_name,
+          trs_cible_pct:            om.trs_cible_pct,
+          to_shift_min:             om.to_shift_min,
+          pause_min:                om.pause_min,
+          vdlp_min:                 om.vdlp_min,
+          vdlc_min:                 om.vdlc_min,
+          chgt_format_min:          om.chgt_format_min,
+          reglage_lancement_min:    om.reglage_lancement_min,
+          micro_arrets_shift_min:   om.micro_arrets_shift_min,
+          maint_curative_shift_min: om.maint_curative_shift_min,
+          room_code:                om.room_code,
+          inSchema:                 SCHEMA_CODES_SET.has(om.room_code),
+        }
+      })
+      gsCadences.value = gsData.cadences || []
+      gsLoading.value = false
+    }
+
+    var reloadGs = async function() {
+      gsClearCache()
+      await loadGs()
+    }
+
+    var switchGsTab = async function(t) {
+      tab.value = t
+      if (!gsRows.value.length && !gsLoading.value) await loadGs()
+    }
+
+    var gsProcessusUniques = computed(function() {
+      var seen = new Set()
+      gsRows.value.forEach(function(r) { seen.add(r.processus_nom) })
+      return GS_PROC_ORDER.filter(function(p) { return seen.has(p) })
+        .concat(Array.from(seen).filter(function(p) { return !GS_PROC_ORDER.includes(p) }))
+    })
+
+    var gsRefFiltered = computed(function() {
+      var q = gsSearch.value.toLowerCase()
+      return gsRows.value.filter(function(r) {
+        if (gsFilterProc.value && r.processus_nom !== gsFilterProc.value) return false
+        if (q) {
+          var hay = [r.atelier_nom, r.equipment_name, String(r.atelier_id), r.op_code].join(' ').toLowerCase()
+          if (!hay.includes(q)) return false
+        }
+        return true
+      })
+    })
+
+    var gsRefGrouped = computed(function() {
+      var map = {}
+      gsRefFiltered.value.forEach(function(r) {
+        if (!map[r.processus_nom]) {
+          map[r.processus_nom] = { nom: r.processus_nom, couleur: GS_PROC_COLORS[r.processus_nom] || '#888', rows: [] }
+        }
+        map[r.processus_nom].rows.push(r)
+      })
+      return GS_PROC_ORDER.filter(function(p) { return map[p] }).map(function(p) { return map[p] })
+        .concat(Object.keys(map).filter(function(p) { return !GS_PROC_ORDER.includes(p) }).map(function(p) { return map[p] }))
+    })
+
+    var gsCadencesFiltrees = computed(function() {
+      var qs = gsCadSalle.value.trim()
+      var qa = gsCadArticle.value.toLowerCase()
+      var qd = gsCadDesc.value.toLowerCase()
+      return gsCadences.value.filter(function(c) {
+        if (qs && String(c.numero_atelier) !== qs) return false
+        if (qa && !(c.code_article || '').toLowerCase().includes(qa)) return false
+        if (qd && !(c.description || '').toLowerCase().includes(qd)) return false
+        return true
+      })
+    })
+
     onMounted(loadAll)
 
     return {
@@ -326,6 +540,11 @@ export default {
       getAteliersByProc, getAtelierCount, getActiveFabCount,
       openProc, saveProc, toggleActifProc,
       openAtelier, saveAtelier, toggleActifAtelier,
+      // GS
+      gsLoading, gsRows, gsCadences,
+      gsFilterProc, gsSearch, gsCadSalle, gsCadArticle, gsCadDesc,
+      gsProcessusUniques, gsRefGrouped, gsCadencesFiltrees,
+      reloadGs, switchGsTab,
     }
   }
 }
@@ -410,6 +629,25 @@ export default {
 .btn-save { padding:7px 20px; border:none; border-radius:4px; background:#0a0a0a; color:#fff; font-size:13px; cursor:pointer; font-weight:500; }
 .btn-save:hover { background:#333; }
 .btn-save:disabled { opacity:.5; cursor:not-allowed; }
+/* ── GS onglets ── */
+.tab-btn-gs { border-color:#dbeafe; color:#1d4ed8; }
+.tab-btn-gs.active { background:#1d4ed8; border-color:#1d4ed8; }
+.btn-gs-reload { margin-left:auto; padding:5px 10px; border:1px solid #d1d5db; border-radius:4px; background:#fff; font-size:15px; cursor:pointer; line-height:1; }
+.btn-gs-reload:disabled { opacity:.5; cursor:default; }
+.btn-gs-reload.spinning { animation:gs-spin .7s linear infinite; }
+@keyframes gs-spin { to { transform:rotate(360deg); } }
+
+.gs-filters { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+.t-inp { padding:6px 10px; border:1px solid #d1d5db; border-radius:4px; font-size:12px; }
+.gs-loading { padding:24px; color:#9ca3af; font-size:13px; }
+.gs-proc-hd { display:flex; align-items:center; gap:8px; padding:7px 12px; background:#f3f4f6; border-radius:4px 4px 0 0; border:1px solid #e5e7eb; border-bottom:none; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#374151; }
+.gs-table th { font-size:9px; }
+.gs-table td { font-size:11px; padding:5px 8px; }
+.gs-mono { font-family:monospace; font-size:10px; color:#6b7280; }
+.gs-r { text-align:right; }
+.gs-cad-val { font-weight:700; color:#059669; }
+.gs-missing { color:#ef4444 !important; }
+.gs-footer { font-size:11px; color:#9ca3af; text-align:right; padding:8px 0; }
 .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 @media(max-width:768px){
   .admin-table{min-width:480px}
