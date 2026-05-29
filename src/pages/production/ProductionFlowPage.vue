@@ -141,7 +141,13 @@
         <rect :x="TRACK_X" :y="ZONE_SS_Y" :width="TRACKS_W" :height="ZONE_SS_H"
           rx="12" fill="#2563eb" opacity="0.06"/>
         <text :x="TRACK_X+12" :y="ZONE_SS_Y+22" fill="#2563eb" font-size="11"
-          font-weight="700" letter-spacing="2" opacity="0.8">FORMES SEMI-SOLIDES / OTC</text>
+          font-weight="700" letter-spacing="2" opacity="0.8">FORMES SEMI-SOLIDES</text>
+
+        <!-- Zone OTC -->
+        <rect :x="TRACK_X" :y="ZONE_OTC_Y" :width="5*STEP+NW" :height="ZONE_OTC_H"
+          rx="12" fill="#0891b2" opacity="0.06"/>
+        <text :x="TRACK_X+12" :y="ZONE_OTC_Y+22" fill="#0891b2" font-size="11"
+          font-weight="700" letter-spacing="2" opacity="0.8">OTC</text>
 
         <rect :x="COND_X" :y="COND_Y" :width="COND_W" :height="COND_H"
           rx="12" fill="#059669" opacity="0.06"/>
@@ -155,16 +161,11 @@
         <text :x="PESEE_X+12" :y="PESEE_Y+22" fill="#d97706" font-size="11"
           font-weight="700" letter-spacing="2" opacity="0.8">PESÉE</text>
 
-        <rect :x="INJ_X" :y="INJ_Y" :width="INJ_W" :height="INJ_H"
-          rx="12" fill="#db2777" opacity="0.06"/>
-        <text :x="INJ_X+12" :y="INJ_Y+22" fill="#db2777" font-size="11"
-          font-weight="700" letter-spacing="2" opacity="0.8">FORMES INJECTABLES</text>
-
-        <!-- Cond Secondaire label -->
-        <rect :x="COND_SEC_X" :y="COND_SEC_ZONE_Y" :width="COND_W" :height="COND_SEC_ZONE_H"
-          rx="8" fill="#059669" opacity="0.04" stroke="#059669" stroke-opacity="0.15" stroke-width="1"/>
-        <text :x="COND_SEC_X+COND_W/2" :y="COND_SEC_ZONE_Y+18" text-anchor="middle" fill="#059669"
-          font-size="9" font-weight="700" letter-spacing="2" opacity="0.7">COND. SECONDAIRE</text>
+        <!-- Zone SAS Livraison PF (à droite du COND) -->
+        <rect :x="COND_X+COND_W+10" :y="COND_Y" :width="NW+40" height="360"
+          rx="8" fill="#7c2d12" opacity="0.04" stroke="#7c2d12" stroke-opacity="0.15" stroke-width="1"/>
+        <text :x="COND_X+COND_W+10+(NW+40)/2" :y="COND_Y+18" text-anchor="middle" fill="#7c2d12"
+          font-size="9" font-weight="700" letter-spacing="1" opacity="0.7">LIVRAISON PF</text>
 
         <!-- ── FLÈCHES ── -->
         <g v-for="arr in arrows" :key="arr.id">
@@ -980,8 +981,8 @@ import { useTheme } from '../../composables/useTheme'
 import { getAll as gsGetAll } from '../../services/googleSheets'
 
 // ── LAYOUT CONSTANTS ──────────────────────────────────────────────
-var SVG_W  = 1540
-var SVG_H  = 960
+var SVG_W  = 1580
+var SVG_H  = 980
 var NW     = 148
 var NH     = 62
 var HGAP   = 30
@@ -1001,22 +1002,16 @@ var ZONE_FS_H = 580
 var ZONE_SS_Y = 630
 var ZONE_SS_H = 160
 
-// Conditionnement primaire column
-var COND_X = TRACK_X + TRACKS_W + 30     // ~1070
+// OTC zone (sous semi-solides)
+var ZONE_OTC_Y = 848
+var ZONE_OTC_H = 110
+var T_OTC_Y    = 900
+
+// Conditionnement primaire column — décalé à droite pour laisser place au stock SF
+var COND_X = TRACK_X + TRACKS_W + 110    // ~1150
 var COND_Y = 30
 var COND_W = 210
 var COND_H = 640
-
-// Conditionnement secondaire (below cond prim)
-var COND_SEC_X        = COND_X
-var COND_SEC_ZONE_Y   = 690
-var COND_SEC_ZONE_H   = 160
-
-// Injectable
-var INJ_X = COND_X
-var INJ_Y = 870
-var INJ_W = COND_W
-var INJ_H = 70
 
 // Track Y positions
 var T1Y = 100    // Gran01→Mél01→Comp01→Pellic01
@@ -1026,8 +1021,6 @@ var T3Y = 430    // Gran02→Mél03→Comp04→Pellic02
 var T4Y = 545    // Formulation→Gélules
 var T5Y = 700    // Semi-solides
 var COND_PRIM_Y = 100   // première ligne cond prim
-var COND_SEC_Y  = 720   // cond secondaire
-var INJ_NODE_Y  = 895
 
 // ── NODE BUILDER ─────────────────────────────────────────────────
 var buildNode = function(id, code, nom, zone, type, col, trackY, overX) {
@@ -1086,12 +1079,18 @@ var NODES_DEF = [
   buildNode('c222', '222', 'INTEGRA 520',    'cond_primaire', 'cond', 0, COND_PRIM_Y + 5*70,  COND_X+31),
   buildNode('c223', '223', 'IMA PG SUPER 2', 'cond_primaire', 'cond', 0, COND_PRIM_Y + 6*70,  COND_X+31),
 
-  // ── CONDITIONNEMENT SECONDAIRE
-  buildNode('c153', '153', 'Cond. Sec.',          'cond_secondaire', 'cond', 0, COND_SEC_Y,       COND_X+31),
-  buildNode('c154', '154', 'Cond. Sec. Ext.',     'cond_secondaire', 'cond', 0, COND_SEC_Y + 80,  COND_X+31),
+  // ── STOCK INTERMÉDIAIRE SF (tampon entre FAB et COND)
+  buildNode('n416', '416', 'Stock Inter. SF',    'stockage_sf', 'fab', 0, 400, 940),
 
-  // ── INJECTABLES
-  buildNode('i521', '521', 'Réception Injectables','injectable', 'cond', 0, INJ_NODE_Y, COND_X+31),
+  // ── SAS LIVRAISON PF (après COND primaire)
+  buildNode('n155', '155', 'SAS Livraison PF',   'stockage_pf', 'fab', 0, 310, COND_X + COND_W + 30),
+
+  // ── OTC — 5 lignes de mélange / remplissage
+  buildNode('n101', '101', 'Ligne OTC 01', 'otc', 'fab', 0, T_OTC_Y),
+  buildNode('n102', '102', 'Ligne OTC 02', 'otc', 'fab', 1, T_OTC_Y),
+  buildNode('n103', '103', 'Ligne OTC 03', 'otc', 'fab', 2, T_OTC_Y),
+  buildNode('n104', '104', 'Ligne OTC 04', 'otc', 'fab', 3, T_OTC_Y),
+  buildNode('n105', '105', 'Ligne OTC 05', 'otc', 'fab', 4, T_OTC_Y),
 ]
 
 // ── ARROWS ───────────────────────────────────────────────────────
@@ -1125,14 +1124,9 @@ var ARROWS_DEF = [
   { id: 'a19', from: 'n131', to: 'c222' },
   { id: 'a20', from: 'n445', to: 'c223' },
   { id: 'a21', from: 'n128', to: 'c147' },
-  // Cond Prim → Cond Sec
-  { id: 'a22', from: 'c149', to: 'c153' },
-  { id: 'a23', from: 'c148', to: 'c153' },
-  { id: 'a24', from: 'c147', to: 'c154' },
-  { id: 'a25', from: 'c146', to: 'c154' },
-  { id: 'a26', from: 'c220', to: 'c153' },
-  { id: 'a27', from: 'c222', to: 'c154' },
-  { id: 'a28', from: 'c223', to: 'c153' },
+  // Cond Prim → SAS Livraison PF
+  { id: 'a22', from: 'c149', to: 'n155' },
+  { id: 'a23', from: 'c223', to: 'n155' },
 ]
 
 // ── STEP LABELS ───────────────────────────────────────────────────
@@ -1872,7 +1866,9 @@ export default {
       { key: 'cond_primaire',   label: 'Cond. Primaire',        color: '#059669' },
       { key: 'cond_secondaire', label: 'Cond. Secondaire',      color: '#047857' },
       { key: 'pesee',           label: 'Zone Pesée',            color: '#d97706' },
-      { key: 'injectable',      label: 'Formes Injectables',    color: '#db2777' },
+      { key: 'otc',             label: 'OTC',                   color: '#0891b2' },
+      { key: 'stockage_sf',     label: 'Stock Inter. SF',       color: '#b45309' },
+      { key: 'stockage_pf',     label: 'SAS Livraison PF',      color: '#7c2d12' },
     ]
 
     var zoneColor = function(z) {
@@ -2426,10 +2422,9 @@ export default {
       theme,
       SVG_W, SVG_H, NW, NH,
       TRACK_X, TRACKS_W, ZONE_FS_Y, ZONE_FS_H, ZONE_SS_Y, ZONE_SS_H,
+      ZONE_OTC_Y, ZONE_OTC_H, STEP,
       COND_X, COND_Y, COND_W, COND_H,
-      COND_SEC_X, COND_SEC_ZONE_Y, COND_SEC_ZONE_H,
       PESEE_X, PESEE_Y, PESEE_W, PESEE_H,
-      INJ_X, INJ_Y, INJ_W, INJ_H,
       loading, legend, zones,
       allNodes, arrows, selectedNode,
       stepLabels: STEP_LABELS,
