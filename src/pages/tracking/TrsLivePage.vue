@@ -111,7 +111,7 @@
             <div class="td td-c">
               <template v-if="p.session">
                 <div class="cad-r mono clr-b">{{p.session.cadence_reelle_boite_min!=null?p.session.cadence_reelle_boite_min:'—'}}</div>
-                <div class="cad-o mono dim">/{{p.session.cadence_objectif_snapshot||p.equip.cadence_objectif_boite_min||'—'}}</div>
+                <div class="cad-o mono dim">/{{p.session.cadence_objectif_snapshot||'—'}}</div>
               </template>
               <span class="dim" v-else>—</span>
             </div>
@@ -221,13 +221,25 @@
         <div class="cadence-preview" v-if="startModal.equip">
           <div class="cp-row">
             <span class="cp-lbl">Cadence nominale</span>
-            <span class="cp-val">{{startModal.equip.cadence_nominale_boite_min || '—'}} boîtes/min</span>
+            <span class="cp-val">{{startModal.equip.cadence_nominale_boite_min || '—'}} b/min</span>
           </div>
           <div class="cp-row">
-            <span class="cp-lbl">Cadence objectif</span>
-            <span class="cp-val obj">{{startModal.cadenceObj || startModal.equip.cadence_objectif_boite_min || '—'}} boîtes/min</span>
+            <span class="cp-lbl">Cadence objectif (GS)</span>
+            <span class="cp-val obj">{{startModal.cadenceObj || '—'}} b/min</span>
           </div>
-          <div class="cp-row" v-if="startModal.cadenceObj || startModal.equip.cadence_objectif_boite_min">
+          <div class="cp-row">
+            <span class="cp-lbl">TO référence (GS)</span>
+            <span class="cp-val">{{startModal.equip.to_shift_ref || '—'}} min</span>
+          </div>
+          <div class="cp-row">
+            <span class="cp-lbl">Arrêts planifiés (GS)</span>
+            <span class="cp-val">{{gsTotalPlanRef(startModal.equip)}} min</span>
+          </div>
+          <div class="cp-row">
+            <span class="cp-lbl">Temps net production (GS)</span>
+            <span class="cp-val">{{gsNetRef(startModal.equip)}} min</span>
+          </div>
+          <div class="cp-row" v-if="startModal.cadenceObj">
             <span class="cp-lbl">Objectif / shift</span>
             <span class="cp-val obj">{{computeObjShift(startModal)}} boîtes</span>
           </div>
@@ -514,12 +526,24 @@ export default {
       return 'oee-red'
     }
 
+    // ── Helpers GS référence ──────────────────────────────────────
+    // Somme de TOUS les arrêts planifiés GS (pauses + VDLP + VDLC + Chgt + Réglage + Micro + Maint)
+    var gsTotalPlanRef = function(eq) {
+      if (!eq) return 0
+      return (eq.pause_ref||0) + (eq.vdlp_ref||0)  + (eq.vdlc_ref||0) +
+             (eq.chgt_format_ref||0) + (eq.reglage_ref||0) +
+             (eq.micro_arrets_ref||0) + (eq.maint_curative_ref||0)
+    }
+    // Temps net de production de référence = TO_GS - arrêts planifiés GS
+    var gsNetRef = function(eq) {
+      if (!eq) return 480
+      return Math.max(1, (eq.to_shift_ref||480) - gsTotalPlanRef(eq))
+    }
+
     var computeObjShift = function(m) {
-      var cadObj = m.cadenceObj || (m.equip && m.equip.cadence_objectif_boite_min)
+      var cadObj = m.cadenceObj
       if (!cadObj || !m.equip) return '—'
-      var to = m.equip.temps_ouverture_shift_min || 480
-      var pauses = m.equip.temps_pause_planifie_min || 0
-      return Math.round(cadObj * (to - pauses))
+      return Math.round(cadObj * gsNetRef(m.equip))
     }
 
     var computeCadence = function(m) {
@@ -544,35 +568,24 @@ export default {
       var s = m.panel && m.panel.session
       if (!s) return []
       var eq = m.panel.equip
-      var start = toDateTime(s.date, s.heure_debut)
-      var end   = toDateTime(s.date, m.heure_fin)
-      if (!start || !end || end <= start) return []
 
-      var totalMin = (end - start) / 60000
+      // TO net de référence GS (shift - tous arrêts planifiés GS)
+      var toNetRef = gsNetRef(eq)
+
+      // Seuls les arrêts imprévus (non planifiés, non pause) réduisent la disponibilité
       var arretImpro = (m.panel.arrets||[]).reduce(function(acc, a) {
-        if (!a.est_planifie && !a.est_pause) return acc + (a.duree_minutes || 0)
-        return acc
-      }, 0)
-      var arretPlan = (m.panel.arrets||[]).reduce(function(acc, a) {
-        if (a.est_planifie && !a.est_pause) return acc + (a.duree_minutes || 0)
-        return acc
-      }, 0)
-      var pauses = (m.panel.arrets||[]).reduce(function(acc, a) {
-        if (a.est_pause) return acc + (a.duree_minutes || 0)
-        return acc
+        return (!a.est_planifie && !a.est_pause) ? acc + (a.duree_minutes||0) : acc
       }, 0)
 
-      var to = totalMin - pauses
-      var tf = to - arretImpro
-      var boitesGood = (m.boites_produits || 0) - (m.boites_rebuts || 0)
+      var tf         = Math.max(0, toNetRef - arretImpro)
       var total      = m.boites_produits || 0
-      var cadNom     = s.cadence_nominale_snapshot || eq.cadence_nominale_boite_min || 0
-      var tn = cadNom > 0 && tf > 0 ? Math.min((total / cadNom), tf) : tf
+      var boitesGood = total - (m.boites_rebuts || 0)
+      var cadObj     = s.cadence_objectif_snapshot  // cadence GS onglet 2
 
-      var D = to > 0 ? Math.round((tf / to) * 100) : null
-      var P = tf > 0 && cadNom > 0 ? Math.round((tn / tf) * 100) : null
-      var Q = total > 0 ? Math.round((boitesGood / total) * 100) : null
-      var TRS = (D != null && P != null && Q != null) ? Math.round((D * P * Q) / 10000) : null
+      var D   = toNetRef > 0 ? Math.round((tf / toNetRef) * 100) : null
+      var P   = (tf > 0 && cadObj > 0) ? Math.min(150, Math.round((total / (cadObj * tf)) * 100)) : null
+      var Q   = total > 0 ? Math.round((boitesGood / total) * 100) : null
+      var TRS = (D != null && P != null && Q != null) ? Math.round((D/100) * (P/100) * (Q/100) * 100) : null
 
       return [
         { label:'Disponibilité', val: D },
@@ -613,9 +626,15 @@ export default {
         var numAtelier = equipToNum[eq.id] || null
         var gsRoom = numAtelier ? gsData.planRooms.find(function(r) { return r.id === numAtelier }) : null
         return Object.assign({}, eq, {
-          temps_ouverture_shift_min: (gsRoom && gsRoom.to_shift_min) || 480,
-          temps_pause_planifie_min:  (gsRoom && gsRoom.pause_min) || 0,
-          numero_atelier:            numAtelier
+          numero_atelier:     numAtelier,
+          to_shift_ref:       (gsRoom && gsRoom.to_shift_min)             || 480,
+          pause_ref:          (gsRoom && gsRoom.pause_min)                || 0,
+          vdlp_ref:           (gsRoom && gsRoom.vdlp_min)                 || 0,
+          vdlc_ref:           (gsRoom && gsRoom.vdlc_min)                 || 0,
+          chgt_format_ref:    (gsRoom && gsRoom.chgt_format_min)          || 0,
+          reglage_ref:        (gsRoom && gsRoom.reglage_lancement_min)    || 0,
+          micro_arrets_ref:   (gsRoom && gsRoom.micro_arrets_shift_min)   || 0,
+          maint_curative_ref: (gsRoom && gsRoom.maint_curative_shift_min) || 0,
         })
       })
       var newPanels = []
@@ -763,10 +782,9 @@ export default {
       if (!startModal.lot) { startModal.error = 'Sélectionner un lot.'; return }
       startModal.saving = true
       var eq = startModal.equip
-      var cadObj = startModal.cadenceObj || eq.cadence_objectif_boite_min
-      var to     = eq.temps_ouverture_shift_min || 480
-      var pauses = eq.temps_pause_planifie_min  || 0
-      var objBoites = cadObj ? Math.round(cadObj * (to - pauses)) : null
+      var cadObj    = startModal.cadenceObj           // GS onglet 2 uniquement
+      var netRef    = gsNetRef(eq)                    // TO_GS - arrêts planifiés GS
+      var objBoites = cadObj ? Math.round(cadObj * netRef) : null
 
       var r = await supabase.from('production_sessions').insert({
         lot_id:         startModal.lot.id,
@@ -973,23 +991,34 @@ export default {
       var end      = toDateTime(s.date, closeModal.heure_fin)
       var totalMin = (start && end) ? Math.round((end - start) / 60000) : 0
 
-      var arretImpro = arrs.reduce(function(a,x){ return !x.est_planifie && !x.est_pause ? a + (x.duree_minutes||0) : a }, 0)
-      var arretPlan  = arrs.reduce(function(a,x){ return x.est_planifie && !x.est_pause ? a + (x.duree_minutes||0) : a }, 0)
-      var pauses     = arrs.reduce(function(a,x){ return x.est_pause ? a + (x.duree_minutes||0) : a }, 0)
-      var to = totalMin - pauses
-      var tf = to - arretImpro
+      // Arrêts déclarés — classés par nature
+      var arretImpro = arrs.reduce(function(a,x){ return (!x.est_planifie && !x.est_pause) ? a+(x.duree_minutes||0) : a }, 0)
+      var arretPlan  = arrs.reduce(function(a,x){ return (x.est_planifie  && !x.est_pause) ? a+(x.duree_minutes||0) : a }, 0)
+      var pauses     = arrs.reduce(function(a,x){ return x.est_pause ? a+(x.duree_minutes||0) : a }, 0)
 
-      var total    = closeModal.boites_produits || 0
-      var good     = total - (closeModal.boites_rebuts || 0)
-      var cadNom   = s.cadence_nominale_snapshot || eq.cadence_nominale_boite_min || 0
+      // ── TRS basé sur données GS ────────────────────────────────────
+      // TO net de référence = GS to_shift_min − TOUS les arrêts planifiés GS
+      //   (pauses + VDLP + VDLC + Chgt format + Réglage + Micro-arrêts + Maint curative)
+      var toNetRef = gsNetRef(eq)
+
+      // Temps de fonctionnement = TO_net − arrêts imprévus déclarés
+      var tf = Math.max(0, toNetRef - arretImpro)
+
+      var total     = closeModal.boites_produits || 0
+      var good      = total - (closeModal.boites_rebuts || 0)
+      var cadObj    = s.cadence_objectif_snapshot       // cadence GS onglet 2
       var cadReelle = (totalMin > 0 && total > 0) ? parseFloat((total / totalMin).toFixed(2)) : null
-      var D = to > 0 ? Math.round((tf / to) * 100) : null
-      var P = (tf > 0 && cadNom > 0) ? Math.min(100, Math.round((cadReelle || 0) / cadNom * 100)) : null
+      var rendPct   = (s.objectif_boites && total) ? Math.round((total / s.objectif_boites) * 100) : null
+
+      // D = TF / TO_net_ref (GS)
+      var D = toNetRef > 0 ? Math.round((tf / toNetRef) * 100) : null
+      // P = boites_produites / (cadence_objectif_GS × TF)  — cap 150 %
+      var P = (tf > 0 && cadObj > 0) ? Math.min(150, Math.round((total / (cadObj * tf)) * 100)) : null
+      // Q = boites bonnes / boites totales
       var Q = total > 0 ? Math.round((good / total) * 100) : null
       var TRS = (D != null && P != null && Q != null) ? Math.round((D/100) * (P/100) * (Q/100) * 100) : null
-      var rendPct = (s.objectif_boites && total) ? Math.round((total / s.objectif_boites) * 100) : null
 
-      var colisage = s.colisage_confirme || 1
+      var colisage    = s.colisage_confirme || 1
       var colisFinal  = Math.floor(total / colisage)
       var colisRebuts = Math.floor((closeModal.boites_rebuts || 0) / colisage)
 
@@ -1009,7 +1038,7 @@ export default {
         colis_rebuts:             colisRebuts,
         cadence_reelle_boite_min: cadReelle,
         rendement_pct:            rendPct,
-        temps_ouverture_min:      to,
+        temps_ouverture_min:      toNetRef,        // référence GS
         temps_fonctionnement_min: tf,
         temps_arret_planifie_min: arretPlan,
         temps_arret_impro_min:    arretImpro,
@@ -1045,6 +1074,7 @@ export default {
       timers, arretTimers, filteredPanels,
       startModal, arretModal, requalModal, comptageModal, closeModal,
       panelClass, panelColor, oeeClass,
+      gsTotalPlanRef, gsNetRef,
       computeObjShift, computeCadence, computeCadenceVsObj, computeOEEPreview,
       loadAll,
       openStartModal, searchLots, selectLot, doStart,
