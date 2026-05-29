@@ -726,6 +726,9 @@
         </div>
         <div class="trs-cad-preview" v-if="trsStartModal.equip">
           <div class="trs-cp-row"><span class="trs-cp-lbl">Cadence obj. (GS)</span><span class="trs-cp-val trs-cp-obj">{{trsStartModal.cadenceObj || '—'}} b/min</span></div>
+          <div class="trs-cp-row"><span class="trs-cp-lbl">TO référence (GS)</span><span class="trs-cp-val" :class="trsStartModal.equip.to_shift_ref < 60 ? 'trs-cp-warn' : ''">{{trsStartModal.equip.to_shift_ref || '—'}} min</span></div>
+          <div class="trs-cp-row"><span class="trs-cp-lbl">Arrêts planifiés (GS)</span><span class="trs-cp-val">{{trsTotalPlanRef(trsStartModal.equip)}} min</span></div>
+          <div class="trs-cp-row"><span class="trs-cp-lbl">Temps net production</span><span class="trs-cp-val" :class="trsNetRef(trsStartModal.equip) < 60 ? 'trs-cp-warn' : 'trs-cp-obj'">{{trsNetRef(trsStartModal.equip)}} min</span></div>
           <div class="trs-cp-row" v-if="trsStartModal.cadenceObj"><span class="trs-cp-lbl">Objectif / shift</span><span class="trs-cp-val trs-cp-obj">{{trsComputeObjShift(trsStartModal)}} boîtes</span></div>
         </div>
         <!-- Cadence réelle opérateur + colisage -->
@@ -2496,7 +2499,7 @@ export default {
       trsPanels, trsShifts, trsEquipes, trsArretFamilles,
       trsClock, trsTimers, trsArretTimers, selectedTrsPanel,
       trsStartModal, trsArretModal, trsRequalModal, trsComptageModal, trsCloseModal,
-      trsPanelColor, trsOeeClass, trsComputeObjShift, trsComputeCadence, trsComputeCadenceVsObj, trsComputeOEEPreview,
+      trsPanelColor, trsOeeClass, trsComputeObjShift, trsTotalPlanRef, trsNetRef, trsComputeCadence, trsComputeCadenceVsObj, trsComputeOEEPreview,
       loadTrsFull,
       trsOpenStart, trsSearchLots, trsSelectLot, trsDoStart,
       trsOpenArret, trsOnFamilleChange, trsOnSFChange, trsOnTypeChange, trsDoArret,
@@ -2788,7 +2791,9 @@ export default {
 .trs-cp-row, .trs-cc-row { display:flex; justify-content:space-between; align-items:center; font-size:11px; }
 .trs-cp-lbl { color:#4b5563; }
 .trs-cp-val { color:#e2e8f0; font-weight:700; }
-.trs-cp-obj { color:#6ee7b7; }
+.trs-cp-obj  { color:#6ee7b7; }
+.trs-cp-warn { color:#f59e0b; font-weight:900; }
+.flow-page[data-theme="day"] .trs-cp-warn { color:#d97706; }
 .trs-ok { color:#10b981; font-weight:700; }
 .trs-bad { color:#ef4444; font-weight:700; }
 .trs-cascade { display:flex; align-items:flex-end; gap:6px; }
