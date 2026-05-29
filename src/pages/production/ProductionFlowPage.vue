@@ -737,10 +737,22 @@
           </div>
         </div>
         <div class="trs-cad-preview" v-if="trsStartModal.equip">
+          <!-- Type de transition détecté -->
+          <div class="trs-cp-row" v-if="trsStartModal.lot">
+            <span class="trs-cp-lbl">Type transition</span>
+            <span class="trs-cp-val" :class="trsStartModal.isPremierCampagne ? 'trs-cp-warn' : trsStartModal.hasVdlp ? '' : 'trs-cp-obj'">
+              {{trsStartModal.isPremierCampagne ? '🆕 Nouvelle campagne (VDLC + format + réglage)' : trsStartModal.hasVdlp ? '🔄 Lot suivant — même campagne (VDLP)' : '▶ Premier lancement (aucun arrêt de changement)'}}
+            </span>
+          </div>
           <div class="trs-cp-row"><span class="trs-cp-lbl">Cadence obj. (GS)</span><span class="trs-cp-val trs-cp-obj">{{trsStartModal.cadenceObj || '—'}} b/min</span></div>
           <div class="trs-cp-row"><span class="trs-cp-lbl">TO référence (GS)</span><span class="trs-cp-val" :class="trsStartModal.equip.to_shift_ref < 60 ? 'trs-cp-warn' : ''">{{trsStartModal.equip.to_shift_ref || '—'}} min</span></div>
-          <div class="trs-cp-row"><span class="trs-cp-lbl">Arrêts planifiés (GS)</span><span class="trs-cp-val">{{trsTotalPlanRef(trsStartModal.equip)}} min</span></div>
-          <div class="trs-cp-row"><span class="trs-cp-lbl">Temps net production</span><span class="trs-cp-val" :class="trsNetRef(trsStartModal.equip) < 60 ? 'trs-cp-warn' : 'trs-cp-obj'">{{trsNetRef(trsStartModal.equip)}} min</span></div>
+          <div class="trs-cp-row"><span class="trs-cp-lbl">Pause</span><span class="trs-cp-val">{{trsStartModal.equip.pause_ref || 0}} min</span></div>
+          <div class="trs-cp-row" v-if="trsStartModal.hasVdlp"><span class="trs-cp-lbl">VDLP</span><span class="trs-cp-val">{{trsStartModal.equip.vdlp_ref || 0}} min</span></div>
+          <div class="trs-cp-row" v-if="trsStartModal.isPremierCampagne"><span class="trs-cp-lbl">VDLC</span><span class="trs-cp-val">{{trsStartModal.equip.vdlc_ref || 0}} min</span></div>
+          <div class="trs-cp-row" v-if="trsStartModal.isPremierCampagne"><span class="trs-cp-lbl">Chgt format</span><span class="trs-cp-val">{{trsStartModal.equip.chgt_format_ref || 0}} min</span></div>
+          <div class="trs-cp-row" v-if="trsStartModal.isPremierCampagne"><span class="trs-cp-lbl">Réglage lancement</span><span class="trs-cp-val">{{trsStartModal.equip.reglage_ref || 0}} min</span></div>
+          <div class="trs-cp-row"><span class="trs-cp-lbl">Micro-arrêts (proportionnel)</span><span class="trs-cp-val">{{trsModalMicro}} min</span></div>
+          <div class="trs-cp-row"><span class="trs-cp-lbl">Temps net production</span><span class="trs-cp-val" :class="trsNetRef(trsStartModal.equip, trsModalOpts) < 60 ? 'trs-cp-warn' : 'trs-cp-obj'">{{trsNetRef(trsStartModal.equip, trsModalOpts)}} min</span></div>
           <div class="trs-cp-row" v-if="trsStartModal.cadenceObj"><span class="trs-cp-lbl">Objectif / shift</span><span class="trs-cp-val trs-cp-obj">{{trsComputeObjShift(trsStartModal)}} boîtes</span></div>
         </div>
         <!-- Cadence réelle opérateur + colisage -->
@@ -1282,13 +1294,15 @@ export default {
       trsMode.value = !trsMode.value
       if (trsMode.value) {
         await loadTrsFull()
-        trsClockInt   = setInterval(trsTick, 1000)
-        trsRefreshInt = setInterval(loadTrsFull, 60000)
+        trsClockInt    = setInterval(trsTick, 1000)
+        trsRefreshInt  = setInterval(loadTrsFull, 60000)
+        trsAutoStopInt = setInterval(trsAutoStopCheck, 60000)
         trsTick()
       } else {
         clearInterval(trsClockInt)
         clearInterval(trsRefreshInt)
-        trsClockInt = null; trsRefreshInt = null
+        clearInterval(trsAutoStopInt)
+        trsClockInt = null; trsRefreshInt = null; trsAutoStopInt = null
         selectedTrsPanel.value = null
       }
     }
@@ -1305,9 +1319,11 @@ export default {
     var selectedTrsPanel = ref(null)
     var trsClockInt      = null
     var trsRefreshInt    = null
+    var trsAutoStopInt   = null
+    var trsAutoClosing   = {}         // sessionId → true, évite les doubles triggers
     var trsLotTimeout    = null
 
-    var trsStartModal    = reactive({ show:false, equip:null, lotSearch:'', lotSuggestions:[], lot:null, shift_id:null, equipe_id:null, date:'', heure_debut:'', cadenceObj:null, cadenceReel:null, colisage:null, colisageSrc:'', error:'', saving:false })
+    var trsStartModal    = reactive({ show:false, equip:null, lotSearch:'', lotSuggestions:[], lot:null, shift_id:null, equipe_id:null, date:'', heure_debut:'', cadenceObj:null, cadenceReel:null, colisage:null, colisageSrc:'', isPremierCampagne:false, hasVdlp:false, error:'', saving:false })
     var trsArretModal    = reactive({ show:false, panel:null, famille_id:null, sf_id:null, type_id:null, sousFamilles:[], types:[], selectedType:null, familleCouleur:'#EF4444', heure_debut:'', commentaire:'', error:'', saving:false })
     var trsRequalModal   = reactive({ show:false, panel:null, famille_id:null, sf_id:null, type_id:null, sousFamilles:[], types:[], saving:false })
     var trsComptageModal = reactive({ show:false, panel:null, heure:'', boites:null, rebuts:0, saving:false })
@@ -1318,14 +1334,28 @@ export default {
     var trsTheoCounters  = ref({})
 
     // ── Helpers GS temps (miroir de TrsLivePage) ───────────────────
-    var trsTotalPlanRef = function(eq) {
+    // opts = { isPremierCampagne: bool, hasVdlp: bool }
+    // Règles :
+    //   pause      → toujours
+    //   vdlp       → seulement si même campagne, lot suivant (hasVdlp)
+    //   vdlc+format+reglage → seulement si premier lot d'une nouvelle campagne (isPremierCampagne)
+    //   micro      → proportionnel au temps net dispo : (TO - pause - transitions) × micro_GS / 480
+    var trsTotalPlanRef = function(eq, opts) {
       if (!eq) return 0
-      return (eq.pause_ref||0)+(eq.vdlp_ref||0)+(eq.vdlc_ref||0)+
-             (eq.chgt_format_ref||0)+(eq.reglage_ref||0)+(eq.micro_arrets_ref||0)+(eq.maint_curative_ref||0)
+      var isPremier = opts && opts.isPremierCampagne
+      var hasVdlp   = opts && opts.hasVdlp
+      var pause = eq.pause_ref || 0
+      var vdlp  = hasVdlp  ? (eq.vdlp_ref         || 0) : 0
+      var vdlc  = isPremier ? (eq.vdlc_ref          || 0) : 0
+      var chgt  = isPremier ? (eq.chgt_format_ref   || 0) : 0
+      var regl  = isPremier ? (eq.reglage_ref        || 0) : 0
+      var toBase = Math.max(0, (eq.to_shift_ref || 480) - pause - vdlp - vdlc - chgt - regl)
+      var micro  = Math.round(toBase * ((eq.micro_arrets_ref || 0) / 480))
+      return pause + vdlp + vdlc + chgt + regl + micro
     }
-    var trsNetRef = function(eq) {
+    var trsNetRef = function(eq, opts) {
       if (!eq) return 480
-      return Math.max(1, (eq.to_shift_ref||480) - trsTotalPlanRef(eq))
+      return Math.max(1, (eq.to_shift_ref || 480) - trsTotalPlanRef(eq, opts))
     }
 
     var trsNowTime = function() {
@@ -1365,8 +1395,23 @@ export default {
     var trsComputeObjShift = function(m) {
       var cadObj = m.cadenceObj
       if (!cadObj || !m.equip) return '—'
-      return Math.round(cadObj * trsNetRef(m.equip))
+      var opts = { isPremierCampagne: m.isPremierCampagne, hasVdlp: m.hasVdlp }
+      return Math.round(cadObj * trsNetRef(m.equip, opts))
     }
+
+    // Computed réactif pour les opts du modal démarrage (évite la répétition dans le template)
+    var trsModalOpts = computed(function() {
+      return { isPremierCampagne: trsStartModal.isPremierCampagne, hasVdlp: trsStartModal.hasVdlp }
+    })
+    var trsModalMicro = computed(function() {
+      var eq = trsStartModal.equip
+      if (!eq) return 0
+      var total = trsTotalPlanRef(eq, trsModalOpts.value)
+      var fixed = (eq.pause_ref || 0)
+        + (trsStartModal.hasVdlp         ? (eq.vdlp_ref        || 0) : 0)
+        + (trsStartModal.isPremierCampagne ? (eq.vdlc_ref        || 0) + (eq.chgt_format_ref || 0) + (eq.reglage_ref || 0) : 0)
+      return total - fixed
+    })
 
     var trsComputeCadence = function(m) {
       var s = m.panel && m.panel.session
@@ -1572,12 +1617,30 @@ export default {
     }
 
     // ── TRS Actions ───────────────────────────────────────────────
+    var trsDetectShift = function() {
+      var now = trsNowTime()   // "HH:MM"
+      var nowMin = parseInt(now.slice(0,2)) * 60 + parseInt(now.slice(3,5))
+      return trsShifts.value.find(function(s) {
+        var start = s.heure_debut.slice(0, 5)
+        var end   = s.heure_fin.slice(0, 5)
+        var sMin  = parseInt(start.slice(0,2)) * 60 + parseInt(start.slice(3,5))
+        var eMin  = parseInt(end.slice(0,2))   * 60 + parseInt(end.slice(3,5))
+        if (sMin < eMin) return nowMin >= sMin && nowMin < eMin          // shift normal
+        return nowMin >= sMin || nowMin < eMin                            // shift overnight
+      }) || null
+    }
+
     var trsOpenStart = function(equip) {
       trsStartModal.equip = equip; trsStartModal.lotSearch = ''; trsStartModal.lotSuggestions = []
-      trsStartModal.lot = null; trsStartModal.shift_id = null; trsStartModal.equipe_id = null
+      trsStartModal.lot = null; trsStartModal.equipe_id = null
       trsStartModal.date = new Date().toISOString().slice(0,10); trsStartModal.heure_debut = trsNowTime()
       trsStartModal.cadenceObj = null; trsStartModal.cadenceReel = null; trsStartModal.colisage = null; trsStartModal.colisageSrc = ''
-      trsStartModal.error = ''; trsStartModal.saving = false; trsStartModal.show = true
+      trsStartModal.isPremierCampagne = false; trsStartModal.hasVdlp = false
+      trsStartModal.error = ''; trsStartModal.saving = false
+      // Détection automatique du shift
+      var autoShift = trsDetectShift()
+      trsStartModal.shift_id = autoShift ? autoShift.id : null
+      trsStartModal.show = true
     }
 
     var trsSearchLots = async function() {
@@ -1602,9 +1665,9 @@ export default {
 
     var trsSelectLot = async function(l) {
       trsStartModal.lot = l; trsStartModal.lotSearch = l.numero_lot; trsStartModal.lotSuggestions = []
-      trsStartModal.cadenceObj = null
+      trsStartModal.cadenceObj = null; trsStartModal.isPremierCampagne = false; trsStartModal.hasVdlp = false
       if (trsStartModal.equip) {
-        // Lookup cadence depuis GS onglet 2 : (N°_atelier × code_article)
+        // Cadence GS onglet 2 : N°_atelier × code_article
         var numAtelier = trsStartModal.equip.numero_atelier
         if (numAtelier && l.code_article) {
           var match = trsCadences.value.find(function(c) {
@@ -1613,6 +1676,21 @@ export default {
           trsStartModal.cadenceObj = match ? match.cadence_objectif_b_min : null
         }
         if (!trsStartModal.cadenceReel && trsStartModal.cadenceObj) trsStartModal.cadenceReel = trsStartModal.cadenceObj
+        // Détection type de campagne : comparer avec la dernière session de cet équipement
+        if (l.code_article) {
+          var lastSR = await supabase.from('production_sessions')
+            .select('lot_id').eq('equipement_id', trsStartModal.equip.id)
+            .order('created_at', { ascending: false }).limit(1).maybeSingle()
+          if (!lastSR.error && lastSR.data && lastSR.data.lot_id) {
+            var lastLotR = await supabase.from('lots')
+              .select('products(code_article)').eq('id', lastSR.data.lot_id).maybeSingle()
+            var lastCode = lastLotR.data && lastLotR.data.products ? lastLotR.data.products.code_article : null
+            if (lastCode) {
+              if (lastCode === l.code_article) trsStartModal.hasVdlp = true           // même campagne → VDLP
+              else                              trsStartModal.isPremierCampagne = true // nouvelle campagne → VDLC+format+réglage
+            }
+          }
+        }
       }
       // Colisage : catalogue_produits en priorité, fallback products
       var colisage = null; var colisageSrc = ''
@@ -1631,8 +1709,9 @@ export default {
       if (!trsStartModal.lot) { trsStartModal.error = 'Sélectionner un lot.'; return }
       trsStartModal.saving = true
       var eq = trsStartModal.equip
-      var cadObj    = trsStartModal.cadenceObj           // GS onglet 2 uniquement
-      var netRef    = trsNetRef(eq)                      // TO_GS - arrêts planifiés GS
+      var cadObj    = trsStartModal.cadenceObj
+      var planOpts  = { isPremierCampagne: trsStartModal.isPremierCampagne, hasVdlp: trsStartModal.hasVdlp }
+      var netRef    = trsNetRef(eq, planOpts)            // TO_GS - arrêts planifiés conditionnels
       var objBoites = cadObj ? Math.round(cadObj * netRef) : null
       var r = await supabase.from('production_sessions').insert({
         lot_id: trsStartModal.lot.id, equipement_id: eq.id,
@@ -1656,6 +1735,55 @@ export default {
       }
       trsStartModal.show = false; trsStartModal.saving = false
       await loadTrsFull()
+    }
+
+    // ── Clôture automatique 10 min après fin de shift ────────────────
+    var trsTimeToMin = function(hhmm) {
+      var parts = (hhmm || '').slice(0, 5).split(':')
+      return parseInt(parts[0] || 0) * 60 + parseInt(parts[1] || 0)
+    }
+
+    var trsDoAutoClose = async function(p, sh) {
+      var sessId   = p.session.id
+      if (trsAutoClosing[sessId]) return
+      trsAutoClosing[sessId] = true
+      var heureFin = sh.heure_fin.slice(0, 5)
+      // Clore l'arrêt en cours si présent
+      if (p.activeArret) {
+        var aStart = trsToDateTime(p.session.date, p.activeArret.heure_debut)
+        var finDate = new Date(p.session.date + 'T' + heureFin + ':00')
+        var aDur = aStart ? Math.max(0, Math.round((finDate - aStart) / 60000)) : null
+        await supabase.from('production_arrets').update({
+          heure_fin: heureFin + ':00', duree_minutes: aDur, is_running: false,
+          updated_at: new Date().toISOString()
+        }).eq('id', p.activeArret.id)
+      }
+      await supabase.from('production_sessions').update({
+        statut: 'Clôturé', heure_fin: heureFin + ':00',
+        updated_at: new Date().toISOString()
+      }).eq('id', sessId)
+      delete trsAutoClosing[sessId]
+      await loadTrsFull()
+    }
+
+    var trsAutoStopCheck = async function() {
+      var nowMin = trsTimeToMin(trsNowTime())
+      for (var pi = 0; pi < trsPanels.value.length; pi++) {
+        var p = trsPanels.value[pi]
+        if (!p.session || p.session.statut === 'Clôturé' || p.session.statut === 'Annulé') continue
+        if (trsAutoClosing[p.session.id]) continue
+        if (!p.session.shift_id) continue
+        var sh = trsShifts.value.find(function(s) { return s.id === p.session.shift_id })
+        if (!sh) continue
+        var finMin      = trsTimeToMin(sh.heure_fin)
+        var triggerMin  = (finMin + 10) % 1440   // fin + 10 min
+        var windowEnd   = (finMin + 70) % 1440   // fenêtre de 60 min pour éviter les faux positifs
+        // diff circulaire : minutes depuis le trigger
+        var diff = (nowMin - triggerMin + 1440) % 1440
+        if (diff < 60) {                           // dans la fenêtre de 60 min après le trigger
+          await trsDoAutoClose(p, sh)
+        }
+      }
     }
 
     var trsOpenArret = function(p) {
@@ -2484,6 +2612,7 @@ export default {
       clearInterval(refreshInt)
       clearInterval(trsClockInt)
       clearInterval(trsRefreshInt)
+      clearInterval(trsAutoStopInt)
     })
 
     return {
@@ -2514,8 +2643,9 @@ export default {
       trsClock, trsTimers, trsArretTimers, selectedTrsPanel,
       trsStartModal, trsArretModal, trsRequalModal, trsComptageModal, trsCloseModal,
       trsPanelColor, trsOeeClass, trsComputeObjShift, trsTotalPlanRef, trsNetRef, trsComputeCadence, trsComputeCadenceVsObj, trsComputeOEEPreview,
+      trsModalOpts, trsModalMicro,
       loadTrsFull,
-      trsOpenStart, trsSearchLots, trsSelectLot, trsDoStart,
+      trsDetectShift, trsOpenStart, trsSearchLots, trsSelectLot, trsDoStart,
       trsOpenArret, trsOnFamilleChange, trsOnSFChange, trsOnTypeChange, trsDoArret,
       trsClotureArret, trsOpenRequalif, trsOnRequalFamilleChange, trsOnRequalSFChange, trsDoRequalif,
       trsTheoCounters, trsCadenceModal, trsOpenCadence, trsDoChangeCadence,
