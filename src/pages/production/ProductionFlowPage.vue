@@ -2341,8 +2341,8 @@ export default {
       loading.value = true
       var [gsData, rRoomsFK, r2, r3, r4, r5, r6] = await Promise.all([
         gsGetAll(),
-        // FK uniquement : equipement_id (non présent dans le CSV)
-        supabase.from('plan_rooms').select('code,equipement_id'),
+        // FK uniquement : atelier_id + equipement_id (non présents dans le CSV)
+        supabase.from('plan_rooms').select('code,atelier_id,equipement_id'),
         supabase.from('suivi_fabrication')
           .select('id,lot_id,atelier_id,statut,lots(numero_lot,products(description))')
           .is('deleted_at', null).in('statut', ['En cours', 'Arrêt']),
@@ -2356,11 +2356,14 @@ export default {
         // Product flux summary (for search)
         supabase.from('v_product_flux_summary').select('*').order('product_name'),
       ])
-      // plan_rooms depuis Google Sheets, enrichis de equipement_id depuis Supabase
+      // plan_rooms depuis Google Sheets (noms, codes) + FKs depuis Supabase (atelier_id, equipement_id)
       var fkMap = {}
-      ;(rRoomsFK.data || []).forEach(function(r) { fkMap[r.code] = r.equipement_id || null })
+      ;(rRoomsFK.data || []).forEach(function(r) {
+        fkMap[r.code] = { atelier_id: r.atelier_id || null, equipement_id: r.equipement_id || null }
+      })
       rooms.value = gsData.planRooms.map(function(r) {
-        return Object.assign({}, r, { equipement_id: fkMap[r.code] || null })
+        var fk = fkMap[r.code] || {}
+        return Object.assign({}, r, { atelier_id: fk.atelier_id || null, equipement_id: fk.equipement_id || null })
       })
       opMaster.value = gsData.operationsMaster
       if (!r2.error) suiviFab.value   = r2.data

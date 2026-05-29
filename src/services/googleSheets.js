@@ -38,6 +38,14 @@ var _zone = function(procNom, opNum) {
   return 'formes_seches'
 }
 
+// Préfixe de code salle — doit correspondre aux IDs définis dans NODES_DEF (ProductionFlowPage)
+// Règle : 'c' Conditionnement · 'p' Pesée (op 210) · 'n' tout autre Fabrication
+var _prefix = function(procNom, opNum) {
+  if (procNom === 'Conditionnement') return 'c'
+  if (opNum === 210) return 'p'
+  return 'n'
+}
+
 // Parse une ligne CSV en gérant les guillemets et les virgules internes
 var _parseLine = function(line) {
   var result = []
@@ -106,6 +114,7 @@ var _parse = function(text) {
   }).sort(function(a, b) { return (a.nom_atelier || '').localeCompare(b.nom_atelier || '') })
 
   // ── operations_master (une entrée par salle / équipement) ──
+  // room_code = préfixe + N°_atelier → correspond aux codes de NODES_DEF (ex. 'n131', 'c149', 'p464')
   var operationsMaster = rows
     .filter(function(r) { return r.op_number !== null })
     .map(function(r) {
@@ -114,24 +123,26 @@ var _parse = function(text) {
         op_number:      r.op_number,
         op_code:        r.op_code,
         equipment_name: r.equipment_name,
-        room_code:      'p' + r.atelier_id,
+        room_code:      _prefix(r.processus_nom, r.op_number) + r.atelier_id,
         room_name:      r.atelier_nom,
         processus:      r.processus_nom
       }
     }).sort(function(a, b) { return (a.op_number || 0) - (b.op_number || 0) })
 
   // ── plan_rooms ──
+  // code = préfixe + N°_atelier → correspond aux IDs de NODES_DEF dans ProductionFlowPage
+  // atelier_id est ABSENT ici : le FK Supabase est fourni par la requête plan_rooms Supabase (ProductionFlowPage)
   var planRooms = rows.map(function(r) {
     return {
-      id:           r.atelier_id,
-      code:         'p' + r.atelier_id,
-      nom:          r.equipment_name || r.atelier_nom,
-      zone:         _zone(r.processus_nom, r.op_number),
-      type:         r.processus_nom === 'Conditionnement' ? 'cond' : 'fab',
-      op_number:    r.op_number,
-      actif:        true,
-      atelier_id:   r.atelier_id,
-      equipement_id: null     // FK Supabase non présente dans le CSV
+      id:            r.atelier_id,
+      code:          _prefix(r.processus_nom, r.op_number) + r.atelier_id,
+      nom:           r.equipment_name || r.atelier_nom,
+      zone:          _zone(r.processus_nom, r.op_number),
+      type:          r.processus_nom === 'Conditionnement' ? 'cond' : 'fab',
+      op_number:     r.op_number,
+      actif:         true,
+      atelier_id:    null,      // fourni par Supabase plan_rooms dans ProductionFlowPage
+      equipement_id: null       // idem
     }
   })
 
