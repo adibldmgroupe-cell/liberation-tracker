@@ -553,7 +553,9 @@ export default {
     var load = async function() {
       lotsLoading.value = true
       try {
-      var query = supabase.from('lots').select('*, products(code_article,description), orders_of(id,statut,etape_circuit,updated_at,pending_ar_service), orders_oc(id,statut,etape_circuit,updated_at,pending_ar_service), liberation_documents(id,type_document,statut,is_applicable,service_emetteur,emitted_at,approved_at,updated_at,pending_ar_service), deviations(id,statut,bloquante,numero_dn,description,declared_at,declared_service,profiles!declared_by(prenom,nom)), aql_inspections(id,type,resultat,requested_at,inspected_at,request_ar_pending,result_ar_pending), lot_planning(date_lcq_cible,date_lcq_revisee,date_aq_cible,date_aq_revisee,date_dt_cible,date_dt_revisee)')
+      // Requête lots + products uniquement (belongs-to, rapide). Les relations has-many
+      // sont récupérées séparément → évite le timeout de la méga-jointure PostgREST.
+      var query = supabase.from('lots').select('*, products(code_article,description)')
 
       var q = route.query.q
       if(q){
@@ -566,15 +568,41 @@ export default {
       query=query.order('date_enregistrement',{ascending:false,nullsFirst:false}).range(0,499)
       var result=await query
       if(result.error){console.error('Erreur chargement lots:',result.error);return}
-      total.value=result.data?result.data.length:0
+      var rows=result.data||[]
+      total.value=rows.length
+      var lotIds=rows.map(function(l){return l.id})
+      if(!lotIds.length){lots.value=[];return}
 
-      lots.value=(result.data||[]).map(function(l){
-        var docs=l.liberation_documents||[]
-        var devs=l.deviations||[]
-        var aqls=l.aql_inspections||[]
-        var of=Array.isArray(l.orders_of)?l.orders_of[0]:l.orders_of
-        var oc=Array.isArray(l.orders_oc)?l.orders_oc[0]:l.orders_oc
-        var planning=Array.isArray(l.lot_planning)?l.lot_planning[0]:l.lot_planning
+      // Relations récupérées par lots de 100 IDs (évite URL trop longue sur .in())
+      var chunk=function(arr,size){var out=[];for(var ci=0;ci<arr.length;ci+=size){out.push(arr.slice(ci,ci+size))}return out}
+      var idChunks=chunk(lotIds,100)
+      var fetchRel=function(table,cols){
+        return Promise.all(idChunks.map(function(ids){return supabase.from(table).select(cols).in('lot_id',ids)}))
+          .then(function(res){var all=[];res.forEach(function(r){if(r.data)all=all.concat(r.data)});return all})
+      }
+      var rel=await Promise.all([
+        fetchRel('orders_of','id,lot_id,statut,etape_circuit,updated_at,pending_ar_service'),
+        fetchRel('orders_oc','id,lot_id,statut,etape_circuit,updated_at,pending_ar_service'),
+        fetchRel('liberation_documents','id,lot_id,type_document,statut,is_applicable,service_emetteur,emitted_at,approved_at,updated_at,pending_ar_service'),
+        fetchRel('deviations','id,lot_id,statut,bloquante,numero_dn,description,declared_at,declared_service,profiles!declared_by(prenom,nom)'),
+        fetchRel('aql_inspections','id,lot_id,type,resultat,requested_at,inspected_at,request_ar_pending,result_ar_pending'),
+        fetchRel('lot_planning','lot_id,date_lcq_cible,date_lcq_revisee,date_aq_cible,date_aq_revisee,date_dt_cible,date_dt_revisee'),
+      ])
+      var ofMap={},ocMap={},docsMap={},devsMap={},aqlsMap={},planMap={}
+      rel[0].forEach(function(o){ofMap[o.lot_id]=o})
+      rel[1].forEach(function(o){ocMap[o.lot_id]=o})
+      rel[2].forEach(function(d){(docsMap[d.lot_id]=docsMap[d.lot_id]||[]).push(d)})
+      rel[3].forEach(function(d){(devsMap[d.lot_id]=devsMap[d.lot_id]||[]).push(d)})
+      rel[4].forEach(function(a){(aqlsMap[a.lot_id]=aqlsMap[a.lot_id]||[]).push(a)})
+      rel[5].forEach(function(p){planMap[p.lot_id]=p})
+
+      lots.value=rows.map(function(l){
+        var docs=docsMap[l.id]||[]
+        var devs=devsMap[l.id]||[]
+        var aqls=aqlsMap[l.id]||[]
+        var of=ofMap[l.id]||null
+        var oc=ocMap[l.id]||null
+        var planning=planMap[l.id]||null
 
         var statutInfo=getGranularStatus(of,oc,docs,l.statut_sap)
         var ofInfo=getOfOcInfo(of,l.statut_sap)

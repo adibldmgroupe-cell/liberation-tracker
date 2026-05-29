@@ -1,8 +1,10 @@
 import { supabase } from '../supabase'
 
 let cachedPermissions = null
+let cachedService = null
 
 export async function loadPermissions(service) {
+  cachedService = service
   const { data } = await supabase
     .from('permissions')
     .select('action')
@@ -13,6 +15,8 @@ export async function loadPermissions(service) {
 }
 
 export function canPerform(action) {
+  // L'admin peut tout faire — bypass global (couvre toutes les pages)
+  if (cachedService === 'admin') return true
   return cachedPermissions?.includes(action) || false
 }
 

@@ -232,7 +232,7 @@ export default {
       await supabase.from('liberation_documents').update({is_applicable:true,is_required:true,updated_at:now}).eq('id',doc.value.id)
       await supabase.from('liberation_dossiers').update({da_micro_applicable:true,updated_at:now}).eq('lot_id',lotId)
       await supabase.from('lot_events').insert({lot_id:lotId,event_type:'da_micro_applicable',description:'DA Microbiologie déclarée applicable',triggered_by:userId.value,created_at:now})
-      loadDoc()
+      await loadDoc()
     }
 
     var doAct = async function(action) {
@@ -307,7 +307,7 @@ export default {
         if (svc) await createNotification(svc, lotId, doc.value.id, 'Lot ' + lotNum + ' — ' + typeLabel + ' : clôturé par Planification', 'document_approuve')
       }
 
-      loadDoc()
+      await loadDoc()
     }
 
     var doRetour = async function() {
@@ -349,7 +349,7 @@ export default {
 
       showRetour.value = false
       motif.value = ''
-      loadDoc()
+      await loadDoc()
     }
 
     var doAR = async function() {
@@ -359,13 +359,13 @@ export default {
       var res = await supabase.from('liberation_documents').update({ pending_ar_service: null, updated_at: now }).eq('id', docId)
       if (res.error) { alert('Erreur AR : ' + res.error.message); return }
       await supabase.from('lot_events').insert({ lot_id: lotId, event_type: 'ar_document', description: doc.value.type_document.toUpperCase() + ' — accusé de réception', triggered_by: userId.value, created_at: now })
-      loadDoc()
+      await loadDoc()
     }
 
     var canAR = computed(function() {
       if (!doc.value || !doc.value.pending_ar_service) return false
       if (isClotSap.value || isMajDoc.value) return false
-      return doc.value.pending_ar_service === userService.value && canPerform('accuser_reception_document')
+      return (doc.value.pending_ar_service === userService.value || userService.value === 'admin') && canPerform('accuser_reception_document')
     })
 
     var loadDoc = async function() {
@@ -380,7 +380,7 @@ export default {
       userId.value = userRes.data.user.id
       var profileRes = await supabase.from('profiles').select('service').eq('id', userRes.data.user.id).single()
       if (profileRes.data) { userService.value = profileRes.data.service; await loadPermissions(profileRes.data.service) }
-      loadDoc()
+      await loadDoc()
     })
 
     return { doc, movements, showRetour, motif, retourDest, userService, typeLabels, actionLabelsMap, statusLabel, spClass, flowClass, fmtDt, dotClass, prepareRetour, doAct, doRetour, doSetApplicable, doAR, canAR, canEmit, canVerify, canApprove, canConfirmClot, canRetourner, canRectifier, isClotSap, isMajDoc, isCCL }
