@@ -53,7 +53,6 @@
             <td><span class="stat-badge" :class="e.actif?'actif':'inactif'">{{e.actif?'Actif':'Inactif'}}</span></td>
             <td class="acts">
               <button class="ia" @click="openModal(e)" title="Modifier">✏️</button>
-              <button class="ia" @click="openObjectifs(e)" title="Objectifs par produit/shift">🎯</button>
             </td>
           </tr>
         </tbody>
@@ -134,67 +133,6 @@
       </div>
     </div>
 
-    <!-- ══ MODAL OBJECTIFS PAR PRODUIT/SHIFT ══ -->
-    <div class="overlay" v-if="objModal.show" @click.self="objModal.show=false">
-      <div class="modal modal-lg">
-        <div class="modal-hd">Objectifs — {{objModal.equip?.nom_equipement}}</div>
-        <div class="obj-info">Objectif par défaut : <strong>{{objModal.equip?.cadence_objectif_boite_min}} boîtes/min</strong></div>
-
-        <table class="obj-table" v-if="objModal.rows.length">
-          <thead><tr><th>Produit</th><th>Shift</th><th>Cadence obj (boîtes/min)</th><th>Colisage réf</th><th>Commentaire</th><th></th></tr></thead>
-          <tbody>
-            <tr v-for="o in objModal.rows" :key="o.id">
-              <td>{{o.products ? o.products.code_article : '— Tous —'}}</td>
-              <td>{{o.shifts ? o.shifts.nom : '— Tous —'}}</td>
-              <td class="num">{{o.cadence_objectif_boite_min}}</td>
-              <td class="num">{{o.colisage_ref||'—'}}</td>
-              <td class="small-txt">{{o.commentaire||'—'}}</td>
-              <td><button class="ia del" @click="deleteObj(o.id)">🗑</button></td>
-            </tr>
-          </tbody>
-        </table>
-        <div class="empty-small" v-else>Aucun objectif spécifique — objectif par défaut appliqué</div>
-
-        <div class="section-title" style="margin-top:16px">Ajouter un objectif spécifique</div>
-        <div class="form-grid">
-          <div>
-            <label class="lbl">Produit <small>(vide = tous)</small></label>
-            <input v-model="objModal.newRow.product_search" class="inp" placeholder="Rechercher code produit…" @input="searchProducts" />
-            <div class="prod-suggestions" v-if="objModal.prodSuggestions.length">
-              <div v-for="p in objModal.prodSuggestions" :key="p.id" class="ps-item" @click="selectProd(p)">
-                <span class="ps-code">{{p.code_article}}</span><span class="ps-desc">{{p.description}}</span>
-              </div>
-            </div>
-          </div>
-          <div>
-            <label class="lbl">Shift <small>(vide = tous)</small></label>
-            <select v-model="objModal.newRow.shift_id" class="inp">
-              <option :value="null">— Tous shifts —</option>
-              <option v-for="s in shifts" :key="s.id" :value="s.id">{{s.nom}}</option>
-            </select>
-          </div>
-          <div>
-            <label class="lbl">Cadence objectif *</label>
-            <input v-model.number="objModal.newRow.cadence_objectif_boite_min" type="number" step="0.5" class="inp" placeholder="ex: 95" />
-          </div>
-          <div>
-            <label class="lbl">Colisage réf</label>
-            <input v-model.number="objModal.newRow.colisage_ref" type="number" class="inp" />
-          </div>
-          <div class="fg-full">
-            <label class="lbl">Commentaire</label>
-            <input v-model="objModal.newRow.commentaire" class="inp" />
-          </div>
-        </div>
-        <button class="btn-save" @click="addObj" :disabled="objModal.saving" style="margin-top:12px">
-          {{objModal.saving?'Ajout…':'+ Ajouter objectif'}}
-        </button>
-
-        <div class="modal-acts" style="margin-top:16px">
-          <button class="btn-cancel" style="flex:none;padding:8px 20px" @click="objModal.show=false">Fermer</button>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -203,18 +141,11 @@ import { ref, computed, reactive, onMounted } from 'vue'
 import { supabase } from '../../supabase'
 export default {
   setup() {
-    var equipements  = ref([])
-    var shifts       = ref([])
-    var loading      = ref(false)
-    var filterSite   = ref('Tous')
-    var prodSearchTimeout = null
+    var equipements = ref([])
+    var loading     = ref(false)
+    var filterSite  = ref('Tous')
 
     var modal = reactive({ show:false, editing:null, d:{}, error:'', saving:false })
-    var objModal = reactive({
-      show:false, equip:null, rows:[], saving:false,
-      prodSuggestions:[],
-      newRow:{ product_id:null, product_search:'', shift_id:null, cadence_objectif_boite_min:null, colisage_ref:null, commentaire:'' }
-    })
 
     var filteredEquipements = computed(function() {
       if (filterSite.value === 'Tous') return equipements.value
@@ -233,11 +164,6 @@ export default {
       var r = await supabase.from('equipements_conditionnement').select('*').order('ordre_affichage')
       if (r.data) equipements.value = r.data
       loading.value = false
-    }
-
-    var loadShifts = async function() {
-      var r = await supabase.from('shifts').select('id,nom').eq('actif',true).order('heure_debut')
-      if (r.data) shifts.value = r.data
     }
 
     var openModal = function(e) {
@@ -274,63 +200,12 @@ export default {
       await loadEquipements()
     }
 
-    var openObjectifs = async function(e) {
-      objModal.equip = e
-      objModal.rows  = []
-      objModal.newRow = { product_id:null, product_search:'', shift_id:null, cadence_objectif_boite_min:null, colisage_ref:null, commentaire:'' }
-      objModal.prodSuggestions = []
-      var r = await supabase.from('objectifs_production')
-        .select('*, products(code_article,description), shifts(nom)')
-        .eq('equipement_id', e.id)
-        .order('created_at')
-      if (r.data) objModal.rows = r.data
-      objModal.show = true
-    }
-
-    var searchProducts = function() {
-      clearTimeout(prodSearchTimeout)
-      var q = objModal.newRow.product_search
-      if (!q || q.length < 2) { objModal.prodSuggestions = []; return }
-      prodSearchTimeout = setTimeout(async function() {
-        var r = await supabase.from('products').select('id,code_article,description')
-          .or('code_article.ilike.%'+q+'%,description.ilike.%'+q+'%').limit(6)
-        objModal.prodSuggestions = r.data || []
-      }, 200)
-    }
-
-    var selectProd = function(p) {
-      objModal.newRow.product_id = p.id
-      objModal.newRow.product_search = p.code_article
-      objModal.prodSuggestions = []
-    }
-
-    var addObj = async function() {
-      if (!objModal.newRow.cadence_objectif_boite_min) return
-      objModal.saving = true
-      var r = await supabase.from('objectifs_production').insert({
-        equipement_id: objModal.equip.id,
-        product_id: objModal.newRow.product_id || null,
-        shift_id: objModal.newRow.shift_id || null,
-        cadence_objectif_boite_min: objModal.newRow.cadence_objectif_boite_min,
-        colisage_ref: objModal.newRow.colisage_ref || null,
-        commentaire: objModal.newRow.commentaire || null,
-        actif: true
-      })
-      if (!r.error) await openObjectifs(objModal.equip)
-      objModal.saving = false
-    }
-
-    var deleteObj = async function(id) {
-      await supabase.from('objectifs_production').delete().eq('id', id)
-      await openObjectifs(objModal.equip)
-    }
-
-    onMounted(async function() { await loadEquipements(); await loadShifts() })
+    onMounted(loadEquipements)
 
     return {
-      equipements, shifts, loading, filterSite, filteredEquipements,
-      modal, objModal, trsClass,
-      openModal, saveModal, openObjectifs, searchProducts, selectProd, addObj, deleteObj
+      equipements, loading, filterSite, filteredEquipements,
+      modal, trsClass,
+      openModal, saveModal
     }
   }
 }
@@ -375,7 +250,6 @@ export default {
 /* Modal */
 .overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:100}
 .modal{background:#fff;padding:24px;width:520px;max-width:96vw;border-radius:6px;max-height:90vh;overflow-y:auto}
-.modal-lg{width:720px}
 .modal-hd{font-size:14px;font-weight:600;margin-bottom:16px}
 .section-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#666;padding:10px 0 6px;border-bottom:1px solid #f0f0f0;margin-bottom:8px}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -398,15 +272,4 @@ export default {
 .btn-cancel{padding:10px 20px;background:#f5f5f5;color:#666;border:none;font-size:13px;cursor:pointer;border-radius:2px}
 .btn-cancel:hover{background:#eee}
 
-/* Objectifs */
-.obj-info{font-size:12px;color:#555;margin-bottom:12px;padding:8px 12px;background:#f8f8f8;border-radius:3px}
-.obj-table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px}
-.obj-table th{background:#f5f5f5;padding:6px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.4px;text-align:left;border-bottom:1px solid #e0e0e0}
-.obj-table td{padding:7px 10px;border-bottom:1px solid #f0f0f0}
-.small-txt{font-size:11px;color:#888}
-.prod-suggestions{border:1px solid #ddd;border-radius:3px;margin-top:2px;max-height:160px;overflow-y:auto;background:#fff;position:relative;z-index:10}
-.ps-item{display:flex;gap:8px;padding:7px 10px;cursor:pointer;font-size:12px}
-.ps-item:hover{background:#f5f5f5}
-.ps-code{font-family:'SF Mono',monospace;font-weight:500;color:#185FA5;min-width:80px}
-.ps-desc{color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </style>
