@@ -92,7 +92,7 @@
           </template>
         </tr></thead>
         <tbody>
-          <tr v-for="l in filteredLots" :key="l.id" :class="{'row-sel':isSelected(l.id),'row-bloquante':l.dev_has_bloquante}" @click="goToLot(l.id)">
+          <tr v-for="l in pagedLots" :key="l.id" :class="{'row-sel':isSelected(l.id),'row-bloquante':l.dev_has_bloquante}" @click="goToLot(l.id)">
             <td class="td-chk" @click.stop><input type="checkbox" :value="l.id" v-model="selected" /></td>
             <td class="mono bold">{{l.numero_lot}}</td>
             <td class="td-prod">{{l.prod_desc}}<span class="code">{{l.prod_code}}</span></td>
@@ -121,6 +121,11 @@
           </tr>
         </tbody>
       </table>
+      <div class="pag-bar" v-if="totalPages > 1">
+        <button class="pag-btn" :disabled="tablePage===0" @click.stop="tablePage--">‹ Préc.</button>
+        <span class="pag-info">Page {{tablePage+1}} / {{totalPages}} &nbsp;·&nbsp; {{filteredLots.length}} lot{{filteredLots.length!==1?'s':''}}</span>
+        <button class="pag-btn" :disabled="tablePage>=totalPages-1" @click.stop="tablePage++">Suiv. ›</button>
+      </div>
     </div>
 
     <!-- Dropdown filtre colonne (position:fixed) -->
@@ -292,6 +297,8 @@ export default {
     var route = useRoute(), router = useRouter()
     var lots = ref([]), total = ref(0), activeFilters = ref([])
     var lotsLoading = ref(false)
+    var tablePage = ref(0)
+    var TABLE_PAGE_SIZE = 50
     var sortCol = ref(''), sortDir = ref('asc'), showDates = ref(false)
     var hideAccepted = ref(localStorage.getItem('lots_hide_accepted') !== 'false')
     var toggleHideAccepted = function() { hideAccepted.value = !hideAccepted.value; localStorage.setItem('lots_hide_accepted', String(hideAccepted.value)) }
@@ -1560,6 +1567,10 @@ var loadCharge = async function() {
       return result
     })
 
+    // pagedLots découpe filteredLots (déjà trié + filtré sur TOUS les lots) → tri global garanti
+    var totalPages = computed(function(){ return Math.max(1, Math.ceil(filteredLots.value.length / TABLE_PAGE_SIZE)) })
+    var pagedLots = computed(function(){ var s = tablePage.value * TABLE_PAGE_SIZE; return filteredLots.value.slice(s, s + TABLE_PAGE_SIZE) })
+
     var toggleFilter = function(value){var idx=activeFilters.value.indexOf(value);if(idx>=0)activeFilters.value.splice(idx,1);else activeFilters.value.push(value)}
     var sortBy = function(col){if(sortCol.value===col){sortDir.value=sortDir.value==='asc'?'desc':'asc'}else{sortCol.value=col;sortDir.value='asc'}}
     var sortIcon = function(col){if(sortCol.value!==col)return'↕';return sortDir.value==='asc'?'↑':'↓'}
@@ -1622,11 +1633,11 @@ var loadCharge = async function() {
 
     var isSelected = function(id){return selected.value.indexOf(id)>=0}
     var toggleLot = function(id){var idx=selected.value.indexOf(id);if(idx>=0)selected.value.splice(idx,1);else selected.value.push(id)}
-    var allVisibleChecked = computed(function(){return filteredLots.value.length>0&&filteredLots.value.every(function(l){return isSelected(l.id)})})
-    var someVisibleChecked = computed(function(){return filteredLots.value.some(function(l){return isSelected(l.id)})})
+    var allVisibleChecked = computed(function(){return pagedLots.value.length>0&&pagedLots.value.every(function(l){return isSelected(l.id)})})
+    var someVisibleChecked = computed(function(){return pagedLots.value.some(function(l){return isSelected(l.id)})})
     var toggleAll = function(){
-      if(allVisibleChecked.value){filteredLots.value.forEach(function(l){var i=selected.value.indexOf(l.id);if(i>=0)selected.value.splice(i,1)})}
-      else{filteredLots.value.forEach(function(l){if(!isSelected(l.id))selected.value.push(l.id)})}
+      if(allVisibleChecked.value){pagedLots.value.forEach(function(l){var i=selected.value.indexOf(l.id);if(i>=0)selected.value.splice(i,1)})}
+      else{pagedLots.value.forEach(function(l){if(!isSelected(l.id))selected.value.push(l.id)})}
     }
     var getLotNum = function(id){var l=lots.value.find(function(x){return x.id===id});return l?l.numero_lot:id}
 
@@ -1968,8 +1979,9 @@ var loadCharge = async function() {
     })
     onUnmounted(function(){document.removeEventListener('click', closeAll)})
     watch(function(){return route.query},load,{deep:true})
+    watch([activeFilters, columnFilters, hideAccepted, sortCol, sortDir], function(){ tablePage.value = 0 }, {deep:true})
 
-    return{lots,total,lotsLoading,activeFilters,showDates,hideAccepted,toggleHideAccepted,filteredLots,filterOptions,
+    return{lots,total,lotsLoading,activeFilters,showDates,hideAccepted,toggleHideAccepted,filteredLots,pagedLots,tablePage,totalPages,filterOptions,
       toggleFilter,sortBy,sortIcon,goToLot,doExportExcel,doExportPDF,
       selected,actionType,showConfirm,executing,progress,execResult,bulkDate,
       actionLabel,canExecute,allVisibleChecked,someVisibleChecked,
@@ -2006,6 +2018,9 @@ var loadCharge = async function() {
 .col-item-over{background:#E6F1FB;border-color:#185FA5}
 .col-reset{margin-top:8px;width:100%;padding:5px;font-size:11px;border:1px solid #ddd;border-radius:3px;background:#fafafa;cursor:pointer;color:#666}.col-reset:hover{background:#f0f0f0}
 .lots-loading{text-align:center;padding:40px 0;color:#999;font-size:13px;letter-spacing:.3px}
+.pag-bar{display:flex;align-items:center;gap:12px;padding:8px 12px;border-top:1px solid #e8e8e8;background:#fafafa;position:sticky;bottom:0}
+.pag-btn{padding:3px 12px;border:1px solid #ddd;border-radius:3px;background:#fff;cursor:pointer;font-size:11px;font-family:inherit}.pag-btn:hover:not(:disabled){background:#f0f0f0}.pag-btn:disabled{opacity:.35;cursor:not-allowed}
+.pag-info{font-size:11px;color:#777;flex:1;text-align:center}
 .filters{display:flex;gap:4px;padding:8px 0;flex-wrap:wrap}
 .fbtn{display:flex;align-items:center;gap:4px;padding:5px 10px;min-height:32px;font-size:11px;border:1px solid #e8e8e8;border-radius:3px;background:#fff;cursor:pointer;color:#666;font-family:inherit;transition:.15s}
 .fbtn:hover{border-color:#ccc}.fbtn.active{border-color:#185FA5;background:#E6F1FB;color:#0C447C}
