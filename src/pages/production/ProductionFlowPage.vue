@@ -978,6 +978,7 @@ import { useRouter } from 'vue-router'
 import { supabase } from '../../supabase'
 import { useTheme } from '../../composables/useTheme'
 import { getAll as gsGetAll } from '../../services/googleSheets'
+import { declareDeviation } from '../../services/actions'
 
 // ── LAYOUT CONSTANTS ──────────────────────────────────────────────
 var SVG_W  = 1580
@@ -2361,14 +2362,14 @@ export default {
       modal.value.saving = true; modal.value.err = ''
       var userData = await supabase.auth.getUser()
       var userId = userData.data.user?.id || null
-      var res = await supabase.from('deviations').insert({
-        lot_id: modal.value.lotId,
-        description: modal.value.description,
-        statut: 'ouverte',
-        declared_by: userId
-      })
+      var userMeta = userData.data.user?.user_metadata || {}
+      var userService = userMeta.service || null
+      try {
+        await declareDeviation(modal.value.lotId, modal.value.description, false, null, userId, userService)
+      } catch(e) {
+        modal.value.err = e.message || 'Erreur'; modal.value.saving = false; return
+      }
       modal.value.saving = false
-      if (res.error) { modal.value.err = res.error.message; return }
       modal.value.open = false
       await loadLive()
     }

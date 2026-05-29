@@ -148,6 +148,7 @@
               <template v-else-if="p.session.statut === 'En cours'">
                 <button class="ab ab-stp" @click="openArretModal(p)" title="Déclarer arrêt">⏸</button>
                 <button class="ab ab-cnt" @click="openComptageModal(p)" title="Comptage">+</button>
+                <button class="ab ab-dev" @click="openDevModal(p)" title="Déclarer déviation">⚠</button>
                 <button class="ab ab-cls" @click="openCloseModal(p)" title="Clôturer">✓</button>
               </template>
               <template v-else-if="p.session.statut === 'Arrêt' || p.session.statut === 'Pause'">
@@ -445,6 +446,25 @@
       </div>
     </div>
 
+    <!-- ══ MODAL DÉCLARER DÉVIATION ══ -->
+    <div class="overlay" v-if="devModal.show" @click.self="devModal.show=false">
+      <div class="modal">
+        <div class="modal-hd">⚠ Déclarer déviation — {{devModal.panel?.equip.nom_equipement}}</div>
+        <div class="modal-ctx" v-if="devModal.panel?.session">
+          Lot {{devModal.panel.lotNum}} · Session en cours
+        </div>
+        <label class="lbl">Description *</label>
+        <textarea v-model="devModal.description" class="inp" rows="3" placeholder="Décrivez la déviation observée…" style="resize:vertical"></textarea>
+        <div class="err" v-if="devModal.error">{{devModal.error}}</div>
+        <div class="modal-acts">
+          <button class="btn-save btn-warn" @click="doSaveDev" :disabled="devModal.saving || !devModal.description.trim()">
+            {{devModal.saving ? '…' : '⚠ Déclarer'}}
+          </button>
+          <button class="btn-cancel" @click="devModal.show=false">Annuler</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -453,6 +473,7 @@ import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { supabase } from '../../supabase'
 import { useTheme } from '../../composables/useTheme'
 import { getAll as gsGetAll } from '../../services/googleSheets'
+import { declareDeviation } from '../../services/actions'
 
 export default {
   setup() {
@@ -472,11 +493,12 @@ export default {
     var lotSearchTimeout = null
 
     // ── Modals ──
-    var startModal    = reactive({ show:false, equip:null, lotSearch:'', lotSuggestions:[], lot:null, shift_id:null, equipe_id:null, date:'', heure_debut:'', cadenceObj:null, error:'', saving:false })
+    var startModal    = reactive({ show:false, equip:null, lotSearch:'', lotSuggestions:[], lot:null, shift_id:null, equipe_id:null, date:'', heure_debut:'', cadenceObj:null, colisage:null, colisageSrc:'', error:'', saving:false })
     var arretModal    = reactive({ show:false, panel:null, famille_id:null, sf_id:null, type_id:null, sousFamilles:[], types:[], selectedType:null, familleCouleur:'#EF4444', heure_debut:'', commentaire:'', error:'', saving:false })
     var requalModal   = reactive({ show:false, panel:null, famille_id:null, sf_id:null, type_id:null, sousFamilles:[], types:[], saving:false })
     var comptageModal = reactive({ show:false, panel:null, heure:'', boites:null, rebuts:0, saving:false })
     var closeModal    = reactive({ show:false, panel:null, heure_fin:'', boites_produits:null, boites_rebuts:0, observation:'', error:'', saving:false })
+    var devModal      = reactive({ show:false, panel:null, description:'', error:'', saving:false })
 
     var filteredPanels = computed(function() {
       if (filterSite.value === 'Tous') return panels.value
@@ -736,6 +758,8 @@ export default {
       startModal.date           = new Date().toISOString().slice(0,10)
       startModal.heure_debut    = nowTime()
       startModal.cadenceObj     = null
+      startModal.colisage       = null
+      startModal.colisageSrc    = ''
       startModal.error          = ''
       startModal.saving         = false
       startModal.show           = true
@@ -761,11 +785,13 @@ export default {
       }, 200)
     }
 
-    var selectLot = function(l) {
+    var selectLot = async function(l) {
       startModal.lot            = l
       startModal.lotSearch      = l.numero_lot
       startModal.lotSuggestions = []
       startModal.cadenceObj     = null
+      startModal.colisage       = null
+      startModal.colisageSrc    = ''
       if (startModal.equip) {
         var numAtelier = startModal.equip.numero_atelier
         if (numAtelier && l.code_article) {
@@ -776,6 +802,18 @@ export default {
           startModal.cadenceObj = match ? match.cadence_objectif_b_min : null
         }
       }
+      // Colisage : catalogue_produits en priorité, fallback products
+      var colisage = null; var colisageSrc = ''
+      if (l.code_article) {
+        var catR = await supabase.from('catalogue_produits').select('quantite_par_colis').eq('code_article', l.code_article).maybeSingle()
+        if (catR.data && catR.data.quantite_par_colis) { colisage = catR.data.quantite_par_colis; colisageSrc = 'catalogue' }
+      }
+      if (!colisage && l.product_id) {
+        var prodR = await supabase.from('products').select('quantite_par_colis').eq('id', l.product_id).maybeSingle()
+        if (prodR.data && prodR.data.quantite_par_colis) { colisage = prodR.data.quantite_par_colis; colisageSrc = 'sap' }
+      }
+      startModal.colisage    = colisage
+      startModal.colisageSrc = colisageSrc
     }
 
     var doStart = async function() {
@@ -798,7 +836,8 @@ export default {
         cadence_objectif_snapshot: cadObj                         || null,
         objectif_boites:           objBoites,
         temps_ouverture_min:       netRef,                         // snapshot GS au démarrage
-        colis_produits: 0, colis_rebuts: 0
+        colis_produits: 0, colis_rebuts: 0,
+        colisage_confirme:         startModal.colisage            || null
       })
       if (r.error) { startModal.error = r.error.message; startModal.saving = false; return }
       startModal.show = false; startModal.saving = false
@@ -1057,6 +1096,32 @@ export default {
       await loadAll()
     }
 
+    // ── Déclarer déviation ──
+    var openDevModal = function(p) {
+      devModal.panel       = p
+      devModal.description = ''
+      devModal.error       = ''
+      devModal.saving      = false
+      devModal.show        = true
+    }
+
+    var doSaveDev = async function() {
+      if (!devModal.description.trim()) { devModal.error = 'Description requise.'; return }
+      var s = devModal.panel && devModal.panel.session
+      if (!s || !s.lot_id) { devModal.error = 'Aucun lot associé à cette session.'; return }
+      devModal.saving = true; devModal.error = ''
+      var userData = await supabase.auth.getUser()
+      var userId = userData.data.user?.id || null
+      var userMeta = userData.data.user?.user_metadata || {}
+      var userService = userMeta.service || null
+      try {
+        await declareDeviation(s.lot_id, devModal.description, false, null, userId, userService)
+      } catch(e) {
+        devModal.error = e.message || 'Erreur'; devModal.saving = false; return
+      }
+      devModal.show = false; devModal.saving = false
+    }
+
     onMounted(async function() {
       await loadAll()
       clockInt   = setInterval(tick, 1000)
@@ -1073,7 +1138,7 @@ export default {
       theme,
       panels, shifts, equipes, arretFamilles, loading, clock, filterSite,
       timers, arretTimers, filteredPanels,
-      startModal, arretModal, requalModal, comptageModal, closeModal,
+      startModal, arretModal, requalModal, comptageModal, closeModal, devModal,
       panelClass, panelColor, oeeClass,
       gsTotalPlanRef, gsNetRef,
       computeObjShift, computeCadence, computeCadenceVsObj, computeOEEPreview,
@@ -1082,7 +1147,8 @@ export default {
       openArretModal, onFamilleChange, onSFChange, onTypeChange, doArret,
       clotureArret, openRequalifModal, onRequalFamilleChange, onRequalSFChange, doRequalif,
       openComptageModal, doComptage,
-      openCloseModal, doClose
+      openCloseModal, doClose,
+      openDevModal, doSaveDev
     }
   }
 }
@@ -1267,6 +1333,8 @@ export default {
 .ab-cnt:hover { background: rgba(59,130,246,.22); }
 .ab-cls   { background: rgba(148,163,184,.08); color: #94a3b8; border-color: rgba(148,163,184,.2); }
 .ab-cls:hover { background: rgba(148,163,184,.15); }
+.ab-dev   { background: rgba(245,158,11,.1); color: #f59e0b; border-color: rgba(245,158,11,.25); }
+.ab-dev:hover { background: rgba(245,158,11,.2); }
 .ab-rsm   { background: rgba(16,185,129,.12); color: #10b981; border-color: rgba(16,185,129,.25); }
 .ab-rsm:hover { background: rgba(16,185,129,.22); }
 .ab-req   { background: rgba(245,158,11,.12); color: #f59e0b; border-color: rgba(245,158,11,.25); }
@@ -1412,6 +1480,8 @@ export default {
 .btn-stop:hover:not(:disabled) { background: #c53030; }
 .btn-close-sess { background: #0a0a0a; }
 .btn-close-sess:hover:not(:disabled) { background: #333; }
+.btn-warn  { background: #b45309; }
+.btn-warn:hover:not(:disabled) { background: #92400e; }
 .btn-cancel {
   flex: 1; padding: 10px; background: #f5f5f5; color: #666;
   border: none; font-size: 13px; cursor: pointer; border-radius: 2px;
