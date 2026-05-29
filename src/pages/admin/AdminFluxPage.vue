@@ -361,6 +361,7 @@
 <script>
 import { ref, computed, onMounted, reactive } from 'vue'
 import { supabase } from '../../supabase'
+import { getAll as gsGetAll } from '../../services/googleSheets'
 
 // Labels des groupes d'opérations
 var OP_LABELS = {
@@ -715,18 +716,24 @@ export default {
     // ── LOAD ─────────────────────────────────────────────────────
     var loadAll = async function() {
       fluxLoading.value = true
-      var results = await Promise.all([
+      var [gsData, r0, r1, r2] = await Promise.all([
+        gsGetAll(),
         supabase.from('product_flux').select('*').order('product_code').order('route').order('op_number'),
         supabase.from('v_product_flux_summary').select('*'),
         supabase.from('equipment_cadences').select('*').order('room_code'),
-        supabase.from('operations_master').select('*').order('op_number'),
-        supabase.from('plan_rooms').select('id,code,nom,zone,type,op_number,actif').not('op_number','is',null).order('op_number').order('nom')
       ])
-      if (!results[0].error) allFluxRows.value     = results[0].data
-      if (!results[1].error) productsSummary.value = results[1].data
-      if (!results[2].error) cadences.value        = results[2].data
-      if (!results[3].error) opMaster.value        = results[3].data
-      if (!results[4].error) planRooms.value       = results[4].data
+      // operations_master et plan_rooms chargés depuis Google Sheets
+      opMaster.value  = gsData.operationsMaster
+      planRooms.value = gsData.planRooms
+        .filter(function(r){ return r.op_number != null })
+        .slice()
+        .sort(function(a, b) {
+          if (a.op_number !== b.op_number) return a.op_number - b.op_number
+          return (a.nom || '').localeCompare(b.nom || '')
+        })
+      if (!r0.error) allFluxRows.value     = r0.data
+      if (!r1.error) productsSummary.value = r1.data
+      if (!r2.error) cadences.value        = r2.data
       fluxLoading.value = false
     }
 

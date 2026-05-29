@@ -977,6 +977,7 @@ import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '../../supabase'
 import { useTheme } from '../../composables/useTheme'
+import { getAll as gsGetAll } from '../../services/googleSheets'
 
 // ── LAYOUT CONSTANTS ──────────────────────────────────────────────
 var SVG_W  = 1540
@@ -2219,10 +2220,10 @@ export default {
         // ── FABRICATION ──────────────────────────────────────────
         var atId = node.atelier_id
         if (!atId) {
-          // Auto-résolution : cherche dans operations_master puis crée/trouve l'atelier
-          var omR = await supabase.from('operations_master').select('room_name,op_code').eq('room_code',node.id).limit(1).maybeSingle()
-          var roomName = omR.data ? omR.data.room_name : node.label
-          var opCode   = omR.data ? omR.data.op_code   : ''
+          // Auto-résolution : cherche dans operations_master (chargé depuis Google Sheets)
+          var omRow    = opMaster.value.find(function(om) { return om.room_code === node.id })
+          var roomName = omRow ? omRow.room_name : node.label
+          var opCode   = omRow ? omRow.op_code   : ''
           var procName = OP_CODE_TO_PROC[opCode] || null
           var procId = null
           if (procName) {
@@ -2338,8 +2339,10 @@ export default {
     // ─── LOAD ────────────────────────────────────────────────────
     var loadLive = async function() {
       loading.value = true
-      var [r1, r2, r3, r4, r5, r6, r7] = await Promise.all([
-        supabase.from('plan_rooms').select('*'),
+      var [gsData, rRoomsFK, r2, r3, r4, r5, r6] = await Promise.all([
+        gsGetAll(),
+        // FK uniquement : equipement_id (non présent dans le CSV)
+        supabase.from('plan_rooms').select('code,equipement_id'),
         supabase.from('suivi_fabrication')
           .select('id,lot_id,atelier_id,statut,lots(numero_lot,products(description))')
           .is('deleted_at', null).in('statut', ['En cours', 'Arrêt']),
@@ -2352,10 +2355,14 @@ export default {
           .select('id,session_id,is_running').eq('is_running', true),
         // Product flux summary (for search)
         supabase.from('v_product_flux_summary').select('*').order('product_name'),
-        // Operations master (for flux mapping)
-        supabase.from('operations_master').select('*'),
       ])
-      if (!r1.error) rooms.value      = r1.data
+      // plan_rooms depuis Google Sheets, enrichis de equipement_id depuis Supabase
+      var fkMap = {}
+      ;(rRoomsFK.data || []).forEach(function(r) { fkMap[r.code] = r.equipement_id || null })
+      rooms.value = gsData.planRooms.map(function(r) {
+        return Object.assign({}, r, { equipement_id: fkMap[r.code] || null })
+      })
+      opMaster.value = gsData.operationsMaster
       if (!r2.error) suiviFab.value   = r2.data
       if (!r3.error) sessions.value   = r3.data
       if (!r4.error) deviations.value = r4.data
@@ -2376,7 +2383,6 @@ export default {
         })
         allProductsFlux.value = list
       }
-      if (!r7.error) opMaster.value = r7.data
       loading.value = false
     }
 
