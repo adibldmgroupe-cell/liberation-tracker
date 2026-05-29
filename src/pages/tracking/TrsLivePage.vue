@@ -220,9 +220,12 @@
         </div>
 
         <div class="cadence-preview" v-if="startModal.equip">
-          <div class="cp-row">
-            <span class="cp-lbl">Cadence nominale</span>
-            <span class="cp-val">{{startModal.equip.cadence_nominale_boite_min || '—'}} b/min</span>
+          <!-- Type de transition détecté -->
+          <div class="cp-row" v-if="startModal.lot">
+            <span class="cp-lbl">Type transition</span>
+            <span class="cp-val" :class="startModal.isPremierCampagne ? 'cp-warn' : startModal.hasVdlp ? '' : 'obj'">
+              {{startModal.isPremierCampagne ? '🆕 Nouvelle campagne (VDLC + format + réglage)' : startModal.hasVdlp ? '🔄 Lot suivant — même campagne (VDLP)' : '▶ Premier lancement (aucun arrêt de changement)'}}
+            </span>
           </div>
           <div class="cp-row">
             <span class="cp-lbl">Cadence objectif (GS)</span>
@@ -233,12 +236,32 @@
             <span class="cp-val">{{startModal.equip.to_shift_ref || '—'}} min</span>
           </div>
           <div class="cp-row">
-            <span class="cp-lbl">Arrêts planifiés (GS)</span>
-            <span class="cp-val">{{gsTotalPlanRef(startModal.equip)}} min</span>
+            <span class="cp-lbl">Pause</span>
+            <span class="cp-val">{{startModal.equip.pause_ref || 0}} min</span>
+          </div>
+          <div class="cp-row" v-if="startModal.hasVdlp">
+            <span class="cp-lbl">VDLP</span>
+            <span class="cp-val">{{startModal.equip.vdlp_ref || 0}} min</span>
+          </div>
+          <div class="cp-row" v-if="startModal.isPremierCampagne">
+            <span class="cp-lbl">VDLC</span>
+            <span class="cp-val">{{startModal.equip.vdlc_ref || 0}} min</span>
+          </div>
+          <div class="cp-row" v-if="startModal.isPremierCampagne">
+            <span class="cp-lbl">Chgt format</span>
+            <span class="cp-val">{{startModal.equip.chgt_format_ref || 0}} min</span>
+          </div>
+          <div class="cp-row" v-if="startModal.isPremierCampagne">
+            <span class="cp-lbl">Réglage lancement</span>
+            <span class="cp-val">{{startModal.equip.reglage_ref || 0}} min</span>
           </div>
           <div class="cp-row">
-            <span class="cp-lbl">Temps net production (GS)</span>
-            <span class="cp-val">{{gsNetRef(startModal.equip)}} min</span>
+            <span class="cp-lbl">Micro-arrêts (proportionnel)</span>
+            <span class="cp-val">{{modalMicro}} min</span>
+          </div>
+          <div class="cp-row">
+            <span class="cp-lbl">Temps net production</span>
+            <span class="cp-val obj">{{gsNetRef(startModal.equip, modalOpts)}} min</span>
           </div>
           <div class="cp-row" v-if="startModal.cadenceObj">
             <span class="cp-lbl">Objectif / shift</span>
@@ -488,12 +511,14 @@ export default {
     var filterSite    = ref('Tous')
     var timers        = ref({})
     var arretTimers   = ref({})
-    var clockInt = null
-    var refreshInt = null
+    var clockInt      = null
+    var refreshInt    = null
+    var autoStopInt   = null
+    var autoClosing   = {}
     var lotSearchTimeout = null
 
     // ── Modals ──
-    var startModal    = reactive({ show:false, equip:null, lotSearch:'', lotSuggestions:[], lot:null, shift_id:null, equipe_id:null, date:'', heure_debut:'', cadenceObj:null, colisage:null, colisageSrc:'', error:'', saving:false })
+    var startModal    = reactive({ show:false, equip:null, lotSearch:'', lotSuggestions:[], lot:null, shift_id:null, equipe_id:null, date:'', heure_debut:'', cadenceObj:null, colisage:null, colisageSrc:'', isPremierCampagne:false, hasVdlp:false, error:'', saving:false })
     var arretModal    = reactive({ show:false, panel:null, famille_id:null, sf_id:null, type_id:null, sousFamilles:[], types:[], selectedType:null, familleCouleur:'#EF4444', heure_debut:'', commentaire:'', error:'', saving:false })
     var requalModal   = reactive({ show:false, panel:null, famille_id:null, sf_id:null, type_id:null, sousFamilles:[], types:[], saving:false })
     var comptageModal = reactive({ show:false, panel:null, heure:'', boites:null, rebuts:0, saving:false })
@@ -549,24 +574,50 @@ export default {
     }
 
     // ── Helpers GS référence ──────────────────────────────────────
-    // Somme de TOUS les arrêts planifiés GS (pauses + VDLP + VDLC + Chgt + Réglage + Micro + Maint)
-    var gsTotalPlanRef = function(eq) {
+    // opts = { isPremierCampagne, hasVdlp }
+    // Règles :
+    //   pause      → toujours
+    //   vdlp       → seulement si même campagne, lot suivant (hasVdlp)
+    //   vdlc+format+reglage → seulement si premier lot nouvelle campagne (isPremierCampagne)
+    //   micro      → proportionnel : (TO - pause - transitions) × micro_GS / 480
+    var gsTotalPlanRef = function(eq, opts) {
       if (!eq) return 0
-      return (eq.pause_ref||0) + (eq.vdlp_ref||0)  + (eq.vdlc_ref||0) +
-             (eq.chgt_format_ref||0) + (eq.reglage_ref||0) +
-             (eq.micro_arrets_ref||0) + (eq.maint_curative_ref||0)
+      var isPremier = opts && opts.isPremierCampagne
+      var hasVdlp   = opts && opts.hasVdlp
+      var pause = eq.pause_ref || 0
+      var vdlp  = hasVdlp  ? (eq.vdlp_ref         || 0) : 0
+      var vdlc  = isPremier ? (eq.vdlc_ref          || 0) : 0
+      var chgt  = isPremier ? (eq.chgt_format_ref   || 0) : 0
+      var regl  = isPremier ? (eq.reglage_ref        || 0) : 0
+      var toBase = Math.max(0, (eq.to_shift_ref || 480) - pause - vdlp - vdlc - chgt - regl)
+      var micro  = Math.round(toBase * ((eq.micro_arrets_ref || 0) / 480))
+      return pause + vdlp + vdlc + chgt + regl + micro
     }
-    // Temps net de production de référence = TO_GS - arrêts planifiés GS
-    var gsNetRef = function(eq) {
+    var gsNetRef = function(eq, opts) {
       if (!eq) return 480
-      return Math.max(1, (eq.to_shift_ref||480) - gsTotalPlanRef(eq))
+      return Math.max(1, (eq.to_shift_ref || 480) - gsTotalPlanRef(eq, opts))
     }
 
     var computeObjShift = function(m) {
       var cadObj = m.cadenceObj
       if (!cadObj || !m.equip) return '—'
-      return Math.round(cadObj * gsNetRef(m.equip))
+      var opts = { isPremierCampagne: m.isPremierCampagne, hasVdlp: m.hasVdlp }
+      return Math.round(cadObj * gsNetRef(m.equip, opts))
     }
+
+    // Computed pour les opts du modal démarrage (template propre)
+    var modalOpts = computed(function() {
+      return { isPremierCampagne: startModal.isPremierCampagne, hasVdlp: startModal.hasVdlp }
+    })
+    var modalMicro = computed(function() {
+      var eq = startModal.equip
+      if (!eq) return 0
+      var total = gsTotalPlanRef(eq, modalOpts.value)
+      var fixed = (eq.pause_ref || 0)
+        + (startModal.hasVdlp          ? (eq.vdlp_ref        || 0) : 0)
+        + (startModal.isPremierCampagne ? (eq.vdlc_ref        || 0) + (eq.chgt_format_ref || 0) + (eq.reglage_ref || 0) : 0)
+      return total - fixed
+    })
 
     var computeCadence = function(m) {
       var s = m.panel && m.panel.session
@@ -748,21 +799,37 @@ export default {
     }
 
     // ── Démarrer session ──
+    var detectShift = function() {
+      var now = nowTime()
+      var nowMin = parseInt(now.slice(0,2)) * 60 + parseInt(now.slice(3,5))
+      return shifts.value.find(function(s) {
+        var start = s.heure_debut.slice(0, 5)
+        var end   = s.heure_fin.slice(0, 5)
+        var sMin  = parseInt(start.slice(0,2)) * 60 + parseInt(start.slice(3,5))
+        var eMin  = parseInt(end.slice(0,2))   * 60 + parseInt(end.slice(3,5))
+        if (sMin < eMin) return nowMin >= sMin && nowMin < eMin
+        return nowMin >= sMin || nowMin < eMin
+      }) || null
+    }
+
     var openStartModal = function(equip) {
       startModal.equip          = equip
       startModal.lotSearch      = ''
       startModal.lotSuggestions = []
       startModal.lot            = null
-      startModal.shift_id       = null
       startModal.equipe_id      = null
       startModal.date           = new Date().toISOString().slice(0,10)
       startModal.heure_debut    = nowTime()
       startModal.cadenceObj     = null
       startModal.colisage       = null
       startModal.colisageSrc    = ''
+      startModal.isPremierCampagne = false
+      startModal.hasVdlp           = false
       startModal.error          = ''
       startModal.saving         = false
-      startModal.show           = true
+      var autoShift = detectShift()
+      startModal.shift_id = autoShift ? autoShift.id : null
+      startModal.show = true
     }
 
     var searchLots = function() {
@@ -792,14 +859,30 @@ export default {
       startModal.cadenceObj     = null
       startModal.colisage       = null
       startModal.colisageSrc    = ''
+      startModal.isPremierCampagne = false
+      startModal.hasVdlp           = false
       if (startModal.equip) {
         var numAtelier = startModal.equip.numero_atelier
         if (numAtelier && l.code_article) {
-          // Lookup cadence depuis GS onglet 2 : (N°_atelier × code_article)
           var match = gsCadences.value.find(function(c) {
             return c.numero_atelier === numAtelier && c.code_article === l.code_article
           })
           startModal.cadenceObj = match ? match.cadence_objectif_b_min : null
+        }
+        // Détection type campagne : comparer avec la dernière session de cet équipement
+        if (l.code_article) {
+          var lastSR = await supabase.from('production_sessions')
+            .select('lot_id').eq('equipement_id', startModal.equip.id)
+            .order('created_at', { ascending: false }).limit(1).maybeSingle()
+          if (!lastSR.error && lastSR.data && lastSR.data.lot_id) {
+            var lastLotR = await supabase.from('lots')
+              .select('products(code_article)').eq('id', lastSR.data.lot_id).maybeSingle()
+            var lastCode = lastLotR.data && lastLotR.data.products ? lastLotR.data.products.code_article : null
+            if (lastCode) {
+              if (lastCode === l.code_article) startModal.hasVdlp = true
+              else                              startModal.isPremierCampagne = true
+            }
+          }
         }
       }
       // Colisage : catalogue_produits en priorité, fallback products
@@ -820,8 +903,9 @@ export default {
       if (!startModal.lot) { startModal.error = 'Sélectionner un lot.'; return }
       startModal.saving = true
       var eq = startModal.equip
-      var cadObj    = startModal.cadenceObj           // GS onglet 2 uniquement
-      var netRef    = gsNetRef(eq)                    // TO_GS - arrêts planifiés GS
+      var cadObj   = startModal.cadenceObj
+      var planOpts = { isPremierCampagne: startModal.isPremierCampagne, hasVdlp: startModal.hasVdlp }
+      var netRef   = gsNetRef(eq, planOpts)
       var objBoites = cadObj ? Math.round(cadObj * netRef) : null
 
       var r = await supabase.from('production_sessions').insert({
@@ -1122,16 +1206,64 @@ export default {
       devModal.show = false; devModal.saving = false
     }
 
+    // ── Clôture automatique 10 min après fin de shift ────────────────
+    var timeToMin = function(hhmm) {
+      var parts = (hhmm || '').slice(0, 5).split(':')
+      return parseInt(parts[0] || 0) * 60 + parseInt(parts[1] || 0)
+    }
+
+    var doAutoClose = async function(p, sh) {
+      var sessId = p.session.id
+      if (autoClosing[sessId]) return
+      autoClosing[sessId] = true
+      var heureFin = sh.heure_fin.slice(0, 5)
+      if (p.activeArret) {
+        var aStart  = toDateTime(p.session.date, p.activeArret.heure_debut)
+        var finDate = new Date(p.session.date + 'T' + heureFin + ':00')
+        var aDur    = aStart ? Math.max(0, Math.round((finDate - aStart) / 60000)) : null
+        await supabase.from('production_arrets').update({
+          heure_fin: heureFin + ':00', duree_minutes: aDur, is_running: false,
+          updated_at: new Date().toISOString()
+        }).eq('id', p.activeArret.id)
+      }
+      await supabase.from('production_sessions').update({
+        statut: 'Clôturé', heure_fin: heureFin + ':00',
+        updated_at: new Date().toISOString()
+      }).eq('id', sessId)
+      delete autoClosing[sessId]
+      await loadAll()
+    }
+
+    var autoStopCheck = async function() {
+      var nowMin = timeToMin(nowTime())
+      for (var pi = 0; pi < panels.value.length; pi++) {
+        var p = panels.value[pi]
+        if (!p.session || p.session.statut === 'Clôturé' || p.session.statut === 'Annulé') continue
+        if (autoClosing[p.session.id]) continue
+        if (!p.session.shift_id) continue
+        var sh = shifts.value.find(function(s) { return s.id === p.session.shift_id })
+        if (!sh) continue
+        var finMin     = timeToMin(sh.heure_fin)
+        var triggerMin = (finMin + 10) % 1440
+        var diff       = (nowMin - triggerMin + 1440) % 1440
+        if (diff < 60) {
+          await doAutoClose(p, sh)
+        }
+      }
+    }
+
     onMounted(async function() {
       await loadAll()
-      clockInt   = setInterval(tick, 1000)
-      refreshInt = setInterval(loadAll, 60000)
+      clockInt      = setInterval(tick, 1000)
+      refreshInt    = setInterval(loadAll, 60000)
+      autoStopInt   = setInterval(autoStopCheck, 60000)
       tick()
     })
 
     onUnmounted(function() {
       clearInterval(clockInt)
       clearInterval(refreshInt)
+      clearInterval(autoStopInt)
     })
 
     return {
@@ -1140,10 +1272,10 @@ export default {
       timers, arretTimers, filteredPanels,
       startModal, arretModal, requalModal, comptageModal, closeModal, devModal,
       panelClass, panelColor, oeeClass,
-      gsTotalPlanRef, gsNetRef,
+      gsTotalPlanRef, gsNetRef, modalOpts, modalMicro,
       computeObjShift, computeCadence, computeCadenceVsObj, computeOEEPreview,
       loadAll,
-      openStartModal, searchLots, selectLot, doStart,
+      detectShift, openStartModal, searchLots, selectLot, doStart,
       openArretModal, onFamilleChange, onSFChange, onTypeChange, doArret,
       clotureArret, openRequalifModal, onRequalFamilleChange, onRequalSFChange, doRequalif,
       openComptageModal, doComptage,
@@ -1422,7 +1554,8 @@ export default {
 .cp-row  { display: flex; justify-content: space-between; padding: 2px 0; font-size: 12px; }
 .cp-lbl  { color: #666; }
 .cp-val  { font-family: 'SF Mono', monospace; font-weight: 500; color: #0a0a0a; }
-.cp-val.obj { color: #185FA5; font-weight: 600; }
+.cp-val.obj  { color: #185FA5; font-weight: 600; }
+.cp-val.cp-warn { color: #d97706; font-weight: 700; }
 
 .cascade-selects { display: flex; align-items: flex-end; gap: 6px; }
 .cs-step { flex: 1; }
