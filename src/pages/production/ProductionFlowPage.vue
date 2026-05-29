@@ -108,6 +108,9 @@
           <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
             <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e1e3a" stroke-width="0.5"/>
           </pattern>
+          <pattern id="grid-day" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#c8ccd8" stroke-width="0.4"/>
+          </pattern>
           <filter id="glow">
             <feGaussianBlur stdDeviation="3" result="blur"/>
             <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
@@ -126,7 +129,7 @@
             <path d="M0,0 L0,6 L8,3 z" fill="#fbbf24"/>
           </marker>
         </defs>
-        <rect width="100%" height="100%" fill="url(#grid)"/>
+        <rect width="100%" height="100%" :fill="theme==='day' ? 'url(#grid-day)' : 'url(#grid)'"/>
 
         <!-- ── ZONES BACKGROUND ── -->
         <rect :x="TRACK_X" :y="ZONE_FS_Y" :width="TRACKS_W" :height="ZONE_FS_H"
@@ -166,7 +169,7 @@
         <!-- ── FLÈCHES ── -->
         <g v-for="arr in arrows" :key="arr.id">
           <path :d="arr.d" fill="none"
-            :stroke="arr.fluxHighlight?'#fbbf24':arr.active?'#10b981':'#374151'"
+            :stroke="arr.fluxHighlight?'#fbbf24':arr.active?'#10b981':(theme==='day'?'#94a3b8':'#374151')"
             :stroke-width="arr.fluxHighlight?3:2"
             :stroke-dasharray="arr.fluxHighlight?'none':arr.active?'none':'6,3'"
             :marker-end="arr.fluxHighlight?'url(#arr-flux)':arr.active?'url(#arr-active)':'url(#arr)'"
@@ -197,32 +200,32 @@
             :opacity="nodeDim(node)*0.9"/>
           <!-- Code salle -->
           <text :x="node.x+node.w/2" :y="node.y+20"
-            text-anchor="middle" fill="rgba(255,255,255,.95)"
+            text-anchor="middle" :fill="theme==='day' ? '#1e2130' : 'rgba(255,255,255,.95)'"
             font-size="16" font-weight="800" font-family="monospace"
             :opacity="nodeDim(node)">
             {{node.code}}
           </text>
           <!-- Nom ligne 1 -->
           <text :x="node.x+node.w/2" :y="node.y+36"
-            text-anchor="middle" fill="rgba(255,255,255,.75)" font-size="9.5"
+            text-anchor="middle" :fill="theme==='day' ? '#6b7280' : 'rgba(255,255,255,.75)'" font-size="9.5"
             :opacity="nodeDim(node)">
             {{node.line1}}
           </text>
           <!-- Nom ligne 2 -->
           <text v-if="node.line2" :x="node.x+node.w/2" :y="node.y+48"
-            text-anchor="middle" fill="rgba(255,255,255,.75)" font-size="9.5"
+            text-anchor="middle" :fill="theme==='day' ? '#6b7280' : 'rgba(255,255,255,.75)'" font-size="9.5"
             :opacity="nodeDim(node)">
             {{node.line2}}
           </text>
           <!-- Dot statut PDP (masqué en mode TRS) -->
           <circle v-if="nodeStatus(node).label!=='Libre' && !trsMode"
             :cx="node.x+node.w-10" :cy="node.y+10" r="6"
-            :fill="nodeStatus(node).color" stroke="rgba(255,255,255,.5)" stroke-width="1"
+            :fill="nodeStatus(node).color" :stroke="theme==='day' ? 'rgba(0,0,0,.15)' : 'rgba(255,255,255,.5)'" stroke-width="1"
             filter="url(#glow)" :opacity="nodeDim(node)"/>
           <!-- Count lots PDP (masqué en mode TRS) -->
           <text v-if="activeLotCount(node)>0 && !trsMode"
             :x="node.x+10" :y="node.y+12"
-            fill="rgba(255,255,255,.8)" font-size="9" font-weight="700"
+            :fill="theme==='day' ? '#374151' : 'rgba(255,255,255,.8)'" font-size="9" font-weight="700"
             :opacity="nodeDim(node)">
             {{activeLotCount(node)}}L
           </text>
@@ -233,23 +236,36 @@
           <!-- Dot TRS (mode TRS uniquement) -->
           <circle v-if="trsMode && node.type==='cond'"
             :cx="node.x+node.w-10" :cy="node.y+10" r="6"
-            :fill="nodeTrs(node) && nodeTrs(node).statut==='En cours' ? '#10b981' : nodeTrs(node) && (nodeTrs(node).statut==='Arrêt'||nodeTrs(node).statut==='Pause') ? '#f59e0b' : '#374151'"
-            stroke="rgba(255,255,255,.4)" stroke-width="1"
+            :fill="nodeTrs(node) && nodeTrs(node).statut==='En cours' ? '#10b981' : nodeTrs(node) && (nodeTrs(node).statut==='Arrêt'||nodeTrs(node).statut==='Pause') ? '#f59e0b' : (theme==='day' ? '#d1d5db' : '#374151')"
+            :stroke="theme==='day' ? 'rgba(0,0,0,.15)' : 'rgba(255,255,255,.4)'" stroke-width="1"
             filter="url(#glow)" :opacity="nodeDim(node)"/>
 
           <!-- ── TRS OVERLAY (mode TRS uniquement) ── -->
-          <template v-if="trsMode">
-            <!-- Fond bandeau bas -->
+          <!-- Jour : badge TRS épuré (couleur + valeur seulement) -->
+          <template v-if="trsMode && theme==='day'">
+            <rect :x="node.x" :y="node.y+node.h-22" :width="node.w" height="22"
+              rx="0" fill="rgba(255,255,255,0.88)" :opacity="nodeDim(node)"/>
+            <line :x1="node.x" :y1="node.y+node.h-22" :x2="node.x+node.w" :y2="node.y+node.h-22"
+              :stroke="nodeTrs(node) && nodeTrs(node).trs != null ? trsColor(nodeTrs(node).trs) : '#d1d5db'" stroke-width="2.5" :opacity="nodeDim(node)"/>
+            <text :x="node.x+node.w*0.3" :y="node.y+node.h-7" text-anchor="middle"
+              fill="#9ca3af" font-size="7" font-weight="600" letter-spacing="0.5" :opacity="nodeDim(node)">TRS</text>
+            <text :x="node.x+node.w*0.72" :y="node.y+node.h-6" text-anchor="middle"
+              font-size="11" font-weight="900"
+              :fill="nodeTrs(node) && nodeTrs(node).trs != null ? trsColor(nodeTrs(node).trs) : '#9ca3af'"
+              :opacity="nodeDim(node)">
+              {{nodeTrs(node) && nodeTrs(node).trs != null ? nodeTrs(node).trs+'%' : '—'}}
+            </text>
+          </template>
+          <!-- Nuit : bandeau complet D / P / Q / TRS -->
+          <template v-else-if="trsMode">
             <rect :x="node.x" :y="node.y+node.h-26" :width="node.w" height="26"
               rx="0" fill="rgba(0,0,0,0.82)" :opacity="nodeDim(node)"/>
-            <!-- Séparateurs verticaux -->
             <line :x1="node.x+node.w*0.25" :y1="node.y+node.h-26" :x2="node.x+node.w*0.25" :y2="node.y+node.h"
               stroke="#2a2a4a" stroke-width="0.5" :opacity="nodeDim(node)"/>
             <line :x1="node.x+node.w*0.5"  :y1="node.y+node.h-26" :x2="node.x+node.w*0.5"  :y2="node.y+node.h"
               stroke="#2a2a4a" stroke-width="0.5" :opacity="nodeDim(node)"/>
             <line :x1="node.x+node.w*0.75" :y1="node.y+node.h-26" :x2="node.x+node.w*0.75" :y2="node.y+node.h"
               stroke="#2a2a4a" stroke-width="0.5" :opacity="nodeDim(node)"/>
-            <!-- Labels D P Q TRS -->
             <text :x="node.x+node.w*0.125" :y="node.y+node.h-15" text-anchor="middle"
               fill="#6b7280" font-size="6" letter-spacing="0.5" :opacity="nodeDim(node)">D</text>
             <text :x="node.x+node.w*0.375" :y="node.y+node.h-15" text-anchor="middle"
@@ -258,25 +274,21 @@
               fill="#6b7280" font-size="6" letter-spacing="0.5" :opacity="nodeDim(node)">Q</text>
             <text :x="node.x+node.w*0.875" :y="node.y+node.h-15" text-anchor="middle"
               fill="#9ca3af" font-size="6" font-weight="700" letter-spacing="0.5" :opacity="nodeDim(node)">TRS</text>
-            <!-- Valeurs D -->
             <text :x="node.x+node.w*0.125" :y="node.y+node.h-4" text-anchor="middle"
               font-size="8" font-weight="700"
               :fill="nodeTrs(node) ? trsColor(nodeTrs(node).d) : '#374151'" :opacity="nodeDim(node)">
               {{nodeTrs(node) && nodeTrs(node).d != null ? nodeTrs(node).d+'%' : '—'}}
             </text>
-            <!-- Valeurs P -->
             <text :x="node.x+node.w*0.375" :y="node.y+node.h-4" text-anchor="middle"
               font-size="8" font-weight="700"
               :fill="nodeTrs(node) ? trsColor(nodeTrs(node).p) : '#374151'" :opacity="nodeDim(node)">
               {{nodeTrs(node) && nodeTrs(node).p != null ? nodeTrs(node).p+'%' : '—'}}
             </text>
-            <!-- Valeurs Q -->
             <text :x="node.x+node.w*0.625" :y="node.y+node.h-4" text-anchor="middle"
               font-size="8" font-weight="700"
               :fill="nodeTrs(node) ? trsColor(nodeTrs(node).q) : '#374151'" :opacity="nodeDim(node)">
               {{nodeTrs(node) && nodeTrs(node).q != null ? nodeTrs(node).q+'%' : '—'}}
             </text>
-            <!-- Valeur TRS (plus grande) -->
             <text :x="node.x+node.w*0.875" :y="node.y+node.h-3" text-anchor="middle"
               font-size="9.5" font-weight="900"
               :fill="nodeTrs(node) && nodeTrs(node).trs != null ? trsColor(nodeTrs(node).trs) : '#374151'"
@@ -288,24 +300,24 @@
 
         <!-- ── TITRE COIN SUP GAUCHE ── -->
         <rect x="16" y="16" width="200" height="44"
-          rx="8" fill="#1a1a3e" stroke="#3b3b6e" stroke-width="1.5"/>
+          rx="8" :fill="theme==='day' ? '#fff' : '#1a1a3e'" :stroke="theme==='day' ? '#d8dce8' : '#3b3b6e'" stroke-width="1.5"/>
         <text x="116" y="36" text-anchor="middle"
-          fill="#7c7cff" font-size="12" font-weight="800" letter-spacing="2">
+          :fill="theme==='day' ? '#185FA5' : '#7c7cff'" font-size="12" font-weight="800" letter-spacing="2">
           PRODUCTION
         </text>
         <text x="116" y="52" text-anchor="middle"
-          fill="#4b4b8a" font-size="9" letter-spacing="3">
+          :fill="theme==='day' ? '#aaa' : '#4b4b8a'" font-size="9" letter-spacing="3">
           LDM GROUPE
         </text>
 
         <!-- ── STEP LABELS ── -->
         <g v-for="step in stepLabels" :key="step.id">
           <line :x1="step.x" :y1="step.y1" :x2="step.x" :y2="step.y2"
-            stroke="#2a2a4a" stroke-width="1" stroke-dasharray="3,3"/>
+            :stroke="theme==='day' ? '#c8ccd8' : '#2a2a4a'" stroke-width="1" stroke-dasharray="3,3"/>
           <rect :x="step.x-step.tw/2" :y="step.y2+2" :width="step.tw" height="18"
-            rx="3" fill="#12122a"/>
+            rx="3" :fill="theme==='day' ? '#fff' : '#12122a'" :stroke="theme==='day' ? '#d8dce8' : 'none'" stroke-width="1"/>
           <text :x="step.x" :y="step.y2+14" text-anchor="middle"
-            fill="#4b5563" font-size="9" font-weight="600" letter-spacing="1">
+            :fill="theme==='day' ? '#666' : '#4b5563'" font-size="9" font-weight="600" letter-spacing="1">
             {{step.label}}
           </text>
         </g>
@@ -2038,35 +2050,37 @@ export default {
     }
 
     var nodeColor = function(node) {
+      var isDay = theme.value === 'day'
       if (trsMode.value) {
         var t = nodeTrs(node)
-        if (!t || t.trs == null) return '#12122a'
-        if (t.trs >= 85) return '#062216'
-        if (t.trs >= 60) return '#231500'
-        return '#1f0808'
+        if (!t || t.trs == null) return isDay ? '#e8eaf0' : '#12122a'
+        if (t.trs >= 85) return isDay ? '#d1fae5' : '#062216'
+        if (t.trs >= 60) return isDay ? '#fef3c7' : '#231500'
+        return isDay ? '#fee2e2' : '#1f0808'
       }
       var st = nodeStatus(node)
-      if (st.label === 'Arrêt')     return '#3f1212'
-      if (st.label === 'Déviation') return '#3f2e00'
-      if (st.label === 'En cours')  return '#0d2e20'
-      if (nodeIsFlux(node)) return '#2a2000'
+      if (st.label === 'Arrêt')     return isDay ? '#fee2e2' : '#3f1212'
+      if (st.label === 'Déviation') return isDay ? '#fef3c7' : '#3f2e00'
+      if (st.label === 'En cours')  return isDay ? '#dcfce7' : '#0d2e20'
+      if (nodeIsFlux(node)) return isDay ? '#fef9c3' : '#2a2000'
       var z = zones.find(function(x) { return x.key === node.zone })
-      return z ? z.color + '22' : '#1e1e3a'
+      return isDay ? (z ? z.color + '18' : '#f0f2f8') : (z ? z.color + '22' : '#1e1e3a')
     }
 
     var nodeStroke = function(node) {
-      if (selectedNode.value && selectedNode.value.id === node.id) return '#fff'
+      var isDay = theme.value === 'day'
+      if (selectedNode.value && selectedNode.value.id === node.id) return isDay ? '#185FA5' : '#fff'
       if (trsMode.value) {
         var t = nodeTrs(node)
         if (t && t.trs != null) return trsColor(t.trs)
-        return '#2a2a4a'
+        return isDay ? '#c0c4d0' : '#2a2a4a'
       }
       if (nodeIsFlux(node)) return '#fbbf24'
       var st = nodeStatus(node)
       if (st.label === 'Arrêt')     return '#ef4444'
       if (st.label === 'Déviation') return '#f59e0b'
       if (st.label === 'En cours')  return '#10b981'
-      return zoneColor(node.zone) + '88'
+      return isDay ? zoneColor(node.zone) + '44' : zoneColor(node.zone) + '88'
     }
 
     var nodeStrokeWidth = function(node) {
