@@ -30,12 +30,11 @@ import { ref, computed, defineAsyncComponent } from 'vue'
 // Composants chargés en async — module téléchargé une seule fois, instance montée
 // à la première activation de l'onglet, puis maintenue en mémoire (v-show).
 var COMPS = {
-  produits:    defineAsyncComponent(function() { return import('../ProductsCatalogPage.vue')  }),
-  equipements: defineAsyncComponent(function() { return import('./AdminEquipementsPage.vue') }),
-  ateliers:    defineAsyncComponent(function() { return import('./AdminAteliersPage.vue')    }),
-  flux:        defineAsyncComponent(function() { return import('./AdminFluxPage.vue')        }),
-  shifts:      defineAsyncComponent(function() { return import('./AdminShiftsPage.vue')      }),
-  arrets:      defineAsyncComponent(function() { return import('./AdminArretTypesPage.vue')  }),
+  produits: defineAsyncComponent(function() { return import('../ProductsCatalogPage.vue') }),
+  ateliers: defineAsyncComponent(function() { return import('./AdminAteliersPage.vue')   }),
+  flux:     defineAsyncComponent(function() { return import('./AdminFluxPage.vue')       }),
+  shifts:   defineAsyncComponent(function() { return import('./AdminShiftsPage.vue')     }),
+  arrets:   defineAsyncComponent(function() { return import('./AdminArretTypesPage.vue') }),
 }
 
 export default {
@@ -44,12 +43,11 @@ export default {
     var mountedKeys = ref(['produits'])   // onglets déjà montés (lazy)
 
     var tabs = [
-      { key: 'produits',    icon: '🗃',  label: 'Catalogue produits'   },
-      { key: 'equipements', icon: '⚙️', label: 'Équipements'           },
-      { key: 'ateliers',    icon: '🏗',  label: 'Processus & Ateliers' },
-      { key: 'flux',        icon: '⚙',   label: 'Flux produits'        },
-      { key: 'shifts',      icon: '🕐',  label: 'Shifts & Équipes'     },
-      { key: 'arrets',      icon: '🛑',  label: "Types d'arrêts"       },
+      { key: 'produits', icon: '🗃', label: 'Catalogue produits'   },
+      { key: 'ateliers', icon: '🏗', label: 'Processus & Ateliers' },
+      { key: 'flux',     icon: '⚙', label: 'Flux produits'        },
+      { key: 'shifts',   icon: '🕐', label: 'Shifts & Équipes'     },
+      { key: 'arrets',   icon: '🛑', label: "Types d'arrêts"       },
     ]
 
     // Panels effectivement montés (data chargée uniquement à la 1ère activation)

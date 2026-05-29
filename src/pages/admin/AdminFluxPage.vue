@@ -10,15 +10,8 @@
       </button>
     </div>
 
-    <!-- TABS -->
-    <div class="fa-tabs">
-      <button class="fa-tab" :class="{active:tab==='flux'}" @click="tab='flux'">🔀 Flux par produit</button>
-      <button class="fa-tab" :class="{active:tab==='cadences'}" @click="tab='cadences'">⚡ Cadences</button>
-      <button class="fa-tab" :class="{active:tab==='master'}" @click="tab='master'">🏭 Ateliers référence</button>
-    </div>
-
-    <!-- ── TAB : FLUX PAR PRODUIT ── -->
-    <div v-if="tab==='flux'" class="tab-body">
+    <!-- ── FLUX PAR PRODUIT ── -->
+    <div class="tab-body">
       <div class="tb-toolbar">
         <div class="tb-search-wrap">
           <span class="ts-icon">🔍</span>
@@ -133,79 +126,6 @@
       </div>
     </div>
 
-    <!-- ── TAB : CADENCES ── -->
-    <div v-if="tab==='cadences'" class="tab-body">
-      <div class="tb-toolbar">
-        <div class="tb-search-wrap">
-          <span class="ts-icon">🔍</span>
-          <input class="tb-search" placeholder="Chercher équipement ou produit…" v-model="cadSearch"/>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <button class="tb-btn-add" @click="openNewCad">+ Nouvelle cadence</button>
-        </div>
-      </div>
-      <div v-if="cadImportMsg" class="cad-import-msg" :class="cadImportMsg.type">{{cadImportMsg.text}}</div>
-
-      <div class="cad-table-wrap table-wrap">
-        <table class="cad-table">
-          <thead>
-            <tr>
-              <th>Salle</th>
-              <th>Désignation</th>
-              <th>Produit</th>
-              <th>Cadence théorique</th>
-              <th>Unité</th>
-              <th>Notes</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="!filteredCadences.length">
-              <td colspan="7" class="empty-row">
-                {{cadences.length ? 'Aucun résultat' : 'Aucune cadence définie — cliquez "+ Nouvelle cadence"'}}
-              </td>
-            </tr>
-            <tr v-for="c in filteredCadences" :key="c.id">
-              <td><span class="room-chip">{{c.room_code}}</span></td>
-              <td>{{getRoomName(c.room_code)}}</td>
-              <td><div class="cad-prod-code">{{c.product_code}}</div></td>
-              <td class="cad-val">{{c.cadence_theorique?.toLocaleString('fr-FR') ?? '—'}}</td>
-              <td><span class="unit-chip">{{c.unite}}</span></td>
-              <td class="cad-notes">{{c.notes||'—'}}</td>
-              <td>
-                <button class="prs-btn" @click="openEditCad(c)">✏</button>
-                <button class="prs-btn prs-del" @click="deleteCad(c)">✕</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- ── TAB : MASTER ATELIERS ── -->
-    <div v-if="tab==='master'" class="tab-body">
-      <div class="table-wrap">
-        <table class="cad-table">
-          <thead>
-            <tr>
-              <th>Op#</th><th>Code</th><th>Code opération</th>
-              <th>Désignation</th><th>Équipement</th><th>Processus</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="m in opMaster" :key="m.id">
-              <td><span class="op-num">{{m.op_number}}</span></td>
-              <td><span class="room-chip">{{m.room_code}}</span></td>
-              <td><span class="op-code">{{m.op_code}}</span></td>
-              <td>{{m.room_name}}</td>
-              <td>{{m.equipment_name}}</td>
-              <td>{{m.processus}}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
     <!-- ── MODAL ÉTAPE FLUX ── -->
     <div class="modal-overlay" v-if="stepModal.open" @click.self="stepModal.open=false">
       <div class="modal-box">
@@ -304,62 +224,6 @@
       </div>
     </div>
 
-    <!-- ── MODAL CADENCE ── -->
-    <div class="modal-overlay" v-if="cadModal.open" @click.self="cadModal.open=false">
-      <div class="modal-box">
-        <div class="modal-hd">{{cadModal.id ? '✏ Modifier cadence' : '+ Nouvelle cadence'}}</div>
-        <div class="modal-body">
-          <div class="mf-row">
-            <label>Salle / Équipement</label>
-            <select class="mf-input" v-model="cadModal.room_code">
-              <option value="">— Choisir —</option>
-              <option v-for="m in opMaster" :key="m.room_code" :value="m.room_code">
-                {{m.room_code}} — {{m.room_name}} ({{m.equipment_name}})
-              </option>
-            </select>
-          </div>
-          <div class="mf-row">
-            <label>Code produit</label>
-            <div class="lot-search-wrap">
-              <input class="mf-input" placeholder="Ex: PFLDM05…" v-model="cadModal.prodSearch" @input="searchCadProds"/>
-              <div class="lot-dropdown" v-if="cadModal.prodDropdown.length">
-                <div v-for="p in cadModal.prodDropdown" :key="p.product_code" class="ld-item"
-                  @click="selectCadProd(p)">
-                  <b>{{p.product_code}}</b> — {{p.product_name}}
-                </div>
-              </div>
-            </div>
-            <div v-if="cadModal.product_code" class="lot-chip">✓ {{cadModal.product_code}}</div>
-          </div>
-          <div class="mf-row">
-            <label>Cadence théorique</label>
-            <input class="mf-input" type="number" v-model="cadModal.cadence" placeholder="Ex: 120000"/>
-          </div>
-          <div class="mf-row">
-            <label>Unité</label>
-            <select class="mf-input" v-model="cadModal.unite">
-              <option value="cp/h">cp/h — comprimés/heure</option>
-              <option value="gel/h">gel/h — gélules/heure</option>
-              <option value="tube/h">tube/h — tubes/heure</option>
-              <option value="b/h">b/h — boîtes/heure</option>
-              <option value="kg/h">kg/h — kg/heure</option>
-            </select>
-          </div>
-          <div class="mf-row">
-            <label>Notes <span class="mf-opt">(optionnel)</span></label>
-            <input class="mf-input" v-model="cadModal.notes" placeholder="Conditions, format spécifique…"/>
-          </div>
-          <div class="mf-err" v-if="cadModal.err">{{cadModal.err}}</div>
-        </div>
-        <div class="modal-ft">
-          <button class="mb-cancel" @click="cadModal.open=false">Annuler</button>
-          <button class="mb-ok" @click="saveCad" :disabled="cadModal.saving">
-            {{cadModal.saving ? '…' : cadModal.id ? 'Enregistrer' : 'Ajouter'}}
-          </button>
-        </div>
-      </div>
-    </div>
-
   </div>
 </template>
 
@@ -384,19 +248,14 @@ var OP_LABELS = {
 
 export default {
   setup() {
-    var tab            = ref('flux')
     var fluxSearch     = ref('')
     var fluxTypeFilter = ref('')
     var fluxView       = ref('pivot')
-    var cadSearch      = ref('')
     var fluxLoading    = ref(false)
     var gsReloading    = ref(false)
-    var cadImporting   = ref(false)
-    var cadImportMsg   = ref(null)
 
     var productsSummary = ref([])
     var allFluxRows     = ref([])
-    var cadences        = ref([])
     var opMaster        = ref([])
     var planRooms       = ref([])   // plan_rooms avec op_number renseigné
 
@@ -407,11 +266,6 @@ export default {
     var stepModal = reactive({
       open: false, id: null, saving: false, err: '',
       product_code: '', product_name: '', route: 1, op_number: '', room_code: ''
-    })
-    var cadModal = reactive({
-      open: false, id: null, saving: false, err: '',
-      room_code: '', product_code: '', prodSearch: '',
-      prodDropdown: [], cadence: null, unite: 'cp/h', notes: ''
     })
 
     // ── PRODUITS / FLUX ──────────────────────────────────────────
@@ -446,14 +300,6 @@ export default {
       return groupedProducts.value.filter(function(p) {
         return (!q || p.product_code.toLowerCase().includes(q) || p.product_name.toLowerCase().includes(q)) &&
                (!fluxTypeFilter.value || p.type_flux === fluxTypeFilter.value)
-      })
-    })
-
-    var filteredCadences = computed(function() {
-      var q = cadSearch.value.toLowerCase()
-      if (!q) return cadences.value
-      return cadences.value.filter(function(c) {
-        return c.room_code.toLowerCase().includes(q) || c.product_code.toLowerCase().includes(q)
       })
     })
 
@@ -594,68 +440,6 @@ export default {
       if (!res.error) await loadAll()
     }
 
-    // ── CADENCE CRUD ─────────────────────────────────────────────
-    var openNewCad = function() {
-      Object.assign(cadModal, {
-        open: true, id: null, saving: false, err: '',
-        room_code: '', product_code: '', prodSearch: '',
-        prodDropdown: [], cadence: null, unite: 'cp/h', notes: ''
-      })
-    }
-
-    var openEditCad = function(c) {
-      Object.assign(cadModal, {
-        open: true, id: c.id, saving: false, err: '',
-        room_code: c.room_code, product_code: c.product_code,
-        prodSearch: c.product_code, prodDropdown: [],
-        cadence: c.cadence_theorique, unite: c.unite || 'cp/h', notes: c.notes || ''
-      })
-    }
-
-    var searchCadProds = async function() {
-      var q = cadModal.prodSearch
-      if (!q || q.length < 2) { cadModal.prodDropdown = []; return }
-      var results = allFluxRows.value.filter(function(r) {
-        return r.product_code.toLowerCase().includes(q.toLowerCase()) ||
-               r.product_name.toLowerCase().includes(q.toLowerCase())
-      }).reduce(function(acc, r) {
-        if (!acc.find(function(x) { return x.product_code === r.product_code }))
-          acc.push({ product_code: r.product_code, product_name: r.product_name })
-        return acc
-      }, []).slice(0, 10)
-      cadModal.prodDropdown = results
-    }
-
-    var selectCadProd = function(p) {
-      cadModal.product_code = p.product_code
-      cadModal.prodSearch = p.product_code
-      cadModal.prodDropdown = []
-    }
-
-    var saveCad = async function() {
-      if (!cadModal.room_code) { cadModal.err = 'Salle requise.'; return }
-      if (!cadModal.product_code) { cadModal.err = 'Produit requis.'; return }
-      cadModal.saving = true; cadModal.err = ''
-      var payload = {
-        room_code: cadModal.room_code, product_code: cadModal.product_code,
-        cadence_theorique: cadModal.cadence ? parseFloat(cadModal.cadence) : null,
-        unite: cadModal.unite, notes: cadModal.notes || null
-      }
-      var res = cadModal.id
-        ? await supabase.from('equipment_cadences').update(payload).eq('id', cadModal.id)
-        : await supabase.from('equipment_cadences').insert(payload)
-      cadModal.saving = false
-      if (res.error) { cadModal.err = res.error.message; return }
-      cadModal.open = false
-      await loadAll()
-    }
-
-    var deleteCad = async function(c) {
-      if (!confirm('Supprimer cette cadence ?')) return
-      var res = await supabase.from('equipment_cadences').delete().eq('id', c.id)
-      if (!res.error) await loadAll()
-    }
-
     // ── GOOGLE SHEETS IMPORT ─────────────────────────────────────
     var openGsImport = function() {
       Object.assign(gsModal, { open: true, url: '', csvText: '', fetching: false, saving: false, err: '', preview: [] })
@@ -730,11 +514,10 @@ export default {
     // ── LOAD ─────────────────────────────────────────────────────
     var loadAll = async function() {
       fluxLoading.value = true
-      var [gsData, r0, r1, r2] = await Promise.all([
+      var [gsData, r0, r1] = await Promise.all([
         gsGetAll(),
         supabase.from('product_flux').select('*').order('product_code').order('route').order('op_number'),
         supabase.from('v_product_flux_summary').select('*'),
-        supabase.from('equipment_cadences').select('*').order('room_code'),
       ])
       // operations_master et plan_rooms chargés depuis Google Sheets
       opMaster.value  = gsData.operationsMaster
@@ -747,22 +530,19 @@ export default {
         })
       if (!r0.error) allFluxRows.value     = r0.data
       if (!r1.error) productsSummary.value = r1.data
-      if (!r2.error) cadences.value        = r2.data
       fluxLoading.value = false
     }
 
     onMounted(loadAll)
 
     return {
-      tab, fluxSearch, fluxTypeFilter, fluxView, cadSearch, fluxLoading,
+      fluxSearch, fluxTypeFilter, fluxView, fluxLoading,
       gsReloading, reloadGs,
-      cadImporting, cadImportMsg,
-      filteredProducts, filteredCadences, opMaster, opOptions, roomsForOp,
+      filteredProducts, opMaster, opOptions, roomsForOp,
       machineColsFlat, machineColGroups, pivotMachineRows,
-      stepModal, cadModal, gsModal,
+      stepModal, gsModal,
       getRoomName, onOpChange,
       openNewFlux, openAddStep, openEditStep, saveStep, deleteStep,
-      openNewCad, openEditCad, searchCadProds, selectCadProd, saveCad, deleteCad,
       toggleMachineFlux,
       openGsImport, loadGsCsv, parseGsCsv, confirmGsImport,
     }
@@ -785,11 +565,6 @@ export default {
 .fa-btn-gs-reload:disabled { opacity: .5; cursor: not-allowed; }
 @keyframes fa-spin { from { transform: rotate(0) } to { transform: rotate(360deg) } }
 .fa-btn-gs-reload.spinning { animation: fa-spin .7s linear infinite; }
-
-/* Tabs */
-.fa-tabs { display: flex; gap: 4px; border-bottom: 1px solid #e5e7eb; margin-bottom: 20px; }
-.fa-tab { padding: 8px 18px; border: none; background: none; font-size: 13px; font-weight: 600; color: #6b7280; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
-.fa-tab.active { color: #7c3aed; border-bottom-color: #7c3aed; }
 
 /* Toolbar */
 .tb-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
@@ -975,10 +750,6 @@ export default {
 /* ═══ MESSAGES ══════════════════════════════════════════════════ */
 .empty-row { text-align: center; color: #9ca3af; font-style: italic; padding: 32px; }
 .loading-row { text-align: center; color: #9ca3af; padding: 32px; }
-.cad-import-msg { padding: 8px 14px; border-radius: 4px; font-size: 12px; margin-bottom: 12px; }
-.cad-import-msg.ok  { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
-.cad-import-msg.err { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
-
 /* ═══ MODALS ════════════════════════════════════════════════════ */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 200; display: flex; align-items: center; justify-content: center; }
 .modal-box { background: #fff; border-radius: 10px; width: 460px; max-width: 95vw; box-shadow: 0 20px 50px rgba(0,0,0,.2); }
