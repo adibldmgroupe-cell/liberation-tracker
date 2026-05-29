@@ -729,9 +729,8 @@
           </div>
         </div>
         <div class="trs-cad-preview" v-if="trsStartModal.equip">
-          <div class="trs-cp-row"><span class="trs-cp-lbl">Cadence nominale</span><span class="trs-cp-val">{{trsStartModal.equip.cadence_nominale_boite_min || '—'}} b/min</span></div>
-          <div class="trs-cp-row"><span class="trs-cp-lbl">Cadence objectif</span><span class="trs-cp-val trs-cp-obj">{{trsStartModal.cadenceObj || trsStartModal.equip.cadence_objectif_boite_min || '—'}} b/min</span></div>
-          <div class="trs-cp-row" v-if="trsStartModal.cadenceObj || trsStartModal.equip.cadence_objectif_boite_min"><span class="trs-cp-lbl">Objectif / shift</span><span class="trs-cp-val trs-cp-obj">{{trsComputeObjShift(trsStartModal)}} boîtes</span></div>
+          <div class="trs-cp-row"><span class="trs-cp-lbl">Cadence obj. (GS)</span><span class="trs-cp-val trs-cp-obj">{{trsStartModal.cadenceObj || '—'}} b/min</span></div>
+          <div class="trs-cp-row" v-if="trsStartModal.cadenceObj"><span class="trs-cp-lbl">Objectif / shift</span><span class="trs-cp-val trs-cp-obj">{{trsComputeObjShift(trsStartModal)}} boîtes</span></div>
         </div>
         <!-- Cadence réelle opérateur + colisage -->
         <div class="trs-form-row trs-cad-real-row" v-if="trsStartModal.lot">
@@ -1275,6 +1274,7 @@ export default {
     var trsShifts        = ref([])
     var trsEquipes       = ref([])
     var trsArretFamilles = ref([])
+    var trsCadences      = ref([])   // GS onglet 2 — cadences par (N°_atelier × code_article)
     var trsClock         = ref('')
     var trsTimers        = ref({})
     var trsArretTimers   = ref({})
@@ -1292,6 +1292,17 @@ export default {
     var trsHistoModal    = reactive({ show:false, loading:false, date:'', equip_id:null, sessions:[] })
     var trsEquipes_list  = ref([])
     var trsTheoCounters  = ref({})
+
+    // ── Helpers GS temps (miroir de TrsLivePage) ───────────────────
+    var trsTotalPlanRef = function(eq) {
+      if (!eq) return 0
+      return (eq.pause_ref||0)+(eq.vdlp_ref||0)+(eq.vdlc_ref||0)+
+             (eq.chgt_format_ref||0)+(eq.reglage_ref||0)+(eq.micro_arrets_ref||0)+(eq.maint_curative_ref||0)
+    }
+    var trsNetRef = function(eq) {
+      if (!eq) return 480
+      return Math.max(1, (eq.to_shift_ref||480) - trsTotalPlanRef(eq))
+    }
 
     var trsNowTime = function() {
       var n = new Date()
@@ -1328,11 +1339,9 @@ export default {
     }
 
     var trsComputeObjShift = function(m) {
-      var cadObj = m.cadenceObj || (m.equip && m.equip.cadence_objectif_boite_min)
+      var cadObj = m.cadenceObj
       if (!cadObj || !m.equip) return '—'
-      var to = m.equip.temps_ouverture_shift_min || 480
-      var pauses = m.equip.temps_pause_planifie_min || 0
-      return Math.round(cadObj * (to - pauses))
+      return Math.round(cadObj * trsNetRef(m.equip))
     }
 
     var trsComputeCadence = function(m) {
@@ -1446,16 +1455,42 @@ export default {
 
     var loadTrsFull = async function() {
       trsLoading.value = true
-      var [rEq, rSh, rEq2, rFam] = await Promise.all([
+      var [rEq, rSh, rEq2, rFam, gsData, rRooms] = await Promise.all([
         supabase.from('equipements_conditionnement').select('*').eq('actif', true).order('ordre_affichage'),
         supabase.from('shifts').select('*').eq('actif', true).order('heure_debut'),
         supabase.from('equipes').select('*').eq('actif', true).order('nom'),
-        supabase.from('arret_familles').select('*').eq('actif', true).order('ordre')
+        supabase.from('arret_familles').select('*').eq('actif', true).order('ordre'),
+        gsGetAll(),
+        supabase.from('plan_rooms').select('code,equipement_id')
       ])
       if (rSh.data)  trsShifts.value       = rSh.data
       if (rEq2.data) trsEquipes.value       = rEq2.data
       if (rFam.data) trsArretFamilles.value = rFam.data
-      var equipList = rEq.data || []
+      trsCadences.value = gsData.cadences || []
+      // Construire map equipement_id → N°_atelier via plan_rooms.code (ex: 'c149' → 149)
+      var equipToNum = {}
+      ;(rRooms.data || []).forEach(function(r) {
+        if (r.equipement_id && r.code) {
+          var num = parseInt(r.code.replace(/^[a-z]+/i, ''), 10)
+          if (!isNaN(num)) equipToNum[r.equipement_id] = num
+        }
+      })
+      // Enrichir chaque équipement avec les données GS onglet 1
+      var equipList = (rEq.data || []).map(function(eq) {
+        var numAtelier = equipToNum[eq.id] || null
+        var gsRoom = numAtelier ? gsData.planRooms.find(function(r) { return r.id === numAtelier }) : null
+        return Object.assign({}, eq, {
+          numero_atelier:     numAtelier,
+          to_shift_ref:       (gsRoom && gsRoom.to_shift_min)             || 480,
+          pause_ref:          (gsRoom && gsRoom.pause_min)                || 0,
+          vdlp_ref:           (gsRoom && gsRoom.vdlp_min)                 || 0,
+          vdlc_ref:           (gsRoom && gsRoom.vdlc_min)                 || 0,
+          chgt_format_ref:    (gsRoom && gsRoom.chgt_format_min)          || 0,
+          reglage_ref:        (gsRoom && gsRoom.reglage_lancement_min)    || 0,
+          micro_arrets_ref:   (gsRoom && gsRoom.micro_arrets_shift_min)   || 0,
+          maint_curative_ref: (gsRoom && gsRoom.maint_curative_shift_min) || 0,
+        })
+      })
       var newPanels = []
       for (var i = 0; i < equipList.length; i++) {
         var eq = equipList[i]
@@ -1546,10 +1581,16 @@ export default {
 
     var trsSelectLot = async function(l) {
       trsStartModal.lot = l; trsStartModal.lotSearch = l.numero_lot; trsStartModal.lotSuggestions = []
+      trsStartModal.cadenceObj = null
       if (trsStartModal.equip) {
-        var r = await supabase.from('objectifs_production').select('cadence_objectif_boite_min').eq('equipement_id', trsStartModal.equip.id).eq('product_id', l.product_id).eq('actif', true).limit(1).maybeSingle()
-        trsStartModal.cadenceObj = r.data ? r.data.cadence_objectif_boite_min : null
-        // Pré-remplir cadence réelle avec l'objectif comme suggestion
+        // Lookup cadence depuis GS onglet 2 : (N°_atelier × code_article)
+        var numAtelier = trsStartModal.equip.numero_atelier
+        if (numAtelier && l.code_article) {
+          var match = trsCadences.value.find(function(c) {
+            return c.numero_atelier === numAtelier && c.code_article === l.code_article
+          })
+          trsStartModal.cadenceObj = match ? match.cadence_objectif_b_min : null
+        }
         if (!trsStartModal.cadenceReel && trsStartModal.cadenceObj) trsStartModal.cadenceReel = trsStartModal.cadenceObj
       }
       // Colisage : catalogue_produits en priorité, fallback products
@@ -1569,9 +1610,9 @@ export default {
       if (!trsStartModal.lot) { trsStartModal.error = 'Sélectionner un lot.'; return }
       trsStartModal.saving = true
       var eq = trsStartModal.equip
-      var cadObj = trsStartModal.cadenceObj || eq.cadence_objectif_boite_min
-      var to = eq.temps_ouverture_shift_min || 480; var pauses = eq.temps_pause_planifie_min || 0
-      var objBoites = cadObj ? Math.round(cadObj * (to - pauses)) : null
+      var cadObj    = trsStartModal.cadenceObj           // GS onglet 2 uniquement
+      var netRef    = trsNetRef(eq)                      // TO_GS - arrêts planifiés GS
+      var objBoites = cadObj ? Math.round(cadObj * netRef) : null
       var r = await supabase.from('production_sessions').insert({
         lot_id: trsStartModal.lot.id, equipement_id: eq.id,
         shift_id: trsStartModal.shift_id||null, equipe_id: trsStartModal.equipe_id||null,
@@ -2362,6 +2403,7 @@ export default {
         return Object.assign({}, r, { atelier_id: fk.atelier_id || null, equipement_id: fk.equipement_id || null })
       })
       opMaster.value = gsData.operationsMaster
+      trsCadences.value = gsData.cadences || []
       if (!r2.error) suiviFab.value   = r2.data
       if (!r3.error) sessions.value   = r3.data
       if (!r4.error) deviations.value = r4.data
