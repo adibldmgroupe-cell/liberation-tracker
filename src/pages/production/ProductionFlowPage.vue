@@ -55,11 +55,7 @@
         <button class="fh-btn" :class="{spinning:loading}" @click="loadLive" title="Rafraîchir">↻</button>
         <button class="fh-btn" :class="{'fh-btn-trs-on': trsMode}" @click="toggleTrsMode" title="Mode TRS OEE">📊</button>
         <router-link to="/admin/flux" class="fh-btn fh-btn-admin" title="⚙ Paramétrer flux produits">⚙</router-link>
-        <div class="theme-sw">
-          <button class="tsw-btn" :class="{active:theme==='night'}" @click="theme='night'" title="Nuit">🌙</button>
-          <button class="tsw-btn" :class="{active:theme==='day'}" @click="theme='day'" title="Jour">☀️</button>
-          <button class="tsw-btn" :class="{active:theme==='workshop'}" @click="theme='workshop'" title="Atelier">🏭</button>
-        </div>
+        <button class="fh-btn fh-btn-theme" @click="cycleTheme" :title="themeTitle">{{themeIcon}}</button>
       </div>
     </div>
 
@@ -1153,6 +1149,18 @@ export default {
   setup() {
     var router = useRouter()
     var { theme } = useTheme()
+
+    var THEME_ORDER = ['night', 'day', 'workshop']
+    var cycleTheme = function() {
+      var idx = THEME_ORDER.indexOf(theme.value)
+      theme.value = THEME_ORDER[(idx + 1) % THEME_ORDER.length]
+    }
+    var themeIcon = computed(function() {
+      return theme.value === 'day' ? '☀️' : theme.value === 'workshop' ? '🏭' : '🌙'
+    })
+    var themeTitle = computed(function() {
+      return theme.value === 'night' ? 'Nuit → cliquer pour Jour' : theme.value === 'day' ? 'Jour → cliquer pour Atelier' : 'Atelier → cliquer pour Nuit'
+    })
 
     var loading       = ref(false)
     var selectedNode  = ref(null)
@@ -2462,7 +2470,7 @@ export default {
     })
 
     return {
-      theme,
+      theme, cycleTheme, themeIcon, themeTitle,
       SVG_W, SVG_H, NW, NH,
       TRACK_X, TRACKS_W, ZONE_FS_Y, ZONE_FS_H, ZONE_SS_Y, ZONE_SS_H,
       ZONE_OTC_Y, ZONE_OTC_H, STEP,
@@ -2519,6 +2527,7 @@ export default {
 .fh-btn:hover { color:#fff; border-color:#4b5563; }
 .fh-btn.spinning { animation: spin 1s linear infinite; }
 .fh-btn-trs-on { background:#0f4c3a !important; border-color:#10b981 !important; color:#6ee7b7 !important; font-size:13px; }
+.fh-btn-theme  { font-size:16px; }
 
 /* ── TRS Bandeau ── */
 .trs-band { display:flex; align-items:center; gap:20px; padding:6px 16px; background:#050f0a; border-bottom:1px solid #064e35; flex-shrink:0; }
@@ -2892,8 +2901,94 @@ export default {
 .flow-page[data-theme="day"] .dp-lot-num { color: #1a1a2e; }
 .flow-page[data-theme="day"] .dp-lot-prod { color: #888; }
 .flow-page[data-theme="day"] .dp-empty { color: #ccc; }
-/* TRS detail panel */
+/* ── TRS bandeau ── */
+.flow-page[data-theme="day"] .trs-band { background: #fff; border-bottom: 1px solid #dde1ea; }
+.flow-page[data-theme="day"] .trs-band-label { color: #185FA5; }
+.flow-page[data-theme="day"] .trs-kpi-val { color: #1a1a2e; }
+.flow-page[data-theme="day"] .trs-kpi-tot { color: #aaa; }
+.flow-page[data-theme="day"] .trs-kpi-lbl { color: #888; }
+.flow-page[data-theme="day"] .trs-band-refresh { border-color: #c8ccd8; color: #185FA5; }
+.flow-page[data-theme="day"] .trs-band-refresh:hover { background: #eef2f8; }
+.flow-page[data-theme="day"] .trs-band-histo { background: rgba(0,0,0,.04); border-color: #c8ccd8; color: #555; }
+.flow-page[data-theme="day"] .trs-band-histo:hover { background: rgba(0,0,0,.08); }
+/* ── TRS detail panel ── */
 .flow-page[data-theme="day"] .trs-detail-panel { background: #fff; border-left-color: #d8dce8; }
+.flow-page[data-theme="day"] .tdp-hd-info .tdp-equip { color: #1a1a2e; }
+.flow-page[data-theme="day"] .tdp-hd-info .tdp-nom   { color: #999; }
+.flow-page[data-theme="day"] .tdp-clock  { color: #185FA5; }
+.flow-page[data-theme="day"] .tdp-close  { color: #bbb; }
+.flow-page[data-theme="day"] .tdp-close:hover { color: #1a1a2e; }
+.flow-page[data-theme="day"] .tdp-empty-msg { color: #aaa; }
+.flow-page[data-theme="day"] .tdp-lot-num   { color: #185FA5; }
+.flow-page[data-theme="day"] .tdp-lot-prod  { color: #999; }
+.flow-page[data-theme="day"] .tdp-no-session { color: #aaa; }
+.flow-page[data-theme="day"] .tdp-timer-lbl  { color: #aaa; }
+.flow-page[data-theme="day"] .tdp-metric { background: #f5f7fa; }
+.flow-page[data-theme="day"] .tdp-metric-val { color: #1a1a2e; }
+.flow-page[data-theme="day"] .tdp-metric-lbl { color: #999; }
+.flow-page[data-theme="day"] .tdp-rend-bar { background: #e5e7eb; }
+.flow-page[data-theme="day"] .tdp-oee { border-top-color: #eee; border-bottom-color: #eee; }
+.flow-page[data-theme="day"] .tdp-oee-item { background: #f5f7fa; }
+.flow-page[data-theme="day"] .tdp-oee-val  { /* couleurs OEE conservées (trsOeeClass) */ }
+.flow-page[data-theme="day"] .tdp-oee-lbl  { color: #888; }
+.flow-page[data-theme="day"] .tdp-btn { background: #f5f7fa; border-color: #dde1ea; color: #444; }
+.flow-page[data-theme="day"] .tdp-btn:hover:not(:disabled) { background: #e8ecf3; border-color: #b0b8cc; color: #1a1a2e; }
+.flow-page[data-theme="day"] .tdp-btn-start { color: #185FA5; border-color: #185FA544; }
+.flow-page[data-theme="day"] .tdp-btn-start:hover:not(:disabled) { background: #eef2fa; border-color: #185FA5; }
+.flow-page[data-theme="day"] .tdp-btn-stop  { color: #dc2626; border-color: #dc262644; }
+.flow-page[data-theme="day"] .tdp-btn-stop:hover:not(:disabled)  { background: #fef2f2; border-color: #dc2626; }
+.flow-page[data-theme="day"] .tdp-btn-count { color: #2563eb; border-color: #2563eb44; }
+.flow-page[data-theme="day"] .tdp-btn-close { color: #7c3aed; border-color: #7c3aed44; }
+.flow-page[data-theme="day"] .tdp-btn-resume{ color: #059669; border-color: #05966944; }
+.flow-page[data-theme="day"] .tdp-arrets-title { color: #aaa; }
+.flow-page[data-theme="day"] .tdp-arret-row { border-bottom-color: #eee; }
+.flow-page[data-theme="day"] .tdp-arret-row.running { background: #f0fdf4; border-radius:4px; }
+.flow-page[data-theme="day"] .tdp-arret-code { color: #1a1a2e; }
+.flow-page[data-theme="day"] .tdp-arret-name { color: #888; }
+.flow-page[data-theme="day"] .tdp-arret-dur  { color: #bbb; }
+.flow-page[data-theme="day"] .tdp-comptage-bloc { border-top-color: #eee; }
+.flow-page[data-theme="day"] .tdp-cad-ic   { color: #185FA5; }
+.flow-page[data-theme="day"] .tdp-cad-val  { color: #1a1a2e; }
+.flow-page[data-theme="day"] .tdp-cad-col  { color: #999; }
+.flow-page[data-theme="day"] .tdp-cad-edit { border-color: #dde1ea; color: #bbb; }
+.flow-page[data-theme="day"] .tdp-cad-edit:hover { color: #185FA5; border-color: #185FA5; }
+.flow-page[data-theme="day"] .tdp-cpt-hd .tdp-cpt-cell { color: #aaa; }
+.flow-page[data-theme="day"] .tdp-cpt-lbl  { color: #999; }
+.flow-page[data-theme="day"] .tdp-cpt-th   { color: #aaa; }
+.flow-page[data-theme="day"] .tdp-cpt-theo { color: #7c3aed; }
+.flow-page[data-theme="day"] .tdp-cpt-reel { color: #185FA5; }
+.flow-page[data-theme="day"] .tdp-reminder { background: #fffbeb; border-color: #f59e0b88; color: #92400e; }
+/* ── TRS modals (day) ── */
+.flow-page[data-theme="day"] .trs-overlay { background: rgba(0,0,0,.35); }
+.flow-page[data-theme="day"] .trs-modal { background: #fff; border-color: #dde1ea; box-shadow: 0 16px 48px rgba(0,0,0,.14); }
+.flow-page[data-theme="day"] .trs-modal-hd { color: #1a1a2e; border-bottom-color: #eee; }
+.flow-page[data-theme="day"] .trs-modal-ctx { color: #999; }
+.flow-page[data-theme="day"] .trs-lbl  { color: #888; }
+.flow-page[data-theme="day"] .trs-inp  { background: #f9fafb; border-color: #d1d5db; color: #1a1a2e; }
+.flow-page[data-theme="day"] .trs-inp:focus { border-color: #185FA5; outline: none; }
+.flow-page[data-theme="day"] .trs-auto-list { background: #fff; border-color: #d1d5db; box-shadow: 0 4px 12px rgba(0,0,0,.08); }
+.flow-page[data-theme="day"] .trs-auto-item { border-bottom-color: #f3f4f6; }
+.flow-page[data-theme="day"] .trs-auto-item:hover { background: #f3f6fb; }
+.flow-page[data-theme="day"] .trs-auto-code { color: #185FA5; }
+.flow-page[data-theme="day"] .trs-auto-desc { color: #888; }
+.flow-page[data-theme="day"] .trs-sel-lot { color: #059669; background: #f0fdf4; }
+.flow-page[data-theme="day"] .trs-cad-preview, .flow-page[data-theme="day"] .trs-cad-calc { background: #f3f6fb; border: 1px solid #dde1ea; }
+.flow-page[data-theme="day"] .trs-cp-lbl { color: #888; }
+.flow-page[data-theme="day"] .trs-cp-val { color: #1a1a2e; }
+.flow-page[data-theme="day"] .trs-cp-obj { color: #185FA5; }
+.flow-page[data-theme="day"] .trs-cad-real-row { border-top-color: #eee; }
+.flow-page[data-theme="day"] .trs-lbl-src { color: #059669; }
+.flow-page[data-theme="day"] .trs-cascade { border: none; }
+.flow-page[data-theme="day"] .trs-cs-arrow { color: #ccc; }
+.flow-page[data-theme="day"] .trs-oee-preview { background: #f3f6fb; }
+.flow-page[data-theme="day"] .trs-op-title { color: #185FA5; }
+.flow-page[data-theme="day"] .trs-op-val { color: #1a1a2e; }
+.flow-page[data-theme="day"] .trs-op-lbl { color: #999; }
+.flow-page[data-theme="day"] .trs-err { background: #fef2f2; color: #dc2626; }
+.flow-page[data-theme="day"] .trs-btn-cancel { background: #f5f5f5; border-color: #dde1ea; color: #666; }
+.flow-page[data-theme="day"] .trs-btn-cancel:hover { background: #ebebeb; color: #333; border-color: #bbb; }
+/* ── Historique modal ── */
+.flow-page[data-theme="day"] .trs-histo-wrap { border-color: #dde1ea; }
 /* SVG body */
 .flow-page[data-theme="day"] .flow-body { background: #eef0f5; }
 /* Modal */
