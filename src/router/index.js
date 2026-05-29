@@ -20,6 +20,7 @@ const routes = [
 { path: 'notifications', name: 'Notifications', component: () => import('../pages/NotificationsPage.vue') },
       { path: 'tasks', name: 'Tasks', component: () => import('../pages/TasksPage.vue') },
       // Routes administration — réservées au service 'admin'
+      { path: 'admin/referentiel', name: 'AdminReferentiel', component: () => import('../pages/admin/AdminRefPage.vue'), meta: { requiresAdmin: true } },
       { path: 'admin/users', name: 'AdminUsers', component: () => import('../pages/AdminUsersPage.vue'), meta: { requiresAdmin: true } },
       { path: 'admin/permissions', name: 'AdminPermissions', component: () => import('../pages/AdminPermissionsPage.vue'), meta: { requiresAdmin: true } },
       { path: 'admin/products', name: 'AdminProducts', component: () => import('../pages/ProductsCatalogPage.vue'), meta: { requiresAdmin: true } },
