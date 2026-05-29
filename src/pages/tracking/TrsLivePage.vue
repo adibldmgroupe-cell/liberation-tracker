@@ -569,8 +569,8 @@ export default {
       if (!s) return []
       var eq = m.panel.equip
 
-      // TO net de référence GS (shift - tous arrêts planifiés GS)
-      var toNetRef = gsNetRef(eq)
+      // TO net de référence : snapshot ou recalcul GS (fallback)
+      var toNetRef = s.temps_ouverture_min || gsNetRef(eq)
 
       // Seuls les arrêts imprévus (non planifiés, non pause) réduisent la disponibilité
       var arretImpro = (m.panel.arrets||[]).reduce(function(acc, a) {
@@ -797,6 +797,7 @@ export default {
         cadence_nominale_snapshot: eq.cadence_nominale_boite_min  || null,
         cadence_objectif_snapshot: cadObj                         || null,
         objectif_boites:           objBoites,
+        temps_ouverture_min:       netRef,                         // snapshot GS au démarrage
         colis_produits: 0, colis_rebuts: 0
       })
       if (r.error) { startModal.error = r.error.message; startModal.saving = false; return }
@@ -997,9 +998,9 @@ export default {
       var pauses     = arrs.reduce(function(a,x){ return x.est_pause ? a+(x.duree_minutes||0) : a }, 0)
 
       // ── TRS basé sur données GS ────────────────────────────────────
-      // TO net de référence = GS to_shift_min − TOUS les arrêts planifiés GS
-      //   (pauses + VDLP + VDLC + Chgt format + Réglage + Micro-arrêts + Maint curative)
-      var toNetRef = gsNetRef(eq)
+      // TO net de référence : snapshot au démarrage (s.temps_ouverture_min)
+      //   ou recalcul GS si session antérieure au déploiement du snapshot
+      var toNetRef = s.temps_ouverture_min || gsNetRef(eq)
 
       // Temps de fonctionnement = TO_net − arrêts imprévus déclarés
       var tf = Math.max(0, toNetRef - arretImpro)

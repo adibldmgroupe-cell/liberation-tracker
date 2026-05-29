@@ -1365,20 +1365,17 @@ export default {
       var s = m.panel && m.panel.session
       if (!s) return []
       var eq = m.panel.equip
-      var start = trsToDateTime(s.date, s.heure_debut)
-      var end   = trsToDateTime(s.date, m.heure_fin)
-      if (!start || !end || end <= start) return []
-      var totalMin   = (end - start) / 60000
       var arretImpro = (m.panel.arrets||[]).reduce(function(acc,a){ return !a.est_planifie && !a.est_pause ? acc+(a.duree_minutes||0) : acc }, 0)
-      var pauses     = (m.panel.arrets||[]).reduce(function(acc,a){ return a.est_pause ? acc+(a.duree_minutes||0) : acc }, 0)
-      var to = totalMin - pauses; var tf = to - arretImpro
-      var colisGood = (m.colis_produits||0) - (m.colis_rebuts||0); var total = m.colis_produits||0
-      var cadNom = s.cadence_nominale_snapshot || eq.cadence_nominale_boite_min || 0
-      var tn = cadNom>0 && tf>0 ? Math.min((total/cadNom),tf) : tf
-      var D = to>0 ? Math.round((tf/to)*100) : null
-      var P = tf>0 && cadNom>0 ? Math.round((tn/tf)*100) : null
-      var Q = total>0 ? Math.round((colisGood/total)*100) : null
-      var TRS = (D!=null && P!=null && Q!=null) ? Math.round((D*P*Q)/10000) : null
+      // TO net de référence : snapshot ou fallback GS
+      var toNetRef   = s.temps_ouverture_min || trsNetRef(eq)
+      var tf         = Math.max(0, toNetRef - arretImpro)
+      var total      = m.colis_produits||0
+      var colisGood  = total - (m.colis_rebuts||0)
+      var cadObj     = s.cadence_objectif_snapshot
+      var D   = toNetRef>0 ? Math.round((tf/toNetRef)*100) : null
+      var P   = (tf>0 && cadObj>0) ? Math.min(150, Math.round((total/(cadObj*tf))*100)) : null
+      var Q   = total>0 ? Math.round((colisGood/total)*100) : null
+      var TRS = (D!=null && P!=null && Q!=null) ? Math.round((D/100)*(P/100)*(Q/100)*100) : null
       return [{ label:'Disponibilité', val:D }, { label:'Performance', val:P }, { label:'Qualité', val:Q }, { label:'TRS', val:TRS }]
     }
 
@@ -1618,7 +1615,8 @@ export default {
         shift_id: trsStartModal.shift_id||null, equipe_id: trsStartModal.equipe_id||null,
         date: trsStartModal.date, heure_debut: trsStartModal.heure_debut+':00', statut: 'En cours',
         cadence_nominale_snapshot: eq.cadence_nominale_boite_min||null, cadence_objectif_snapshot: cadObj||null,
-        objectif_boites: objBoites, colis_produits: 0, colis_rebuts: 0,
+        objectif_boites: objBoites, temps_ouverture_min: netRef,   // snapshot GS au démarrage
+        colis_produits: 0, colis_rebuts: 0,
         colisage_confirme: trsStartModal.colisage || null
       }).select('id').single()
       if (r.error) { trsStartModal.error = r.error.message; trsStartModal.saving = false; return }
@@ -1839,7 +1837,9 @@ export default {
       var arretImpro = arrs.reduce(function(a,x){ return !x.est_planifie && !x.est_pause ? a+(x.duree_minutes||0) : a }, 0)
       var arretPlan  = arrs.reduce(function(a,x){ return x.est_planifie && !x.est_pause ? a+(x.duree_minutes||0) : a }, 0)
       var pauses     = arrs.reduce(function(a,x){ return x.est_pause ? a+(x.duree_minutes||0) : a }, 0)
-      var to = totalMin - pauses; var tf = to - arretImpro
+      // TO net de référence : snapshot au démarrage ou fallback GS
+      var toNetRef  = s.temps_ouverture_min || trsNetRef(eq)
+      var tf        = Math.max(0, toNetRef - arretImpro)
       // colis_produits ici contient des BOITES (l'opérateur saisit des boites)
       var boitesClose = trsCloseModal.colis_produits||0
       var rebuts_bte  = trsCloseModal.colis_rebuts||0
@@ -1847,11 +1847,11 @@ export default {
       var colisClose  = (colisageClose2 && colisageClose2 > 0) ? Math.floor(boitesClose / colisageClose2) : boitesClose
       var colisRbtClose = (colisageClose2 && colisageClose2 > 0) ? Math.floor(rebuts_bte / colisageClose2) : rebuts_bte
       var total = boitesClose; var good = total - rebuts_bte
-      var cadNom = s.cadence_nominale_snapshot || eq.cadence_nominale_boite_min || 0
+      var cadObj    = s.cadence_objectif_snapshot                     // GS onglet 2
       var cadReelle = (totalMin>0 && total>0) ? parseFloat((total/totalMin).toFixed(2)) : null
-      var D   = to>0 ? Math.round((tf/to)*100) : null
-      // Performance = boitesTotal / (cadNom × tf) — cadNom en b/min, tf en min
-      var P   = (tf>0 && cadNom>0) ? Math.min(100, Math.round((total/(cadNom*tf))*100)) : null
+      var D   = toNetRef>0 ? Math.round((tf/toNetRef)*100) : null
+      // Performance = boitesTotal / (cadObj_GS × tf) — cap 150 %
+      var P   = (tf>0 && cadObj>0) ? Math.min(150, Math.round((total/(cadObj*tf))*100)) : null
       var Q   = total>0 ? Math.round((good/total)*100) : null
       var TRS = (D!=null && P!=null && Q!=null) ? Math.round((D/100)*(P/100)*(Q/100)*100) : null
       var rendPct = (s.objectif_boites && total) ? Math.round((total/s.objectif_boites)*100) : null
@@ -1865,7 +1865,7 @@ export default {
         heure_fin: trsCloseModal.heure_fin+':00', statut: 'Clôturé',
         colis_produits: colisClose, colis_rebuts: colisRbtClose,
         cadence_reelle_boite_min: cadReelle, rendement_pct: rendPct,
-        temps_ouverture_min: to, temps_fonctionnement_min: tf,
+        temps_ouverture_min: toNetRef, temps_fonctionnement_min: tf,
         temps_arret_planifie_min: arretPlan, temps_arret_impro_min: arretImpro, temps_pause_min: pauses,
         disponibilite: D, performance: P, qualite: Q, trs: TRS,
         observation: trsCloseModal.observation||null, updated_at: new Date().toISOString()
