@@ -440,6 +440,7 @@
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { supabase } from '../../supabase'
 import { useTheme } from '../../composables/useTheme'
+import { getAll as gsGetAll } from '../../services/googleSheets'
 
 export default {
   setup() {
@@ -449,6 +450,7 @@ export default {
     var equipes       = ref([])
     var arretFamilles = ref([])
     var loading       = ref(false)
+    var gsCadences    = ref([])
     var clock         = ref('')
     var filterSite    = ref('Tous')
     var timers        = ref({})
@@ -583,17 +585,39 @@ export default {
     // ── Chargement ──
     var loadAll = async function() {
       loading.value = true
-      var [rEq, rSh, rEq2, rFam] = await Promise.all([
-        supabase.from('equipements_conditionnement').select('*').eq('actif', true).order('ordre_affichage'),
+      var [rEq, rPlanRooms, gsData, rSh, rEq2, rFam] = await Promise.all([
+        supabase.from('equipements_conditionnement').select('id, nom_equipement, site, actif, ordre_affichage, cadence_nominale_boite_min').eq('actif', true).order('ordre_affichage'),
+        supabase.from('plan_rooms').select('code, equipement_id'),
+        gsGetAll(),
         supabase.from('shifts').select('*').eq('actif', true).order('heure_debut'),
         supabase.from('equipes').select('*').eq('actif', true).order('nom'),
         supabase.from('arret_familles').select('*').eq('actif', true).order('ordre')
       ])
-      if (rSh.data)  shifts.value         = rSh.data
-      if (rEq2.data) equipes.value        = rEq2.data
-      if (rFam.data) arretFamilles.value  = rFam.data
+      if (rSh.data)  shifts.value        = rSh.data
+      if (rEq2.data) equipes.value       = rEq2.data
+      if (rFam.data) arretFamilles.value = rFam.data
 
-      var equipList = rEq.data || []
+      // Cadences GS onglet 2
+      gsCadences.value = gsData.cadences || []
+
+      // Construire map : equipement_id → N°_atelier (via plan_rooms.code = 'c' + N°_atelier)
+      var equipToNum = {}
+      ;(rPlanRooms.data || []).forEach(function(pr) {
+        if (pr.equipement_id && pr.code && pr.code.charAt(0) === 'c') {
+          equipToNum[pr.equipement_id] = parseInt(pr.code.slice(1))
+        }
+      })
+
+      // Fusionner Supabase équipements + paramètres GS onglet 1
+      var equipList = (rEq.data || []).map(function(eq) {
+        var numAtelier = equipToNum[eq.id] || null
+        var gsRoom = numAtelier ? gsData.planRooms.find(function(r) { return r.id === numAtelier }) : null
+        return Object.assign({}, eq, {
+          temps_ouverture_shift_min: (gsRoom && gsRoom.to_shift_min) || 480,
+          temps_pause_planifie_min:  (gsRoom && gsRoom.pause_min) || 0,
+          numero_atelier:            numAtelier
+        })
+      })
       var newPanels = []
 
       for (var i = 0; i < equipList.length; i++) {
@@ -718,19 +742,20 @@ export default {
       }, 200)
     }
 
-    var selectLot = async function(l) {
+    var selectLot = function(l) {
       startModal.lot            = l
       startModal.lotSearch      = l.numero_lot
       startModal.lotSuggestions = []
+      startModal.cadenceObj     = null
       if (startModal.equip) {
-        var r = await supabase.from('objectifs_production')
-          .select('cadence_objectif_boite_min')
-          .eq('equipement_id', startModal.equip.id)
-          .eq('product_id', l.product_id)
-          .eq('actif', true)
-          .limit(1)
-          .maybeSingle()
-        startModal.cadenceObj = r.data ? r.data.cadence_objectif_boite_min : null
+        var numAtelier = startModal.equip.numero_atelier
+        if (numAtelier && l.code_article) {
+          // Lookup cadence depuis GS onglet 2 : (N°_atelier × code_article)
+          var match = gsCadences.value.find(function(c) {
+            return c.numero_atelier === numAtelier && c.code_article === l.code_article
+          })
+          startModal.cadenceObj = match ? match.cadence_objectif_b_min : null
+        }
       }
     }
 

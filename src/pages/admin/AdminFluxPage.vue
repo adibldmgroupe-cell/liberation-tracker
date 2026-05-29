@@ -1,8 +1,13 @@
 <template>
   <div class="flux-admin">
     <div class="fa-header">
-      <div class="fa-title">⚙ Paramétrage flux produits</div>
-      <div class="fa-sub">Configurez les étapes de fabrication et de conditionnement par produit</div>
+      <div>
+        <div class="fa-title">⚙ Paramétrage flux produits</div>
+        <div class="fa-sub">Configurez les étapes de fabrication et de conditionnement par produit</div>
+      </div>
+      <button class="fa-btn-gs-reload" @click="reloadGs" :disabled="gsReloading" :class="{spinning:gsReloading}">
+        ↻ Forcer rechargement GS
+      </button>
     </div>
 
     <!-- TABS -->
@@ -361,7 +366,7 @@
 <script>
 import { ref, computed, onMounted, reactive } from 'vue'
 import { supabase } from '../../supabase'
-import { getAll as gsGetAll } from '../../services/googleSheets'
+import { getAll as gsGetAll, clearCache as gsClearCache } from '../../services/googleSheets'
 
 // Labels des groupes d'opérations
 var OP_LABELS = {
@@ -385,6 +390,7 @@ export default {
     var fluxView       = ref('pivot')
     var cadSearch      = ref('')
     var fluxLoading    = ref(false)
+    var gsReloading    = ref(false)
     var cadImporting   = ref(false)
     var cadImportMsg   = ref(null)
 
@@ -713,6 +719,14 @@ export default {
       await loadAll()
     }
 
+    // ── RELOAD GS ────────────────────────────────────────────────
+    var reloadGs = async function() {
+      gsReloading.value = true
+      gsClearCache()
+      await loadAll()
+      gsReloading.value = false
+    }
+
     // ── LOAD ─────────────────────────────────────────────────────
     var loadAll = async function() {
       fluxLoading.value = true
@@ -741,6 +755,7 @@ export default {
 
     return {
       tab, fluxSearch, fluxTypeFilter, fluxView, cadSearch, fluxLoading,
+      gsReloading, reloadGs,
       cadImporting, cadImportMsg,
       filteredProducts, filteredCadences, opMaster, opOptions, roomsForOp,
       machineColsFlat, machineColGroups, pivotMachineRows,
@@ -757,9 +772,19 @@ export default {
 
 <style scoped>
 .flux-admin { padding: 20px; max-width: 100%; font-family: 'Inter', sans-serif; }
-.fa-header { margin-bottom: 20px; }
+.fa-header { margin-bottom: 20px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .fa-title { font-size: 18px; font-weight: 800; color: #1a1a2e; }
 .fa-sub { font-size: 12px; color: #6b7280; margin-top: 4px; }
+.fa-btn-gs-reload {
+  padding: 7px 14px; font-size: 12px; font-weight: 600;
+  border: 1px solid #d1d5db; background: #f9fafb; color: #374151;
+  border-radius: 4px; cursor: pointer; white-space: nowrap; flex-shrink: 0;
+  transition: background .15s;
+}
+.fa-btn-gs-reload:hover:not(:disabled) { background: #e5e7eb; }
+.fa-btn-gs-reload:disabled { opacity: .5; cursor: not-allowed; }
+@keyframes fa-spin { from { transform: rotate(0) } to { transform: rotate(360deg) } }
+.fa-btn-gs-reload.spinning { animation: fa-spin .7s linear infinite; }
 
 /* Tabs */
 .fa-tabs { display: flex; gap: 4px; border-bottom: 1px solid #e5e7eb; margin-bottom: 20px; }
