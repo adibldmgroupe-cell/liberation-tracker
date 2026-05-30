@@ -5,18 +5,13 @@
       <div class="ph-right">
         <span class="pc" v-if="lots.length">{{filteredLots.length}} lot{{filteredLots.length!==1?'s':''}}<span class="pc-sub" v-if="filteredLots.length<lots.length"> / {{lots.length}}</span></span>
         <div class="statut-panel-wrap" @click.stop>
-          <button class="btn-cols" :class="{'btn-cols-on': hideAccepted || hideRefused}" @click="showStatutPanel=!showStatutPanel">⊙ Statuts{{(hideAccepted||hideRefused) ? ' ●' : ''}}</button>
+          <button class="btn-cols" :class="{'btn-cols-on': hiddenStatuts.length > 0}" @click="showStatutPanel=!showStatutPanel">⊙ Statuts{{hiddenStatuts.length > 0 ? ' ('+hiddenStatuts.length+')' : ''}}</button>
           <div class="statut-panel" v-if="showStatutPanel">
-            <div class="col-panel-title">Visibilité statuts SAP</div>
-            <label class="statut-item">
-              <input type="checkbox" :checked="!hideAccepted" @change="toggleHideAccepted" @click.stop />
-              <span class="statut-dot" style="background:#1D9E75"></span>
-              <span class="statut-lbl">Acceptés</span>
-            </label>
-            <label class="statut-item">
-              <input type="checkbox" :checked="!hideRefused" @change="toggleHideRefused" @click.stop />
-              <span class="statut-dot" style="background:#888"></span>
-              <span class="statut-lbl">Refusés</span>
+            <div class="col-panel-title">Visibilité statuts</div>
+            <label class="statut-item" v-for="f in filterOptions" :key="f.value" @click.stop>
+              <input type="checkbox" :checked="!hiddenStatuts.includes(f.value)" @change="toggleStatutVisibility(f.value)" @click.stop />
+              <span class="statut-dot" :style="{background:f.color}"></span>
+              <span class="statut-lbl">{{f.label}}</span>
             </label>
           </div>
         </div>
@@ -42,11 +37,6 @@
         <button class="btn-exp" @click="doExportExcel">📥 Excel</button>
         <button class="btn-exp" @click="doExportPDF">📄 PDF</button>
       </div>
-    </div>
-    <div class="filters">
-      <button v-for="f in filterOptions" :key="f.value" class="fbtn" :class="{active:activeFilters.includes(f.value)}" @click="toggleFilter(f.value)">
-        <span class="fdot" :style="{background:f.color}"></span>{{f.label}}
-      </button>
     </div>
 
     <!-- Barre d'actions en masse -->
@@ -310,15 +300,18 @@ import { canPerform, loadPermissions, getPermissionForBulkAction, getPermissionF
 export default {
   setup() {
     var route = useRoute(), router = useRouter()
-    var lots = ref([]), total = ref(0), activeFilters = ref([])
+    var lots = ref([]), total = ref(0)
     var lotsLoading = ref(false)
     var tablePage = ref(0)
     var TABLE_PAGE_SIZE = 250
     var sortCol = ref(''), sortDir = ref('asc'), showDates = ref(false)
-    var hideAccepted = ref(localStorage.getItem('lots_hide_accepted') !== 'false')
-    var toggleHideAccepted = function() { hideAccepted.value = !hideAccepted.value; localStorage.setItem('lots_hide_accepted', String(hideAccepted.value)) }
-    var hideRefused = ref(localStorage.getItem('lots_hide_refused') !== 'false')
-    var toggleHideRefused = function() { hideRefused.value = !hideRefused.value; localStorage.setItem('lots_hide_refused', String(hideRefused.value)) }
+    var hiddenStatuts = ref(JSON.parse(localStorage.getItem('lots_hidden_statuts') || '["accepte","refuse"]'))
+    var toggleStatutVisibility = function(value) {
+      var idx = hiddenStatuts.value.indexOf(value)
+      if (idx >= 0) hiddenStatuts.value.splice(idx, 1)
+      else hiddenStatuts.value.push(value)
+      localStorage.setItem('lots_hidden_statuts', JSON.stringify(hiddenStatuts.value))
+    }
     var showStatutPanel = ref(false)
     var selected = ref([]), actionType = ref(''), showConfirm = ref(false)
     var executing = ref(false), progress = ref(0), execResult = ref(null)
@@ -1559,9 +1552,7 @@ var loadCharge = async function() {
 
     var filteredLots = computed(function(){
       var result = lots.value
-      if(hideAccepted.value){result=result.filter(function(l){return l.statut_sap!=='accepte'})}
-      if(hideRefused.value){result=result.filter(function(l){return l.statut_sap!=='refuse'})}
-      if(activeFilters.value.length>0){result=result.filter(function(l){return activeFilters.value.indexOf(l.statut_filter)>=0})}
+      if(hiddenStatuts.value.length>0){result=result.filter(function(l){return !hiddenStatuts.value.includes(l.statut_filter)})}
       var cf=columnFilters.value,cfk=Object.keys(cf)
       if(cfk.length>0){result=result.filter(function(l){return cfk.every(function(k){return l[k]===cf[k]})})}
       if(sortCol.value){
@@ -1590,10 +1581,9 @@ var loadCharge = async function() {
     var totalPages = computed(function(){ return Math.max(1, Math.ceil(filteredLots.value.length / TABLE_PAGE_SIZE)) })
     var pagedLots = computed(function(){ var s = tablePage.value * TABLE_PAGE_SIZE; return filteredLots.value.slice(s, s + TABLE_PAGE_SIZE) })
 
-    var toggleFilter = function(value){var idx=activeFilters.value.indexOf(value);if(idx>=0)activeFilters.value.splice(idx,1);else activeFilters.value.push(value)}
     var sortBy = function(col){if(sortCol.value===col){sortDir.value=sortDir.value==='asc'?'desc':'asc'}else{sortCol.value=col;sortDir.value='asc'}}
     var sortIcon = function(col){if(sortCol.value!==col)return'↕';return sortDir.value==='asc'?'↑':'↓'}
-    var goToLot = function(id){var query={};if(route.query.q)query.q=route.query.q;if(activeFilters.value.length)query.filters=activeFilters.value.join(',');router.push({path:'/lots/'+id,query:query})}
+    var goToLot = function(id){var query={};if(route.query.q)query.q=route.query.q;router.push({path:'/lots/'+id,query:query})}
 
     var exportCols=[
       {key:'numero_lot',label:'N° Lot',width:12},{key:'prod_desc',label:'Produit',width:28},{key:'prod_code',label:'Code',width:12},
@@ -1992,16 +1982,15 @@ var loadCharge = async function() {
         var p = await supabase.from('profiles').select('service').eq('id', u.data.user.id).single()
         if (p.data) { await loadPermissions(p.data.service); userService.value = p.data.service }
       }
-      if(route.query.filters)activeFilters.value=route.query.filters.split(',')
       load()
       document.addEventListener('click', closeAll)
     })
     onUnmounted(function(){document.removeEventListener('click', closeAll)})
     watch(function(){return route.query},load,{deep:true})
-    watch([activeFilters, columnFilters, hideAccepted, hideRefused, sortCol, sortDir], function(){ tablePage.value = 0 }, {deep:true})
+    watch([hiddenStatuts, columnFilters, sortCol, sortDir], function(){ tablePage.value = 0 }, {deep:true})
 
-    return{lots,total,lotsLoading,activeFilters,showDates,hideAccepted,toggleHideAccepted,hideRefused,toggleHideRefused,showStatutPanel,filteredLots,pagedLots,tablePage,totalPages,filterOptions,
-      toggleFilter,sortBy,sortIcon,goToLot,doExportExcel,doExportPDF,
+    return{lots,total,lotsLoading,hiddenStatuts,toggleStatutVisibility,showStatutPanel,showDates,filteredLots,pagedLots,tablePage,totalPages,filterOptions,
+      sortBy,sortIcon,goToLot,doExportExcel,doExportPDF,
       selected,actionType,showConfirm,executing,progress,execResult,bulkDate,
       actionLabel,canExecute,allVisibleChecked,someVisibleChecked,
       isSelected,toggleLot,toggleAll,getLotNum,executeAction,
