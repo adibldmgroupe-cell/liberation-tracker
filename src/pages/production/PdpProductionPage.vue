@@ -319,7 +319,7 @@
         <div class="modal-ctx">
           URL : <code class="gs-url">{{GS_URL}}</code>
         </div>
-        <div class="gs-cols">Colonnes attendues : <b>Equipement · code_article · description · N_lot · Taille_lot · Date_fin_estimée · Date_début · Date_fin_réelle</b></div>
+        <div class="gs-cols">Colonnes détectées : <b>Equipement · Numéro d'article · Description article · Lot interne · Prévisionnel [UN] · Date fin estimée · Date début · Date fin réelle</b></div>
         <button class="btn-gs-fetch" @click="fetchGsData" :disabled="gsModal.fetching">
           {{gsModal.fetching?'⟳ Chargement…':'↓ Charger les données'}}
         </button>
@@ -346,12 +346,12 @@
                 <tr v-for="(r,i) in gsModal.preview" :key="i" :class="r._err?'row-err':''">
                   <td><span v-if="r._famille" class="fam-badge" :class="'fb-'+r._famille">{{r._famille==='fab'?'FAB':'COND'}}</span><span v-else class="gs-err-badge">?</span></td>
                   <td class="sm">{{r.Equipement}}</td>
-                  <td class="mono">{{r.N_lot}}</td>
-                  <td class="sm">{{r.description}}</td>
-                  <td class="num">{{r.Taille_lot}}</td>
-                  <td class="mono sm">{{r['Date_début']}}</td>
-                  <td class="mono sm">{{r['Date_fin_estimée']}}</td>
-                  <td class="mono sm">{{r.Date_fin_réelle}}</td>
+                  <td class="mono">{{r._lot}}</td>
+                  <td class="sm">{{r._description}}</td>
+                  <td class="num">{{r._taille}}</td>
+                  <td class="mono sm">{{r._date_debut}}</td>
+                  <td class="mono sm">{{r._date_fin_est}}</td>
+                  <td class="mono sm">{{r._date_fin}}</td>
                   <td class="sm">{{r._err||'✓'}}</td>
                 </tr>
               </tbody>
@@ -816,25 +816,58 @@ export default {
       gsModal.show = true; gsModal.err = ''; gsModal.preview = []; gsModal.fetching = false; gsModal.saving = false
     }
 
+    // ── Parser CSV RFC-4180 (gère les champs entre guillemets contenant des virgules) ──
+    var parseCSVLine = function(line) {
+      var cells = [], cur = '', inQ = false
+      for (var i = 0; i < line.length; i++) {
+        var ch = line[i]
+        if (ch === '"') {
+          if (inQ && line[i + 1] === '"') { cur += '"'; i++ }
+          else inQ = !inQ
+        } else if (ch === ',' && !inQ) {
+          cells.push(cur.trim()); cur = ''
+        } else { cur += ch }
+      }
+      cells.push(cur.trim())
+      return cells
+    }
+
+    // Lookup flexible de colonne (essaie plusieurs noms possibles)
+    var gc = function(row, keys) {
+      for (var k = 0; k < keys.length; k++) {
+        var v = row[keys[k]]
+        if (v !== undefined && v !== '') return v
+      }
+      return ''
+    }
+
     var fetchGsData = async function() {
       gsModal.fetching = true; gsModal.err = ''; gsModal.preview = []
       try {
         var resp = await fetch(GS_URL)
         if (!resp.ok) throw new Error('HTTP ' + resp.status)
         var text = await resp.text()
-        var lines = text.trim().split('\n')
-        if (lines.length < 2) throw new Error('CSV vide ou invalide')
-        var headers = lines[0].split(',').map(function(h) { return h.trim().replace(/^"|"$/g, '') })
-        var atMap = {}
-        ateliers.value.forEach(function(a) { atMap[a.nom_atelier.toLowerCase()] = a })
-        var eqMap = {}
-        equipements.value.forEach(function(e) { eqMap[e.nom_equipement.toLowerCase()] = e })
+        var rawLines = text.trim().split('\n')
+        if (rawLines.length < 2) throw new Error('CSV vide ou invalide')
+        var headers = parseCSVLine(rawLines[0]).map(function(h) { return h })
+        var atMap = {}, eqMap = {}
+        ateliers.value.forEach(function(a) { atMap[a.nom_atelier.toLowerCase().trim()] = a })
+        equipements.value.forEach(function(e) { eqMap[e.nom_equipement.toLowerCase().trim()] = e })
         var rows = []
-        for (var i = 1; i < lines.length; i++) {
-          var cells = lines[i].split(',').map(function(c) { return c.trim().replace(/^"|"$/g, '') })
+        for (var i = 1; i < rawLines.length; i++) {
+          if (!rawLines[i].trim()) continue
+          var cells = parseCSVLine(rawLines[i])
           var row = {}
-          headers.forEach(function(h, j) { row[h] = cells[j] || '' })
-          var equip = (row['Equipement'] || '').toLowerCase()
+          headers.forEach(function(h, j) { row[h] = (cells[j] || '').trim() })
+          // Valeurs normalisées (insensibles au nom exact de colonne)
+          row._lot        = gc(row, ['N_lot','Lot interne','Lot','numero_lot','N° lot'])
+          row._description= gc(row, ['description','Description article','Description'])
+          row._taille     = gc(row, ['Taille_lot','Prévisionnel [UN]','Taille lot','Quantité','quantite'])
+          row._date_debut = gc(row, ['Date_début','Date début','date_debut','Date de début'])
+          row._date_fin   = gc(row, ['Date_fin_réelle','Date fin réelle','date_fin_reelle','Date fin'])
+          row._date_fin_est = gc(row, ['Date_fin_estimée','Date fin estimée','date_fin_estimee'])
+          // Détection Fab / Cond
+          var equip = (gc(row, ['Equipement','Équipement','equipement']) || '').toLowerCase().trim()
           if (atMap[equip]) { row._famille = 'fab'; row._atelier = atMap[equip] }
           else if (eqMap[equip]) { row._famille = 'cond'; row._equip = eqMap[equip] }
           else row._err = 'Équipement inconnu'
@@ -853,37 +886,46 @@ export default {
       gsModal.saving = true; gsModal.err = ''
       var lotCache = {}
       var getLotId = async function(nLot) {
-        if (lotCache[nLot]) return lotCache[nLot]
-        var r = await supabase.from('lots').select('id').ilike('numero_lot', nLot.trim()).maybeSingle()
-        var id = r.data ? r.data.id : null
-        lotCache[nLot] = id
-        return id
+        if (!nLot) return null
+        var key = nLot.trim()
+        if (lotCache[key] !== undefined) return lotCache[key]
+        var r = await supabase.from('lots').select('id').ilike('numero_lot', key).maybeSingle()
+        lotCache[key] = r.data ? r.data.id : null
+        return lotCache[key]
       }
       var parseDate = function(s) {
-        if (!s) return null
-        var p = s.split('/')
-        if (p.length === 3) return new Date(p[2] + '-' + p[1] + '-' + p[0]).toISOString()
-        return s || null
+        if (!s || !s.trim()) return null
+        var p = s.trim().split('/')
+        if (p.length === 3) {
+          var iso = p[2] + '-' + p[1].padStart(2,'0') + '-' + p[0].padStart(2,'0')
+          var d = new Date(iso)
+          return isNaN(d.getTime()) ? null : iso
+        }
+        return s.trim() || null
       }
       var fabRows = [], condRows = []
       for (var i = 0; i < toImport.length; i++) {
         var r = toImport[i]
-        var lotId = r['N_lot'] ? await getLotId(r['N_lot']) : null
+        var lotId = r._lot ? await getLotId(r._lot) : null
+        var dDebut = parseDate(r._date_debut)
+        var dFin   = parseDate(r._date_fin)
+        var statut = dFin ? 'Clôturé' : dDebut ? 'En cours' : 'Planifié'
         if (r._famille === 'fab') {
           fabRows.push({
             lot_id: lotId, atelier_id: r._atelier.id,
-            date_debut: parseDate(r['Date_début']),
-            date_fin: parseDate(r['Date_fin_réelle']),
-            statut: parseDate(r['Date_fin_réelle']) ? 'Clôturé' : parseDate(r['Date_début']) ? 'En cours' : 'Planifié'
+            date_debut: dDebut ? new Date(dDebut).toISOString() : null,
+            date_fin:   dFin   ? new Date(dFin).toISOString()   : null,
+            statut: statut
           })
         } else {
+          var dEst = parseDate(r._date_fin_est)
           condRows.push({
             lot_id: lotId, equipement_id: r._equip.id,
-            taille_lot: parseInt(r['Taille_lot']) || null,
-            date_debut: parseDate(r['Date_début']),
-            date_fin: parseDate(r['Date_fin_réelle']),
-            date_fin_estimee: parseDate(r['Date_fin_estimée']) ? parseDate(r['Date_fin_estimée']).slice(0, 10) : null,
-            statut: parseDate(r['Date_fin_réelle']) ? 'Clôturé' : parseDate(r['Date_début']) ? 'En cours' : 'Planifié',
+            taille_lot: parseInt(r._taille) || null,
+            date_debut: dDebut ? new Date(dDebut).toISOString() : null,
+            date_fin:   dFin   ? new Date(dFin).toISOString()   : null,
+            date_fin_estimee: dEst || null,
+            statut: statut,
             created_at: new Date().toISOString()
           })
         }
