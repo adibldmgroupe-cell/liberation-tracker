@@ -463,21 +463,42 @@ export default {
       if (!text) { gsModal.err = 'Contenu CSV vide.'; return }
       var lines = text.split(/\r?\n/).filter(function(l) { return l.trim() })
       if (lines.length < 2) { gsModal.err = 'CSV trop court.'; return }
-      var startIdx = 0
-      var header = lines[0].split(',').map(function(h) { return h.trim().toLowerCase() })
-      if (header.includes('product_code') || header.includes('code_produit')) startIdx = 1
+
+      // ── Détection entête flexible ──────────────────────────────
+      var norm = function(s) { return (s||'').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'') }
+      var header = lines[0].split(',').map(norm)
+      var hasHeader = header.some(function(h) {
+        return ['product_code','code_produit','code_article','product_name','description','op_number','numero','operation'].includes(h)
+      })
+      var startIdx = hasHeader ? 1 : 0
+
+      // Mapping colonnes par nom (priorité) ou par position (fallback)
+      var iCode  = Math.max(header.indexOf('product_code'), header.indexOf('code_produit'), header.indexOf('code_article'), 0)
+      var iName  = Math.max(header.indexOf('product_name'), header.indexOf('nom_produit'),  header.indexOf('description'),  1)
+      var iRoute = Math.max(header.indexOf('route'), -1)
+      var iOp    = Math.max(header.indexOf('op_number'), header.indexOf('numero'), header.indexOf('operation'), header.indexOf('op'), -1)
+      var iRoom  = Math.max(header.indexOf('room_code'), header.indexOf('salle'), header.indexOf('room'), -1)
+
+      // Fallback positionnel si header absent ou colonnes non trouvées
+      if (!hasHeader) { iCode=0; iName=1; iRoute=2; iOp=3; iRoom=4 }
+      else {
+        if (iOp  < 0) iOp  = iRoute >= 0 ? iRoute + 1 : 2
+        if (iRoom < 0) iRoom = iOp + 1
+        if (iRoute < 0) iRoute = -1
+      }
+
       var rows = []
       for (var i = startIdx; i < lines.length; i++) {
         var cols = lines[i].split(',')
-        var pcode = (cols[0] || '').trim()
-        var pname = (cols[1] || '').trim()
-        var route = parseInt((cols[2] || '1').trim())
-        var opNum = parseInt((cols[3] || '').trim())
-        var room  = (cols[4] || '').trim() || null
+        var pcode = (cols[iCode] || '').trim()
+        var pname = (cols[iName] || '').trim()
+        var route = iRoute >= 0 ? parseInt((cols[iRoute] || '1').trim()) : 1
+        var opNum = parseInt((cols[iOp]  || '').trim())
+        var room  = iRoom >= 0 ? ((cols[iRoom] || '').trim() || null) : null
         if (!pcode || isNaN(opNum)) continue
         rows.push({ product_code: pcode, product_name: pname, route: isNaN(route) ? 1 : route, op_number: opNum, room_code: room })
       }
-      if (!rows.length) { gsModal.err = 'Aucune ligne valide trouvée.'; return }
+      if (!rows.length) { gsModal.err = 'Aucune ligne valide. Colonnes attendues : product_code, op_number (ou code_article, Numéro).'; return }
       gsModal.preview = rows
     }
 
