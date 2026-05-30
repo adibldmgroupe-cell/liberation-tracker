@@ -341,7 +341,6 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { supabase } from '../../supabase'
 import { useTheme } from '../../composables/useTheme'
-import { getAll as gsGetAll } from '../../services/googleSheets'
 
 export default {
   setup() {
@@ -402,9 +401,9 @@ export default {
     // ─── LOAD ──────────────────────────────────────────────────
     var loadAll = async function() {
       loading.value = true
-      var [r1, gsData, r3, r4] = await Promise.all([
+      var [r1, rAt, r3, r4] = await Promise.all([
         supabase.from('processus').select('*').eq('actif',true).order('ordre'),
-        gsGetAll(),
+        supabase.from('ateliers').select('id,nom_atelier,processus_id,actif').eq('actif',true).order('nom_atelier'),
         supabase.from('suivi_fabrication')
           .select('*, lots(id,numero_lot,quantite,products(description))')
           .is('deleted_at',null)
@@ -414,20 +413,11 @@ export default {
           .is('deleted_at',null)
           .order('heure_debut',{ascending:false})
       ])
-      // Processus depuis Supabase — IDs FK pour suivi_fabrication.processus_id
       if (!r1.error) {
         processus.value = r1.data.filter(function(p){ return p.nom_process !== 'Conditionnement' })
       }
-      // Ateliers depuis GS — id = id_supabase → FK ateliers.id pour suivi_fabrication.atelier_id
-      // On relie processus_id GS (séquentiel) → Supabase processus.id via nom_process
-      var sbProcByName = {}
-      processus.value.forEach(function(p) { sbProcByName[p.nom_process] = p.id })
-      ateliers.value = gsData.ateliers
-        .filter(function(a) { return a.processus_nom !== 'Conditionnement' && a.actif })
-        .map(function(a) {
-          return Object.assign({}, a, { processus_id: sbProcByName[a.processus_nom] || null })
-        })
-        .sort(function(a, b) { return (a.nom_atelier || '').localeCompare(b.nom_atelier || '') })
+      var condProcIds = r1.data ? r1.data.filter(function(p){ return p.nom_process === 'Conditionnement' }).map(function(p){ return p.id }) : []
+      ateliers.value = (rAt.data || []).filter(function(a) { return !condProcIds.includes(a.processus_id) })
       if (!r3.error) suiviFab.value = r3.data
       if (!r4.error) arretAtelier.value = r4.data
       loading.value = false

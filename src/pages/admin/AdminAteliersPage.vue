@@ -131,10 +131,16 @@
         </select>
         <input class="t-inp" v-model="gsSearch" placeholder="Chercher nom, équipement, N°…" />
         <button class="btn-sync" @click="syncRefToSupabase" :disabled="syncRefSaving||gsLoading||!gsRows.length">
-          {{syncRefSaving?'⟳ Synchronisation…':'💾 Synchroniser vers Supabase'}}
+          {{syncRefSaving?'⟳ Synchronisation…':'💾 Sync plan_rooms'}}
         </button>
         <span v-if="syncRefResult" class="sync-result" :class="syncRefResult.errors&&syncRefResult.errors.length?'sync-warn':'sync-ok'">
-          {{syncRefResult.err || (syncRefResult.updated+' salles synchronisées'+(syncRefResult.errors&&syncRefResult.errors.length?' · '+syncRefResult.errors.length+' erreur(s)':''))}}
+          {{syncRefResult.err || (syncRefResult.updated+' salles'+(syncRefResult.errors&&syncRefResult.errors.length?' · '+syncRefResult.errors.length+' erreur(s)':''))}}
+        </span>
+        <button class="btn-sync" @click="syncOpMasterToSupabase" :disabled="syncOpSaving||gsLoading||!gsRows.length">
+          {{syncOpSaving?'⟳ Synchronisation…':'💾 Sync operations_master'}}
+        </button>
+        <span v-if="syncOpResult" class="sync-result" :class="syncOpResult.err?'sync-warn':'sync-ok'">
+          {{syncOpResult.err || (syncOpResult.updated+' opérations synchronisées')}}
         </span>
       </div>
       <div v-if="gsLoading" class="gs-loading">Chargement GS…</div>
@@ -453,6 +459,7 @@ export default {
     var gsCadences = ref([])      // onglet 2
     var syncRefSaving = ref(false), syncRefResult = ref(null)
     var syncCadSaving = ref(false), syncCadResult = ref(null)
+    var syncOpSaving  = ref(false), syncOpResult  = ref(null)
 
     // Filtres GS onglet 1
     var gsFilterProc = ref('')
@@ -550,6 +557,38 @@ export default {
       syncCadSaving.value = false
     }
 
+    // ── Synchroniser GS Référentiel → operations_master ──
+    var syncOpMasterToSupabase = async function() {
+      if (!gsRows.value.length) return
+      syncOpSaving.value = true; syncOpResult.value = null
+      var rows = gsRows.value
+        .filter(function(r) { return r.room_code && r.op_number != null })
+        .map(function(r) {
+          return {
+            room_code:       r.room_code,
+            room_name:       r.atelier_nom,
+            processus:       r.processus_nom,
+            op_number:       r.op_number,
+            op_code:         r.op_code || '',
+            equipment_name:  r.equipment_name || '',
+            trs_cible_pct:   r.trs_cible_pct,
+            to_shift_min:    r.to_shift_min,
+            pause_min:       r.pause_min,
+            vdlp_min:        r.vdlp_min,
+            vdlc_min:        r.vdlc_min,
+            chgt_format_min: r.chgt_format_min,
+            reglage_min:     r.reglage_lancement_min,
+            micro_arrets_min: r.micro_arrets_shift_min,
+            maint_min:       r.maint_curative_shift_min,
+            updated_at:      new Date().toISOString()
+          }
+        })
+      var res = await supabase.from('operations_master').upsert(rows, { onConflict: 'room_code' })
+      if (res.error) syncOpResult.value = { err: res.error.message }
+      else syncOpResult.value = { updated: rows.length }
+      syncOpSaving.value = false
+    }
+
     var switchGsTab = async function(t) {
       tab.value = t
       if (!gsRows.value.length && !gsLoading.value) await loadGs()
@@ -614,6 +653,7 @@ export default {
       reloadGs, switchGsTab,
       syncRefSaving, syncRefResult, syncRefToSupabase,
       syncCadSaving, syncCadResult, syncCadencesToSupabase,
+      syncOpSaving,  syncOpResult,  syncOpMasterToSupabase,
     }
   }
 }

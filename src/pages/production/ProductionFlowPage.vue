@@ -1012,7 +1012,6 @@ import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '../../supabase'
 import { useTheme } from '../../composables/useTheme'
-import { getAll as gsGetAll } from '../../services/googleSheets'
 import { declareDeviation } from '../../services/actions'
 
 // ── LAYOUT CONSTANTS ──────────────────────────────────────────────
@@ -1533,40 +1532,38 @@ export default {
 
     var loadTrsFull = async function() {
       trsLoading.value = true
-      var [rEq, rSh, rEq2, rFam, gsData, rRooms] = await Promise.all([
+      var [rEq, rSh, rEq2, rFam, rRooms, rCadences] = await Promise.all([
         supabase.from('equipements_conditionnement').select('*').eq('actif', true).order('ordre_affichage'),
         supabase.from('shifts').select('*').eq('actif', true).order('heure_debut'),
         supabase.from('equipes').select('*').eq('actif', true).order('nom'),
         supabase.from('arret_familles').select('*').eq('actif', true).order('ordre'),
-        gsGetAll(),
-        supabase.from('plan_rooms').select('code,equipement_id')
+        supabase.from('plan_rooms').select('code,equipement_id,to_shift_min,pause_min,vdlp_min,vdlc_min,chgt_format_min,reglage_min,micro_arrets_min,maint_min'),
+        supabase.from('cadences').select('numero_salle,code_article,cadence_objectif_b_min')
       ])
       if (rSh.data)  trsShifts.value       = rSh.data
       if (rEq2.data) trsEquipes.value       = rEq2.data
       if (rFam.data) trsArretFamilles.value = rFam.data
-      trsCadences.value = gsData.cadences || []
-      // Construire map equipement_id → N°_atelier via plan_rooms.code (ex: 'c149' → 149)
-      var equipToNum = {}
-      ;(rRooms.data || []).forEach(function(r) {
-        if (r.equipement_id && r.code) {
-          var num = parseInt(r.code.replace(/^[a-z]+/i, ''), 10)
-          if (!isNaN(num)) equipToNum[r.equipement_id] = num
-        }
+      trsCadences.value = (rCadences.data || []).map(function(c) {
+        return { numero_atelier: c.numero_salle, code_article: c.code_article, cadence_objectif_b_min: c.cadence_objectif_b_min }
       })
-      // Enrichir chaque équipement avec les données GS onglet 1
+      // Construire map equipement_id → plan_room (TRS params) via plan_rooms.code
+      var equipToPlanRoom = {}
+      ;(rRooms.data || []).forEach(function(r) {
+        if (r.equipement_id && r.code) equipToPlanRoom[r.equipement_id] = r
+      })
       var equipList = (rEq.data || []).map(function(eq) {
-        var numAtelier = equipToNum[eq.id] || null
-        var gsRoom = numAtelier ? gsData.planRooms.find(function(r) { return r.id === numAtelier }) : null
+        var pr = equipToPlanRoom[eq.id] || null
+        var numAtelier = pr ? parseInt(pr.code.replace(/^[a-z]+/i, ''), 10) : null
         return Object.assign({}, eq, {
           numero_atelier:     numAtelier,
-          to_shift_ref:       (gsRoom && gsRoom.to_shift_min)             || 480,
-          pause_ref:          (gsRoom && gsRoom.pause_min)                || 0,
-          vdlp_ref:           (gsRoom && gsRoom.vdlp_min)                 || 0,
-          vdlc_ref:           (gsRoom && gsRoom.vdlc_min)                 || 0,
-          chgt_format_ref:    (gsRoom && gsRoom.chgt_format_min)          || 0,
-          reglage_ref:        (gsRoom && gsRoom.reglage_lancement_min)    || 0,
-          micro_arrets_ref:   (gsRoom && gsRoom.micro_arrets_shift_min)   || 0,
-          maint_curative_ref: (gsRoom && gsRoom.maint_curative_shift_min) || 0,
+          to_shift_ref:       (pr && pr.to_shift_min)      || 480,
+          pause_ref:          (pr && pr.pause_min)         || 0,
+          vdlp_ref:           (pr && pr.vdlp_min)          || 0,
+          vdlc_ref:           (pr && pr.vdlc_min)          || 0,
+          chgt_format_ref:    (pr && pr.chgt_format_min)   || 0,
+          reglage_ref:        (pr && pr.reglage_min)       || 0,
+          micro_arrets_ref:   (pr && pr.micro_arrets_min)  || 0,
+          maint_curative_ref: (pr && pr.maint_min)         || 0,
         })
       })
       var newPanels = []
@@ -2557,10 +2554,10 @@ export default {
     // ─── LOAD ────────────────────────────────────────────────────
     var loadLive = async function() {
       loading.value = true
-      var [gsData, rRoomsFK, r2, r3, r4, r5, r6] = await Promise.all([
-        gsGetAll(),
-        // FK uniquement : atelier_id + equipement_id (non présents dans le CSV)
-        supabase.from('plan_rooms').select('code,atelier_id,equipement_id'),
+      var [rRoomsAll, rOm, rCadences, r2, r3, r4, r5, r6] = await Promise.all([
+        supabase.from('plan_rooms').select('code,nom,zone,type,op_number,actif,atelier_id,equipement_id'),
+        supabase.from('operations_master').select('op_number,equipment_name,room_code,processus,room_name'),
+        supabase.from('cadences').select('numero_salle,code_article,cadence_objectif_b_min'),
         supabase.from('suivi_fabrication')
           .select('id,lot_id,atelier_id,statut,lots(numero_lot,products(description))')
           .is('deleted_at', null).in('statut', ['En cours', 'Arrêt']),
@@ -2571,20 +2568,13 @@ export default {
           .select('id,lot_id,statut').in('statut', ['ouverte', 'en_cours']),
         supabase.from('production_arrets')
           .select('id,session_id,is_running').eq('is_running', true),
-        // Product flux summary (for search)
         supabase.from('v_product_flux_summary').select('*').order('product_name'),
       ])
-      // plan_rooms depuis Google Sheets (noms, codes) + FKs depuis Supabase (atelier_id, equipement_id)
-      var fkMap = {}
-      ;(rRoomsFK.data || []).forEach(function(r) {
-        fkMap[r.code] = { atelier_id: r.atelier_id || null, equipement_id: r.equipement_id || null }
+      rooms.value = rRoomsAll.data || []
+      opMaster.value = rOm.data || []
+      trsCadences.value = (rCadences.data || []).map(function(c) {
+        return { numero_atelier: c.numero_salle, code_article: c.code_article, cadence_objectif_b_min: c.cadence_objectif_b_min }
       })
-      rooms.value = gsData.planRooms.map(function(r) {
-        var fk = fkMap[r.code] || {}
-        return Object.assign({}, r, { atelier_id: fk.atelier_id || null, equipement_id: fk.equipement_id || null })
-      })
-      opMaster.value = gsData.operationsMaster
-      trsCadences.value = gsData.cadences || []
       if (!r2.error) suiviFab.value   = r2.data
       if (!r3.error) sessions.value   = r3.data
       if (!r4.error) deviations.value = r4.data

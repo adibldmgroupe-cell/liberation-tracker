@@ -380,7 +380,6 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { supabase } from '../../supabase'
 import { useTheme } from '../../composables/useTheme'
-import { getAll as gsGetAll } from '../../services/googleSheets'
 
 var GS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQqKb5_i0U7YeQYMiNEDy4X2gq6W_78NA2EuC2gRqSVXOKuBcBuXR8ASrE9Eq3admceATv4_gdAUppc/pub?gid=1634438429&single=true&output=csv'
 
@@ -575,8 +574,8 @@ export default {
     // ── LOAD ──
     var loadAll = async function() {
       loading.value = true
-      var [gsData, rAt, rEq, rPR, rSF, rSC, rAF, rAC, rPC] = await Promise.all([
-        gsGetAll(),
+      var [rOm, rAt, rEq, rPR, rSF, rSC, rAF, rAC, rPC] = await Promise.all([
+        supabase.from('operations_master').select('id,equipment_name,processus'),
         supabase.from('ateliers').select('id,nom_atelier').eq('actif', true).order('nom_atelier'),
         supabase.from('equipements_conditionnement').select('id,nom_equipement').eq('actif', true).order('ordre_affichage'),
         supabase.from('plan_rooms').select('id,code,nom,atelier_id,equipement_id'),
@@ -599,13 +598,12 @@ export default {
       if (rAt.data)  ateliers.value    = rAt.data
       if (rEq.data)  equipements.value = rEq.data
       if (rPR.data)  planRooms.value   = rPR.data
-      // Construire la map GS Référentiel : equipment_name → { id_supabase, type }
-      // Source unique de vérité pour la détection Fab/Cond à l'import PDP
+      // Construire la map Référentiel : equipment_name → { id_supabase, type }
       var refMap = {}
-      ;(gsData.operationsMaster || []).forEach(function(om) {
+      ;(rOm.data || []).forEach(function(om) {
         if (om.equipment_name) {
           var key = om.equipment_name.toLowerCase().trim()
-          refMap[key] = { id_supabase: om.id_supabase || om.id, type: om.processus === 'Conditionnement' ? 'cond' : 'fab' }
+          refMap[key] = { id_supabase: om.id, type: om.processus === 'Conditionnement' ? 'cond' : 'fab' }
         }
       })
       gsRefMap.value = refMap

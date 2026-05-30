@@ -505,7 +505,6 @@
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { supabase } from '../../supabase'
 import { useTheme } from '../../composables/useTheme'
-import { getAll as gsGetAll } from '../../services/googleSheets'
 import { declareDeviation } from '../../services/actions'
 
 export default {
@@ -681,10 +680,10 @@ export default {
     // ── Chargement ──
     var loadAll = async function() {
       loading.value = true
-      var [rEq, rPlanRooms, gsData, rSh, rEq2, rFam] = await Promise.all([
+      var [rEq, rPlanRooms, rCadences, rSh, rEq2, rFam] = await Promise.all([
         supabase.from('equipements_conditionnement').select('id, nom_equipement, site, actif, ordre_affichage, cadence_nominale_boite_min').eq('actif', true).order('ordre_affichage'),
-        supabase.from('plan_rooms').select('code, equipement_id'),
-        gsGetAll(),
+        supabase.from('plan_rooms').select('code, equipement_id, to_shift_min, pause_min, vdlp_min, vdlc_min, chgt_format_min, reglage_min, micro_arrets_min, maint_min'),
+        supabase.from('cadences').select('numero_salle, code_article, cadence_objectif_b_min'),
         supabase.from('shifts').select('*').eq('actif', true).order('heure_debut'),
         supabase.from('equipes').select('*').eq('actif', true).order('nom'),
         supabase.from('arret_familles').select('*').eq('actif', true).order('ordre')
@@ -693,31 +692,33 @@ export default {
       if (rEq2.data) equipes.value       = rEq2.data
       if (rFam.data) arretFamilles.value = rFam.data
 
-      // Cadences GS onglet 2
-      gsCadences.value = gsData.cadences || []
+      // Cadences depuis Supabase (table cadences)
+      gsCadences.value = (rCadences.data || []).map(function(c) {
+        return { numero_atelier: c.numero_salle, code_article: c.code_article, cadence_objectif_b_min: c.cadence_objectif_b_min }
+      })
 
-      // Construire map : equipement_id → N°_atelier (via plan_rooms.code = 'c' + N°_atelier)
-      var equipToNum = {}
+      // Construire map : equipement_id → plan_room (TRS params) via code = 'c' + N°_atelier
+      var equipToPlanRoom = {}
       ;(rPlanRooms.data || []).forEach(function(pr) {
         if (pr.equipement_id && pr.code && pr.code.charAt(0) === 'c') {
-          equipToNum[pr.equipement_id] = parseInt(pr.code.slice(1))
+          equipToPlanRoom[pr.equipement_id] = pr
         }
       })
 
-      // Fusionner Supabase équipements + paramètres GS onglet 1
+      // Fusionner Supabase équipements + paramètres plan_rooms
       var equipList = (rEq.data || []).map(function(eq) {
-        var numAtelier = equipToNum[eq.id] || null
-        var gsRoom = numAtelier ? gsData.planRooms.find(function(r) { return r.id === numAtelier }) : null
+        var pr = equipToPlanRoom[eq.id] || null
+        var numAtelier = pr ? parseInt(pr.code.slice(1)) : null
         return Object.assign({}, eq, {
           numero_atelier:     numAtelier,
-          to_shift_ref:       (gsRoom && gsRoom.to_shift_min)             || 480,
-          pause_ref:          (gsRoom && gsRoom.pause_min)                || 0,
-          vdlp_ref:           (gsRoom && gsRoom.vdlp_min)                 || 0,
-          vdlc_ref:           (gsRoom && gsRoom.vdlc_min)                 || 0,
-          chgt_format_ref:    (gsRoom && gsRoom.chgt_format_min)          || 0,
-          reglage_ref:        (gsRoom && gsRoom.reglage_lancement_min)    || 0,
-          micro_arrets_ref:   (gsRoom && gsRoom.micro_arrets_shift_min)   || 0,
-          maint_curative_ref: (gsRoom && gsRoom.maint_curative_shift_min) || 0,
+          to_shift_ref:       (pr && pr.to_shift_min)      || 480,
+          pause_ref:          (pr && pr.pause_min)         || 0,
+          vdlp_ref:           (pr && pr.vdlp_min)          || 0,
+          vdlc_ref:           (pr && pr.vdlc_min)          || 0,
+          chgt_format_ref:    (pr && pr.chgt_format_min)   || 0,
+          reglage_ref:        (pr && pr.reglage_min)       || 0,
+          micro_arrets_ref:   (pr && pr.micro_arrets_min)  || 0,
+          maint_curative_ref: (pr && pr.maint_min)         || 0,
         })
       })
       var newPanels = []

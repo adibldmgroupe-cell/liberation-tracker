@@ -230,7 +230,6 @@
 <script>
 import { ref, computed, onMounted, reactive } from 'vue'
 import { supabase } from '../../supabase'
-import { getAll as gsGetAll, clearCache as gsClearCache } from '../../services/googleSheets'
 
 // Labels des groupes d'opérations
 var OP_LABELS = {
@@ -503,10 +502,8 @@ export default {
       await loadAll()
     }
 
-    // ── RELOAD GS ────────────────────────────────────────────────
     var reloadGs = async function() {
       gsReloading.value = true
-      gsClearCache()
       await loadAll()
       gsReloading.value = false
     }
@@ -514,20 +511,17 @@ export default {
     // ── LOAD ─────────────────────────────────────────────────────
     var loadAll = async function() {
       fluxLoading.value = true
-      var [gsData, r0, r1] = await Promise.all([
-        gsGetAll(),
+      var [rOm, rPr, r0, r1] = await Promise.all([
+        supabase.from('operations_master').select('op_number,equipment_name,room_code,processus,room_name').order('op_number'),
+        supabase.from('plan_rooms').select('code,nom,op_number,actif').not('op_number','is',null).order('op_number'),
         supabase.from('product_flux').select('*').order('product_code').order('route').order('op_number'),
         supabase.from('v_product_flux_summary').select('*'),
       ])
-      // operations_master et plan_rooms chargés depuis Google Sheets
-      opMaster.value  = gsData.operationsMaster
-      planRooms.value = gsData.planRooms
-        .filter(function(r){ return r.op_number != null })
-        .slice()
-        .sort(function(a, b) {
-          if (a.op_number !== b.op_number) return a.op_number - b.op_number
-          return (a.nom || '').localeCompare(b.nom || '')
-        })
+      opMaster.value  = rOm.data || []
+      planRooms.value = (rPr.data || []).sort(function(a, b) {
+        if (a.op_number !== b.op_number) return a.op_number - b.op_number
+        return (a.nom || '').localeCompare(b.nom || '')
+      })
       if (!r0.error) allFluxRows.value     = r0.data
       if (!r1.error) productsSummary.value = r1.data
       fluxLoading.value = false
