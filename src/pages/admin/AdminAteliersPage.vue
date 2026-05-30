@@ -130,6 +130,12 @@
           <option v-for="p in gsProcessusUniques" :key="p" :value="p">{{p}}</option>
         </select>
         <input class="t-inp" v-model="gsSearch" placeholder="Chercher nom, équipement, N°…" />
+        <button class="btn-sync" @click="syncRefToSupabase" :disabled="syncRefSaving||gsLoading||!gsRows.length">
+          {{syncRefSaving?'⟳ Synchronisation…':'💾 Synchroniser vers Supabase'}}
+        </button>
+        <span v-if="syncRefResult" class="sync-result" :class="syncRefResult.errors&&syncRefResult.errors.length?'sync-warn':'sync-ok'">
+          {{syncRefResult.err || (syncRefResult.updated+' salles synchronisées'+(syncRefResult.errors&&syncRefResult.errors.length?' · '+syncRefResult.errors.length+' erreur(s)':''))}}
+        </span>
       </div>
       <div v-if="gsLoading" class="gs-loading">Chargement GS…</div>
       <template v-else>
@@ -189,6 +195,12 @@
         <input class="t-inp" v-model="gsCadSalle"   placeholder="N° salle…" style="max-width:120px" />
         <input class="t-inp" v-model="gsCadArticle" placeholder="Code article…" />
         <input class="t-inp" v-model="gsCadDesc"    placeholder="Description…" />
+        <button class="btn-sync" @click="syncCadencesToSupabase" :disabled="syncCadSaving||gsLoading||!gsCadences.length">
+          {{syncCadSaving?'⟳ Synchronisation…':'💾 Synchroniser vers Supabase'}}
+        </button>
+        <span v-if="syncCadResult" class="sync-result" :class="syncCadResult.err?'sync-warn':'sync-ok'">
+          {{syncCadResult.err || (syncCadResult.updated+' cadences synchronisées')}}
+        </span>
       </div>
       <div v-if="gsLoading" class="gs-loading">Chargement GS…</div>
       <div class="table-wrap" v-else>
@@ -439,6 +451,8 @@ export default {
     var gsLoading  = ref(false)
     var gsRows     = ref([])      // onglet 1
     var gsCadences = ref([])      // onglet 2
+    var syncRefSaving = ref(false), syncRefResult = ref(null)
+    var syncCadSaving = ref(false), syncCadResult = ref(null)
 
     // Filtres GS onglet 1
     var gsFilterProc = ref('')
@@ -481,6 +495,59 @@ export default {
     var reloadGs = async function() {
       gsClearCache()
       await loadGs()
+    }
+
+    // ── Synchroniser GS Référentiel → plan_rooms (colonnes TRS) ──
+    var syncRefToSupabase = async function() {
+      if (!gsRows.value.length) return
+      syncRefSaving.value = true; syncRefResult.value = null
+      var updated = 0, errors = []
+      for (var i = 0; i < gsRows.value.length; i++) {
+        var r = gsRows.value[i]
+        if (!r.room_code) continue
+        var payload = {
+          trs_cible_pct:    r.trs_cible_pct,
+          to_shift_min:     r.to_shift_min,
+          pause_min:        r.pause_min,
+          vdlp_min:         r.vdlp_min,
+          vdlc_min:         r.vdlc_min,
+          chgt_format_min:  r.chgt_format_min,
+          reglage_min:      r.reglage_lancement_min,
+          micro_arrets_min: r.micro_arrets_shift_min,
+          maint_min:        r.maint_curative_shift_min,
+          op_number:        r.op_number,
+          op_code:          r.op_code || null,
+          equipment_name:   r.equipment_name || null
+        }
+        var res = await supabase.from('plan_rooms').update(payload).eq('code', r.room_code)
+        if (res.error) errors.push(r.room_code + ' : ' + res.error.message)
+        else updated++
+      }
+      syncRefResult.value = { updated, errors }
+      syncRefSaving.value = false
+    }
+
+    // ── Synchroniser GS Cadences → table cadences ──
+    var syncCadencesToSupabase = async function() {
+      if (!gsCadences.value.length) return
+      syncCadSaving.value = true; syncCadResult.value = null
+      var rows = gsCadences.value
+        .filter(function(c) { return c.numero_atelier && c.code_article && c.taille_lot != null && c.cadence_objectif_b_min != null })
+        .map(function(c) {
+          return {
+            numero_salle:           c.numero_atelier,
+            code_article:           c.code_article,
+            description:            c.description || null,
+            equipment_name:         c.equipment_name || null,
+            taille_lot:             c.taille_lot,
+            cadence_objectif_b_min: c.cadence_objectif_b_min,
+            updated_at:             new Date().toISOString()
+          }
+        })
+      var res = await supabase.from('cadences').upsert(rows, { onConflict: 'numero_salle,code_article,taille_lot' })
+      if (res.error) syncCadResult.value = { err: res.error.message }
+      else syncCadResult.value = { updated: rows.length }
+      syncCadSaving.value = false
     }
 
     var switchGsTab = async function(t) {
@@ -545,6 +612,8 @@ export default {
       gsFilterProc, gsSearch, gsCadSalle, gsCadArticle, gsCadDesc,
       gsProcessusUniques, gsRefGrouped, gsCadencesFiltrees,
       reloadGs, switchGsTab,
+      syncRefSaving, syncRefResult, syncRefToSupabase,
+      syncCadSaving, syncCadResult, syncCadencesToSupabase,
     }
   }
 }
@@ -648,6 +717,12 @@ export default {
 .gs-cad-val { font-weight:700; color:#059669; }
 .gs-missing { color:#ef4444 !important; }
 .gs-footer { font-size:11px; color:#9ca3af; text-align:right; padding:8px 0; }
+.btn-sync { padding:5px 14px; font-size:12px; font-weight:600; border:1px solid #185FA5; border-radius:3px; background:#E6F1FB; color:#0C447C; cursor:pointer; font-family:inherit; white-space:nowrap; }
+.btn-sync:hover:not(:disabled) { background:#d0e3f5; }
+.btn-sync:disabled { opacity:.4; cursor:not-allowed; }
+.sync-result { font-size:11px; padding:3px 10px; border-radius:3px; white-space:nowrap; }
+.sync-ok { background:#EAF3DE; color:#3B6D11; }
+.sync-warn { background:#FEF5E7; color:#A0620D; }
 .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 @media(max-width:768px){
   .admin-table{min-width:480px}
