@@ -61,7 +61,7 @@
         <span class="notif-bell" @click="$router.push('/notifications')">🔔<span class="bell-badge" v-if="unreadCount>0">{{unreadCount}}</span></span>
         <span class="clock">{{clock}}</span>
       </header>
-      <div class="page-content"><router-view /></div>
+      <div class="page-content" :class="{'page-full':$route.name==='ProductionFlux'}"><router-view /></div>
     </main>
     <!-- Toast notifications -->
     <div class="toast-container">

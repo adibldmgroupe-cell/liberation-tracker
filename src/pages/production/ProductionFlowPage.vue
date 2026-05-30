@@ -1203,6 +1203,7 @@ export default {
     var loading       = ref(false)
     var selectedNode  = ref(null)
     var suiviFab      = ref([])
+    var suiviCond     = ref([])
     var sessions      = ref([])
     var deviations    = ref([])
     var arrets        = ref([])
@@ -2170,28 +2171,19 @@ export default {
 
     // ─── LIVE DATA HELPERS ───────────────────────────────────────
     var nodeStatus = function(node) {
-      var sessIds = sessions.value
-        .filter(function(s) { return s.equipement_id === node.equipement_id })
-        .map(function(s) { return s.id })
-      var hasArret = arrets.value.some(function(a) { return sessIds.includes(a.session_id) })
-      var hasFabArret = suiviFab.value.some(function(sf) {
-        return sf.atelier_id === node.atelier_id && sf.statut === 'Arrêt'
-      })
       var lotIds = []
-      suiviFab.value.filter(function(sf) { return sf.atelier_id === node.atelier_id })
-        .forEach(function(sf) { lotIds.push(sf.lot_id) })
-      sessions.value.filter(function(s) { return s.equipement_id === node.equipement_id })
-        .forEach(function(s) { lotIds.push(s.lot_id) })
+      var hasArret = false, hasActive = false
+      if (node.type === 'cond') {
+        suiviCond.value.filter(function(sc) { return sc.equipement_id === node.equipement_id })
+          .forEach(function(sc) { lotIds.push(sc.lot_id); if (sc.statut === 'Arrêt') hasArret = true; if (sc.statut === 'En cours') hasActive = true })
+      } else {
+        suiviFab.value.filter(function(sf) { return sf.atelier_id === node.atelier_id })
+          .forEach(function(sf) { lotIds.push(sf.lot_id); if (sf.statut === 'Arrêt') hasArret = true; if (sf.statut === 'En cours') hasActive = true })
+      }
       var hasDev = deviations.value.some(function(d) { return lotIds.includes(d.lot_id) })
-      var hasFabActive = suiviFab.value.some(function(sf) {
-        return sf.atelier_id === node.atelier_id && sf.statut === 'En cours'
-      })
-      var hasSessActive = sessions.value.some(function(s) {
-        return s.equipement_id === node.equipement_id && s.statut === 'En cours'
-      })
-      if (hasArret || hasFabArret) return { label: 'Arrêt',    icon: '⏸', color: '#ef4444' }
-      if (hasDev)                   return { label: 'Déviation',icon: '⚠', color: '#f59e0b' }
-      if (hasFabActive || hasSessActive) return { label: 'En cours', icon: '🔄', color: '#10b981' }
+      if (hasArret)  return { label: 'Arrêt',    icon: '⏸', color: '#ef4444' }
+      if (hasDev)    return { label: 'Déviation',icon: '⚠', color: '#f59e0b' }
+      if (hasActive) return { label: 'En cours', icon: '🔄', color: '#10b981' }
       return { label: 'Libre', icon: '✓', color: '#4b5563' }
     }
 
@@ -2240,18 +2232,27 @@ export default {
     }
 
     var activeLotCount = function(node) {
-      var c = suiviFab.value.filter(function(sf) {
-        return sf.atelier_id === node.atelier_id && sf.statut === 'En cours'
-      }).length
-      c += sessions.value.filter(function(s) {
-        return s.equipement_id === node.equipement_id && s.statut === 'En cours'
-      }).length
-      return c
+      if (node.type === 'cond') {
+        return suiviCond.value.filter(function(sc) { return sc.equipement_id === node.equipement_id && sc.statut === 'En cours' }).length
+      }
+      return suiviFab.value.filter(function(sf) { return sf.atelier_id === node.atelier_id && sf.statut === 'En cours' }).length
     }
 
     var getNodeLots = function(node) {
       if (!node) return []
       var res = []
+      if (node.type === 'cond') {
+        suiviCond.value.filter(function(sc) { return sc.equipement_id === node.equipement_id })
+          .forEach(function(sc) {
+            res.push({
+              id: 'c' + sc.id, fabId: sc.id, lotRawId: sc.lot_id,
+              numero_lot: sc.lots?.numero_lot || sc.lot_id,
+              nom_produit: sc.lots?.products?.description || '',
+              statut: sc.statut, isCond: true
+            })
+          })
+        return res
+      }
       suiviFab.value.filter(function(sf) { return sf.atelier_id === node.atelier_id })
         .forEach(function(sf) {
           res.push({
@@ -2412,23 +2413,20 @@ export default {
       var res
 
       if (node.type === 'cond') {
-        // ── CONDITIONNEMENT ─────────────────────────────────────
+        // ── CONDITIONNEMENT → suivi_conditionnement (PDP planificateur) ──
         var eqId = node.equipement_id
         if (!eqId) {
-          // Auto-résolution depuis equipements_conditionnement par nom
           var eqR = await supabase.from('equipements_conditionnement').select('id').ilike('nom_equipement','%'+node.label+'%').limit(1).maybeSingle()
           if (!eqR.data) { modal.value.err = 'Équipement introuvable pour nœud '+node.code+'. Vérifier le nom dans Équipements.'; modal.value.saving=false; return }
           eqId = eqR.data.id
           await supabase.from('plan_rooms').upsert({code:node.id, equipement_id:eqId, atelier_id:null},{onConflict:'code'})
         }
         for (var ci = 0; ci < lotsToStart.length; ci++) {
-          res = await supabase.from('production_sessions').insert({
+          res = await supabase.from('suivi_conditionnement').insert({
             lot_id: lotsToStart[ci].id,
             equipement_id: eqId,
-            date: modal.value.dateDebut.slice(0, 10),
-            heure_debut: modal.value.dateDebut.slice(11) + ':00',
             statut: 'En cours',
-            colis_produits: 0, colis_rebuts: 0
+            date_debut: modal.value.dateDebut || new Date().toISOString()
           })
           if (res.error) { modal.value.err = 'Lot '+lotsToStart[ci].numero_lot+' : '+res.error.message; modal.value.saving=false; return }
         }
@@ -2485,16 +2483,8 @@ export default {
       var node = selectedNode.value
       var res
       if (node.type === 'cond') {
-        // Cond: insert production_arret (utiliser TRS modal pour les arrêts détaillés)
-        res = await supabase.from('production_arrets').insert({
-          session_id: modal.value.fabId,
-          commentaire: modal.value.motif || null,
-          heure_debut: new Date().toTimeString().slice(0,5) + ':00',
-          is_running: true
-        })
-        if (!res.error) {
-          await supabase.from('production_sessions').update({ statut: 'Arrêt', updated_at: new Date().toISOString() }).eq('id', modal.value.fabId)
-        }
+        // Cond: mise en arrêt dans suivi_conditionnement (PDP planificateur)
+        res = await supabase.from('suivi_conditionnement').update({ statut: 'Arrêt', updated_at: new Date().toISOString() }).eq('id', modal.value.fabId)
       } else {
         // Fab: insert atelier_arret
         res = await supabase.from('atelier_arrets').insert({
@@ -2518,9 +2508,10 @@ export default {
       var node = selectedNode.value
       var res
       if (node.type === 'cond') {
-        res = await supabase.from('production_sessions').update({
+        res = await supabase.from('suivi_conditionnement').update({
           statut: 'Clôturé',
-          heure_fin: modal.value.dateFin ? modal.value.dateFin.slice(11) + ':00' : new Date().toISOString().slice(11, 19)
+          date_fin: modal.value.dateFin || new Date().toISOString(),
+          updated_at: new Date().toISOString()
         }).eq('id', modal.value.fabId)
       } else {
         res = await supabase.from('suivi_fabrication').update({
@@ -2554,12 +2545,15 @@ export default {
     // ─── LOAD ────────────────────────────────────────────────────
     var loadLive = async function() {
       loading.value = true
-      var [rRoomsAll, rOm, rCadences, r2, r3, r4, r5, r6] = await Promise.all([
+      var [rRoomsAll, rOm, rCadences, r2, r2b, r3, r4, r5, r6] = await Promise.all([
         supabase.from('plan_rooms').select('code,nom,zone,type,op_number,actif,atelier_id,equipement_id'),
         supabase.from('operations_master').select('op_number,equipment_name,room_code,processus,room_name'),
         supabase.from('cadences').select('numero_salle,code_article,cadence_objectif_b_min'),
         supabase.from('suivi_fabrication')
           .select('id,lot_id,atelier_id,statut,lots(numero_lot,products(description))')
+          .is('deleted_at', null).in('statut', ['En cours', 'Arrêt']),
+        supabase.from('suivi_conditionnement')
+          .select('id,lot_id,equipement_id,statut,lots(numero_lot,products(description))')
           .is('deleted_at', null).in('statut', ['En cours', 'Arrêt']),
         supabase.from('production_sessions')
           .select('id,lot_id,equipement_id,statut,lots(numero_lot,products(description))')
@@ -2575,8 +2569,9 @@ export default {
       trsCadences.value = (rCadences.data || []).map(function(c) {
         return { numero_atelier: c.numero_salle, code_article: c.code_article, cadence_objectif_b_min: c.cadence_objectif_b_min }
       })
-      if (!r2.error) suiviFab.value   = r2.data
-      if (!r3.error) sessions.value   = r3.data
+      if (!r2.error)  suiviFab.value   = r2.data
+      if (!r2b.error) suiviCond.value  = r2b.data
+      if (!r3.error)  sessions.value   = r3.data
       if (!r4.error) deviations.value = r4.data
       if (!r5.error) arrets.value     = r5.data
       if (!r6.error) {
