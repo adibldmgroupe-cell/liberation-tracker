@@ -11,11 +11,7 @@
           <button v-for="s in ['Tous','PHARMA','OTC']" :key="s" class="site-tab" :class="{active:filterSite===s}" @click="filterSite=s">{{s}}</button>
         </div>
         <button class="btn-refresh" @click="loadAll" :class="{spinning:loading}" title="Rafraîchir">↻</button>
-        <div class="theme-sw">
-          <button class="tsw-btn" :class="{active:theme==='night'}" @click="theme='night'" title="Nuit">🌙</button>
-          <button class="tsw-btn" :class="{active:theme==='day'}" @click="theme='day'" title="Jour">☀️</button>
-          <button class="tsw-btn" :class="{active:theme==='workshop'}" @click="theme='workshop'" title="Atelier">🏭</button>
-        </div>
+        <button class="btn-refresh" @click="cycleTheme" :title="themeTitle">{{themeIcon}}</button>
       </div>
     </div>
 
@@ -1281,8 +1277,20 @@ export default {
       clearInterval(autoStopInt)
     })
 
+    var THEME_ORDER = ['night', 'day', 'workshop']
+    var cycleTheme = function() {
+      var idx = THEME_ORDER.indexOf(theme.value)
+      theme.value = THEME_ORDER[(idx + 1) % THEME_ORDER.length]
+    }
+    var themeIcon = computed(function() {
+      return theme.value === 'day' ? '☀️' : theme.value === 'workshop' ? '🏭' : '🌙'
+    })
+    var themeTitle = computed(function() {
+      return theme.value === 'night' ? 'Nuit → cliquer pour Jour' : theme.value === 'day' ? 'Jour → cliquer pour Atelier' : 'Atelier → cliquer pour Nuit'
+    })
+
     return {
-      theme,
+      theme, cycleTheme, themeIcon, themeTitle,
       panels, shifts, equipes, arretFamilles, loading, clock, filterSite,
       timers, arretTimers, filteredPanels,
       startModal, arretModal, requalModal, comptageModal, closeModal, devModal,

@@ -471,6 +471,7 @@
             <template v-else-if="selectedTrsPanel.session.statut === 'En cours'">
               <button class="tdp-btn tdp-btn-stop"  @click="trsOpenArret(selectedTrsPanel)">⏸ Arrêt</button>
               <button class="tdp-btn tdp-btn-count" @click="trsOpenComptage(selectedTrsPanel)">+ Comptage</button>
+              <button class="tdp-btn tdp-btn-dev"   @click="trsOpenDev(selectedTrsPanel)">⚠ Déviation</button>
               <button class="tdp-btn tdp-btn-close" @click="trsOpenClose(selectedTrsPanel)">✓ Clôturer</button>
             </template>
             <template v-else-if="selectedTrsPanel.session.statut === 'Arrêt' || selectedTrsPanel.session.statut === 'Pause'">
@@ -2348,6 +2349,12 @@ export default {
     var openDevModal = function() {
       resetModal('deviation')
     }
+    var trsOpenDev = function(p) {
+      resetModal('deviation')
+      if (p && p.session && p.session.lot_id) {
+        modal.value.lotId = p.session.lot_id
+      }
+    }
 
     var searchModalLots = async function() {
       var q = modal.value.lotSearch
@@ -2663,6 +2670,7 @@ export default {
       trsHistoModal, trsEquipes_list, openTrsHisto, loadTrsHistoData,
       trsOpenComptage, trsDoComptage,
       trsOpenClose, trsDoClose,
+      trsOpenDev,
     }
   }
 }
@@ -2920,6 +2928,8 @@ export default {
 .tdp-btn-stop   { border-color:#ef444444; color:#ef4444; }
 .tdp-btn-stop:hover:not(:disabled)  { background:#ef444411; }
 .tdp-btn-count  { border-color:#3b82f644; color:#60a5fa; }
+.tdp-btn-dev    { border-color:#b4530944; color:#f59e0b; }
+.tdp-btn-dev:hover:not(:disabled)    { background:#b4530911; }
 .tdp-btn-close  { border-color:#7c3aed44; color:#a78bfa; }
 .tdp-btn-resume { border-color:#10b98144; color:#10b981; }
 .tdp-btn-requal { border-color:#f59e0b44; color:#f59e0b; }

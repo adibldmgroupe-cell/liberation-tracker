@@ -16,11 +16,7 @@
           <button v-for="s in ['Tous','PHARMA','OTC']" :key="s" class="stab" :class="{active:filterSite===s}" @click="filterSite=s">{{s}}</button>
         </div>
         <button class="btn-ref" @click="loadAll" :class="{spin:loading}">↻</button>
-        <div class="theme-sw">
-          <button class="tsw-btn" :class="{active:theme==='night'}" @click="theme='night'" title="Nuit">🌙</button>
-          <button class="tsw-btn" :class="{active:theme==='day'}" @click="theme='day'" title="Jour">☀️</button>
-          <button class="tsw-btn" :class="{active:theme==='workshop'}" @click="theme='workshop'" title="Atelier">🏭</button>
-        </div>
+        <button class="btn-ref" @click="cycleTheme" :title="themeTitle">{{themeIcon}}</button>
       </div>
     </div>
 
@@ -132,6 +128,9 @@
               <th>Début→Fin</th>
               <th class="tc">Colis</th>
               <th class="tc">Rend.</th>
+              <th class="tc">D%</th>
+              <th class="tc">P%</th>
+              <th class="tc">Q%</th>
               <th class="tc">TRS</th>
               <th>Statut</th>
             </tr>
@@ -146,6 +145,9 @@
               <td class="mono">{{s.heure_debut&&s.heure_debut.slice(0,5)}}→{{s.heure_fin&&s.heure_fin.slice(0,5)||'…'}}</td>
               <td class="num">{{s.colis_produits||0}}</td>
               <td class="num"><span :class="vClass(s.rendement_pct)">{{s.rendement_pct!=null?s.rendement_pct+'%':'—'}}</span></td>
+              <td class="num"><span :class="vClass(s.disponibilite)">{{s.disponibilite!=null?s.disponibilite+'%':'—'}}</span></td>
+              <td class="num"><span :class="vClass(s.performance)">{{s.performance!=null?s.performance+'%':'—'}}</span></td>
+              <td class="num"><span :class="vClass(s.qualite)">{{s.qualite!=null?s.qualite+'%':'—'}}</span></td>
               <td class="num"><span :class="vClass(s.trs)">{{s.trs!=null?s.trs+'%':'—'}}</span></td>
               <td><span class="schip" :class="'sc-'+(s.statut||'').toLowerCase().replace(/\s/g,'-')">{{s.statut}}</span></td>
             </tr>
@@ -255,6 +257,9 @@
               <div class="dpi-kpis" v-if="s.colis_produits||s.trs!=null">
                 <span class="kpiv">{{s.colis_produits||0}} colis</span>
                 <span v-if="s.rendement_pct!=null" class="kpiv" :class="vClass(s.rendement_pct)">Rend. {{s.rendement_pct}}%</span>
+                <span v-if="s.disponibilite!=null" class="kpiv" :class="vClass(s.disponibilite)">D {{s.disponibilite}}%</span>
+                <span v-if="s.performance!=null" class="kpiv" :class="vClass(s.performance)">P {{s.performance}}%</span>
+                <span v-if="s.qualite!=null" class="kpiv" :class="vClass(s.qualite)">Q {{s.qualite}}%</span>
                 <span v-if="s.trs!=null" class="kpiv" :class="vClass(s.trs)">TRS {{s.trs}}%</span>
               </div>
             </div>
@@ -685,8 +690,20 @@ export default {
 
     onMounted(loadAll)
 
+    var THEME_ORDER = ['night', 'day', 'workshop']
+    var cycleTheme = function() {
+      var idx = THEME_ORDER.indexOf(theme.value)
+      theme.value = THEME_ORDER[(idx + 1) % THEME_ORDER.length]
+    }
+    var themeIcon = computed(function() {
+      return theme.value === 'day' ? '☀️' : theme.value === 'workshop' ? '🏭' : '🌙'
+    })
+    var themeTitle = computed(function() {
+      return theme.value === 'night' ? 'Nuit → cliquer pour Jour' : theme.value === 'day' ? 'Jour → cliquer pour Atelier' : 'Atelier → cliquer pour Nuit'
+    })
+
     return {
-      theme,
+      theme, cycleTheme, themeIcon, themeTitle,
       activeView, loading, views, PERIODS,
       equipements, shifts, allSessions, allPlanning,
       filterSite, filterEquipId, filterPlanStatut,
