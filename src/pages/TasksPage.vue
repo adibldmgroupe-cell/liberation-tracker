@@ -308,7 +308,7 @@ export default {
       if (!uniq.length) return {}
       var res = await supabase.from('lots').select('id,numero_lot,product_id,statut_sap').in('id',uniq)
       var map = {}
-      ;(res.data||[]).forEach(function(l){ if(l.statut_sap!=='accepte') map[l.id]=l })
+      ;(res.data||[]).forEach(function(l){ if(l.statut_sap!=='accepte'&&l.statut_sap!=='refuse') map[l.id]=l })
       var prodIds = (res.data||[]).map(function(l){return l.product_id}).filter(function(id,i,a){return id!=null&&a.indexOf(id)===i})
       if (prodIds.length) {
         var pRes = await supabase.from('products').select('id,code_article,description').in('id',prodIds)
