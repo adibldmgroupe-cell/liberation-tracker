@@ -16,12 +16,22 @@
           <span class="nav-icon">📋</span>Tâches
           <span class="notif-badge tasks-badge" v-if="pendingTasksCount>0">{{pendingTasksCount}}</span>
         </router-link>
-        <div class="nav-sep">Tracking production</div>
-        <router-link to="/production/flux" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🏭</span>Schéma Production</router-link>
-        <router-link to="/tracking/trs" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">⚡</span>TRS Live</router-link>
-        <router-link to="/tracking/analytics" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">📊</span>Analytics TRS</router-link>
-        <router-link to="/tracking/pdp-fab" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🏗</span>PDP Fabrication</router-link>
-        <router-link to="/tracking/pdp-cond" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">📦</span>PDP Conditionnement</router-link>
+        <div class="nav-sep">Module production</div>
+        <!-- Groupe TRS -->
+        <div class="nav-grp">
+          <button class="nav-grp-hd" @click="toggleNavGrp('trs')">
+            <span class="nav-icon">🏭</span>
+            <span class="nav-grp-label">TRS Production</span>
+            <span class="nav-grp-chev">{{navGrpOpen.includes('trs')?'▾':'▸'}}</span>
+          </button>
+          <div v-if="navGrpOpen.includes('trs')" class="nav-grp-body">
+            <router-link to="/production/flux" class="nav-item nav-sub" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🗺</span>Schéma Production</router-link>
+            <router-link to="/tracking/trs" class="nav-item nav-sub" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">⚡</span>TRS Live</router-link>
+            <router-link to="/tracking/pdp-cond" class="nav-item nav-sub" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">📋</span>Sessions</router-link>
+          </div>
+        </div>
+        <!-- PDP Production -->
+        <router-link to="/production/pdp" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🗓</span>PDP Production</router-link>
         <template v-if="isAdmin">
           <div class="nav-sep">Administration</div>
           <router-link to="/admin/users" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">👥</span>Utilisateurs</router-link>
@@ -77,6 +87,13 @@ export default {
     var clock = ref(''), unreadCount = ref(0), pendingTasksCount = ref(0), searchInput = ref(null), mobileMenuOpen = ref(false)
     var toasts = ref([]), lastCheck = ref(new Date().toISOString()), toastId = ref(0)
     var debounce = null, clockInt = null, notifInt = null, planningInt = null, devAlertInt = null, tasksInt = null
+    var navGrpOpen = ref(JSON.parse(localStorage.getItem('nav_grp_open') || '["trs"]'))
+    var toggleNavGrp = function(key) {
+      var idx = navGrpOpen.value.indexOf(key)
+      if (idx >= 0) navGrpOpen.value.splice(idx, 1)
+      else navGrpOpen.value.push(key)
+      localStorage.setItem('nav_grp_open', JSON.stringify(navGrpOpen.value))
+    }
     var serviceLabels = {planification:'Planification',stock:'Stock',aq:'Assurance Qualité',aq_dap:'AQ DAP',dt:'Direction Technique',fabrication:'Fabrication',conditionnement:'Conditionnement',lcq:'Laboratoire CQ',admin:'Administration'}
     var initials = computed(function(){return profile.value?(profile.value.prenom[0]+profile.value.nom[0]).toUpperCase():''})
     var isAdmin = computed(function(){return profile.value && profile.value.service === 'admin'})
@@ -188,7 +205,8 @@ export default {
     onUnmounted(function(){clearInterval(clockInt);clearInterval(notifInt);clearInterval(planningInt);clearInterval(devAlertInt);clearInterval(tasksInt)})
 
     return {profile,initials,isAdmin,searchQuery,suggestions,showSug,clock,unreadCount,pendingTasksCount,searchInput,
-      mobileMenuOpen,toasts,serviceLabels,onSearch,submitSearch,selectSug,hideSug,logout,goToLot}
+      mobileMenuOpen,toasts,serviceLabels,onSearch,submitSearch,selectSug,hideSug,logout,goToLot,
+      navGrpOpen,toggleNavGrp}
   }
 }
 </script>
@@ -199,6 +217,15 @@ export default {
 .sidebar-nav{flex:1;padding:12px 8px;overflow-y:auto}
 .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;color:#888;text-decoration:none;font-size:13px;border-radius:4px;margin-bottom:2px;transition:.15s;position:relative}.nav-item:hover{color:#ccc;background:#161616}.nav-item.active{color:#fff;background:#1a1a1a}
 .nav-sep{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#444;padding:12px 12px 4px;}
+.nav-grp{margin-bottom:2px}
+.nav-grp-hd{display:flex;align-items:center;gap:10px;padding:9px 12px;color:#888;font-size:13px;border-radius:4px;cursor:pointer;border:none;background:none;width:100%;text-align:left;transition:.15s;font-family:inherit}
+.nav-grp-hd:hover{color:#ccc;background:#161616}
+.nav-grp-label{flex:1}
+.nav-grp-chev{font-size:9px;color:#555;flex-shrink:0}
+.nav-grp-body{padding-left:6px}
+.nav-sub{padding-left:28px !important;font-size:12px !important}
+.nav-sub:not(.active){color:#666 !important}
+.nav-sub:hover:not(.active){color:#aaa !important}
 .nav-icon{font-size:14px;width:18px;text-align:center}
 .notif-badge{position:absolute;right:8px;background:#E24B4A;color:#fff;font-size:10px;font-weight:600;padding:1px 6px;border-radius:8px;min-width:16px;text-align:center}
 .tasks-badge{background:#E89C3A}

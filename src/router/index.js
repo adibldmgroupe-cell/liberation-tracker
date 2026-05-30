@@ -25,6 +25,7 @@ const routes = [
       { path: 'admin/permissions', name: 'AdminPermissions', component: () => import('../pages/AdminPermissionsPage.vue'), meta: { requiresAdmin: true } },
       { path: 'admin/products', name: 'AdminProducts', component: () => import('../pages/ProductsCatalogPage.vue'), meta: { requiresAdmin: true } },
       { path: 'production/flux',  name: 'ProductionFlux',  component: () => import('../pages/production/ProductionFlowPage.vue') },
+      { path: 'production/pdp',   name: 'PdpProduction',   component: () => import('../pages/production/PdpProductionPage.vue') },
       { path: 'admin/flux', name: 'AdminFlux', component: () => import('../pages/admin/AdminFluxPage.vue'), meta: { requiresAdmin: true } },
       { path: 'tracking/trs',       name: 'TrsLive',       component: () => import('../pages/tracking/TrsLivePage.vue') },
       { path: 'tracking/analytics', name: 'TrsAnalytics',  component: () => import('../pages/tracking/TrsAnalyticsPage.vue') },
