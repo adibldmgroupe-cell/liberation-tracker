@@ -427,6 +427,7 @@ export default {
     var pdpCond     = ref([])
     var ateliers    = ref([])
     var equipements = ref([])
+    var planRooms   = ref([])
     var lotSuggestions = ref([])
     var lotTimeout  = null
 
@@ -572,9 +573,10 @@ export default {
     // ── LOAD ──
     var loadAll = async function() {
       loading.value = true
-      var [rAt, rEq, rSF, rSC, rAF, rAC, rPC] = await Promise.all([
+      var [rAt, rEq, rPR, rSF, rSC, rAF, rAC, rPC] = await Promise.all([
         supabase.from('ateliers').select('id,nom_atelier').eq('actif', true).order('nom_atelier'),
         supabase.from('equipements_conditionnement').select('id,nom_equipement').eq('actif', true).order('ordre_affichage'),
+        supabase.from('plan_rooms').select('id,code,nom,atelier_id,equipement_id'),
         supabase.from('suivi_fabrication')
           .select('id,lot_id,atelier_id,statut,date_debut,date_fin,lots(numero_lot,products(description))')
           .is('deleted_at', null).order('date_debut', {ascending: false}),
@@ -593,6 +595,7 @@ export default {
       ])
       if (rAt.data)  ateliers.value    = rAt.data
       if (rEq.data)  equipements.value = rEq.data
+      if (rPR.data)  planRooms.value   = rPR.data
       if (rSF.data)  suiviFab.value    = rSF.data
       if (rSC.data)  suiviCond.value   = rSC.data
       if (rAF.data)  arretsFab.value   = rAF.data
@@ -850,9 +853,13 @@ export default {
         var rawLines = text.trim().split('\n')
         if (rawLines.length < 2) throw new Error('CSV vide ou invalide')
         var headers = parseCSVLine(rawLines[0]).map(function(h) { return h })
-        var atMap = {}, eqMap = {}
+        var atMap = {}, eqMap = {}, roomMap = {}
         ateliers.value.forEach(function(a) { atMap[a.nom_atelier.toLowerCase().trim()] = a })
         equipements.value.forEach(function(e) { eqMap[e.nom_equipement.toLowerCase().trim()] = e })
+        // plan_rooms.nom comme 3ème lookup (ex: "Pesée 1", "Granulation & Séchage 1", "IMA PG SUPER 1")
+        planRooms.value.forEach(function(r) {
+          if (r.nom) roomMap[r.nom.toLowerCase().trim()] = r
+        })
         var rows = []
         for (var i = 1; i < rawLines.length; i++) {
           if (!rawLines[i].trim()) continue
@@ -860,17 +867,26 @@ export default {
           var row = {}
           headers.forEach(function(h, j) { row[h] = (cells[j] || '').trim() })
           // Valeurs normalisées (insensibles au nom exact de colonne)
-          row._lot        = gc(row, ['N_lot','Lot interne','Lot','numero_lot','N° lot'])
-          row._description= gc(row, ['description','Description article','Description'])
-          row._taille     = gc(row, ['Taille_lot','Prévisionnel [UN]','Taille lot','Quantité','quantite'])
-          row._date_debut = gc(row, ['Date_début','Date début','date_debut','Date de début'])
-          row._date_fin   = gc(row, ['Date_fin_réelle','Date fin réelle','date_fin_reelle','Date fin'])
+          row._lot          = gc(row, ['N_lot','Lot interne','Lot','numero_lot','N° lot'])
+          row._description  = gc(row, ['description','Description article','Description'])
+          row._taille       = gc(row, ['Taille_lot','Prévisionnel [UN]','Taille lot','Quantité','quantite'])
+          row._date_debut   = gc(row, ['Date_début','Date début','date_debut','Date de début'])
+          row._date_fin     = gc(row, ['Date_fin_réelle','Date fin réelle','date_fin_reelle','Date fin'])
           row._date_fin_est = gc(row, ['Date_fin_estimée','Date fin estimée','date_fin_estimee'])
-          // Détection Fab / Cond
+          // Détection Fab / Cond (3 niveaux : ateliers → equipements_conditionnement → plan_rooms)
           var equip = (gc(row, ['Equipement','Équipement','equipement']) || '').toLowerCase().trim()
-          if (atMap[equip]) { row._famille = 'fab'; row._atelier = atMap[equip] }
-          else if (eqMap[equip]) { row._famille = 'cond'; row._equip = eqMap[equip] }
-          else row._err = 'Équipement inconnu'
+          if (atMap[equip]) {
+            row._famille = 'fab'; row._atelier = atMap[equip]
+          } else if (eqMap[equip]) {
+            row._famille = 'cond'; row._equip = eqMap[equip]
+          } else if (roomMap[equip]) {
+            var rm = roomMap[equip]
+            if (rm.atelier_id) { row._famille = 'fab'; row._atelier = { id: rm.atelier_id } }
+            else if (rm.equipement_id) { row._famille = 'cond'; row._equip = { id: rm.equipement_id } }
+            else row._err = 'Salle non liée (ni atelier ni équipement conditionné)'
+          } else {
+            row._err = 'Équipement inconnu'
+          }
           rows.push(row)
         }
         gsModal.preview = rows
