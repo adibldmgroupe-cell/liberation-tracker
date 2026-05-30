@@ -328,6 +328,43 @@ dans un même fichier SQL exécuté d'un seul coup.
 
 ---
 
+## RÈGLE CRITIQUE N°13 — RLS Supabase : 4 policies obligatoires à la création
+
+### Bug rencontré (31 mai 2026 — table `suivi_conditionnement`)
+
+```
+new row violates row-level security policy for table "suivi_conditionnement"
+```
+
+### Root cause
+
+La table avait `ENABLE ROW LEVEL SECURITY` mais aucune policy `FOR INSERT`.  
+Supabase bloque **silencieusement toute écriture** si aucune policy d'écriture n'existe, même pour un utilisateur authentifié. Le SELECT peut fonctionner (policy existante ou accès par défaut), mais INSERT/UPDATE/DELETE sont refusés par défaut dès que RLS est activé sans policy explicite.
+
+### CAPA — Règle à appliquer ABSOLUMENT
+
+Chaque fois qu'une table est créée avec RLS, **toujours ajouter immédiatement les 4 policies** dans la même migration :
+
+```sql
+ALTER TABLE ma_table ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "rls_ma_table_select" ON ma_table FOR SELECT TO authenticated USING (true);
+CREATE POLICY "rls_ma_table_insert" ON ma_table FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "rls_ma_table_update" ON ma_table FOR UPDATE TO authenticated USING (true);
+CREATE POLICY "rls_ma_table_delete" ON ma_table FOR DELETE TO authenticated USING (true);
+```
+
+Ne jamais écrire `ENABLE ROW LEVEL SECURITY` sans les 4 policies qui suivent dans la même migration.
+
+### Diagnostic rapide si un INSERT échoue avec RLS
+
+```sql
+SELECT policyname, cmd FROM pg_policies WHERE tablename = 'ma_table';
+-- Si INSERT absent → ajouter la policy FOR INSERT
+```
+
+---
+
 ## Déploiement
 
 - Push sur `main` → GitHub Actions build + deploy GitHub Pages automatiquement
