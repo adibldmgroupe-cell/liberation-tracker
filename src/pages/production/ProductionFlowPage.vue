@@ -678,17 +678,28 @@
                   :value="lot.lotRawId">{{lot.numero_lot}} — {{lot.nom_produit}}</option>
               </select>
             </div>
-            <div class="mf-row">
-              <label>Description</label>
-              <textarea class="mf-input mf-ta" rows="3" v-model="modal.description"
-                placeholder="Décrivez la déviation observée…"/>
+            <div class="dev-form">
+              <div class="dev-form-row">
+                <label class="dev-lbl">N° DN</label>
+                <input type="text" v-model="modal.numeroDn" placeholder="Ex: DN-2026-001" class="mf-input dev-flex1" />
+              </div>
+              <div class="dev-form-row">
+                <label class="dev-lbl">Observation</label>
+                <textarea v-model="modal.description" rows="2" placeholder="Observation (facultatif)..." class="mf-input mf-ta dev-flex1"></textarea>
+              </div>
+              <div class="dev-form-row dev-bloquante-row">
+                <label class="dev-lbl">Bloquante</label>
+                <button class="dev-tog" :class="modal.bloquante?'dev-tog-on':'dev-tog-off'" @click="modal.bloquante=!modal.bloquante">
+                  {{modal.bloquante ? 'Oui — Bloquante' : 'Non — Non bloquante'}}
+                </button>
+              </div>
             </div>
             <div class="mf-err" v-if="modal.err">{{modal.err}}</div>
           </div>
           <div class="modal-ft">
             <button class="mb-cancel" @click="closeModal">Annuler</button>
             <button class="mb-ok mb-warn" @click="saveDev" :disabled="modal.saving">
-              {{modal.saving?'…':'⚠ Déclarer'}}
+              {{modal.saving?'…':'Confirmer'}}
             </button>
           </div>
         </template>
@@ -2313,7 +2324,8 @@ export default {
         lotSearch: '', lotDropdown: [], selectedLot: null, lots: [],
         dateDebut: now2, dateFin: now2,
         quantite: null, motif: '', fabId: '', lotId: '',
-        description: '', nodeType: selectedNode.value?.type || 'fab'
+        description: '', numeroDn: '', bloquante: false,
+        nodeType: selectedNode.value?.type || 'fab'
       }
     }
 
@@ -2511,14 +2523,13 @@ export default {
 
     var saveDev = async function() {
       if (!modal.value.lotId) { modal.value.err = 'Sélectionner un lot.'; return }
-      if (!modal.value.description.trim()) { modal.value.err = 'Description requise.'; return }
       modal.value.saving = true; modal.value.err = ''
       var userData = await supabase.auth.getUser()
       var userId = userData.data.user?.id || null
       var userMeta = userData.data.user?.user_metadata || {}
       var userService = userMeta.service || null
       try {
-        await declareDeviation(modal.value.lotId, modal.value.description, false, null, userId, userService)
+        await declareDeviation(modal.value.lotId, modal.value.description, modal.value.bloquante, modal.value.numeroDn || null, userId, userService)
       } catch(e) {
         modal.value.err = e.message || 'Erreur'; modal.value.saving = false; return
       }
@@ -2798,6 +2809,14 @@ export default {
 .mb-warn:hover:not(:disabled)  { background:#92400e; }
 .mb-green { background:#047857; }
 .mb-green:hover:not(:disabled) { background:#065f46; }
+/* ══ DEV FORM (identique LotDetailPage inline) ══ */
+.dev-form{display:flex;flex-direction:column;gap:8px;margin:10px 0}
+.dev-form-row{display:flex;align-items:flex-start;gap:10px}
+.dev-lbl{font-size:11px;font-weight:600;color:#6b7280;min-width:80px;padding-top:6px;text-transform:uppercase;letter-spacing:.5px}
+.dev-bloquante-row{align-items:center}
+.dev-tog{padding:5px 14px;border:none;border-radius:10px;cursor:pointer;font-size:11px;font-weight:600;font-family:inherit}
+.dev-tog-on{background:#FCEBEB;color:#A32D2D}.dev-tog-off{background:#1e1e3a;color:#9ca3af}
+.dev-flex1{flex:1}
 
 .lot-search-wrap { position:relative; }
 .lot-dropdown { position:absolute; top:100%; left:0; right:0; background:#1a1a3e; border:1px solid #2a2a4a; border-radius:6px; z-index:10; max-height:160px; overflow-y:auto; margin-top:2px; }

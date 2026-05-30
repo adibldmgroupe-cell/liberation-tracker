@@ -476,12 +476,26 @@
         <div class="modal-ctx" v-if="devModal.panel?.session">
           Lot {{devModal.panel.lotNum}} · Session en cours
         </div>
-        <label class="lbl">Description *</label>
-        <textarea v-model="devModal.description" class="inp" rows="3" placeholder="Décrivez la déviation observée…" style="resize:vertical"></textarea>
+        <div class="dev-form">
+          <div class="dev-form-row">
+            <label class="dev-lbl">N° DN</label>
+            <input type="text" v-model="devModal.numeroDn" placeholder="Ex: DN-2026-001" class="dev-input-sm" />
+          </div>
+          <div class="dev-form-row">
+            <label class="dev-lbl">Observation</label>
+            <textarea v-model="devModal.description" rows="2" placeholder="Observation (facultatif)..." class="dev-input"></textarea>
+          </div>
+          <div class="dev-form-row dev-bloquante-row">
+            <label class="dev-lbl">Bloquante</label>
+            <button class="dev-tog" :class="devModal.bloquante?'dev-tog-on':'dev-tog-off'" @click="devModal.bloquante=!devModal.bloquante">
+              {{devModal.bloquante ? 'Oui — Bloquante' : 'Non — Non bloquante'}}
+            </button>
+          </div>
+        </div>
         <div class="err" v-if="devModal.error">{{devModal.error}}</div>
         <div class="modal-acts">
-          <button class="btn-save btn-warn" @click="doSaveDev" :disabled="devModal.saving || !devModal.description.trim()">
-            {{devModal.saving ? '…' : '⚠ Déclarer'}}
+          <button class="btn-save btn-warn" @click="doSaveDev" :disabled="devModal.saving">
+            {{devModal.saving ? '…' : 'Confirmer'}}
           </button>
           <button class="btn-cancel" @click="devModal.show=false">Annuler</button>
         </div>
@@ -523,7 +537,7 @@ export default {
     var requalModal   = reactive({ show:false, panel:null, famille_id:null, sf_id:null, type_id:null, sousFamilles:[], types:[], saving:false })
     var comptageModal = reactive({ show:false, panel:null, heure:'', boites:null, rebuts:0, saving:false })
     var closeModal    = reactive({ show:false, panel:null, heure_fin:'', boites_produits:null, boites_rebuts:0, observation:'', error:'', saving:false })
-    var devModal      = reactive({ show:false, panel:null, description:'', error:'', saving:false })
+    var devModal      = reactive({ show:false, panel:null, description:'', numeroDn:'', bloquante:false, error:'', saving:false })
 
     var filteredPanels = computed(function() {
       if (filterSite.value === 'Tous') return panels.value
@@ -1184,13 +1198,14 @@ export default {
     var openDevModal = function(p) {
       devModal.panel       = p
       devModal.description = ''
+      devModal.numeroDn    = ''
+      devModal.bloquante   = false
       devModal.error       = ''
       devModal.saving      = false
       devModal.show        = true
     }
 
     var doSaveDev = async function() {
-      if (!devModal.description.trim()) { devModal.error = 'Description requise.'; return }
       var s = devModal.panel && devModal.panel.session
       if (!s || !s.lot_id) { devModal.error = 'Aucun lot associé à cette session.'; return }
       devModal.saving = true; devModal.error = ''
@@ -1199,7 +1214,7 @@ export default {
       var userMeta = userData.data.user?.user_metadata || {}
       var userService = userMeta.service || null
       try {
-        await declareDeviation(s.lot_id, devModal.description, false, null, userId, userService)
+        await declareDeviation(s.lot_id, devModal.description, devModal.bloquante, devModal.numeroDn || null, userId, userService)
       } catch(e) {
         devModal.error = e.message || 'Erreur'; devModal.saving = false; return
       }
@@ -1620,6 +1635,16 @@ export default {
   border: none; font-size: 13px; cursor: pointer; border-radius: 2px;
 }
 .btn-cancel:hover { background: #eee; }
+
+/* ══ DEV FORM (identique LotDetailPage inline) ══ */
+.dev-form{display:flex;flex-direction:column;gap:8px;margin:10px 0}
+.dev-form-row{display:flex;align-items:flex-start;gap:10px}
+.dev-lbl{font-size:11px;font-weight:600;color:#999;min-width:80px;padding-top:6px;text-transform:uppercase;letter-spacing:.5px}
+.dev-input{flex:1;border:1px solid #ddd;padding:6px 8px;font-size:13px;resize:vertical;font-family:inherit;border-radius:2px;background:#fff;color:#0a0a0a}
+.dev-input-sm{flex:1;border:1px solid #ddd;padding:6px 8px;font-size:13px;font-family:inherit;border-radius:2px;background:#fff;color:#0a0a0a}
+.dev-bloquante-row{align-items:center}
+.dev-tog{padding:5px 14px;border:none;border-radius:10px;cursor:pointer;font-size:11px;font-weight:600;font-family:inherit}
+.dev-tog-on{background:#FCEBEB;color:#A32D2D}.dev-tog-off{background:#f5f5f5;color:#999}
 
 /* ══ RESPONSIVE ══ */
 @media (max-width: 768px) {
