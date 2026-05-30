@@ -2105,15 +2105,24 @@ export default {
         return pf.route === activeRoute.value
       })
       if (!flux.length) return null
-      var roomCodes = new Set()
+      // Grouper par op_number : spécifique > flexible
+      // Si un op a ≥1 salle spécifique, la ligne flexible du même op est ignorée
+      var opMap = {}
       flux.forEach(function(pf) {
-        if (pf.room_code) {
-          // Specific room assigned
-          roomCodes.add(pf.room_code)
-        } else {
-          // Flexible: all rooms with this op_number
+        if (!opMap[pf.op_number]) opMap[pf.op_number] = { specific: [], hasFlexible: false }
+        if (pf.room_code) opMap[pf.op_number].specific.push(pf.room_code)
+        else opMap[pf.op_number].hasFlexible = true
+      })
+      var roomCodes = new Set()
+      Object.keys(opMap).forEach(function(opNum) {
+        var entry = opMap[opNum]
+        if (entry.specific.length > 0) {
+          // Salles spécifiques définies → les flexibles du même op sont ignorées
+          entry.specific.forEach(function(rc) { roomCodes.add(rc) })
+        } else if (entry.hasFlexible) {
+          // Vraiment flexible (aucune salle spécifique) → toutes les salles de l'op
           opMaster.value.filter(function(om) {
-            return om.op_number === pf.op_number
+            return om.op_number === parseInt(opNum)
           }).forEach(function(om) {
             roomCodes.add(om.room_code)
           })
