@@ -313,7 +313,7 @@ export default {
     var lots = ref([]), total = ref(0), activeFilters = ref([])
     var lotsLoading = ref(false)
     var tablePage = ref(0)
-    var TABLE_PAGE_SIZE = 50
+    var TABLE_PAGE_SIZE = 250
     var sortCol = ref(''), sortDir = ref('asc'), showDates = ref(false)
     var hideAccepted = ref(localStorage.getItem('lots_hide_accepted') !== 'false')
     var toggleHideAccepted = function() { hideAccepted.value = !hideAccepted.value; localStorage.setItem('lots_hide_accepted', String(hideAccepted.value)) }
