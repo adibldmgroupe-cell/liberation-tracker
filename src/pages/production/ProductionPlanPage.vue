@@ -685,7 +685,7 @@ export default {
     // ─── NAVIGATION ──────────────────────────────────────────────
     var selectRoom  = function(room){selectedRoom.value=room}
     var goToFab     = function(){router.push('/tracking/pdp-fab')}
-    var goToCond    = function(){router.push('/tracking/pdp-cond')}
+    var goToCond    = function(){router.push('/tracking/trs-sessions')}
     var goToLot     = function(room){
       var lots=getRoomLots(room)
       if (lots.length===1) router.push('/lots/'+lots[0].lot_id)

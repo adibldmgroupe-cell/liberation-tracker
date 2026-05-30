@@ -27,7 +27,7 @@
           <div v-if="navGrpOpen.includes('trs')" class="nav-grp-body">
             <router-link to="/production/flux" class="nav-item nav-sub" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🗺</span>Schéma Production</router-link>
             <router-link to="/tracking/trs" class="nav-item nav-sub" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">⚡</span>TRS Live</router-link>
-            <router-link to="/tracking/pdp-cond" class="nav-item nav-sub" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">📋</span>Sessions</router-link>
+            <router-link to="/tracking/trs-sessions" class="nav-item nav-sub" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">📋</span>Sessions</router-link>
           </div>
         </div>
         <!-- PDP Production -->
