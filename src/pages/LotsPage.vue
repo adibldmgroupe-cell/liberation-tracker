@@ -4,7 +4,22 @@
       <span class="pt">LOTS</span>
       <div class="ph-right">
         <span class="pc" v-if="lots.length">{{filteredLots.length}} lot{{filteredLots.length!==1?'s':''}}<span class="pc-sub" v-if="filteredLots.length<lots.length"> / {{lots.length}}</span></span>
-        <button class="btn-toggle btn-accepted" :class="{'btn-accepted-on': hideAccepted}" @click.stop="toggleHideAccepted">{{hideAccepted ? '✅ Acceptés' : '☐ Acceptés'}}</button>
+        <div class="statut-panel-wrap" @click.stop>
+          <button class="btn-cols" :class="{'btn-cols-on': hideAccepted || hideRefused}" @click="showStatutPanel=!showStatutPanel">⊙ Statuts{{(hideAccepted||hideRefused) ? ' ●' : ''}}</button>
+          <div class="statut-panel" v-if="showStatutPanel">
+            <div class="col-panel-title">Visibilité statuts SAP</div>
+            <label class="statut-item">
+              <input type="checkbox" :checked="!hideAccepted" @change="toggleHideAccepted" @click.stop />
+              <span class="statut-dot" style="background:#1D9E75"></span>
+              <span class="statut-lbl">Acceptés</span>
+            </label>
+            <label class="statut-item">
+              <input type="checkbox" :checked="!hideRefused" @change="toggleHideRefused" @click.stop />
+              <span class="statut-dot" style="background:#888"></span>
+              <span class="statut-lbl">Refusés</span>
+            </label>
+          </div>
+        </div>
         <button class="btn-toggle" @click.stop="showDates=!showDates">{{showDates?'Voir statuts':'Voir dates'}}</button>
         <div class="col-panel-wrap" @click.stop>
           <button class="btn-cols" :class="{'btn-cols-on':showColPanel}" @click="showColPanel=!showColPanel">⚙ Colonnes</button>
@@ -302,6 +317,9 @@ export default {
     var sortCol = ref(''), sortDir = ref('asc'), showDates = ref(false)
     var hideAccepted = ref(localStorage.getItem('lots_hide_accepted') !== 'false')
     var toggleHideAccepted = function() { hideAccepted.value = !hideAccepted.value; localStorage.setItem('lots_hide_accepted', String(hideAccepted.value)) }
+    var hideRefused = ref(localStorage.getItem('lots_hide_refused') !== 'false')
+    var toggleHideRefused = function() { hideRefused.value = !hideRefused.value; localStorage.setItem('lots_hide_refused', String(hideRefused.value)) }
+    var showStatutPanel = ref(false)
     var selected = ref([]), actionType = ref(''), showConfirm = ref(false)
     var executing = ref(false), progress = ref(0), execResult = ref(null)
     var userService = ref(''), bulkDate = ref('')
@@ -1537,11 +1555,12 @@ var loadCharge = async function() {
     }
     // ──────────────────────────────────────────────────────────────────
 
-    var closeAll = function() { activeDropdown.value = null; inlineMenu.value = null; showColPanel.value = false; if(datePicker.value) datePicker.value = null; if(devPopup.value) devPopup.value = null }
+    var closeAll = function() { activeDropdown.value = null; inlineMenu.value = null; showColPanel.value = false; showStatutPanel.value = false; if(datePicker.value) datePicker.value = null; if(devPopup.value) devPopup.value = null }
 
     var filteredLots = computed(function(){
       var result = lots.value
       if(hideAccepted.value){result=result.filter(function(l){return l.statut_sap!=='accepte'})}
+      if(hideRefused.value){result=result.filter(function(l){return l.statut_sap!=='refuse'})}
       if(activeFilters.value.length>0){result=result.filter(function(l){return activeFilters.value.indexOf(l.statut_filter)>=0})}
       var cf=columnFilters.value,cfk=Object.keys(cf)
       if(cfk.length>0){result=result.filter(function(l){return cfk.every(function(k){return l[k]===cf[k]})})}
@@ -1979,9 +1998,9 @@ var loadCharge = async function() {
     })
     onUnmounted(function(){document.removeEventListener('click', closeAll)})
     watch(function(){return route.query},load,{deep:true})
-    watch([activeFilters, columnFilters, hideAccepted, sortCol, sortDir], function(){ tablePage.value = 0 }, {deep:true})
+    watch([activeFilters, columnFilters, hideAccepted, hideRefused, sortCol, sortDir], function(){ tablePage.value = 0 }, {deep:true})
 
-    return{lots,total,lotsLoading,activeFilters,showDates,hideAccepted,toggleHideAccepted,filteredLots,pagedLots,tablePage,totalPages,filterOptions,
+    return{lots,total,lotsLoading,activeFilters,showDates,hideAccepted,toggleHideAccepted,hideRefused,toggleHideRefused,showStatutPanel,filteredLots,pagedLots,tablePage,totalPages,filterOptions,
       toggleFilter,sortBy,sortIcon,goToLot,doExportExcel,doExportPDF,
       selected,actionType,showConfirm,executing,progress,execResult,bulkDate,
       actionLabel,canExecute,allVisibleChecked,someVisibleChecked,
@@ -2005,7 +2024,13 @@ var loadCharge = async function() {
 .ph-right{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .btn-exp{font-size:11px;padding:4px 10px;border:1px solid #ddd;border-radius:3px;background:#fff;cursor:pointer;color:#666;font-family:inherit}.btn-exp:hover{background:#f5f5f5}
 .btn-toggle{font-size:11px;padding:4px 10px;border:1px solid #185FA5;border-radius:3px;background:#E6F1FB;cursor:pointer;color:#0C447C;font-family:inherit}.btn-toggle:hover{background:#d0e3f5}
-.btn-accepted{border-color:#ccc;background:#fff;color:#999}.btn-accepted:hover{background:#f5f5f5;border-color:#bbb}.btn-accepted-on{border-color:#1D9E75;background:#EAF3DE;color:#3B6D11}.btn-accepted-on:hover{background:#d8edcc}
+.statut-panel-wrap{position:relative}
+.statut-panel{position:absolute;top:calc(100% + 4px);right:0;background:#fff;border:1px solid #ddd;border-radius:4px;box-shadow:0 6px 20px rgba(0,0,0,.12);z-index:300;padding:10px;min-width:160px}
+.statut-item{display:flex;align-items:center;gap:7px;font-size:12px;color:#333;padding:5px 4px;border-radius:3px;cursor:pointer;user-select:none;white-space:nowrap}
+.statut-item:hover{background:#f5f5f5}
+.statut-item input{cursor:pointer;accent-color:#185FA5;flex-shrink:0}
+.statut-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.statut-lbl{flex:1}
 .btn-cols{font-size:11px;padding:4px 10px;border:1px solid #ddd;border-radius:3px;background:#fff;cursor:pointer;color:#666;font-family:inherit;white-space:nowrap}.btn-cols:hover{background:#f5f5f5}.btn-cols-on{border-color:#185FA5;background:#E6F1FB;color:#0C447C}
 .col-panel-wrap{position:relative}
 .col-panel{position:absolute;top:calc(100% + 4px);right:0;background:#fff;border:1px solid #ddd;border-radius:4px;box-shadow:0 6px 20px rgba(0,0,0,.12);z-index:300;padding:10px;min-width:180px}
