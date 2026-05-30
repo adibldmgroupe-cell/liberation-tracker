@@ -54,15 +54,35 @@
             <button v-if="actionSearch" class="ap-search-clr" @click.stop="actionSearch=''">✕</button>
           </div>
           <div class="ap-body">
-            <template v-for="grp in filteredActionGroups" :key="grp.label">
-              <div class="ap-grp-hd">{{grp.label}}</div>
-              <button v-for="opt in grp.filteredActions" :key="opt.value"
-                class="ap-item" :class="{'ap-item-active': actionType===opt.value}"
-                @click.stop="selectAction(opt.value)">
-                <span class="ap-item-arr">›</span>{{opt.label}}
-              </button>
+            <!-- Mode recherche : liste plate avec séparateurs de groupe -->
+            <template v-if="actionSearch.trim()">
+              <template v-for="grp in filteredActionGroups" :key="grp.label">
+                <div class="ap-grp-hd">{{grp.label}}</div>
+                <button v-for="opt in grp.filteredActions" :key="opt.value"
+                  class="ap-item" :class="{'ap-item-active': actionType===opt.value}"
+                  @click.stop="selectAction(opt.value)">
+                  <span class="ap-item-arr">›</span>{{opt.label}}
+                </button>
+              </template>
+              <div v-if="!filteredActionGroups.length" class="ap-empty">Aucun résultat</div>
             </template>
-            <div v-if="!filteredActionGroups.length" class="ap-empty">Aucun résultat</div>
+            <!-- Mode accordéon : groupes repliables -->
+            <template v-else>
+              <div v-for="grp in actionGroups" :key="grp.label" class="ap-acc-grp">
+                <button class="ap-acc-hd" @click.stop="toggleActionGroup(grp.label)">
+                  <span class="ap-acc-chevron">{{expandedActionGroups.includes(grp.label) ? '▾' : '▸'}}</span>
+                  <span class="ap-acc-label">{{grp.label}}</span>
+                  <span class="ap-acc-cnt">{{grp.actions.length}}</span>
+                </button>
+                <div v-if="expandedActionGroups.includes(grp.label)" class="ap-acc-items">
+                  <button v-for="opt in grp.actions" :key="opt.value"
+                    class="ap-item" :class="{'ap-item-active': actionType===opt.value}"
+                    @click.stop="selectAction(opt.value)">
+                    <span class="ap-item-arr">›</span>{{opt.label}}
+                  </button>
+                </div>
+              </div>
+            </template>
           </div>
         </div>
       </div>
@@ -331,7 +351,12 @@ export default {
     }
     var showStatutPanel = ref(false)
     var selected = ref([]), actionType = ref(''), showConfirm = ref(false)
-    var showActionPanel = ref(false), actionSearch = ref('')
+    var showActionPanel = ref(false), actionSearch = ref(''), expandedActionGroups = ref([])
+    var toggleActionGroup = function(label) {
+      var idx = expandedActionGroups.value.indexOf(label)
+      if (idx >= 0) expandedActionGroups.value.splice(idx, 1)
+      else expandedActionGroups.value.push(label)
+    }
     var executing = ref(false), progress = ref(0), execResult = ref(null)
     var userService = ref(''), bulkDate = ref('')
     var bulkDevBloquante = ref(false), bulkDevNumeroDn = ref(''), bulkDevObs = ref('')
@@ -2026,7 +2051,7 @@ var loadCharge = async function() {
       selected,actionType,showConfirm,executing,progress,execResult,bulkDate,
       actionLabel,canExecute,allVisibleChecked,someVisibleChecked,
       isSelected,toggleLot,toggleAll,getLotNum,executeAction,
-      actionGroups,filteredActionGroups,selectAction,showActionPanel,actionSearch,userService,
+      actionGroups,filteredActionGroups,selectAction,showActionPanel,actionSearch,expandedActionGroups,toggleActionGroup,userService,
       columnFilters,activeDropdown,ddPos,openDropdown,getColumnValues,setColumnFilter,clearColumnFilters,removeColumnFilter,hasColumnFilters,
       visibleCols:tableCols,showColPanel,colDefs,isColVisible,toggleCol,resetCols,moveColUp,moveColDown,CC,
       colDragIdx,colDragOverIdx,onColDragStart,onColDragOver,onColDrop,onColDragEnd,
@@ -2226,6 +2251,15 @@ var loadCharge = async function() {
 .ap-item-arr{color:#d0d0d0;font-size:14px;flex-shrink:0;line-height:1}
 .ap-item:hover .ap-item-arr,.ap-item-active .ap-item-arr{color:#185FA5}
 .ap-empty{padding:20px 14px;font-size:12px;color:#bbb;text-align:center}
+/* Accordéon */
+.ap-acc-grp{border-bottom:1px solid #f5f5f5}
+.ap-acc-grp:last-child{border-bottom:none}
+.ap-acc-hd{display:flex;align-items:center;gap:8px;width:100%;padding:8px 14px;font-size:12px;font-family:inherit;font-weight:500;border:none;background:none;cursor:pointer;color:#444;text-align:left;transition:background .1s}
+.ap-acc-hd:hover{background:#f5f7ff;color:#185FA5}
+.ap-acc-chevron{font-size:12px;color:#aaa;flex-shrink:0;width:12px}
+.ap-acc-label{flex:1}
+.ap-acc-cnt{font-size:10px;color:#bbb;background:#f0f0f0;border-radius:8px;padding:1px 6px;font-weight:400}
+.ap-acc-items{padding:0 0 4px 0;background:#fafbff}
 .bulk-btn{padding:5px 14px;font-size:12px;font-weight:500;background:#185FA5;color:#fff;border:none;border-radius:3px;cursor:pointer;white-space:nowrap}.bulk-btn:hover{background:#0C447C}.bulk-btn:disabled{opacity:.35;cursor:not-allowed}
 .bulk-info{font-size:11px;color:#185FA5;font-family:'SF Mono',monospace}
 .bulk-clear{font-size:11px;padding:3px 10px;border:1px solid #E24B4A;border-radius:3px;background:#fff;color:#E24B4A;cursor:pointer}.bulk-clear:hover{background:#FCEBEB}
