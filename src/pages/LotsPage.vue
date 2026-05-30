@@ -41,14 +41,31 @@
 
     <!-- Barre d'actions en masse -->
     <div class="bulk-bar">
-      <select v-model="actionType" class="bulk-sel">
-        <option value="">— Choisir une action —</option>
-        <template v-for="grp in actionGroups" :key="grp.label">
-          <optgroup :label="grp.label">
-            <option v-for="opt in grp.actions" :key="opt.value" :value="opt.value">{{opt.label}}</option>
-          </optgroup>
-        </template>
-      </select>
+      <div class="action-palette-wrap" @click.stop>
+        <button class="action-trigger" :class="{'action-trigger-on': actionType}" @click="showActionPanel=!showActionPanel">
+          <span class="action-trigger-label">{{actionType ? actionLabel : '— Choisir une action —'}}</span>
+          <span class="action-trigger-arr">{{showActionPanel ? '▲' : '▼'}}</span>
+        </button>
+        <button v-if="actionType" class="action-clear" @click.stop="actionType=''" title="Effacer">✕</button>
+        <div class="action-palette" v-if="showActionPanel">
+          <div class="ap-search-wrap">
+            <span class="ap-search-ico">🔍</span>
+            <input class="ap-search" v-model="actionSearch" placeholder="Rechercher une action…" @click.stop />
+            <button v-if="actionSearch" class="ap-search-clr" @click.stop="actionSearch=''">✕</button>
+          </div>
+          <div class="ap-body">
+            <template v-for="grp in filteredActionGroups" :key="grp.label">
+              <div class="ap-grp-hd">{{grp.label}}</div>
+              <button v-for="opt in grp.filteredActions" :key="opt.value"
+                class="ap-item" :class="{'ap-item-active': actionType===opt.value}"
+                @click.stop="selectAction(opt.value)">
+                <span class="ap-item-arr">›</span>{{opt.label}}
+              </button>
+            </template>
+            <div v-if="!filteredActionGroups.length" class="ap-empty">Aucun résultat</div>
+          </div>
+        </div>
+      </div>
       <!-- Date input pour les actions de planification -->
       <div v-if="actionType.startsWith('plan_')" class="bulk-date-wrap">
         <label class="bulk-date-lbl">Date :</label>
@@ -314,6 +331,7 @@ export default {
     }
     var showStatutPanel = ref(false)
     var selected = ref([]), actionType = ref(''), showConfirm = ref(false)
+    var showActionPanel = ref(false), actionSearch = ref('')
     var executing = ref(false), progress = ref(0), execResult = ref(null)
     var userService = ref(''), bulkDate = ref('')
     var bulkDevBloquante = ref(false), bulkDevNumeroDn = ref(''), bulkDevObs = ref('')
@@ -367,6 +385,20 @@ export default {
         return {label:g.label,actions:g.actions.filter(function(a){return canAction(a.value)})}
       }).filter(function(g){return g.actions.length>0})
     })
+    var filteredActionGroups = computed(function(){
+      var q = actionSearch.value.trim().toLowerCase()
+      return actionGroups.value.map(function(grp){
+        var acts = q ? grp.actions.filter(function(opt){
+          return opt.label.toLowerCase().indexOf(q)>=0 || grp.label.toLowerCase().indexOf(q)>=0
+        }) : grp.actions
+        return Object.assign({},grp,{filteredActions:acts})
+      }).filter(function(grp){return grp.filteredActions.length>0})
+    })
+    var selectAction = function(value){
+      actionType.value = value
+      showActionPanel.value = false
+      actionSearch.value = ''
+    }
 
     // ── Colonnes show/hide ─────────────────────────────────────────────
     // ── Column config (pilote headers, cells, tri, filtre) ────────────
@@ -1548,7 +1580,7 @@ var loadCharge = async function() {
     }
     // ──────────────────────────────────────────────────────────────────
 
-    var closeAll = function() { activeDropdown.value = null; inlineMenu.value = null; showColPanel.value = false; showStatutPanel.value = false; if(datePicker.value) datePicker.value = null; if(devPopup.value) devPopup.value = null }
+    var closeAll = function() { activeDropdown.value = null; inlineMenu.value = null; showColPanel.value = false; showStatutPanel.value = false; showActionPanel.value = false; actionSearch.value = ''; if(datePicker.value) datePicker.value = null; if(devPopup.value) devPopup.value = null }
 
     var filteredLots = computed(function(){
       var result = lots.value
@@ -1994,7 +2026,7 @@ var loadCharge = async function() {
       selected,actionType,showConfirm,executing,progress,execResult,bulkDate,
       actionLabel,canExecute,allVisibleChecked,someVisibleChecked,
       isSelected,toggleLot,toggleAll,getLotNum,executeAction,
-      actionGroups,userService,
+      actionGroups,filteredActionGroups,selectAction,showActionPanel,actionSearch,userService,
       columnFilters,activeDropdown,ddPos,openDropdown,getColumnValues,setColumnFilter,clearColumnFilters,removeColumnFilter,hasColumnFilters,
       visibleCols:tableCols,showColPanel,colDefs,isColVisible,toggleCol,resetCols,moveColUp,moveColDown,CC,
       colDragIdx,colDragOverIdx,onColDragStart,onColDragOver,onColDrop,onColDragEnd,
@@ -2172,7 +2204,28 @@ var loadCharge = async function() {
 .bulk-dev-bl-on{background:#FCEBEB;color:#A32D2D}.bulk-dev-bl-off{background:#f5f5f5;color:#999}
 /* bulk bar */
 .bulk-bar{display:flex;align-items:center;gap:8px;padding:6px 0;flex-wrap:wrap;border-bottom:1px solid #e8e8e8}
-.bulk-sel{padding:5px 8px;font-size:12px;border:1px solid #ddd;border-radius:3px;outline:none;font-family:inherit;min-width:220px}.bulk-sel:focus{border-color:#185FA5}
+/* ── Action palette (command-palette style) ── */
+.action-palette-wrap{position:relative;display:flex;align-items:center;gap:4px}
+.action-trigger{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 10px;font-size:12px;border:1px solid #ddd;border-radius:3px;background:#fff;cursor:pointer;color:#666;font-family:inherit;min-width:200px;max-width:260px;transition:.15s}
+.action-trigger:hover{border-color:#185FA5;color:#333}
+.action-trigger-on{border-color:#185FA5;color:#0C447C;background:#E6F1FB}
+.action-trigger-label{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.action-trigger-arr{font-size:8px;color:#aaa;flex-shrink:0}
+.action-clear{padding:3px 7px;font-size:11px;border:1px solid #ddd;border-radius:3px;background:#fff;cursor:pointer;color:#999;font-family:inherit;line-height:1}.action-clear:hover{color:#E24B4A;border-color:#E24B4A}
+.action-palette{position:absolute;top:calc(100% + 5px);left:0;z-index:600;background:#fff;border:1px solid #e0e0e0;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.15);min-width:320px;max-width:420px;overflow:hidden}
+.ap-search-wrap{display:flex;align-items:center;gap:6px;padding:8px 12px;border-bottom:1px solid #f0f0f0;background:#fafafa}
+.ap-search-ico{font-size:12px;color:#bbb;flex-shrink:0}
+.ap-search{flex:1;border:none;outline:none;font-size:12px;font-family:inherit;color:#333;background:transparent}
+.ap-search::placeholder{color:#bbb}
+.ap-search-clr{background:none;border:none;cursor:pointer;color:#ccc;font-size:11px;padding:2px 4px;border-radius:2px}.ap-search-clr:hover{color:#666;background:#eee}
+.ap-body{max-height:340px;overflow-y:auto;padding:4px 0}
+.ap-grp-hd{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:#bbb;padding:10px 14px 3px;user-select:none}
+.ap-item{display:flex;align-items:center;gap:6px;width:100%;padding:6px 14px;font-size:12px;font-family:inherit;border:none;background:none;cursor:pointer;color:#333;text-align:left;transition:background .08s}
+.ap-item:hover{background:#E6F1FB;color:#0C447C}
+.ap-item-active{background:#E6F1FB;color:#0C447C;font-weight:600}
+.ap-item-arr{color:#d0d0d0;font-size:14px;flex-shrink:0;line-height:1}
+.ap-item:hover .ap-item-arr,.ap-item-active .ap-item-arr{color:#185FA5}
+.ap-empty{padding:20px 14px;font-size:12px;color:#bbb;text-align:center}
 .bulk-btn{padding:5px 14px;font-size:12px;font-weight:500;background:#185FA5;color:#fff;border:none;border-radius:3px;cursor:pointer;white-space:nowrap}.bulk-btn:hover{background:#0C447C}.bulk-btn:disabled{opacity:.35;cursor:not-allowed}
 .bulk-info{font-size:11px;color:#185FA5;font-family:'SF Mono',monospace}
 .bulk-clear{font-size:11px;padding:3px 10px;border:1px solid #E24B4A;border-radius:3px;background:#fff;color:#E24B4A;cursor:pointer}.bulk-clear:hover{background:#FCEBEB}
@@ -2207,7 +2260,9 @@ var loadCharge = async function() {
   .tb td{padding:8px 4px}
   .tb th{font-size:10px}
   .table-wrap{max-height:calc(100vh - 220px)}
-  .bulk-sel{min-width:0;width:100%}
+  .action-trigger{min-width:0;width:100%;max-width:100%}
+  .action-palette-wrap{width:100%}
+  .action-palette{min-width:0;width:100%;max-width:100%}
   .bulk-bar{flex-direction:column;align-items:stretch}
   .bulk-btn{width:100%;padding:10px;min-height:44px}
   .col-panel{right:auto;left:0;max-height:70vh;overflow-y:auto}
