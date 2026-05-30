@@ -20,8 +20,14 @@ ALTER TABLE operations_master ADD COLUMN IF NOT EXISTS maint_min          int;
 ALTER TABLE operations_master ADD COLUMN IF NOT EXISTS updated_at         timestamptz DEFAULT now();
 
 -- 3. Contrainte UNIQUE sur room_code pour permettre l'upsert depuis GS
-ALTER TABLE operations_master
-  ADD CONSTRAINT IF NOT EXISTS uq_opmaster_roomcode UNIQUE (room_code);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'uq_opmaster_roomcode'
+  ) THEN
+    ALTER TABLE operations_master ADD CONSTRAINT uq_opmaster_roomcode UNIQUE (room_code);
+  END IF;
+END$$;
 
 -- 4. RLS (lecture pour tous les authentifiés, écriture admin uniquement via service role)
 ALTER TABLE operations_master ENABLE ROW LEVEL SECURITY;
