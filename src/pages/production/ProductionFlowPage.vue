@@ -2416,7 +2416,7 @@ export default {
         // ── CONDITIONNEMENT → suivi_conditionnement (PDP planificateur) ──
         var eqId = node.equipement_id
         if (!eqId) {
-          var eqR = await supabase.from('equipements_conditionnement').select('id').ilike('nom_equipement','%'+node.label+'%').limit(1).maybeSingle()
+          var eqR = await supabase.from('equipements_conditionnement').select('id').ilike('nom_equipement','%'+node.nom+'%').limit(1).maybeSingle()
           if (!eqR.data) { modal.value.err = 'Équipement introuvable pour nœud '+node.code+'. Vérifier le nom dans Équipements.'; modal.value.saving=false; return }
           eqId = eqR.data.id
           await supabase.from('plan_rooms').upsert({code:node.id, equipement_id:eqId, atelier_id:null},{onConflict:'code'})
@@ -2554,7 +2554,7 @@ export default {
           .is('deleted_at', null).in('statut', ['En cours', 'Arrêt']),
         supabase.from('suivi_conditionnement')
           .select('id,lot_id,equipement_id,statut,lots(numero_lot,products(description))')
-          .is('deleted_at', null).in('statut', ['En cours', 'Arrêt']),
+          .in('statut', ['En cours', 'Arrêt']),
         supabase.from('production_sessions')
           .select('id,lot_id,equipement_id,statut,lots(numero_lot,products(description))')
           .in('statut', ['En cours', 'Arrêt']),
