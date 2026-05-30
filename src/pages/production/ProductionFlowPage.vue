@@ -2121,7 +2121,7 @@ export default {
       })
       var nodeIds = new Set()
       allNodes.value.forEach(function(n) {
-        if (roomCodes.has(n.code)) nodeIds.add(n.id)
+        if (roomCodes.has(n.id)) nodeIds.add(n.id)
       })
       return nodeIds
     })
