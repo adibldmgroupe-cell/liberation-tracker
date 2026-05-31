@@ -1,6 +1,13 @@
 <template>
-  <div>
-    <div class="ph"><span class="pt">SHIFTS & ÉQUIPES</span></div>
+  <div class="shifts-page">
+
+    <!-- ── En-tête ── -->
+    <div class="fa-header">
+      <div>
+        <div class="fa-title">🕐 Shifts & Équipes</div>
+        <div class="fa-sub">Gestion des shifts horaires et équipes de production</div>
+      </div>
+    </div>
 
     <div class="two-cols">
 
@@ -505,13 +512,11 @@ export default {
 </script>
 
 <style scoped>
-.ph{padding-bottom:10px;border-bottom:2px solid #0a0a0a;margin-bottom:16px;display:flex;align-items:baseline;gap:12px}
-.pt{font-size:11px;font-weight:500;letter-spacing:1.5px}
+.shifts-page{font-family:'Inter',sans-serif;font-size:13px;}
 .two-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.card{border:1px solid #e0e0e0;border-radius:4px;overflow:hidden}
-.card-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f8f8f8;border-bottom:1px solid #e0e0e0}
-.card-title{font-size:11px;font-weight:600;letter-spacing:.5px}
-.btn-add{font-size:11px;padding:4px 10px;background:#0a0a0a;color:#fff;border:none;border-radius:2px;cursor:pointer}
+.card{border:1px solid #e5e7eb;border-radius:8px;overflow:hidden}
+.card-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f9fafb;border-bottom:1px solid #e5e7eb}
+.card-title{font-size:12px;font-weight:700;color:#374151;letter-spacing:.3px}
 .btn-add:hover{background:#333}
 .loading{padding:16px;text-align:center;color:#999;font-size:12px}
 .empty{padding:16px;text-align:center;color:#bbb;font-size:12px}
@@ -537,8 +542,8 @@ export default {
 .equipe-nom{flex:1;font-size:13px;font-weight:500}
 
 /* Planning grid */
-.planning-grid{display:grid;grid-template-columns:140px repeat(var(--cols, 4), 1fr);border:1px solid #e0e0e0;border-radius:4px;overflow:auto;max-height:calc(100vh - 280px);font-size:11px}
-.pg-head{padding:6px 8px;background:#f5f5f5;border-bottom:2px solid #e0e0e0;border-right:1px solid #e0e0e0;font-size:10px;font-weight:600;text-align:center;position:sticky;top:0;z-index:2}
+.planning-grid{display:grid;grid-template-columns:140px repeat(var(--cols, 4), 1fr);border:1px solid #e5e7eb;border-radius:8px;overflow:auto;max-height:calc(100vh - 280px);font-size:11px}
+.pg-head{padding:8px 6px;background:#f5f3ff;border-bottom:1px solid #ede9fe;border-right:1px solid #ede9fe;font-size:10px;font-weight:700;color:#7c3aed;text-align:center;position:sticky;top:0;z-index:2}
 .pg-corner{}
 .pg-equip{text-align:center}
 .pg-eq-nom{font-size:11px;font-weight:600}
@@ -563,13 +568,13 @@ export default {
 
 /* Modal */
 .overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:100}
-.modal{background:#fff;padding:24px;width:480px;max-width:96vw;border-radius:6px;max-height:90vh;overflow-y:auto}
+.modal{background:#fff;padding:24px;width:480px;max-width:96vw;border-radius:10px;box-shadow:0 20px 50px rgba(0,0,0,.2);max-height:90vh;overflow-y:auto}
 .modal-sm{width:360px}
-.modal-hd{font-size:14px;font-weight:600;margin-bottom:14px}
-.lbl{display:block;font-size:11px;color:#666;text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px;margin-top:10px}
+.modal-hd{font-size:14px;font-weight:800;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #f3f4f6}
+.lbl{display:block;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;margin-top:10px}
 .lbl.chk{display:flex;align-items:center;gap:6px;cursor:pointer;margin-top:10px;text-transform:none;font-size:13px}
-.inp{width:100%;padding:8px 10px;border:1px solid #ddd;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit;border-radius:2px}
-.inp:focus{border-color:#185FA5}
+.inp{width:100%;padding:8px 10px;border:1px solid #e5e7eb;font-size:12px;outline:none;box-sizing:border-box;font-family:'Inter',sans-serif;border-radius:5px}
+.inp:focus{border-color:#7c3aed}
 .form-row{display:flex;gap:12px}
 .form-field{flex:1}
 .color-row{display:flex;align-items:center;gap:8px;margin-top:4px}
@@ -578,18 +583,18 @@ export default {
 .cp{width:20px;height:20px;border-radius:50%;cursor:pointer;border:2px solid transparent}
 .cp:hover{transform:scale(1.15)}
 .cp.selected{border-color:#0a0a0a}
-.assign-ctx{padding:8px 10px;background:#f5f5f5;border-radius:3px;font-size:12px;margin-bottom:8px;display:flex;flex-direction:column;gap:2px}
-.err{color:#E24B4A;font-size:12px;margin-top:8px;padding:6px 10px;background:#FEF2F2;border-radius:3px}
-.modal-acts{display:flex;gap:8px;margin-top:14px}
-.btn-save{flex:1;padding:10px;background:#185FA5;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer;border-radius:2px}
-.btn-save:hover:not(:disabled){background:#0C447C}
+.assign-ctx{padding:8px 10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:5px;font-size:12px;margin-bottom:12px;display:flex;flex-direction:column;gap:2px}
+.err{color:#ef4444;font-size:11px;margin-top:8px;padding:6px 10px;background:#fef2f2;border-radius:4px}
+.modal-acts{display:flex;gap:8px;margin-top:16px;padding-top:12px;border-top:1px solid #f3f4f6}
+.btn-save{flex:1;padding:10px;background:#7c3aed;color:#fff;border:none;font-size:12px;font-weight:600;cursor:pointer;border-radius:5px}
+.btn-save:hover:not(:disabled){background:#6d28d9}
 .btn-save:disabled{opacity:.5}
-.btn-cancel{flex:1;padding:10px;background:#f5f5f5;color:#666;border:none;font-size:13px;cursor:pointer;border-radius:2px}
+.btn-cancel{flex:1;padding:10px;background:#f5f5f5;color:#6b7280;border:1px solid #e5e7eb;font-size:12px;cursor:pointer;border-radius:5px}
 .btn-cancel:hover{background:#eee}
 
 /* Calendar view tabs */
-.cal-view-tabs{display:flex;gap:0;border:1px solid #e0e0e0;border-radius:3px;overflow:hidden}
-.cv-tab{border:none;background:#f5f5f5;color:#666;font-size:11px;font-weight:600;padding:4px 12px;cursor:pointer;border-right:1px solid #e0e0e0}
+.cal-view-tabs{display:flex;gap:0;border:1px solid #e5e7eb;border-radius:5px;overflow:hidden}
+.cv-tab{border:none;background:#f9fafb;color:#6b7280;font-size:11px;font-weight:600;padding:5px 12px;cursor:pointer;border-right:1px solid #e5e7eb}
 .cv-tab:last-child{border-right:none}
 .cv-tab.active{background:#0a0a0a;color:#fff}
 .cal-nav{display:flex;align-items:center;gap:6px;padding:8px 14px;background:#fafafa;border-bottom:1px solid #f0f0f0}
@@ -597,7 +602,7 @@ export default {
 
 /* Month grid */
 .month-grid{display:grid;grid-template-columns:repeat(7,1fr);border-left:1px solid #e8e8e8;border-top:1px solid #e8e8e8}
-.mth-head{text-align:center;font-size:10px;font-weight:700;color:#999;text-transform:uppercase;padding:6px 0;background:#f8f8f8;border-right:1px solid #e8e8e8;border-bottom:2px solid #e0e0e0;position:sticky;top:0;z-index:2}
+.mth-head{text-align:center;font-size:10px;font-weight:700;color:#7c3aed;text-transform:uppercase;padding:6px 0;background:#f5f3ff;border-right:1px solid #ede9fe;border-bottom:1px solid #ede9fe;position:sticky;top:0;z-index:2}
 .mth-cell{min-height:76px;border-right:1px solid #e8e8e8;border-bottom:1px solid #e8e8e8;padding:4px 5px;vertical-align:top;position:relative}
 .mth-cell.other-month{background:#f9f9f9}
 .mth-day-num{font-size:11px;font-weight:600;color:#555;margin-bottom:3px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;border-radius:50%}
