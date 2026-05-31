@@ -515,7 +515,7 @@ export default {
 .leg-sep { color:#d1d5db }
 
 /* Matrix container */
-.matrix-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid #e5e7eb; border-radius:8px }
+.matrix-outer { overflow-x:auto; overflow-y:auto; max-height:calc(100vh - 220px); -webkit-overflow-scrolling:touch; border:1px solid #e5e7eb; border-radius:8px }
 .matrix { border-collapse:collapse; table-layout:fixed; min-width:100% }
 
 /* Sticky top-left corner */
