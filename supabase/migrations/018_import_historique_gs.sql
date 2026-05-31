@@ -37,6 +37,14 @@ DROP POLICY IF EXISTS "delete_auth" ON notifications;
 CREATE POLICY "delete_auth" ON notifications
   FOR DELETE TO authenticated USING (true);
 
+-- 4. app_settings : policies ÉCRITURE manquantes (RLS bloquait la sauvegarde
+--    des URLs Google Sheets — gs_url Réception PF, gs_historique_url). Règle N°13.
+--    Sans ça, ImportPage et la modale Données ne peuvent pas persister l'URL
+--    (l'app retombe alors sur les URLs par défaut codées dans LotsPage).
+DROP POLICY IF EXISTS "write_auth" ON app_settings;
+CREATE POLICY "write_auth" ON app_settings
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
 -- Vérification rapide (optionnel) :
 -- SELECT conname FROM pg_constraint WHERE conname = 'uq_libdoc_lot_type';
 -- SELECT policyname, cmd FROM pg_policies WHERE tablename IN ('order_validations','notifications');

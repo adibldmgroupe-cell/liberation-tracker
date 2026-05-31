@@ -2111,6 +2111,7 @@ var loadCharge = async function() {
     watch([hiddenStatuts, columnFilters, sortCol, sortDir], function(){ tablePage.value = 0 }, {deep:true})
 
     // ── Modale Données : import GS (Réception PF + Historique) + vidage ──
+    var GS_RECEPTION_URL_DEFAULT = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vScTWm9jzHYQT2sJEZopWbjxkUYSv5LZobGsjdET0ZXKVUaRcJ3S2n-Fpo4y8br_SBWCqRFEqr2D8D7/pub?gid=20353801&single=true&output=csv'
     var GS_HISTO_URL_DEFAULT = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vScTWm9jzHYQT2sJEZopWbjxkUYSv5LZobGsjdET0ZXKVUaRcJ3S2n-Fpo4y8br_SBWCqRFEqr2D8D7/pub?gid=1271101139&single=true&output=csv'
     var showDataModal = ref(false), dataBusy = ref(false), dataProgress = ref(0), dataStats = ref(null), dataAction = ref('')
     var gsReceptionUrl = ref(''), gsHistoUrl = ref(''), confirmVider = ref(false), confirmText = ref('')
@@ -2118,7 +2119,7 @@ var loadCharge = async function() {
     var openDataModal = async function() {
       showDataModal.value = true; dataStats.value = null; confirmVider.value = false; confirmText.value = ''
       var rRec = await supabase.from('app_settings').select('value').eq('key','gs_url').maybeSingle()
-      gsReceptionUrl.value = (rRec.data && rRec.data.value) || localStorage.getItem('liberation_gs_url') || ''
+      gsReceptionUrl.value = (rRec.data && rRec.data.value) || localStorage.getItem('liberation_gs_url') || GS_RECEPTION_URL_DEFAULT
       var rHis = await supabase.from('app_settings').select('value').eq('key','gs_historique_url').maybeSingle()
       gsHistoUrl.value = (rHis.data && rHis.data.value) || GS_HISTO_URL_DEFAULT
     }
