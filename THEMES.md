@@ -1,0 +1,97 @@
+# THEMES.md — Référence des thèmes visuels
+# Liberation Tracker
+
+Chaque thème est défini par ses variables CSS dans `src/styles/themes.css`
+et appliqué via `html[data-theme="..."]`.
+
+Le thème actif est persisté dans `localStorage` (`tracking_theme`)
+et géré par `src/composables/useTheme.js`.
+
+---
+
+## ☀️ Jour — `data-theme="day"`
+
+> Référence : AdminRefPage / AdminFluxPage
+
+| Variable | Valeur | Rôle |
+|---|---|---|
+| `--th-bg` | `#ffffff` | Fond principal |
+| `--th-bg2` | `#f9fafb` | Fond secondaire (inputs, tableaux) |
+| `--th-bg3` | `#f3f4f6` | Fond tertiaire (hover, sections) |
+| `--th-border` | `#e5e7eb` | Bordures |
+| `--th-text` | `#111827` | Texte principal |
+| `--th-text2` | `#6b7280` | Texte secondaire |
+| `--th-text3` | `#9ca3af` | Labels discrets |
+| `--th-input-bg` | `#ffffff` | Fond inputs |
+| `--th-topbar` | `#ffffff` | Fond topbar / header |
+| `--th-sidebar` | `#0a0a0a` | Fond sidebar |
+| `--th-accent` | `#185FA5` | Accent principal (bleu) |
+
+**Police :** `-apple-system, BlinkMacSystemFont, 'Inter', sans-serif`
+**Taille de base :** `13px`
+
+---
+
+## 🌙 Deep-Night — `data-theme="night"`
+
+> Référence : ProductionFlowPage (SCHÉMA FLUX PRODUCTION) — mode nuit base
+
+| Variable | Valeur | Rôle |
+|---|---|---|
+| `--th-bg` | `#0a0a1e` | Fond principal |
+| `--th-bg2` | `#12122a` | Fond secondaire (panneaux, inputs) |
+| `--th-bg3` | `#1a1a3e` | Fond tertiaire (hover, dropdowns) |
+| `--th-border` | `#2a2a4a` | Bordures |
+| `--th-text` | `#e2e8f0` | Texte principal |
+| `--th-text2` | `#9ca3af` | Texte secondaire |
+| `--th-text3` | `#4b5563` | Labels discrets |
+| `--th-input-bg` | `#12122a` | Fond inputs |
+| `--th-topbar` | `#0f0f23` | Fond topbar / header |
+| `--th-sidebar` | `#07071a` | Fond sidebar |
+| `--th-accent` | `#7c7cff` | Accent principal (violet électrique) |
+| `--th-font` | `'Inter', sans-serif` | Police |
+| `--th-font-size` | `13px` | Taille de base |
+
+**Accents secondaires (hardcodés) :**
+| Usage | Valeur |
+|---|---|
+| Bouton action principal (save, add) | `#7c3aed` |
+| Bouton action hover | `#6d28d9` |
+| Focus input / accent fort | `#7c7cff` |
+| Succès / sessions actives | `#10b981` |
+| Erreur | `#ef4444` |
+| Avertissement | `#f59e0b` |
+
+**Pages couvertes :**
+- ✅ AdminRefPage (barre d'onglets)
+- ✅ ProductsCatalogPage
+- ✅ AdminAteliersPage
+- ✅ AdminFluxPage
+- ✅ AdminShiftsPage
+- ✅ AdminArretTypesPage
+
+---
+
+## 🏭 Workshop — `data-theme="workshop"`
+
+> Référence : PdpProductionPage — `[data-theme="workshop"]`
+> *(à valider)*
+
+| Variable | Valeur | Rôle |
+|---|---|---|
+| `--th-bg` | `#161616` | Fond principal |
+| `--th-bg2` | `#1e1e1e` | Fond secondaire |
+| `--th-bg3` | `#252525` | Fond tertiaire |
+| `--th-border` | `#2a2a2a` | Bordures |
+| `--th-text` | `#f0f0f0` | Texte principal |
+| `--th-text2` | `#aaaaaa` | Texte secondaire |
+| `--th-text3` | `#666666` | Labels discrets |
+| `--th-input-bg` | `#1e1e1e` | Fond inputs |
+| `--th-topbar` | `#1a1a1a` | Fond topbar / header |
+| `--th-sidebar` | `#111111` | Fond sidebar |
+| `--th-accent` | `#ff9800` | Accent principal (orange) |
+
+**Police :** à définir lors de la validation
+**Taille de base :** à définir lors de la validation
+
+**Pages couvertes :** *(à faire)*
