@@ -53,7 +53,7 @@ et géré par `src/composables/useTheme.js`.
 **Pages couvertes (layout + couleurs validés) :**
 - ✅ AdminRefPage (barre d'onglets)
 - ✅ ProductsCatalogPage — layout restructuré pattern AdminFluxPage
-- ⏳ AdminAteliersPage
+- ✅ AdminAteliersPage — layout restructuré ✅
 - ⏳ AdminFluxPage (référence, déjà correct)
 - ⏳ AdminShiftsPage
 - ⏳ AdminArretTypesPage
