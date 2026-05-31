@@ -401,6 +401,43 @@ Quand une page est restructurée pour adopter le pattern AdminFluxPage, **tous l
 - [ ] Tous les `.card-hd` → `#f5f3ff / #7c3aed`
 - [ ] Tous les `.col-hd`, `.pg-head`, `.mth-head` → `#f5f3ff / #7c3aed`
 - [ ] Grep `themes.css` pour chaque classe modifiée (règle N°16 ci-dessous)
+- [ ] **Badges de statut/rôle** : toujours ajouter les overrides night/workshop (voir règle N°15c)
+
+---
+
+## RÈGLE N°15c — Badges de statut/rôle : toujours override dark
+
+Les couleurs pastel day (`#d1fae5`, `#fef3c7`, `#EAF3DE`, `#E6F1FB`…) **sont fluorescentes
+sur fond sombre**. Tout badge de statut ou de rôle doit avoir ses overrides night/workshop.
+
+### Pattern obligatoire pour tout badge coloré
+
+```css
+/* Day (scoped CSS) — pastel */
+.badge-vert  { background: #d1fae5; color: #065f46; }
+.badge-amber { background: #fef3c7; color: #92400e; }
+.badge-bleu  { background: #ede9fe; color: #7c3aed; }
+
+/* Night + Workshop (themes.css) — obligatoire */
+html[data-theme="night"] .badge-vert,
+html[data-theme="workshop"] .badge-vert  { background: rgba(52,211,153,.1); color: #6ee7b7; }
+
+html[data-theme="night"] .badge-amber,
+html[data-theme="workshop"] .badge-amber { background: rgba(251,191,36,.12); color: #fbbf24; }
+
+html[data-theme="night"] .badge-bleu,
+html[data-theme="workshop"] .badge-bleu  { background: var(--th-bg3); color: var(--th-accent); }
+```
+
+### Palette dark pour les couleurs sémantiques
+
+| Couleur day | Night/Workshop fond | Night/Workshop texte |
+|---|---|---|
+| Vert (`#d1fae5`) | `rgba(52,211,153,.10)` | `#6ee7b7` |
+| Amber/jaune (`#fef3c7`) | `rgba(251,191,36,.12)` | `#fbbf24` |
+| Rouge (`#FCEBEB`) | `rgba(239,68,68,.12)` | `#fca5a5` |
+| Violet (`#ede9fe`) | `var(--th-bg3)` | `var(--th-accent)` |
+| Neutre (`#f3f4f6`) | `var(--th-bg3)` | `var(--th-text2)` |
 
 ---
 
