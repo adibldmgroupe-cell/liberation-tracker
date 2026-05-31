@@ -1,31 +1,26 @@
 <template>
-  <div>
-    <div class="ph">
+  <div class="products-catalog">
+
+    <!-- ── En-tête ── -->
+    <div class="fa-header">
       <div>
-        <div class="pt">Catalogue Produits Finis</div>
-        <div class="ps">{{ products.length }} produit(s) au total · {{ filtered.length }} affiché(s)</div>
+        <div class="fa-title">🗃 Catalogue Produits Finis</div>
+        <div class="fa-sub">{{ products.length }} produit(s) au total · {{ filtered.length }} affiché(s)</div>
       </div>
-      <div class="ph-actions">
-        <input v-model="searchQ" class="search-inp" placeholder="Rechercher code, description, DCI…" />
-        <button class="btn bg" @click="openCreate">+ Nouveau produit</button>
+      <div class="fa-actions">
+        <button class="fa-btn-gs-reload" :disabled="!gsUrl || gsImporting" @click="importFromGs">
+          <span v-if="gsImporting">⟳ Import… {{ gsProgress }}%</span>
+          <span v-else>🔄 Actualiser le catalogue</span>
+        </button>
+        <button class="fa-btn-gs-reload" @click="showGsConfig=!showGsConfig">{{ showGsConfig ? '▲ Config' : '⚙ Config GS' }}</button>
       </div>
     </div>
 
-    <!-- Import Google Sheets -->
-    <div class="gs-bar">
-      <div class="gs-bar-left">
-        <span class="gs-icon">🔗</span>
-        <span class="gs-label">Google Sheets PF</span>
-        <span v-if="gsUrl" class="gs-url-hint">{{ gsUrl.slice(0, 60) }}…</span>
-        <button class="gs-url-btn" @click="showGsConfig=!showGsConfig">{{ showGsConfig ? '▲' : '⚙' }}</button>
-      </div>
-      <button class="gs-import-btn" :disabled="!gsUrl || gsImporting" @click="importFromGs">
-        <span v-if="gsImporting">⟳ Import… {{ gsProgress }}%</span>
-        <span v-else>🔄 Actualiser le catalogue</span>
-      </button>
-    </div>
-
-    <div v-if="showGsConfig" class="gs-config">
+    <!-- Config Google Sheets -->
+    <div v-if="showGsConfig" class="gs-bar">
+      <span class="gs-icon">🔗</span>
+      <span class="gs-label">Google Sheets PF</span>
+      <span v-if="gsUrl" class="gs-url-hint">{{ gsUrl.slice(0, 60) }}…</span>
       <input v-model="gsUrl" class="gs-url-inp" type="url" placeholder="URL CSV Google Sheets" @change="saveGsUrl" />
     </div>
 
@@ -38,6 +33,17 @@
       <span class="gs-stat u">{{ gsStats.updated }} mis à jour</span>
       <span v-if="gsStats.errors.length" class="gs-stat e">{{ gsStats.errors.length }} erreur(s)</span>
       <span class="gs-stat-close" @click="gsStats=null">✕</span>
+    </div>
+
+    <!-- ── Toolbar ── -->
+    <div class="tb-toolbar">
+      <div class="tb-search-wrap">
+        <span class="ts-icon">🔍</span>
+        <input v-model="searchQ" class="tb-search" placeholder="Rechercher code, description, DCI…" />
+      </div>
+      <div class="tb-filters">
+        <button class="tb-btn-add" @click="openCreate">+ Nouveau produit</button>
+      </div>
     </div>
 
     <div v-if="loading" class="em">Chargement…</div>
@@ -85,56 +91,52 @@
     <div class="overlay" v-if="showModal" @click.self="showModal=false">
       <div class="modal">
         <div class="mt">{{ isEdit ? 'Modifier le produit' : 'Nouveau produit' }}</div>
-
-        <div class="fg">
-          <div class="fi">
-            <label>Code article <span class="req">*</span></label>
-            <input v-model="form.code_article" class="inp" placeholder="Ex : PFABB02" :disabled="isEdit" />
+        <div class="modal-body-inner">
+          <div class="fg">
+            <div class="fi">
+              <label>Code article <span class="req">*</span></label>
+              <input v-model="form.code_article" class="inp" placeholder="Ex : PFABB02" :disabled="isEdit" />
+            </div>
+            <div class="fi">
+              <label>Groupe d'article</label>
+              <input v-model="form.groupe_article" class="inp" placeholder="Ex : MD.PF-Médicament" />
+            </div>
           </div>
           <div class="fi">
-            <label>Groupe d'article</label>
-            <input v-model="form.groupe_article" class="inp" placeholder="Ex : MD.PF-Médicament" />
+            <label>Description <span class="req">*</span></label>
+            <input v-model="form.description" class="inp" placeholder="Ex : LIPANTHYL® 160mg COM PELLI B/30" />
           </div>
+          <div class="fg">
+            <div class="fi">
+              <label>DCI</label>
+              <input v-model="form.dci" class="inp" placeholder="Ex : Fenofibrate" />
+            </div>
+            <div class="fi">
+              <label>Code DCI</label>
+              <input v-model="form.code_dci" class="inp" placeholder="Ex : 06M214" />
+            </div>
+          </div>
+          <div class="fg">
+            <div class="fi">
+              <label>Durée de vie (mois)</label>
+              <input v-model="form.duree_vie" class="inp" placeholder="Ex : 24" type="number" />
+            </div>
+            <div class="fi">
+              <label>Fabricant</label>
+              <input v-model="form.fabricant" class="inp" placeholder="Ex : PRODUCTION ABBOTT" />
+            </div>
+          </div>
+          <div class="fg">
+            <div class="fi">
+              <label>Colisage (boîtes/colis)</label>
+              <input v-model="form.quantite_par_colis" class="inp" placeholder="Ex : 30" type="number" min="1" />
+            </div>
+          </div>
+          <div class="merr" v-if="formErr">{{ formErr }}</div>
         </div>
-
-        <div class="fi">
-          <label>Description <span class="req">*</span></label>
-          <input v-model="form.description" class="inp" placeholder="Ex : LIPANTHYL® 160mg COM PELLI B/30" />
-        </div>
-
-        <div class="fg">
-          <div class="fi">
-            <label>DCI</label>
-            <input v-model="form.dci" class="inp" placeholder="Ex : Fenofibrate" />
-          </div>
-          <div class="fi">
-            <label>Code DCI</label>
-            <input v-model="form.code_dci" class="inp" placeholder="Ex : 06M214" />
-          </div>
-        </div>
-
-        <div class="fg">
-          <div class="fi">
-            <label>Durée de vie (mois)</label>
-            <input v-model="form.duree_vie" class="inp" placeholder="Ex : 24" type="number" />
-          </div>
-          <div class="fi">
-            <label>Fabricant</label>
-            <input v-model="form.fabricant" class="inp" placeholder="Ex : PRODUCTION ABBOTT" />
-          </div>
-        </div>
-
-        <div class="fg">
-          <div class="fi">
-            <label>Colisage (boîtes/colis)</label>
-            <input v-model="form.quantite_par_colis" class="inp" placeholder="Ex : 30" type="number" min="1" />
-          </div>
-        </div>
-
-        <div class="merr" v-if="formErr">{{ formErr }}</div>
         <div class="ma">
-          <button class="btn bg" @click="submitForm" :disabled="saving">{{ saving ? '…' : isEdit ? 'Enregistrer' : 'Créer le produit' }}</button>
-          <button class="btn bc2" @click="showModal=false">Annuler</button>
+          <button class="tb-btn-add" @click="submitForm" :disabled="saving">{{ saving ? '…' : isEdit ? 'Enregistrer' : 'Créer le produit' }}</button>
+          <button class="bc2" @click="showModal=false">Annuler</button>
         </div>
       </div>
     </div>
@@ -371,26 +373,17 @@ export default {
 </script>
 
 <style scoped>
-.ph { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:12px; flex-wrap:wrap }
-.pt { font-size:11px; font-weight:500; letter-spacing:1.5px; text-transform:uppercase }
-.ps { font-size:12px; color:#999; margin-top:3px }
-.ph-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap }
-.search-inp { font-size:12px; padding:6px 10px; border:1px solid #ddd; border-radius:2px; outline:none; width:220px; font-family:inherit }
-.search-inp:focus { border-color:#185FA5 }
+.products-catalog { font-family: 'Inter', sans-serif; }
+.fa-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex-shrink:0; }
 
 /* Google Sheets bar */
-.gs-bar { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 14px; background:#f7fbff; border:1px solid #d0e4f8; border-radius:4px; margin-bottom:4px; flex-wrap:wrap }
+.gs-bar { display:flex; align-items:center; gap:10px; padding:8px 14px; background:#f7fbff; border:1px solid #d0e4f8; border-radius:6px; margin-bottom:12px; flex-wrap:wrap }
 .gs-bar-left { display:flex; align-items:center; gap:8px; min-width:0; flex:1 }
 .gs-icon { font-size:15px; flex-shrink:0 }
-.gs-label { font-size:12px; font-weight:600; color:#0C447C; white-space:nowrap }
-.gs-url-hint { font-size:11px; color:#aaa; font-family:'SF Mono',monospace; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0 }
-.gs-url-btn { border:none; background:none; color:#185FA5; cursor:pointer; font-size:13px; padding:2px 6px; flex-shrink:0 }
-.gs-import-btn { font-size:12px; font-weight:600; padding:8px 16px; background:#185FA5; color:#fff; border:none; border-radius:3px; cursor:pointer; white-space:nowrap; font-family:inherit; flex-shrink:0 }
-.gs-import-btn:hover:not(:disabled) { background:#0C447C }
-.gs-import-btn:disabled { opacity:.5; cursor:default }
-.gs-config { padding:8px 14px; background:#f0f5fb; border:1px solid #d0e4f8; border-top:none; border-radius:0 0 4px 4px; margin-bottom:4px }
-.gs-url-inp { width:100%; font-size:12px; font-family:'SF Mono',monospace; border:1px solid #c0d8f0; border-radius:3px; padding:7px 10px; outline:none; box-sizing:border-box }
-.gs-url-inp:focus { border-color:#185FA5 }
+.gs-label { font-size:12px; font-weight:600; color:#6b7280; white-space:nowrap }
+.gs-url-hint { font-size:11px; color:#9ca3af; font-family:'SF Mono',monospace; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex:1 }
+.gs-url-inp { font-size:12px; font-family:'SF Mono',monospace; border:1px solid #d1d5db; border-radius:5px; padding:6px 10px; outline:none; box-sizing:border-box; min-width:300px; flex:1 }
+.gs-url-inp:focus { border-color:#7c3aed }
 .gs-prog-bar { height:3px; background:#ddeefa; border-radius:2px; overflow:hidden; margin-bottom:8px }
 .gs-prog-fill { height:100%; background:#185FA5; transition:width .3s }
 .gs-result { display:flex; align-items:center; gap:12px; padding:8px 14px; background:#f0f8f0; border:1px solid #c8e8c8; border-radius:3px; margin-bottom:10px; font-size:12px }
@@ -400,17 +393,15 @@ export default {
 .gs-stat.e { color:#E24B4A }
 .gs-stat-close { margin-left:auto; cursor:pointer; color:#999; font-size:14px }
 
-.btn { font-size:12px; padding:7px 16px; border:none; border-radius:2px; cursor:pointer; font-weight:500; font-family:inherit }
-.bg { background:#1D9E75; color:#fff }
-.bg:hover { background:#168a64 }
-.bc2 { background:#f5f5f5; color:#666; border:1px solid #e8e8e8 }
-.btn-sm { font-size:11px; padding:3px 10px; border:1px solid #ddd; border-radius:2px; background:#fff; cursor:pointer; font-family:inherit }
+.bc2 { padding:7px 16px; background:#f5f5f5; color:#666; border:1px solid #e5e7eb; border-radius:5px; font-size:12px; cursor:pointer; font-family:'Inter',sans-serif; }
+.bc2:hover { background:#eee }
+.btn-sm { font-size:11px; padding:3px 10px; border:1px solid #e5e7eb; border-radius:4px; background:#fff; cursor:pointer; font-family:'Inter',sans-serif; }
 .btn-sm:hover { background:#f5f5f5 }
 
-.em { text-align:center; padding:40px; color:#999; font-size:13px }
-.table-wrap { overflow-x:auto; overflow-y:auto; max-height:calc(100vh - 220px); border:1px solid #e8e8e8; border-radius:2px; margin-top:8px }
-.pt-table { width:100%; border-collapse:collapse; font-size:13px }
-.pt-table th { text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.5px; color:#999; padding:8px 10px; border-bottom:2px solid #e8e8e8; font-weight:500; white-space:nowrap; background:#fafafa; position:sticky; top:0; z-index:2 }
+.em { text-align:center; padding:40px; color:#9ca3af; font-size:13px }
+.table-wrap { overflow-x:auto; overflow-y:auto; max-height:calc(100vh - 260px); border:1px solid #e5e7eb; border-radius:8px; margin-top:0 }
+.pt-table { width:100%; border-collapse:collapse; font-size:12px }
+.pt-table th { text-align:left; font-size:11px; font-weight:700; letter-spacing:.3px; text-transform:uppercase; color:#6b7280; padding:10px 12px; border-bottom:1px solid #e5e7eb; white-space:nowrap; background:#f9fafb; position:sticky; top:0; z-index:2 }
 .pt-table td { padding:9px 10px; border-bottom:1px solid #f5f5f5; vertical-align:middle }
 .pt-table tr:last-child td { border-bottom:none }
 .pt-table tr:hover td { background:#fafbfd }
@@ -424,25 +415,22 @@ export default {
 .toff { background:#f5f5f5; color:#999 }
 
 /* Modal */
-.overlay { position:fixed; inset:0; background:rgba(0,0,0,.35); display:flex; align-items:center; justify-content:center; z-index:100; padding:16px }
-.modal { background:#fff; border-radius:4px; padding:24px; width:100%; max-width:520px; max-height:90vh; overflow-y:auto }
-.mt { font-size:15px; font-weight:600; margin-bottom:18px }
+.overlay { position:fixed; inset:0; background:rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; z-index:100; padding:16px }
+.modal { background:#fff; border-radius:10px; box-shadow:0 20px 50px rgba(0,0,0,.2); width:100%; max-width:520px; max-height:90vh; overflow-y:auto; display:flex; flex-direction:column; }
+.mt { font-size:14px; font-weight:800; padding:16px 20px 12px; border-bottom:1px solid #f3f4f6; }
 .fg { display:grid; grid-template-columns:1fr 1fr; gap:12px }
-.fi { display:flex; flex-direction:column; gap:5px; margin-bottom:12px }
-.fi label { font-size:11px; font-weight:500; color:#666; text-transform:uppercase; letter-spacing:.5px }
+.fi { display:flex; flex-direction:column; gap:4px; }
+.fi label { font-size:10px; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:1px }
+.modal-body-inner { padding:16px 20px; display:flex; flex-direction:column; gap:4px; }
 .req { color:#E24B4A }
-.inp { font-size:13px; padding:8px 10px; border:1px solid #ddd; border-radius:2px; outline:none; font-family:inherit }
-.inp:focus { border-color:#185FA5 }
-.inp:disabled { background:#f5f5f5; color:#999; cursor:not-allowed }
-.merr { font-size:12px; color:#E24B4A; margin-bottom:10px }
-.ma { display:flex; gap:8px; margin-top:4px }
+.inp { font-size:12px; padding:8px 10px; border:1px solid #e5e7eb; border-radius:5px; outline:none; font-family:'Inter',sans-serif; width:100%; box-sizing:border-box; }
+.inp:focus { border-color:#7c3aed }
+.inp:disabled { background:#f5f5f5; color:#9ca3af; cursor:not-allowed }
+.merr { font-size:11px; color:#ef4444; background:#fef2f2; padding:6px 10px; border-radius:4px; }
+.ma { display:flex; gap:8px; padding:12px 20px; border-top:1px solid #f3f4f6; }
 
 @media (max-width:640px) {
-  .ph { flex-direction:column }
-  .ph-actions { width:100% }
-  .search-inp { width:100%; flex:1 }
   .gs-bar { flex-direction:column; align-items:stretch }
-  .gs-import-btn { width:100%; padding:12px; font-size:13px }
   .gs-url-hint { display:none }
   .fg { grid-template-columns:1fr }
   .pt-table th:nth-child(3), .pt-table td:nth-child(3),
