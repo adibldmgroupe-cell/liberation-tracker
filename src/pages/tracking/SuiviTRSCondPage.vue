@@ -231,18 +231,18 @@ export default {
 .sc-clôturé, .sc-cloture { background:#30303055; color:#9090b8; }
 .sc-arrêt, .sc-arret { background:#7f1d1d33; color:#f87171; }
 /* JOUR */
-.pdpc[data-theme="day"] { background:#f0f2f5; color:#1a1a2e; }
-.pdpc[data-theme="day"] .ph { border-bottom-color:#d8dce8; }
-.pdpc[data-theme="day"] .pt { color:#5a5a8a; }
-.pdpc[data-theme="day"] .stab { background:#e4e7f0; color:#555; border-color:#c8ccd8; }
-.pdpc[data-theme="day"] .stab.active { background:#1e3a6e; color:#fff; border-color:#1e3a6e; }
-.pdpc[data-theme="day"] .btn-ref { background:#e4e7f0; color:#666; border-color:#c8ccd8; }
-.pdpc[data-theme="day"] .t-srch { background:#fff; color:#1a1a2e; border-color:#c8ccd8; }
-.pdpc[data-theme="day"] .t-sel { background:#fff; color:#1a1a2e; border-color:#c8ccd8; }
-.pdpc[data-theme="day"] .dt-wrap { border-color:#d8dce8; }
-.pdpc[data-theme="day"] .dt th { background:#e8eaf0; color:#5a5a8a; border-bottom-color:#c8ccd8; }
-.pdpc[data-theme="day"] .dt td { border-bottom-color:#e8eaf0; color:#2a2a4e; }
-.pdpc[data-theme="day"] .dt tr:hover td { background:#f5f5ff; }
+.pdpc[data-theme="day"] { background:#ffffff; color:#1a1a2e; }
+.pdpc[data-theme="day"] .ph { border-bottom-color:#ede9fe; }
+.pdpc[data-theme="day"] .pt { color:#7c3aed; }
+.pdpc[data-theme="day"] .stab { background:#f9fafb; color:#6b7280; border-color:#e5e7eb; }
+.pdpc[data-theme="day"] .stab.active { background:#7c3aed; color:#fff; border-color:#7c3aed; }
+.pdpc[data-theme="day"] .btn-ref { background:#f9fafb; color:#6b7280; border-color:#e5e7eb; }
+.pdpc[data-theme="day"] .t-srch { background:#fff; color:#1a1a2e; border-color:#e5e7eb; }
+.pdpc[data-theme="day"] .t-sel { background:#fff; color:#1a1a2e; border-color:#e5e7eb; }
+.pdpc[data-theme="day"] .dt-wrap { border-color:#e5e7eb; }
+.pdpc[data-theme="day"] .dt th { background:#f5f3ff; color:#7c3aed; border-bottom-color:#ede9fe; }
+.pdpc[data-theme="day"] .dt td { border-bottom-color:#f3f4f6; color:#374151; }
+.pdpc[data-theme="day"] .dt tr:hover td { background:#faf5ff; }
 /* ATELIER */
 .pdpc[data-theme="workshop"] { background:#0d1117; color:#cdd9e5; }
 .pdpc[data-theme="workshop"] .ph { border-bottom-color:#30363d; }

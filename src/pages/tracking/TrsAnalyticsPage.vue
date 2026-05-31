@@ -27,10 +27,10 @@ export default {
 .wip { padding:40px; text-align:center; color:#4a4a70; font-size:14px; border:1px dashed #252545; border-radius:4px; }
 
 /* ── JOUR ── */
-.analytics[data-theme="day"] { background:#f0f2f5; color:#1a1a2e; }
-.analytics[data-theme="day"] .ph { border-bottom-color:#d8dce8; }
-.analytics[data-theme="day"] .pt { color:#5a5a8a; }
-.analytics[data-theme="day"] .wip { color:#bbb; border-color:#ddd; }
+.analytics[data-theme="day"] { background:#ffffff; color:#1a1a2e; }
+.analytics[data-theme="day"] .ph { border-bottom-color:#ede9fe; }
+.analytics[data-theme="day"] .pt { color:#7c3aed; }
+.analytics[data-theme="day"] .wip { color:#bbb; border-color:#ede9fe; }
 
 /* ── ATELIER ── */
 .analytics[data-theme="workshop"] { background:#161616; color:#f0f0f0; }
