@@ -243,6 +243,11 @@ export default {
 .pdpc[data-theme="day"] .dt th { background:#f5f3ff; color:#7c3aed; border-bottom-color:#ede9fe; }
 .pdpc[data-theme="day"] .dt td { border-bottom-color:#f3f4f6; color:#374151; }
 .pdpc[data-theme="day"] .dt tr:hover td { background:#faf5ff; }
+.pdpc[data-theme="day"] .sc-en-cours { background:#d1fae5; color:#065f46; }
+.pdpc[data-theme="day"] .sc-clôturé,
+.pdpc[data-theme="day"] .sc-cloture  { background:#f3f4f6; color:#6b7280; }
+.pdpc[data-theme="day"] .sc-arrêt,
+.pdpc[data-theme="day"] .sc-arret   { background:#fee2e2; color:#dc2626; }
 /* ATELIER */
 .pdpc[data-theme="workshop"] { background:#0d1117; color:#cdd9e5; }
 .pdpc[data-theme="workshop"] .ph { border-bottom-color:#30363d; }
