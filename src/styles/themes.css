@@ -1144,3 +1144,15 @@ html[data-theme="night"] .btn-cancel,
 html[data-theme="workshop"] .btn-cancel { background: var(--th-bg2); border-color: var(--th-border); color: var(--th-text2); }
 html[data-theme="night"] .btn-reset,
 html[data-theme="workshop"] .btn-reset { background: var(--th-bg2); border-color: var(--th-border); color: var(--th-text2); }
+
+/* ── AdminUsersPage — badges rôle/statut atténués ────────────── */
+html[data-theme="night"] .rb-admin,
+html[data-theme="workshop"] .rb-admin { background: rgba(251,191,36,.12); color: #fbbf24; }
+html[data-theme="night"] .rb-responsable,
+html[data-theme="workshop"] .rb-responsable { background: rgba(52,211,153,.1); color: #6ee7b7; }
+html[data-theme="night"] .rb-operateur,
+html[data-theme="workshop"] .rb-operateur { background: var(--th-bg3); color: var(--th-text2); }
+html[data-theme="night"] .ton,
+html[data-theme="workshop"] .ton { background: rgba(52,211,153,.1); color: #6ee7b7; }
+html[data-theme="night"] .toff,
+html[data-theme="workshop"] .toff { background: var(--th-bg3); color: var(--th-text3); }
