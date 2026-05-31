@@ -522,7 +522,8 @@ export default {
           reglage_min:      r.reglage_lancement_min,
           micro_arrets_min: r.micro_arrets_shift_min,
           maint_min:        r.maint_curative_shift_min,
-          op_number:        r.op_number,
+          // op_number exclu volontairement : géré par migration 008, pas par le GS
+          // (les numéros SAP du GS sont spécifiques machines et cassent le groupement du tableau croisé)
           op_code:          r.op_code || null,
           equipment_name:   r.equipment_name || null
         }
