@@ -365,6 +365,20 @@ SELECT policyname, cmd FROM pg_policies WHERE tablename = 'ma_table';
 
 ---
 
+## RÈGLE N°14 — Jamais d'agent pour lire des fichiers
+
+Pour lire des fichiers, extraire du CSS, chercher des patterns → **toujours utiliser `Grep` ou `Read` directement**, jamais un agent `Explore` ou `general-purpose`.
+
+| Tâche | Outil correct | À éviter |
+|---|---|---|
+| Extraire couleurs CSS d'un fichier | `Grep pattern="#[0-9a-fA-F]{3,6}"` | Agent Explore |
+| Lire une section d'un fichier | `Read offset=X limit=Y` | Agent |
+| Chercher une classe dans le code | `Grep pattern=".ma-classe"` | Agent |
+
+**Pourquoi :** un agent pour une lecture simple coûte 50-150k tokens vs 2-5k pour un Grep. Résultat identique, coût 30× supérieur. Un agent se justifie uniquement pour du raisonnement multi-étapes ou des décisions conditionnelles complexes.
+
+---
+
 ## Déploiement
 
 - Push sur `main` → GitHub Actions build + deploy GitHub Pages automatiquement
