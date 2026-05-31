@@ -74,22 +74,6 @@
         </table>
       </div>
 
-      <!-- ── BARRE SÉLECTION MULTIPLE ── -->
-      <transition name="bulk-slide">
-        <div class="bulk-assign-bar" v-if="selectedRows.length">
-          <span class="ba-count">{{selectedRows.length}} produit(s) sélectionné(s)</span>
-          <select v-model="bulkRoom" class="ba-sel">
-            <option :value="null">— Choisir une machine —</option>
-            <optgroup v-for="g in machineColGroups" :key="g.op_number" :label="g.op_number+' — '+g.label">
-              <option v-for="r in g.rooms" :key="r.code" :value="r">{{r.nom}}</option>
-            </optgroup>
-          </select>
-          <button class="ba-btn ba-on" :disabled="!bulkRoom" @click="bulkAssign(true)">✓ Cocher</button>
-          <button class="ba-btn ba-off" :disabled="!bulkRoom" @click="bulkAssign(false)">✕ Décocher</button>
-          <button class="ba-clear" @click="selectedRows=[]">✕ Tout désélectionner</button>
-        </div>
-      </transition>
-
       <!-- ── VUE FICHES ── -->
       <div class="products-grid" v-else>
         <div class="prod-card" v-for="p in filteredProducts" :key="p.product_code">
@@ -130,6 +114,22 @@
         </div>
       </div>
     </div>
+
+    <!-- ── BARRE SÉLECTION MULTIPLE (fixe en bas) ── -->
+    <transition name="bulk-slide">
+      <div class="bulk-assign-bar" v-if="selectedRows.length">
+        <span class="ba-count">{{selectedRows.length}} produit(s) sélectionné(s)</span>
+        <select v-model="bulkRoom" class="ba-sel">
+          <option :value="null">— Choisir une machine —</option>
+          <optgroup v-for="g in machineColGroups" :key="g.op_number" :label="g.op_number+' — '+g.label">
+            <option v-for="r in g.rooms" :key="r.code" :value="r">{{r.nom}}</option>
+          </optgroup>
+        </select>
+        <button class="ba-btn ba-on" :disabled="!bulkRoom" @click="bulkAssign(true)">✓ Cocher</button>
+        <button class="ba-btn ba-off" :disabled="!bulkRoom" @click="bulkAssign(false)">✕ Décocher</button>
+        <button class="ba-clear" @click="selectedRows=[]">✕ Tout désélectionner</button>
+      </div>
+    </transition>
 
     <!-- ── MODAL ÉTAPE FLUX ── -->
     <div class="modal-overlay" v-if="stepModal.open" @click.self="stepModal.open=false">
