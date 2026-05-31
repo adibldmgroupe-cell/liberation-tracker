@@ -1271,6 +1271,7 @@ html[data-theme="night"] .ap-acc-hd:hover, html[data-theme="workshop"] .ap-acc-h
 html[data-theme="night"] .dev-pop-acc-hd:hover, html[data-theme="workshop"] .dev-pop-acc-hd:hover { background: var(--th-bg3); color: var(--th-accent); }
 html[data-theme="night"] .ap-item:hover, html[data-theme="workshop"] .ap-item:hover,
 html[data-theme="night"] .ap-item-active, html[data-theme="workshop"] .ap-item-active { background: var(--th-bg3); color: var(--th-accent); }
+html[data-theme="night"] .ap-acc-cnt, html[data-theme="workshop"] .ap-acc-cnt { background: var(--th-bg3); color: var(--th-text); }
 
 /* Sous-fonds clairs internes (#fafafa/#f0f0f0 → bg3) */
 html[data-theme="night"] .ap-search-wrap, html[data-theme="workshop"] .ap-search-wrap,

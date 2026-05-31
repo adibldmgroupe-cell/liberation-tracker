@@ -2258,7 +2258,7 @@ var loadCharge = async function() {
 .ap-acc-hd:hover{background:#f5f3ff;color:#7c3aed}
 .ap-acc-chevron{font-size:12px;color:#aaa;flex-shrink:0;width:12px}
 .ap-acc-label{flex:1}
-.ap-acc-cnt{font-size:10px;color:#bbb;background:#f0f0f0;border-radius:8px;padding:1px 6px;font-weight:400}
+.ap-acc-cnt{font-size:10px;color:#6d28d9;background:#ede9fe;border-radius:8px;padding:1px 6px;font-weight:600}
 .ap-acc-items{padding:0 0 4px 0;background:#faf5ff}
 .bulk-btn{padding:5px 14px;font-size:12px;font-weight:500;background:#7c3aed;color:#fff;border:none;border-radius:3px;cursor:pointer;white-space:nowrap}.bulk-btn:hover{background:#6d28d9}.bulk-btn:disabled{opacity:.35;cursor:not-allowed}
 .bulk-info{font-size:11px;color:#7c3aed;font-family:'SF Mono',monospace}
