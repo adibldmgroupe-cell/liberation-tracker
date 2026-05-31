@@ -379,7 +379,32 @@ Pour lire des fichiers, extraire du CSS, chercher des patterns → **toujours ut
 
 ---
 
-## RÈGLE N°15 — Cohérence scoped CSS ↔ themes.css
+## RÈGLE N°15 — Checklist restructuration au pattern AdminFluxPage
+
+Quand une page est restructurée pour adopter le pattern AdminFluxPage, **tous les éléments
+"header" doivent être mis en violet immédiatement** — ne jamais laisser un gris par défaut.
+
+### Palette violet AdminFluxPage (à appliquer partout)
+
+| Élément | background | color | border |
+|---|---|---|---|
+| En-têtes tableau `th` | `#f5f3ff` | `#7c3aed` | `1px solid #ede9fe` |
+| En-têtes cards `.card-hd` | `#f5f3ff` | `#7c3aed` | `1px solid #ede9fe` |
+| En-têtes colonnes `.col-hd` | `#f5f3ff` | `#7c3aed` | `1px solid #ede9fe` |
+| En-têtes grille `.pg-head` | `#f5f3ff` | `#7c3aed` | `1px solid #ede9fe` |
+| En-têtes calendrier `.mth-head` | `#f5f3ff` | `#7c3aed` | `1px solid #ede9fe` |
+| Titre de page `.fa-title` | — | `#1a1a2e` (jour) | — |
+
+### Checklist avant de committer une restructuration
+
+- [ ] Tous les `th` → `#f5f3ff / #7c3aed`
+- [ ] Tous les `.card-hd` → `#f5f3ff / #7c3aed`
+- [ ] Tous les `.col-hd`, `.pg-head`, `.mth-head` → `#f5f3ff / #7c3aed`
+- [ ] Grep `themes.css` pour chaque classe modifiée (règle N°16 ci-dessous)
+
+---
+
+## RÈGLE N°16 — Cohérence scoped CSS ↔ themes.css
 
 ### Problème rencontré (mai 2026 — AdminShiftsPage)
 
