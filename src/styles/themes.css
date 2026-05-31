@@ -1178,3 +1178,260 @@ html[data-theme="workshop"] .toff { background: var(--th-bg3); color: var(--th-t
 /* ── AdminAteliersPage — en-tête groupe GS ──────────────────── */
 html[data-theme="night"] .gs-proc-hd,
 html[data-theme="workshop"] .gs-proc-hd { background: var(--th-bg3); border-color: var(--th-border); color: var(--th-text); }
+
+/* ══════════════════════════════════════════════════════════════════
+   LotsPage — night + workshop
+   Badges, pips, popups, lignes — non couverts par les overrides génériques
+══════════════════════════════════════════════════════════════════ */
+
+/* Titre principal clair en dark (override le .pt générique text2) */
+html[data-theme="night"] .ph .pt,
+html[data-theme="workshop"] .ph .pt { color: var(--th-text); }
+html[data-theme="night"] .pc, html[data-theme="workshop"] .pc,
+html[data-theme="night"] .pc-sub, html[data-theme="workshop"] .pc-sub { color: var(--th-text2); }
+
+/* ── Badges statut (.s-*) ── */
+html[data-theme="night"] .s-quarantaine, html[data-theme="workshop"] .s-quarantaine { background: rgba(251,191,36,.12); color: #fbbf24; }
+html[data-theme="night"] .s-accepte, html[data-theme="workshop"] .s-accepte { background: rgba(52,211,153,.1); color: #6ee7b7; }
+html[data-theme="night"] .s-sous_investigation, html[data-theme="workshop"] .s-sous_investigation { background: rgba(239,68,68,.12); color: #fca5a5; }
+html[data-theme="night"] .s-vide, html[data-theme="workshop"] .s-vide,
+html[data-theme="night"] .s-refuse, html[data-theme="workshop"] .s-refuse { background: var(--th-bg3); color: var(--th-text2); }
+html[data-theme="night"] .s-enprod, html[data-theme="workshop"] .s-enprod { background: var(--th-bg3); color: var(--th-accent); }
+html[data-theme="night"] .s-enprep, html[data-theme="workshop"] .s-enprep { background: var(--th-bg3); color: #a78bfa; }
+
+/* ── Badges phase (.phase-*) ── */
+html[data-theme="night"] .phase-planifie, html[data-theme="workshop"] .phase-planifie,
+html[data-theme="night"] .phase-cloture, html[data-theme="workshop"] .phase-cloture { background: var(--th-bg3); color: var(--th-text2); }
+html[data-theme="night"] .phase-fab, html[data-theme="workshop"] .phase-fab { background: var(--th-bg3); color: #a78bfa; }
+html[data-theme="night"] .phase-attente-cond, html[data-theme="workshop"] .phase-attente-cond,
+html[data-theme="night"] .phase-attente-pf, html[data-theme="workshop"] .phase-attente-pf { background: rgba(251,191,36,.12); color: #fbbf24; }
+html[data-theme="night"] .phase-cond, html[data-theme="workshop"] .phase-cond { background: rgba(20,184,166,.14); color: #5eead4; }
+html[data-theme="night"] .phase-libere, html[data-theme="workshop"] .phase-libere { background: rgba(52,211,153,.1); color: #6ee7b7; }
+
+/* ── Doc pips (.dc-*, .pip-*-t) ── */
+html[data-theme="night"] .dc-ok, html[data-theme="workshop"] .dc-ok,
+html[data-theme="night"] .pip-done-t, html[data-theme="workshop"] .pip-done-t { background: rgba(52,211,153,.1); color: #6ee7b7; }
+html[data-theme="night"] .dc-ret, html[data-theme="workshop"] .dc-ret { background: rgba(239,68,68,.12); color: #fca5a5; }
+html[data-theme="night"] .dc-wait, html[data-theme="workshop"] .dc-wait { background: var(--th-bg3); color: var(--th-text2); }
+html[data-theme="night"] .dc-prog, html[data-theme="workshop"] .dc-prog { background: var(--th-bg3); color: var(--th-accent); }
+html[data-theme="night"] .dc-na, html[data-theme="workshop"] .dc-na { color: var(--th-text3); }
+html[data-theme="night"] .dc-date, html[data-theme="workshop"] .dc-date { background: var(--th-bg3); color: var(--th-text2); }
+html[data-theme="night"] .pip-prog-t, html[data-theme="workshop"] .pip-prog-t { background: rgba(251,191,36,.12); color: #fbbf24; }
+
+/* ── Déviations (badges + résumés) ── */
+html[data-theme="night"] .dev-open, html[data-theme="workshop"] .dev-open,
+html[data-theme="night"] .dev-stat-op, html[data-theme="workshop"] .dev-stat-op,
+html[data-theme="night"] .dev-bl-on, html[data-theme="workshop"] .dev-bl-on,
+html[data-theme="night"] .dev-sum-bl, html[data-theme="workshop"] .dev-sum-bl,
+html[data-theme="night"] .dev-pop-bl-on, html[data-theme="workshop"] .dev-pop-bl-on,
+html[data-theme="night"] .bulk-dev-bl-on, html[data-theme="workshop"] .bulk-dev-bl-on { background: rgba(239,68,68,.12); color: #fca5a5; }
+html[data-theme="night"] .dev-closed, html[data-theme="workshop"] .dev-closed,
+html[data-theme="night"] .dev-stat-cl, html[data-theme="workshop"] .dev-stat-cl,
+html[data-theme="night"] .dev-sum-cl, html[data-theme="workshop"] .dev-sum-cl { background: rgba(52,211,153,.1); color: #6ee7b7; }
+html[data-theme="night"] .dev-sum-nb, html[data-theme="workshop"] .dev-sum-nb,
+html[data-theme="night"] .dev-bl-off, html[data-theme="workshop"] .dev-bl-off,
+html[data-theme="night"] .dev-pop-bl-off, html[data-theme="workshop"] .dev-pop-bl-off,
+html[data-theme="night"] .bulk-dev-bl-off, html[data-theme="workshop"] .bulk-dev-bl-off { background: var(--th-bg3); color: var(--th-text2); }
+html[data-theme="night"] .dev-pop-svc, html[data-theme="workshop"] .dev-pop-svc,
+html[data-theme="night"] .dev-meta-svc, html[data-theme="workshop"] .dev-meta-svc { background: var(--th-bg3); color: var(--th-accent); }
+html[data-theme="night"] .dev-bl-btn, html[data-theme="workshop"] .dev-bl-btn { background: rgba(251,191,36,.1); color: #fbbf24; border-color: rgba(251,191,36,.3); }
+
+/* ── Chips dates planning (avec !important pour battre le scoped) ── */
+html[data-theme="night"] .plan-date, html[data-theme="workshop"] .plan-date { background: var(--th-bg3); color: var(--th-accent); }
+html[data-theme="night"] .plan-revised, html[data-theme="workshop"] .plan-revised,
+html[data-theme="night"] .plan-warn, html[data-theme="workshop"] .plan-warn { background: rgba(251,191,36,.12) !important; color: #fbbf24 !important; }
+html[data-theme="night"] .plan-urgent, html[data-theme="workshop"] .plan-urgent { background: rgba(251,146,60,.14) !important; color: #fdba74 !important; }
+html[data-theme="night"] .plan-crit, html[data-theme="workshop"] .plan-crit { background: rgba(239,68,68,.14) !important; color: #fca5a5 !important; }
+
+/* ── Popups conteneurs (fond clair → bg2) ── */
+html[data-theme="night"] .statut-panel, html[data-theme="workshop"] .statut-panel,
+html[data-theme="night"] .col-panel, html[data-theme="workshop"] .col-panel,
+html[data-theme="night"] .date-picker-pop, html[data-theme="workshop"] .date-picker-pop,
+html[data-theme="night"] .dev-pop, html[data-theme="workshop"] .dev-pop,
+html[data-theme="night"] .action-palette, html[data-theme="workshop"] .action-palette { background: var(--th-bg2); border-color: var(--th-border); color: var(--th-text); }
+
+/* Titres / séparateurs de popups */
+html[data-theme="night"] .col-panel-title, html[data-theme="workshop"] .col-panel-title,
+html[data-theme="night"] .dp-title, html[data-theme="workshop"] .dp-title,
+html[data-theme="night"] .dp-hist-title, html[data-theme="workshop"] .dp-hist-title,
+html[data-theme="night"] .dev-pop-title, html[data-theme="workshop"] .dev-pop-title,
+html[data-theme="night"] .dev-pop-sep, html[data-theme="workshop"] .dev-pop-sep,
+html[data-theme="night"] .ap-grp-hd, html[data-theme="workshop"] .ap-grp-hd,
+html[data-theme="night"] .inline-menu-title, html[data-theme="workshop"] .inline-menu-title { color: var(--th-text3); border-color: var(--th-border); }
+
+/* Items / texte de popups */
+html[data-theme="night"] .statut-item, html[data-theme="workshop"] .statut-item,
+html[data-theme="night"] .col-item, html[data-theme="workshop"] .col-item,
+html[data-theme="night"] .ap-item, html[data-theme="workshop"] .ap-item,
+html[data-theme="night"] .ap-acc-hd, html[data-theme="workshop"] .ap-acc-hd,
+html[data-theme="night"] .dev-pop-acc-num, html[data-theme="workshop"] .dev-pop-acc-num,
+html[data-theme="night"] .inline-hist-label, html[data-theme="workshop"] .inline-hist-label { color: var(--th-text); }
+html[data-theme="night"] .statut-item:hover, html[data-theme="workshop"] .statut-item:hover,
+html[data-theme="night"] .ap-acc-hd:hover, html[data-theme="workshop"] .ap-acc-hd:hover,
+html[data-theme="night"] .dev-pop-acc-hd:hover, html[data-theme="workshop"] .dev-pop-acc-hd:hover { background: var(--th-bg3); color: var(--th-accent); }
+html[data-theme="night"] .ap-item:hover, html[data-theme="workshop"] .ap-item:hover,
+html[data-theme="night"] .ap-item-active, html[data-theme="workshop"] .ap-item-active { background: var(--th-bg3); color: var(--th-accent); }
+
+/* Sous-fonds clairs internes (#fafafa/#f0f0f0 → bg3) */
+html[data-theme="night"] .ap-search-wrap, html[data-theme="workshop"] .ap-search-wrap,
+html[data-theme="night"] .ap-acc-items, html[data-theme="workshop"] .ap-acc-items,
+html[data-theme="night"] .dev-pop-acc-hd, html[data-theme="workshop"] .dev-pop-acc-hd,
+html[data-theme="night"] .dev-card, html[data-theme="workshop"] .dev-card,
+html[data-theme="night"] .dp-charge, html[data-theme="workshop"] .dp-charge,
+html[data-theme="night"] .dp-hist-row, html[data-theme="workshop"] .dp-hist-row,
+html[data-theme="night"] .pag-bar, html[data-theme="workshop"] .pag-bar { background: var(--th-bg3); border-color: var(--th-border); }
+html[data-theme="night"] .dev-pop-acc, html[data-theme="workshop"] .dev-pop-acc,
+html[data-theme="night"] .ap-acc-grp, html[data-theme="workshop"] .ap-acc-grp,
+html[data-theme="night"] .inline-hist-row, html[data-theme="workshop"] .inline-hist-row { border-color: var(--th-border); }
+
+/* Boutons fond clair dans popups */
+html[data-theme="night"] .btn-app, html[data-theme="workshop"] .btn-app { background: rgba(52,211,153,.1); color: #6ee7b7; border-color: rgba(52,211,153,.3); }
+html[data-theme="night"] .pag-btn, html[data-theme="workshop"] .pag-btn,
+html[data-theme="night"] .col-reset, html[data-theme="workshop"] .col-reset,
+html[data-theme="night"] .inline-motif-cancel, html[data-theme="workshop"] .inline-motif-cancel,
+html[data-theme="night"] .dp-cancel, html[data-theme="workshop"] .dp-cancel,
+html[data-theme="night"] .m-btn-cancel, html[data-theme="workshop"] .m-btn-cancel,
+html[data-theme="night"] .dev-close-btn, html[data-theme="workshop"] .dev-close-btn { background: var(--th-bg3); border-color: var(--th-border); color: var(--th-text2); }
+html[data-theme="night"] .dev-save-btn, html[data-theme="workshop"] .dev-save-btn { background: var(--th-bg3); color: var(--th-accent); border-color: var(--th-border); }
+
+/* Chips */
+html[data-theme="night"] .cf-chip, html[data-theme="workshop"] .cf-chip,
+html[data-theme="night"] .m-more, html[data-theme="workshop"] .m-more { background: var(--th-bg3); color: var(--th-accent); }
+html[data-theme="night"] .m-chip, html[data-theme="workshop"] .m-chip { background: var(--th-bg3); color: var(--th-text2); }
+html[data-theme="night"] .cf-label, html[data-theme="workshop"] .cf-label,
+html[data-theme="night"] .bulk-date-lbl, html[data-theme="workshop"] .bulk-date-lbl { color: var(--th-text2); }
+
+/* Action trigger (palette) */
+html[data-theme="night"] .action-trigger, html[data-theme="workshop"] .action-trigger { background: var(--th-bg2); border-color: var(--th-border); color: var(--th-text2); }
+html[data-theme="night"] .action-trigger-on, html[data-theme="workshop"] .action-trigger-on { background: var(--th-bg3); border-color: var(--th-accent); color: var(--th-accent); }
+
+/* Lignes sélectionnée / bloquante (scoped en !important) */
+html[data-theme="night"] .row-sel td, html[data-theme="workshop"] .row-sel td { background: var(--th-bg3) !important; }
+html[data-theme="night"] .row-bloquante td, html[data-theme="workshop"] .row-bloquante td { background: rgba(239,68,68,.1) !important; }
+html[data-theme="night"] .row-bloquante:hover td, html[data-theme="workshop"] .row-bloquante:hover td { background: rgba(239,68,68,.16) !important; }
+
+/* États vides / chargement */
+html[data-theme="night"] .lots-loading, html[data-theme="workshop"] .lots-loading,
+html[data-theme="night"] .empty, html[data-theme="workshop"] .empty,
+html[data-theme="night"] .inline-empty, html[data-theme="workshop"] .inline-empty,
+html[data-theme="night"] .ap-empty, html[data-theme="workshop"] .ap-empty { color: var(--th-text3); }
+
+/* Boutons primaires violet → accent orange en workshop (texte noir) */
+html[data-theme="workshop"] .bulk-btn,
+html[data-theme="workshop"] .inline-motif-confirm,
+html[data-theme="workshop"] .dp-ok,
+html[data-theme="workshop"] .m-btn-ok { background: var(--th-accent); color: #000; }
+html[data-theme="workshop"] .bulk-btn:hover,
+html[data-theme="workshop"] .inline-motif-confirm:hover,
+html[data-theme="workshop"] .dp-ok:hover,
+html[data-theme="workshop"] .m-btn-ok:hover { background: #e65100; }
+html[data-theme="workshop"] .bulk-info { color: var(--th-accent); }
+
+/* ══════════════════════════════════════════════════════════════════
+   LotDetailPage — night + workshop
+   (badges .s-*/.phase-*/.dev-* partagés avec LotsPage déjà couverts)
+══════════════════════════════════════════════════════════════════ */
+
+/* Fil d'ariane en violet clair (override le .bc bleu existant) */
+html[data-theme="night"] .bc, html[data-theme="workshop"] .bc { color: #c4b5fd; }
+
+/* ── Badges statut pleins : .s-vide à atténuer ── */
+html[data-theme="night"] .s-vide, html[data-theme="workshop"] .s-vide { background: var(--th-bg3); color: var(--th-text2); }
+
+/* ── sp2 (doc ok/ko/wait) ── */
+html[data-theme="night"] .sp2-ok, html[data-theme="workshop"] .sp2-ok { background: rgba(52,211,153,.1); color: #6ee7b7; }
+html[data-theme="night"] .sp2-ko, html[data-theme="workshop"] .sp2-ko { background: rgba(239,68,68,.12); color: #fca5a5; }
+html[data-theme="night"] .sp2-wait, html[data-theme="workshop"] .sp2-wait { background: var(--th-bg3); color: var(--th-text2); }
+
+/* ── Stepper circuit (.fs-*) ── */
+html[data-theme="night"] .flow, html[data-theme="workshop"] .flow { border-color: var(--th-border); }
+html[data-theme="night"] .fs-done, html[data-theme="workshop"] .fs-done { background: rgba(52,211,153,.1); }
+html[data-theme="night"] .fs-done .fs-label, html[data-theme="workshop"] .fs-done .fs-label { color: #6ee7b7; }
+html[data-theme="night"] .fs-active, html[data-theme="workshop"] .fs-active { background: var(--th-bg3); }
+html[data-theme="night"] .fs-active .fs-label, html[data-theme="workshop"] .fs-active .fs-label { color: var(--th-accent); }
+html[data-theme="night"] .fs-wait, html[data-theme="workshop"] .fs-wait { background: var(--th-bg2); }
+html[data-theme="night"] .fs-wait .fs-num, html[data-theme="workshop"] .fs-wait .fs-num { background: var(--th-bg3); color: var(--th-text2); }
+html[data-theme="night"] .fs-wait .fs-label, html[data-theme="workshop"] .fs-wait .fs-label { color: var(--th-text2); }
+html[data-theme="night"] .flow-arrow, html[data-theme="workshop"] .flow-arrow { color: var(--th-text3); }
+
+/* ── Pips détail ── */
+html[data-theme="night"] .pip-wait, html[data-theme="workshop"] .pip-wait,
+html[data-theme="night"] .ind-wait, html[data-theme="workshop"] .ind-wait,
+html[data-theme="night"] .ind-na, html[data-theme="workshop"] .ind-na { background: var(--th-bg3); }
+
+/* ── Grilles / cartes documents (.dg/.di/.ct) ── */
+html[data-theme="night"] .dg, html[data-theme="workshop"] .dg { border-color: var(--th-border); }
+html[data-theme="night"] .di, html[data-theme="workshop"] .di { border-color: var(--th-border); }
+html[data-theme="night"] .di:hover, html[data-theme="workshop"] .di:hover { background: var(--th-bg2); }
+html[data-theme="night"] .dn, html[data-theme="workshop"] .dn { color: var(--th-text); }
+html[data-theme="night"] .dn-active, html[data-theme="workshop"] .dn-active { color: var(--th-accent); }
+html[data-theme="night"] .ds, html[data-theme="workshop"] .ds,
+html[data-theme="night"] .cu, html[data-theme="workshop"] .cu,
+html[data-theme="night"] .cv, html[data-theme="workshop"] .cv,
+html[data-theme="night"] .dim, html[data-theme="workshop"] .dim,
+html[data-theme="night"] .em, html[data-theme="workshop"] .em,
+html[data-theme="night"] .di-date, html[data-theme="workshop"] .di-date { color: var(--th-text2); }
+html[data-theme="night"] .ct td, html[data-theme="workshop"] .ct td { border-bottom-color: var(--th-bg3); }
+html[data-theme="night"] .ca, html[data-theme="workshop"] .ca { color: var(--th-text); }
+
+/* ── Boutons secondaires fond clair ── */
+html[data-theme="night"] .bc2, html[data-theme="workshop"] .bc2 { background: var(--th-bg3); color: var(--th-text2); }
+html[data-theme="night"] .btn-step, html[data-theme="workshop"] .btn-step,
+html[data-theme="night"] .btn-app, html[data-theme="workshop"] .btn-app { background: var(--th-bg3); color: var(--th-accent); border-color: var(--th-border); }
+html[data-theme="night"] .doc-err, html[data-theme="workshop"] .doc-err { background: rgba(239,68,68,.1); color: #fca5a5; border-color: rgba(239,68,68,.3); }
+
+/* ── AQL ── */
+html[data-theme="night"] .aql-list, html[data-theme="workshop"] .aql-list { border-color: var(--th-border); }
+html[data-theme="night"] .aql-row, html[data-theme="workshop"] .aql-row { border-bottom-color: var(--th-border); }
+html[data-theme="night"] .aql-type-lbl, html[data-theme="workshop"] .aql-type-lbl { color: var(--th-text); }
+html[data-theme="night"] .aql-type-val, html[data-theme="workshop"] .aql-type-val { color: var(--th-accent); }
+html[data-theme="night"] .aql-date, html[data-theme="workshop"] .aql-date { color: var(--th-text3); }
+html[data-theme="night"] .aql-ar-badge, html[data-theme="workshop"] .aql-ar-badge { background: rgba(251,191,36,.12); color: #fbbf24; border-color: rgba(251,191,36,.3); }
+
+/* ── Déviations (résumés/toggles propres à LotDetail) ── */
+html[data-theme="night"] .dev-res-bl, html[data-theme="workshop"] .dev-res-bl,
+html[data-theme="night"] .dev-tog-on, html[data-theme="workshop"] .dev-tog-on { background: rgba(239,68,68,.12); color: #fca5a5; }
+html[data-theme="night"] .dev-res-cl, html[data-theme="workshop"] .dev-res-cl { background: rgba(52,211,153,.1); color: #6ee7b7; }
+html[data-theme="night"] .dev-res-nb, html[data-theme="workshop"] .dev-res-nb,
+html[data-theme="night"] .dev-tog-off, html[data-theme="workshop"] .dev-tog-off { background: var(--th-bg3); color: var(--th-text2); }
+html[data-theme="night"] .dev-card, html[data-theme="workshop"] .dev-card { background: var(--th-bg2); border-color: var(--th-border); }
+html[data-theme="night"] .dev-card-meta, html[data-theme="workshop"] .dev-card-meta { border-top-color: var(--th-border); }
+html[data-theme="night"] .dev-lbl, html[data-theme="workshop"] .dev-lbl { color: var(--th-text2); }
+
+/* ── Planning libération ── */
+html[data-theme="night"] .plan-grid, html[data-theme="workshop"] .plan-grid { background: var(--th-border); border-color: var(--th-border); }
+html[data-theme="night"] .plan-bloc, html[data-theme="workshop"] .plan-bloc { background: var(--th-bg2); }
+html[data-theme="night"] .plan-titre, html[data-theme="workshop"] .plan-titre { color: var(--th-text); }
+html[data-theme="night"] .plan-row label, html[data-theme="workshop"] .plan-row label,
+html[data-theme="night"] .plan-note, html[data-theme="workshop"] .plan-note { color: var(--th-text2); }
+html[data-theme="night"] .plan-revised, html[data-theme="workshop"] .plan-revised { border-color: #d97706 !important; background: rgba(251,191,36,.1) !important; }
+
+/* ── Circuit historique ── */
+html[data-theme="night"] .circ-hist, html[data-theme="workshop"] .circ-hist { border-top-color: var(--th-border); }
+html[data-theme="night"] .circ-hist-row, html[data-theme="workshop"] .circ-hist-row { border-bottom-color: var(--th-bg3); }
+html[data-theme="night"] .circ-hist-step, html[data-theme="workshop"] .circ-hist-step { color: var(--th-text); }
+html[data-theme="night"] .circ-hist-who, html[data-theme="workshop"] .circ-hist-who { color: var(--th-text2); }
+
+/* ── KPI grid valeurs sémantiques ── */
+html[data-theme="night"] .ok, html[data-theme="workshop"] .ok { color: #6ee7b7; }
+html[data-theme="night"] .ko, html[data-theme="workshop"] .ko { color: #fca5a5; }
+html[data-theme="night"] .na, html[data-theme="workshop"] .na { color: var(--th-text3); }
+
+/* ── Modal détail + autocomplete ── */
+html[data-theme="night"] .modal-title, html[data-theme="workshop"] .modal-title { color: var(--th-text); }
+html[data-theme="night"] .field label, html[data-theme="workshop"] .field label { color: var(--th-text2); }
+html[data-theme="night"] .auto-list, html[data-theme="workshop"] .auto-list { background: var(--th-bg2); border-color: var(--th-border); }
+html[data-theme="night"] .auto-item, html[data-theme="workshop"] .auto-item { color: var(--th-text); }
+html[data-theme="night"] .auto-item:hover, html[data-theme="workshop"] .auto-item:hover { background: var(--th-bg3); }
+html[data-theme="night"] .auto-code, html[data-theme="workshop"] .auto-code { color: var(--th-accent); }
+
+/* ── Boutons primaires LotDetail : orange en workshop ── */
+html[data-theme="workshop"] .btn-action,
+html[data-theme="workshop"] .btn,
+html[data-theme="workshop"] .lb,
+html[data-theme="workshop"] .bg { background: var(--th-accent); color: #000; }
+html[data-theme="workshop"] .btn-action:hover,
+html[data-theme="workshop"] .btn:hover:not(.bd),
+html[data-theme="workshop"] .lb:hover:not(:disabled) { background: #e65100; }
+html[data-theme="workshop"] .aql-type-val,
+html[data-theme="workshop"] .dn-active { color: var(--th-accent); }
