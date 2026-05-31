@@ -1174,3 +1174,7 @@ html[data-theme="night"] .ton,
 html[data-theme="workshop"] .ton { background: rgba(16,185,129,.12); color: #34d399; }
 html[data-theme="night"] .toff,
 html[data-theme="workshop"] .toff { background: var(--th-bg3); color: var(--th-text3); }
+
+/* ── AdminAteliersPage — en-tête groupe GS ──────────────────── */
+html[data-theme="night"] .gs-proc-hd,
+html[data-theme="workshop"] .gs-proc-hd { background: var(--th-bg3); border-color: var(--th-border); color: var(--th-text); }
