@@ -515,8 +515,8 @@ export default {
 .shifts-page{font-family:'Inter',sans-serif;font-size:13px;}
 .two-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .card{border:1px solid #e5e7eb;border-radius:8px;overflow:hidden}
-.card-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f9fafb;border-bottom:1px solid #e5e7eb}
-.card-title{font-size:12px;font-weight:700;color:#374151;letter-spacing:.3px}
+.card-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f5f3ff;border-bottom:1px solid #ede9fe}
+.card-title{font-size:12px;font-weight:700;color:#7c3aed;letter-spacing:.3px}
 .btn-add:hover{background:#333}
 .loading{padding:16px;text-align:center;color:#999;font-size:12px}
 .empty{padding:16px;text-align:center;color:#bbb;font-size:12px}

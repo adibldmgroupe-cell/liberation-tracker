@@ -624,6 +624,8 @@ html[data-theme="day"] .wn-btn.today { background: var(--th-accent); border-colo
 html[data-theme="day"] .cv-tab.active { background: var(--th-accent); color: #fff; }
 html[data-theme="day"] .mth-day-num.today { background: var(--th-accent); color: #fff; }
 html[data-theme="day"] .card { border-radius: 8px; }
+html[data-theme="day"] .card-hd { background: #f5f3ff; border-bottom-color: #ede9fe; }
+html[data-theme="day"] .card-title { color: #7c3aed; }
 html[data-theme="day"] .planning-grid { border-radius: 8px; }
 
 /* ── AdminArretTypesPage ──────────────────────────────────────── */
