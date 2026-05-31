@@ -57,8 +57,8 @@
           <tbody>
             <tr v-for="row in pivotMachineRows" :key="row.product_code+'_'+row.route"
                 :class="{'pt-r2':row.route===2, 'pt-sel':isRowSelected(row)}">
-              <td class="pt-chk pt-sc pt-sc0" @click.stop="toggleSelectRow(row)">
-                <input type="checkbox" :checked="isRowSelected(row)" @click.stop class="pt-chkbox" />
+              <td class="pt-chk pt-sc pt-sc0">
+                <input type="checkbox" :checked="isRowSelected(row)" @change="toggleSelectRow(row)" class="pt-chkbox" />
               </td>
               <td class="pt-prod-cell pt-sc pt-sc1">
                 <div class="pt-pcode">{{row.product_code}}</div>
