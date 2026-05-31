@@ -480,16 +480,12 @@ html[data-theme="day"] .modal {
   box-shadow: 0 20px 50px rgba(0,0,0,.2);
 }
 html[data-theme="day"] .modal-hd {
-  font-size: 14px;
   font-weight: 800;
-  padding: 16px 20px 12px;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom-color: #f3f4f6;
 }
 html[data-theme="day"] .modal-ft {
-  padding: 12px 20px;
-  border-top: 1px solid #f3f4f6;
+  border-top-color: #f3f4f6;
 }
-html[data-theme="day"] .modal-body { padding: 16px 20px; }
 
 /* ── Inputs — border-radius 5px comme AdminFluxPage ─────────── */
 html[data-theme="day"] .inp { border-radius: 5px; font-size: 12px; }
@@ -536,14 +532,18 @@ html[data-theme="day"] .btn-sync:hover:not(:disabled) { background: #ede9fe; }
 
 /* ── AdminShiftsPage ──────────────────────────────────────────── */
 html[data-theme="day"] .pg-assign:hover { border-color: var(--th-accent); color: var(--th-accent); background: #f5f3ff; }
+html[data-theme="day"] .pg-label.today { background: #f5f3ff; }
 html[data-theme="day"] .btn-save { background: var(--th-accent); }
 html[data-theme="day"] .btn-save:hover:not(:disabled) { background: #6d28d9; }
 html[data-theme="day"] .wn-btn.today { background: var(--th-accent); border-color: var(--th-accent); color: #fff; }
 html[data-theme="day"] .cv-tab.active { background: var(--th-accent); color: #fff; }
 html[data-theme="day"] .mth-day-num.today { background: var(--th-accent); color: #fff; }
+html[data-theme="day"] .card { border-radius: 8px; }
+html[data-theme="day"] .planning-grid { border-radius: 8px; }
 
 /* ── AdminArretTypesPage ──────────────────────────────────────── */
 html[data-theme="day"] .tree-item.active { background: #f5f3ff; border-left-color: var(--th-accent); }
+html[data-theme="day"] .tree-layout { border-radius: 8px; }
 
 /* ── AppLayout ────────────────────────────────────────────────── */
 html[data-theme="day"] .user-avatar { background: var(--th-accent); }
