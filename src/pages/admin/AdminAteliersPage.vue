@@ -1,22 +1,62 @@
 <template>
   <div class="admin-ateliers">
-    <div class="ph">
-      <span class="pt">ADMIN — PROCESSUS & ATELIERS</span>
-      <div class="ph-tabs">
+
+    <!-- ── En-tête ── -->
+    <div class="fa-header">
+      <div>
+        <div class="fa-title">🏗 Processus & Ateliers</div>
+        <div class="fa-sub">{{ tabSub }}</div>
+      </div>
+      <div class="fa-actions">
+        <button class="fa-btn-gs-reload" v-if="tab==='gs-ref'||tab==='gs-cad'" @click="reloadGs" :disabled="gsLoading" :class="{spinning:gsLoading}">↻ Recharger GS</button>
+        <button class="tb-btn-add" v-if="tab==='processus'" @click="openProc(null)">+ Nouveau processus</button>
+        <button class="tb-btn-add" v-if="tab==='ateliers'" @click="openAtelier(null)" :disabled="!processus.length">+ Nouvel atelier</button>
+      </div>
+    </div>
+
+    <!-- ── Toolbar : tabs + filtres contextuels ── -->
+    <div class="tb-toolbar at-toolbar">
+      <div class="at-tabs">
         <button class="tab-btn" :class="{active:tab==='processus'}" @click="tab='processus'">Processus ({{processus.length}})</button>
         <button class="tab-btn" :class="{active:tab==='ateliers'}" @click="tab='ateliers'">Ateliers ({{ateliers.length}})</button>
         <button class="tab-btn tab-btn-gs" :class="{active:tab==='gs-ref'}" @click="switchGsTab('gs-ref')">📋 GS Référentiel ({{gsRows.length}})</button>
         <button class="tab-btn tab-btn-gs" :class="{active:tab==='gs-cad'}" @click="switchGsTab('gs-cad')">⚡ GS Cadences ({{gsCadences.length}})</button>
       </div>
-      <button class="btn-gs-reload" v-if="tab==='gs-ref'||tab==='gs-cad'" @click="reloadGs" :disabled="gsLoading" :class="{spinning:gsLoading}">↻</button>
+      <div class="at-filters" v-if="tab==='ateliers'">
+        <select class="t-sel" v-model="filterProcId">
+          <option :value="null">Tous processus</option>
+          <option v-for="p in processus" :key="p.id" :value="p.id">{{p.nom_process}}</option>
+        </select>
+        <label class="chk-label"><input type="checkbox" v-model="showInactif"> Inclure inactifs</label>
+      </div>
+      <div class="gs-filters-inline" v-if="tab==='gs-ref'">
+        <div class="tb-search-wrap" style="min-width:200px">
+          <span class="ts-icon">🔍</span>
+          <input class="tb-search" v-model="gsSearch" placeholder="Chercher nom, équipement, N°…" />
+        </div>
+        <select class="t-sel" v-model="gsFilterProc">
+          <option value="">Tous processus</option>
+          <option v-for="p in gsProcessusUniques" :key="p" :value="p">{{p}}</option>
+        </select>
+        <button class="btn-sync" @click="syncRefToSupabase" :disabled="syncRefSaving||gsLoading||!gsRows.length">{{syncRefSaving?'⟳ …':'💾 Sync plan_rooms'}}</button>
+        <span v-if="syncRefResult" class="sync-result" :class="syncRefResult.errors&&syncRefResult.errors.length?'sync-warn':'sync-ok'">{{syncRefResult.errors&&syncRefResult.errors.length?syncRefResult.errors.length+' erreur(s)':syncRefResult.updated+' salles'}}</span>
+        <button class="btn-sync" @click="syncOpMasterToSupabase" :disabled="syncOpSaving||gsLoading||!gsRows.length">{{syncOpSaving?'⟳ …':'💾 Sync operations'}}</button>
+        <span v-if="syncOpResult" class="sync-result" :class="syncOpResult.err?'sync-warn':'sync-ok'">{{syncOpResult.err || (syncOpResult.updated+' opérations')}}</span>
+      </div>
+      <div class="gs-filters-inline" v-if="tab==='gs-cad'">
+        <div class="tb-search-wrap" style="min-width:200px">
+          <span class="ts-icon">🔍</span>
+          <input class="tb-search" v-model="gsCadArticle" placeholder="Code article ou description…" />
+        </div>
+        <input class="t-sel" style="max-width:100px" v-model="gsCadSalle" placeholder="N° salle…" />
+        <input class="t-sel" v-model="gsCadDesc" placeholder="Description…" />
+        <button class="btn-sync" @click="syncCadencesToSupabase" :disabled="syncCadSaving||gsLoading||!gsCadences.length">{{syncCadSaving?'⟳ …':'💾 Synchroniser'}}</button>
+        <span v-if="syncCadResult" class="sync-result" :class="syncCadResult.err?'sync-warn':'sync-ok'">{{syncCadResult.err || (syncCadResult.updated+' cadences')}}</span>
+      </div>
     </div>
 
     <!-- ══════════ PROCESSUS ══════════ -->
     <div v-show="tab==='processus'">
-      <div class="sec-toolbar">
-        <span class="sec-desc">Les processus regroupent les ateliers de fabrication (ex : Granulation, Compression, Stérilisation…)</span>
-        <button class="btn-add" @click="openProc(null)">+ Nouveau processus</button>
-      </div>
 
       <div class="table-wrap">
       <table class="admin-table">
@@ -57,18 +97,6 @@
 
     <!-- ══════════ ATELIERS ══════════ -->
     <div v-show="tab==='ateliers'">
-      <div class="sec-toolbar">
-        <div class="at-filters">
-          <select class="t-sel" v-model="filterProcId">
-            <option :value="null">Tous processus</option>
-            <option v-for="p in processus" :key="p.id" :value="p.id">{{p.nom_process}}</option>
-          </select>
-          <label class="chk-label">
-            <input type="checkbox" v-model="showInactif"> Inclure inactifs
-          </label>
-        </div>
-        <button class="btn-add" @click="openAtelier(null)" :disabled="!processus.length" :title="!processus.length?'Créez d\'abord un processus':''">+ Nouvel atelier</button>
-      </div>
 
       <div v-if="!processus.length" class="warn-box">
         ⚠ Aucun processus trouvé. Créez d'abord des processus dans l'onglet <strong>Processus</strong>.
@@ -124,25 +152,6 @@
 
     <!-- ══════════ GS RÉFÉRENTIEL ══════════ -->
     <div v-show="tab==='gs-ref'">
-      <div class="gs-filters">
-        <select class="t-sel" v-model="gsFilterProc">
-          <option value="">Tous les processus</option>
-          <option v-for="p in gsProcessusUniques" :key="p" :value="p">{{p}}</option>
-        </select>
-        <input class="t-inp" v-model="gsSearch" placeholder="Chercher nom, équipement, N°…" />
-        <button class="btn-sync" @click="syncRefToSupabase" :disabled="syncRefSaving||gsLoading||!gsRows.length">
-          {{syncRefSaving?'⟳ Synchronisation…':'💾 Sync plan_rooms'}}
-        </button>
-        <span v-if="syncRefResult" class="sync-result" :class="syncRefResult.errors&&syncRefResult.errors.length?'sync-warn':'sync-ok'">
-          {{syncRefResult.err || (syncRefResult.updated+' salles'+(syncRefResult.errors&&syncRefResult.errors.length?' · '+syncRefResult.errors.length+' erreur(s)':''))}}
-        </span>
-        <button class="btn-sync" @click="syncOpMasterToSupabase" :disabled="syncOpSaving||gsLoading||!gsRows.length">
-          {{syncOpSaving?'⟳ Synchronisation…':'💾 Sync operations_master'}}
-        </button>
-        <span v-if="syncOpResult" class="sync-result" :class="syncOpResult.err?'sync-warn':'sync-ok'">
-          {{syncOpResult.err || (syncOpResult.updated+' opérations synchronisées')}}
-        </span>
-      </div>
       <div v-if="gsLoading" class="gs-loading">Chargement GS…</div>
       <template v-else>
         <div v-for="bloc in gsRefGrouped" :key="bloc.nom" style="margin-bottom:20px">
@@ -197,17 +206,6 @@
 
     <!-- ══════════ GS CADENCES ══════════ -->
     <div v-show="tab==='gs-cad'">
-      <div class="gs-filters">
-        <input class="t-inp" v-model="gsCadSalle"   placeholder="N° salle…" style="max-width:120px" />
-        <input class="t-inp" v-model="gsCadArticle" placeholder="Code article…" />
-        <input class="t-inp" v-model="gsCadDesc"    placeholder="Description…" />
-        <button class="btn-sync" @click="syncCadencesToSupabase" :disabled="syncCadSaving||gsLoading||!gsCadences.length">
-          {{syncCadSaving?'⟳ Synchronisation…':'💾 Synchroniser vers Supabase'}}
-        </button>
-        <span v-if="syncCadResult" class="sync-result" :class="syncCadResult.err?'sync-warn':'sync-ok'">
-          {{syncCadResult.err || (syncCadResult.updated+' cadences synchronisées')}}
-        </span>
-      </div>
       <div v-if="gsLoading" class="gs-loading">Chargement GS…</div>
       <div class="table-wrap" v-else>
         <table class="admin-table gs-table">
@@ -595,6 +593,16 @@ export default {
       if (!gsRows.value.length && !gsLoading.value) await loadGs()
     }
 
+    var tabSub = computed(function() {
+      var subs = {
+        processus:  'Les processus regroupent les ateliers de fabrication (ex : Granulation, Compression, Stérilisation…)',
+        ateliers:   'Ateliers de production organisés par processus',
+        'gs-ref':   'Référentiel GS — synchronisation plan_rooms et operations_master',
+        'gs-cad':   'Cadences GS — objectifs de cadence par produit et atelier'
+      }
+      return subs[tab.value] || ''
+    })
+
     var gsProcessusUniques = computed(function() {
       var seen = new Set()
       gsRows.value.forEach(function(r) { seen.add(r.processus_nom) })
@@ -655,6 +663,7 @@ export default {
       syncRefSaving, syncRefResult, syncRefToSupabase,
       syncCadSaving, syncCadResult, syncCadencesToSupabase,
       syncOpSaving,  syncOpResult,  syncOpMasterToSupabase,
+      tabSub,
     }
   }
 }
@@ -662,15 +671,13 @@ export default {
 
 <style scoped>
 .admin-ateliers { font-family:'Inter',sans-serif; font-size:13px; }
-
-.ph { display:flex; align-items:center; justify-content:space-between; padding-bottom:10px; border-bottom:2px solid #0a0a0a; margin-bottom:16px; flex-wrap:wrap; gap:8px; }
-.pt { font-size:11px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; }
-.ph-tabs { display:flex; gap:4px; }
+.fa-actions { display:flex; align-items:center; gap:8px; flex-shrink:0; flex-wrap:wrap; }
+.at-toolbar { flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px; }
+.at-tabs { display:flex; gap:4px; flex-wrap:wrap; }
+.gs-filters-inline { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-left:auto; }
 .tab-btn { padding:6px 16px; border:1px solid #d1d5db; border-radius:4px; background:#fff; font-size:12px; cursor:pointer; color:#555; }
 .tab-btn.active { background:#0a0a0a; color:#fff; border-color:#0a0a0a; }
 
-.sec-toolbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:8px; flex-wrap:wrap; }
-.sec-desc { font-size:12px; color:#666; }
 .at-filters { display:flex; align-items:center; gap:8px; }
 
 .btn-add { padding:7px 14px; background:#0a0a0a; color:#fff; border:none; border-radius:4px; font-size:12px; cursor:pointer; font-weight:500; }
@@ -680,7 +687,7 @@ export default {
 .warn-box { background:#fffbeb; border:1px solid #fbbf24; border-radius:4px; padding:12px 16px; color:#92400e; font-size:13px; margin-bottom:12px; }
 
 .admin-table { width:100%; border-collapse:collapse; }
-.admin-table th { padding:8px 12px; text-align:left; background:#f9fafb; border-bottom:2px solid #e5e7eb; font-size:11px; font-weight:600; color:#374151; text-transform:uppercase; letter-spacing:.5px; position:sticky; top:0; z-index:2; }
+.admin-table th { padding:10px 12px; text-align:left; background:#f5f3ff; border-bottom:1px solid #ede9fe; font-size:11px; font-weight:700; color:#7c3aed; text-transform:uppercase; letter-spacing:.3px; position:sticky; top:0; z-index:2; }
 .admin-table td { padding:8px 12px; border-bottom:1px solid #f0f0f0; vertical-align:middle; }
 .admin-table tr:hover td { background:#f9fafb; }
 .admin-table tr.inactive td { opacity:.5; }
@@ -747,7 +754,6 @@ export default {
 .btn-gs-reload.spinning { animation:gs-spin .7s linear infinite; }
 @keyframes gs-spin { to { transform:rotate(360deg); } }
 
-.gs-filters { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
 .t-inp { padding:6px 10px; border:1px solid #d1d5db; border-radius:4px; font-size:12px; }
 .gs-loading { padding:24px; color:#9ca3af; font-size:13px; }
 .gs-proc-hd { display:flex; align-items:center; gap:8px; padding:7px 12px; background:#f3f4f6; border-radius:4px 4px 0 0; border:1px solid #e5e7eb; border-bottom:none; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#374151; }
@@ -767,12 +773,11 @@ export default {
 .table-wrap{overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 220px);-webkit-overflow-scrolling:touch}
 @media(max-width:768px){
   .admin-table{min-width:480px}
-  .sec-toolbar{flex-direction:column;align-items:flex-start;gap:8px}
   .at-filters{flex-direction:column;gap:8px;width:100%}
+  .gs-filters-inline{flex-direction:column;align-items:flex-start;width:100%}
   .t-sel{width:100%;font-size:13px}
-  .ph-tabs{flex-wrap:wrap;gap:4px}
+  .at-tabs{flex-wrap:wrap}
   .tab-btn{flex:1;min-height:36px;font-size:12px}
-  .btn-add{min-height:44px;padding:8px 16px;font-size:13px}
 }
 @media(max-width:480px){
   .admin-table{min-width:400px}

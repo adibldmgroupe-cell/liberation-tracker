@@ -561,9 +561,10 @@ html[data-theme="day"] .pt-table th {
   border-bottom: 1px solid #ede9fe;
 }
 html[data-theme="day"] .admin-table th {
-  color: #6b7280;
+  background: #f5f3ff;
+  color: #7c3aed;
   font-weight: 700;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid #ede9fe;
 }
 html[data-theme="day"] .table-wrap {
   border-color: #e5e7eb;
