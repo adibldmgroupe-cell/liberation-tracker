@@ -1,14 +1,18 @@
 <template>
-  <div>
-    <!-- Header -->
-    <div class="ph">
+  <div class="permissions-page">
+
+    <!-- ── En-tête ── -->
+    <div class="fa-header">
       <div>
-        <div class="pt">PERMISSIONS PAR SERVICE</div>
-        <div class="ps" v-if="!loading">{{services.length}} services · {{allPerms.length}} permissions</div>
+        <div class="fa-title">🔐 Permissions par service</div>
+        <div class="fa-sub" v-if="!loading">{{services.length}} services · {{allPerms.length}} permissions</div>
+        <div class="fa-sub" v-else>Chargement…</div>
       </div>
-      <button class="btn-mgr" :class="{'btn-mgr-on': showMgr}" @click="showMgr=!showMgr">
-        {{showMgr ? '✕ Fermer' : '⚙ Gérer les services'}}
-      </button>
+      <div class="fa-actions">
+        <button class="btn-mgr" :class="{'btn-mgr-on': showMgr}" @click="showMgr=!showMgr">
+          {{showMgr ? '✕ Fermer' : '⚙ Gérer les services'}}
+        </button>
+      </div>
     </div>
 
     <!-- Services CRUD panel -->
@@ -474,90 +478,91 @@ export default {
 </script>
 
 <style scoped>
-/* Header */
-.ph { display:flex; align-items:center; justify-content:space-between; padding-bottom:10px; border-bottom:2px solid #0a0a0a; margin-bottom:16px }
-.pt { font-size:11px; font-weight:500; letter-spacing:1.5px }
-.ps { font-size:12px; color:#999; margin-top:3px }
-.btn-mgr { font-size:12px; padding:6px 14px; border:1px solid #d0e4f8; background:#fff; color:#185FA5; border-radius:3px; cursor:pointer; font-family:inherit; white-space:nowrap }
-.btn-mgr:hover { background:#f0f7ff }
-.btn-mgr-on { background:#E6F1FB }
+.permissions-page { font-family:'Inter',sans-serif; font-size:13px; }
+.fa-actions { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+
+/* Services management button */
+.btn-mgr { font-size:12px; padding:6px 14px; border:1px solid #ede9fe; background:#fff; color:#7c3aed; border-radius:5px; cursor:pointer; font-family:'Inter',sans-serif; white-space:nowrap }
+.btn-mgr:hover { background:#f5f3ff }
+.btn-mgr-on { background:#f5f3ff; border-color:#7c3aed }
 
 /* Services management panel */
-.mgr-panel { border:1px solid #d0e4f8; border-radius:6px; padding:16px; background:#f7fbff; margin-bottom:16px }
-.mgr-title { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:#888; margin-bottom:10px }
+.mgr-panel { border:1px solid #ede9fe; border-radius:8px; padding:16px; background:#faf5ff; margin-bottom:16px }
+.mgr-title { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#6b7280; margin-bottom:10px }
 .mgr-list { display:flex; flex-direction:column; gap:4px; margin-bottom:12px }
-.mgr-row { display:flex; align-items:center; gap:8px; padding:7px 10px; background:#fff; border:1px solid #e8e8e8; border-radius:3px }
-.ms-id { font-size:11px; color:#bbb; font-family:'SF Mono',monospace; min-width:130px; flex-shrink:0 }
-.ms-label { font-size:13px; font-weight:500; flex:1 }
+.mgr-row { display:flex; align-items:center; gap:8px; padding:7px 10px; background:#fff; border:1px solid #e5e7eb; border-radius:5px }
+.ms-id { font-size:11px; color:#9ca3af; font-family:'SF Mono',monospace; min-width:130px; flex-shrink:0 }
+.ms-label { font-size:13px; font-weight:500; flex:1; color:#374151 }
 .ms-actions { display:flex; gap:6px; margin-left:auto }
-.mb { font-size:11px; padding:4px 10px; border-radius:2px; cursor:pointer; font-family:inherit; transition:.1s }
-.mb.edit { border:1px solid #d0e4f8; background:#fff; color:#185FA5 }
-.mb.edit:hover { background:#E6F1FB }
-.mb.del { border:1px solid #f5d0d0; background:#fff; color:#E24B4A }
-.mb.del:hover { background:#fff0f0 }
-.mb.ok { border:1px solid #b8e8d0; background:#EAF3DE; color:#1D9E75 }
-.mb.cancel { border:1px solid #e8e8e8; background:#fff; color:#999 }
-.mgr-inp { font-size:12px; border:1px solid #d0d8e8; border-radius:2px; padding:5px 8px; flex:1; min-width:0; font-family:inherit; outline:none }
-.mgr-inp:focus { border-color:#185FA5 }
+.mb { font-size:11px; padding:4px 10px; border-radius:4px; cursor:pointer; font-family:'Inter',sans-serif; transition:.1s }
+.mb.edit { border:1px solid #ede9fe; background:#fff; color:#7c3aed }
+.mb.edit:hover { background:#f5f3ff }
+.mb.del { border:1px solid #fecaca; background:#fff; color:#ef4444 }
+.mb.del:hover { background:#fef2f2 }
+.mb.ok { border:1px solid #bbf7d0; background:#f0fdf4; color:#059669 }
+.mb.cancel { border:1px solid #e5e7eb; background:#fff; color:#9ca3af }
+.mgr-inp { font-size:12px; border:1px solid #e5e7eb; border-radius:5px; padding:6px 10px; flex:1; min-width:0; font-family:'Inter',sans-serif; outline:none }
+.mgr-inp:focus { border-color:#7c3aed }
 .mgr-add { display:flex; gap:8px; align-items:center }
-.btn-add { font-size:12px; padding:6px 14px; background:#185FA5; color:#fff; border:none; border-radius:2px; cursor:pointer; white-space:nowrap; font-family:inherit }
+.btn-add { font-size:12px; padding:7px 14px; background:#7c3aed; color:#fff; border:none; border-radius:5px; cursor:pointer; white-space:nowrap; font-family:'Inter',sans-serif }
+.btn-add:hover { background:#6d28d9 }
 .btn-add:disabled { opacity:0.5; cursor:default }
-.mgr-err { font-size:12px; color:#E24B4A; margin-top:8px }
+.mgr-err { font-size:12px; color:#ef4444; margin-top:8px }
 
 /* Legend */
-.legend { display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:11px; color:#888; margin-bottom:10px; padding:6px 10px; background:#fafafa; border:1px solid #f0f0f0; border-radius:3px }
-.cb-on-eg { color:#1D9E75; font-weight:700; font-size:13px }
-.leg-sep { color:#ddd }
+.legend { display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:11px; color:#6b7280; margin-bottom:10px; padding:6px 12px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:6px }
+.cb-on-eg { color:#059669; font-weight:700; font-size:13px }
+.leg-sep { color:#d1d5db }
 
 /* Matrix container */
-.matrix-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid #e0e0e0; border-radius:4px }
+.matrix-outer { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid #e5e7eb; border-radius:8px }
 .matrix { border-collapse:collapse; table-layout:fixed; min-width:100% }
 
 /* Sticky top-left corner */
 .corner {
   position:sticky; top:0; left:0; z-index:4;
-  background:#f4f7fc;
+  background:#f5f3ff;
   width:220px; min-width:220px;
-  font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.8px; color:#888;
+  font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:#7c3aed;
   text-align:left; padding:10px 12px;
-  border-bottom:2px solid #d0dff0; border-right:2px solid #d0dff0
+  border-bottom:1px solid #ede9fe; border-right:2px solid #ede9fe
 }
 
 /* Service column headers (sticky top) */
 .svc-hd {
   position:sticky; top:0; z-index:2;
-  background:#f0f5fb;
+  background:#f5f3ff;
   min-width:90px; width:90px;
   text-align:center; padding:8px 6px;
   cursor:pointer;
-  border-bottom:2px solid #d0dff0; border-right:1px solid #dde8f4;
+  border-bottom:1px solid #ede9fe; border-right:1px solid #ede9fe;
   transition:background .1s
 }
-.svc-hd:hover { background:#e0eefb }
-.svc-hd-name { font-size:11px; font-weight:600; color:#185FA5; line-height:1.3 }
-.svc-hd-count { font-size:10px; color:#aaa; font-family:'SF Mono',monospace; margin-top:2px }
-.svc-reset-btn { display:block; margin:5px auto 0; font-size:10px; padding:2px 7px; border:1px solid #c0d8f0; background:#fff; color:#185FA5; border-radius:2px; cursor:pointer; font-family:inherit; white-space:nowrap; opacity:0.7; transition:.1s }
-.svc-reset-btn:hover { opacity:1; background:#E6F1FB }
+.svc-hd:hover { background:#ede9fe }
+.svc-hd-name { font-size:11px; font-weight:700; color:#7c3aed; line-height:1.3 }
+.svc-hd-count { font-size:10px; color:#9ca3af; font-family:'SF Mono',monospace; margin-top:2px }
+.svc-reset-btn { display:block; margin:5px auto 0; font-size:10px; padding:2px 7px; border:1px solid #ede9fe; background:#fff; color:#7c3aed; border-radius:4px; cursor:pointer; font-family:'Inter',sans-serif; white-space:nowrap; opacity:0.7; transition:.1s }
+.svc-reset-btn:hover { opacity:1; background:#f5f3ff }
 
 /* Group header rows */
 .grp-row .grp-hd-label-cell {
   position:sticky; left:0; z-index:1;
-  background:#eef3fb;
+  background:#f5f3ff;
   padding:6px 12px;
-  border-top:2px solid #c8d8ee; border-bottom:1px solid #c8d8ee;
-  font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#185FA5;
+  border-top:1px solid #ede9fe; border-bottom:1px solid #ede9fe;
+  font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#7c3aed;
   white-space:nowrap
 }
 .grp-row .grp-svc-cell {
-  background:#eef3fb;
+  background:#f5f3ff;
   text-align:center; padding:4px 2px;
-  border-top:2px solid #c8d8ee; border-bottom:1px solid #c8d8ee; border-right:1px solid #dde8f4
+  border-top:1px solid #ede9fe; border-bottom:1px solid #ede9fe; border-right:1px solid #ede9fe
 }
 .grp-svc-tog {
-  font-size:13px; padding:1px 4px; border:1px solid #c0d8f0; background:#fff;
-  color:#185FA5; border-radius:2px; cursor:pointer; line-height:1; opacity:0.75; transition:.1s
+  font-size:13px; padding:1px 4px; border:1px solid #ede9fe; background:#fff;
+  color:#7c3aed; border-radius:4px; cursor:pointer; line-height:1; opacity:0.75; transition:.1s
 }
-.grp-svc-tog:hover { opacity:1; background:#E6F1FB }
+.grp-svc-tog:hover { opacity:1; background:#f5f3ff }
 
 /* Permission name (sticky left) */
 .perm-cell {
@@ -566,28 +571,28 @@ export default {
   width:220px; min-width:220px;
   padding:7px 12px;
   cursor:pointer;
-  border-bottom:1px solid #f0f0f0; border-right:2px solid #e8eef6
+  border-bottom:1px solid #f3f4f6; border-right:2px solid #ede9fe
 }
-.perm-cell:hover { background:#f7fbff }
-.perm-name { font-size:12px; color:#222; line-height:1.3 }
-.perm-key { font-size:10px; color:#ccc; font-family:'SF Mono',monospace; margin-top:1px }
+.perm-cell:hover { background:#faf5ff }
+.perm-name { font-size:12px; color:#111827; line-height:1.3 }
+.perm-key { font-size:10px; color:#d1d5db; font-family:'SF Mono',monospace; margin-top:1px }
 
 /* Checkbox cells */
 .cb-cell {
   text-align:center; padding:0;
   cursor:pointer;
-  border-bottom:1px solid #f0f0f0; border-right:1px solid #f0f0f0;
+  border-bottom:1px solid #f3f4f6; border-right:1px solid #f3f4f6;
   transition:background .1s
 }
-.cb-cell:hover { background:#e6f1fb }
-.cb-on { color:#1D9E75; font-size:15px; font-weight:700 }
+.cb-cell:hover { background:#ede9fe }
+.cb-on { color:#059669; font-size:15px; font-weight:700 }
 .cb-off { color:transparent; font-size:15px }
 
 /* Alternating permission rows */
 .perm-row:nth-child(even) .cb-cell { background:#fafbfd }
-.perm-row:nth-child(even) .cb-cell:hover { background:#e6f1fb }
+.perm-row:nth-child(even) .cb-cell:hover { background:#ede9fe }
 .perm-row:nth-child(even) .perm-cell { background:#fafbfd }
-.perm-row:nth-child(even) .perm-cell:hover { background:#f0f7ff }
+.perm-row:nth-child(even) .perm-cell:hover { background:#faf5ff }
 .perm-row { height:36px }
 
 /* Loading */
