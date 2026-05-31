@@ -1,5 +1,5 @@
 <template>
-  <div class="app-layout" :class="{'mobile-open':mobileMenuOpen}">
+  <div class="app-layout" :class="{'mobile-open':mobileMenuOpen}" :data-theme="theme">
     <div class="mobile-overlay" v-if="mobileMenuOpen" @click="mobileMenuOpen=false"></div>
     <aside class="sidebar" :class="{'sidebar-open':mobileMenuOpen}">
       <div class="sidebar-logo"><span class="logo-text">LDM</span><span class="logo-sub">Libération PF</span></div>
@@ -59,6 +59,7 @@
           </div>
         </div>
         <span class="notif-bell" @click="$router.push('/notifications')">🔔<span class="bell-badge" v-if="unreadCount>0">{{unreadCount}}</span></span>
+        <button class="theme-btn" @click="cycleTheme" :title="'Thème : '+theme">{{themeIcon}}</button>
         <span class="clock">{{clock}}</span>
       </header>
       <div class="page-content" :class="{'page-full':$route.name==='ProductionFlux'}"><router-view /></div>
@@ -75,6 +76,7 @@
 <script>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useTheme } from '../composables/useTheme'
 import { supabase } from '../supabase'
 import { loadPermissions } from '../services/permissions'
 import { getUnreadCount, getNewNotifications, check48hDeviations } from '../services/notifications'
@@ -84,6 +86,15 @@ export default {
   setup() {
     var router = useRouter()
     var route  = useRoute()
+    var { theme } = useTheme()
+    var THEME_ORDER = ['day', 'night', 'workshop']
+    var cycleTheme = function() {
+      var idx = THEME_ORDER.indexOf(theme.value)
+      theme.value = THEME_ORDER[(idx + 1) % THEME_ORDER.length]
+    }
+    var themeIcon = computed(function() {
+      return theme.value === 'day' ? '☀️' : theme.value === 'workshop' ? '🏭' : '🌙'
+    })
     var profile = ref(null), searchQuery = ref(''), suggestions = ref([]), showSug = ref(false)
     var clock = ref(''), unreadCount = ref(0), pendingTasksCount = ref(0), searchInput = ref(null), mobileMenuOpen = ref(false)
     var toasts = ref([]), lastCheck = ref(new Date().toISOString()), toastId = ref(0)
@@ -216,7 +227,7 @@ export default {
 
     return {profile,initials,isAdmin,searchQuery,suggestions,showSug,clock,unreadCount,pendingTasksCount,searchInput,
       mobileMenuOpen,toasts,serviceLabels,onSearch,submitSearch,selectSug,hideSug,logout,goToLot,
-      navGrpOpen,toggleNavGrp}
+      navGrpOpen,toggleNavGrp,theme,cycleTheme,themeIcon}
   }
 }
 </script>
@@ -252,6 +263,7 @@ export default {
 .sug-type{font-size:9px;font-weight:600;padding:2px 6px;border-radius:2px;letter-spacing:.5px}.t-lot{background:#E6F1FB;color:#0C447C}.t-product{background:#EAF3DE;color:#3B6D11}
 .sug-label{font-weight:500}.sug-sub{color:#999;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .notif-bell{font-size:18px;cursor:pointer;position:relative;padding:4px}.bell-badge{position:absolute;top:-2px;right:-4px;background:#E24B4A;color:#fff;font-size:9px;font-weight:600;padding:1px 4px;border-radius:6px}
+.theme-btn{background:none;border:1px solid transparent;border-radius:4px;cursor:pointer;font-size:15px;padding:3px 6px;line-height:1;transition:background .15s,border-color .15s}.theme-btn:hover{background:rgba(0,0,0,.06);border-color:rgba(0,0,0,.12)}
 .clock{margin-left:auto;font-family:'SF Mono','Fira Code',monospace;font-size:12px;color:#999;white-space:nowrap}
 .page-content{flex:1;overflow-y:auto;overflow-x:hidden;padding:16px 20px;min-width:0}
 

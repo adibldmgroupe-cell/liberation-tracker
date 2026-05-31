@@ -1,6 +1,418 @@
-/* ══════════════════════════════════════════
-   THEME SWITCH WIDGET — partagé entre pages
-══════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════
+   THÈMES GLOBAUX — liberation-tracker
+   Appliqué via html[data-theme="..."] (spécificité 0,2,1 > scoped 0,2,0)
+   Jour     = AdminRefPage/AdminFluxPage  (fond blanc,  accent bleu  #185FA5)
+   Nuit     = PdpProductionPage night     (fond #0b0b1c, accent violet #7c7cff)
+   Workshop = PdpProductionPage workshop  (fond #161616, accent orange #ff9800)
+══════════════════════════════════════════════════════════════════ */
+
+/* ── Variables CSS ────────────────────────────────────────────── */
+html, html[data-theme="day"] {
+  --th-bg:        #ffffff;
+  --th-bg2:       #f9fafb;
+  --th-bg3:       #f3f4f6;
+  --th-border:    #e5e7eb;
+  --th-text:      #111827;
+  --th-text2:     #6b7280;
+  --th-text3:     #9ca3af;
+  --th-input-bg:  #ffffff;
+  --th-topbar:    #ffffff;
+  --th-sidebar:   #0a0a0a;
+  --th-accent:    #185FA5;
+}
+html[data-theme="night"] {
+  --th-bg:        #0b0b1c;
+  --th-bg2:       #12122a;
+  --th-bg3:       #1a1a38;
+  --th-border:    #252545;
+  --th-text:      #e0e0f0;
+  --th-text2:     #8888b0;
+  --th-text3:     #555580;
+  --th-input-bg:  #12122a;
+  --th-topbar:    #0f0f23;
+  --th-sidebar:   #07071a;
+  --th-accent:    #7c7cff;
+}
+html[data-theme="workshop"] {
+  --th-bg:        #161616;
+  --th-bg2:       #1e1e1e;
+  --th-bg3:       #252525;
+  --th-border:    #2a2a2a;
+  --th-text:      #f0f0f0;
+  --th-text2:     #aaaaaa;
+  --th-text3:     #666666;
+  --th-input-bg:  #1e1e1e;
+  --th-topbar:    #1a1a1a;
+  --th-sidebar:   #111111;
+  --th-accent:    #ff9800;
+}
+
+/* ── Layout principal ─────────────────────────────────────────── */
+html[data-theme="night"] body,
+html[data-theme="workshop"] body { background: var(--th-bg); }
+
+html[data-theme="night"] .app-layout,
+html[data-theme="workshop"] .app-layout { background: var(--th-bg); }
+
+html[data-theme="night"] .main-content,
+html[data-theme="workshop"] .main-content { background: var(--th-bg); }
+
+html[data-theme="night"] .page-content,
+html[data-theme="workshop"] .page-content { background: var(--th-bg); }
+
+html[data-theme="night"] .top-bar,
+html[data-theme="workshop"] .top-bar {
+  background: var(--th-topbar);
+  border-bottom-color: var(--th-border);
+}
+html[data-theme="night"] .sidebar,
+html[data-theme="workshop"] .sidebar { background: var(--th-sidebar); }
+
+/* ── En-têtes de pages (.ph, .pt, .ph-right) ─────────────────── */
+html[data-theme="night"] .ph,
+html[data-theme="workshop"] .ph {
+  border-bottom-color: var(--th-border);
+  color: var(--th-text);
+}
+html[data-theme="night"] .pt,
+html[data-theme="workshop"] .pt { color: var(--th-text2); }
+
+html[data-theme="night"] .lh,
+html[data-theme="workshop"] .lh {
+  border-bottom-color: var(--th-border);
+  color: var(--th-text);
+}
+html[data-theme="night"] .ln,
+html[data-theme="workshop"] .ln { color: var(--th-text); }
+
+html[data-theme="night"] .lp,
+html[data-theme="workshop"] .lp { color: var(--th-text2); }
+
+/* ── Tableaux ─────────────────────────────────────────────────── */
+html[data-theme="night"] .tb,
+html[data-theme="workshop"] .tb { color: var(--th-text); }
+
+html[data-theme="night"] .tb th,
+html[data-theme="workshop"] .tb th {
+  background: var(--th-bg2);
+  border-bottom-color: var(--th-border);
+  color: var(--th-text2);
+}
+html[data-theme="night"] .tb td,
+html[data-theme="workshop"] .tb td {
+  border-bottom-color: var(--th-bg3);
+  color: var(--th-text);
+}
+html[data-theme="night"] .tb tr:hover td,
+html[data-theme="workshop"] .tb tr:hover td { background: var(--th-bg2); }
+
+html[data-theme="night"] .table-wrap,
+html[data-theme="workshop"] .table-wrap {
+  background: var(--th-bg);
+}
+
+/* ── Sections et cartes ───────────────────────────────────────── */
+html[data-theme="night"] .section,
+html[data-theme="workshop"] .section { color: var(--th-text); }
+
+html[data-theme="night"] .sh,
+html[data-theme="workshop"] .sh {
+  border-bottom-color: var(--th-border);
+  color: var(--th-text2);
+}
+
+html[data-theme="night"] .ks,
+html[data-theme="workshop"] .ks { border-color: var(--th-border); }
+
+html[data-theme="night"] .k,
+html[data-theme="workshop"] .k {
+  border-right-color: var(--th-border);
+  color: var(--th-text);
+}
+html[data-theme="night"] .kl,
+html[data-theme="night"] .ku,
+html[data-theme="workshop"] .kl,
+html[data-theme="workshop"] .ku { color: var(--th-text2); }
+
+html[data-theme="night"] .kv,
+html[data-theme="workshop"] .kv { color: var(--th-text); }
+
+/* ── Formulaires et inputs ────────────────────────────────────── */
+html[data-theme="night"] input:not([type="checkbox"]):not([type="radio"]):not([type="date"]),
+html[data-theme="night"] select,
+html[data-theme="night"] textarea,
+html[data-theme="workshop"] input:not([type="checkbox"]):not([type="radio"]):not([type="date"]),
+html[data-theme="workshop"] select,
+html[data-theme="workshop"] textarea {
+  background: var(--th-input-bg);
+  color: var(--th-text);
+  border-color: var(--th-border);
+}
+html[data-theme="night"] input[type="date"],
+html[data-theme="workshop"] input[type="date"] {
+  background: var(--th-input-bg);
+  color: var(--th-text);
+  border-color: var(--th-border);
+}
+html[data-theme="night"] input::placeholder,
+html[data-theme="workshop"] input::placeholder { color: var(--th-text3); }
+
+html[data-theme="night"] .search-input,
+html[data-theme="workshop"] .search-input {
+  background: var(--th-bg2);
+  color: var(--th-text);
+}
+
+/* ── Boutons standard ─────────────────────────────────────────── */
+html[data-theme="night"] .btn-sm,
+html[data-theme="workshop"] .btn-sm {
+  background: var(--th-bg2);
+  border-color: var(--th-border);
+  color: var(--th-text2);
+}
+html[data-theme="night"] .btn-sm:hover,
+html[data-theme="workshop"] .btn-sm:hover { background: var(--th-bg3); }
+
+html[data-theme="night"] .btn-toggle,
+html[data-theme="workshop"] .btn-toggle { background: var(--th-bg2); border-color: var(--th-border); color: var(--th-text2); }
+
+html[data-theme="night"] .btn-exp,
+html[data-theme="workshop"] .btn-exp { background: var(--th-bg2); border-color: var(--th-border); color: var(--th-text2); }
+
+html[data-theme="night"] .btn-cols,
+html[data-theme="workshop"] .btn-cols { background: var(--th-bg2); border-color: var(--th-border); color: var(--th-text2); }
+
+/* ── Filtres / chips ──────────────────────────────────────────── */
+html[data-theme="night"] .filters,
+html[data-theme="workshop"] .filters { color: var(--th-text); }
+
+html[data-theme="night"] .fbtn,
+html[data-theme="workshop"] .fbtn {
+  background: var(--th-bg2);
+  border-color: var(--th-border);
+  color: var(--th-text2);
+}
+html[data-theme="night"] .fbtn:hover,
+html[data-theme="workshop"] .fbtn:hover { border-color: var(--th-text3); }
+
+html[data-theme="night"] .cf-bar,
+html[data-theme="workshop"] .cf-bar { border-bottom-color: var(--th-border); }
+
+/* ── Actions en masse ─────────────────────────────────────────── */
+html[data-theme="night"] .bulk-bar,
+html[data-theme="workshop"] .bulk-bar { border-bottom-color: var(--th-border); }
+
+html[data-theme="night"] .bulk-sel,
+html[data-theme="night"] .bulk-date-in,
+html[data-theme="workshop"] .bulk-sel,
+html[data-theme="workshop"] .bulk-date-in {
+  background: var(--th-bg2);
+  border-color: var(--th-border);
+  color: var(--th-text);
+}
+
+/* ── Modals ───────────────────────────────────────────────────── */
+html[data-theme="night"] .m-box,
+html[data-theme="workshop"] .m-box {
+  background: var(--th-bg2);
+  color: var(--th-text);
+}
+html[data-theme="night"] .m-line,
+html[data-theme="workshop"] .m-line { border-bottom-color: var(--th-bg3); }
+
+html[data-theme="night"] .modal-overlay > .modal,
+html[data-theme="workshop"] .modal-overlay > .modal {
+  background: var(--th-bg2);
+  color: var(--th-text);
+}
+
+/* ── Colonne panel (flux produits) ────────────────────────────── */
+html[data-theme="night"] .col-panel,
+html[data-theme="workshop"] .col-panel {
+  background: var(--th-bg2);
+  border-color: var(--th-border);
+}
+html[data-theme="night"] .col-item,
+html[data-theme="workshop"] .col-item { color: var(--th-text); }
+
+/* ── Dropdown / suggestions ───────────────────────────────────── */
+html[data-theme="night"] .col-dd,
+html[data-theme="workshop"] .col-dd {
+  background: var(--th-bg2);
+  border-color: var(--th-border);
+  color: var(--th-text);
+}
+html[data-theme="night"] .col-dd-item:hover,
+html[data-theme="workshop"] .col-dd-item:hover { background: var(--th-bg3); }
+
+html[data-theme="night"] .inline-menu,
+html[data-theme="workshop"] .inline-menu {
+  background: var(--th-bg2);
+  border-color: var(--th-border);
+  color: var(--th-text);
+}
+html[data-theme="night"] .inline-act,
+html[data-theme="workshop"] .inline-act {
+  background: var(--th-bg2);
+  border-bottom-color: var(--th-bg3);
+  color: var(--th-text);
+}
+html[data-theme="night"] .inline-act:hover,
+html[data-theme="workshop"] .inline-act:hover { background: var(--th-bg3); }
+
+html[data-theme="night"] .suggestions,
+html[data-theme="workshop"] .suggestions {
+  background: var(--th-bg2);
+  border-color: var(--th-border);
+}
+html[data-theme="night"] .sug-item:hover,
+html[data-theme="workshop"] .sug-item:hover { background: var(--th-bg3); }
+html[data-theme="night"] .sug-label,
+html[data-theme="workshop"] .sug-label { color: var(--th-text); }
+
+/* ── Notifications et Tâches ──────────────────────────────────── */
+html[data-theme="night"] .tp,
+html[data-theme="workshop"] .tp { color: var(--th-text); }
+html[data-theme="night"] .tp-h1,
+html[data-theme="workshop"] .tp-h1 { color: var(--th-text); }
+html[data-theme="night"] .tp-h2,
+html[data-theme="workshop"] .tp-h2 { color: var(--th-text2); }
+html[data-theme="night"] .tp-search-bar,
+html[data-theme="workshop"] .tp-search-bar {
+  background: var(--th-bg2);
+  border-color: var(--th-border);
+}
+html[data-theme="night"] .tp-search-inp,
+html[data-theme="workshop"] .tp-search-inp { color: var(--th-text); background: transparent; }
+html[data-theme="night"] .tp-refresh,
+html[data-theme="workshop"] .tp-refresh {
+  background: var(--th-bg2);
+  border-color: var(--th-border);
+  color: var(--th-text2);
+}
+html[data-theme="night"] .tp-svc-sel,
+html[data-theme="workshop"] .tp-svc-sel {
+  background: var(--th-bg2);
+  border-color: var(--th-border);
+  color: var(--th-text);
+}
+
+/* ── AdminFluxPage ────────────────────────────────────────────── */
+html[data-theme="night"] .flux-admin,
+html[data-theme="workshop"] .flux-admin { color: var(--th-text); }
+html[data-theme="night"] .fa-title,
+html[data-theme="workshop"] .fa-title { color: var(--th-text); }
+html[data-theme="night"] .fa-sub,
+html[data-theme="workshop"] .fa-sub { color: var(--th-text2); }
+html[data-theme="night"] .fa-btn-gs-reload,
+html[data-theme="workshop"] .fa-btn-gs-reload {
+  background: var(--th-bg2);
+  border-color: var(--th-border);
+  color: var(--th-text2);
+}
+html[data-theme="night"] .tb-search,
+html[data-theme="workshop"] .tb-search {
+  background: var(--th-bg2);
+  border-color: var(--th-border);
+  color: var(--th-text);
+}
+html[data-theme="night"] .tb-sel,
+html[data-theme="workshop"] .tb-sel {
+  background: var(--th-bg2);
+  border-color: var(--th-border);
+  color: var(--th-text);
+}
+html[data-theme="night"] .vt-btn,
+html[data-theme="workshop"] .vt-btn {
+  background: var(--th-bg2);
+  border-color: var(--th-border);
+  color: var(--th-text2);
+}
+html[data-theme="night"] .tb-btn-gs-reload,
+html[data-theme="night"] .tb-btn-clear,
+html[data-theme="workshop"] .tb-btn-gs-reload,
+html[data-theme="workshop"] .tb-btn-clear {
+  border-color: var(--th-border);
+  color: var(--th-text2);
+}
+html[data-theme="night"] .pivot-table,
+html[data-theme="workshop"] .pivot-table { color: var(--th-text); }
+html[data-theme="night"] .pt-r-op th,
+html[data-theme="workshop"] .pt-r-op th {
+  background: var(--th-bg3);
+  border-bottom-color: var(--th-border);
+  border-right-color: var(--th-border);
+}
+html[data-theme="night"] .pt-r-mach th,
+html[data-theme="workshop"] .pt-r-mach th {
+  background: var(--th-bg2);
+  border-bottom-color: var(--th-border);
+  color: var(--th-text2);
+}
+html[data-theme="night"] .pivot-table td,
+html[data-theme="workshop"] .pivot-table td {
+  border-bottom-color: var(--th-bg3);
+  border-right-color: var(--th-bg3);
+  color: var(--th-text);
+}
+html[data-theme="night"] .pivot-table tbody .pt-sc,
+html[data-theme="workshop"] .pivot-table tbody .pt-sc { background: var(--th-bg); }
+html[data-theme="night"] .pivot-table tbody .pt-r2 .pt-sc,
+html[data-theme="workshop"] .pivot-table tbody .pt-r2 .pt-sc { background: var(--th-bg2); }
+html[data-theme="night"] .pt-r2,
+html[data-theme="workshop"] .pt-r2 { background: var(--th-bg2); }
+html[data-theme="night"] .pt-pcode,
+html[data-theme="workshop"] .pt-pcode { color: #a78bfa; }
+html[data-theme="night"] .pt-pname,
+html[data-theme="workshop"] .pt-pname { color: var(--th-text2); }
+html[data-theme="night"] .pt-route-num,
+html[data-theme="workshop"] .pt-route-num { color: var(--th-text); }
+html[data-theme="night"] .pt-cc:hover,
+html[data-theme="workshop"] .pt-cc:hover { background: var(--th-bg3); }
+html[data-theme="night"] .table-scroll,
+html[data-theme="workshop"] .table-scroll { border-color: var(--th-border); }
+html[data-theme="night"] .prod-card,
+html[data-theme="workshop"] .prod-card { background: var(--th-bg2); border-color: var(--th-border); }
+html[data-theme="night"] .pc-code,
+html[data-theme="workshop"] .pc-code { color: #a78bfa; }
+html[data-theme="night"] .pc-name,
+html[data-theme="workshop"] .pc-name { color: var(--th-text); }
+html[data-theme="night"] .modal-box,
+html[data-theme="workshop"] .modal-box { background: var(--th-bg2); }
+html[data-theme="night"] .modal-hd,
+html[data-theme="workshop"] .modal-hd { color: var(--th-text); border-bottom-color: var(--th-border); }
+html[data-theme="night"] .mf-input,
+html[data-theme="workshop"] .mf-input {
+  background: var(--th-input-bg);
+  color: var(--th-text);
+  border-color: var(--th-border);
+}
+html[data-theme="night"] .mf-ta,
+html[data-theme="workshop"] .mf-ta {
+  background: var(--th-input-bg);
+  color: var(--th-text);
+  border-color: var(--th-border);
+}
+html[data-theme="night"] .gsModal label,
+html[data-theme="night"] .mf-row label,
+html[data-theme="workshop"] .gsModal label,
+html[data-theme="workshop"] .mf-row label { color: var(--th-text2); }
+
+/* ── Lot Detail ───────────────────────────────────────────────── */
+html[data-theme="night"] .bc,
+html[data-theme="workshop"] .bc { color: #93c5fd; }
+html[data-theme="night"] .section,
+html[data-theme="workshop"] .section { color: var(--th-text); }
+html[data-theme="night"] .syg,
+html[data-theme="workshop"] .syg { border-color: var(--th-border); }
+html[data-theme="night"] .syc,
+html[data-theme="workshop"] .syc { border-color: var(--th-border); color: var(--th-text); }
+
+/* ── Dashboard ───────────────────────────────────────────────── */
+html[data-theme="night"] .db,
+html[data-theme="workshop"] .db { color: var(--th-text); }
+
+/* ── Thème switch widget (TrsAnalyticsPage) ───────────────────── */
 .theme-sw {
   display: flex;
   gap: 2px;
@@ -27,23 +439,24 @@
   background: rgba(255,255,255,.14);
   border-color: rgba(255,255,255,.22);
 }
+html[data-theme="day"] .theme-sw { background: rgba(0,0,0,.05); border-color: rgba(0,0,0,.1); }
+html[data-theme="day"] .tsw-btn.active { background: rgba(0,0,0,.1); border-color: rgba(0,0,0,.2); }
+html[data-theme="workshop"] .theme-sw { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.08); }
+html[data-theme="workshop"] .tsw-btn.active { background: rgba(255,152,0,.15); border-color: rgba(255,152,0,.4); }
 
-/* Jour — active state adapté fond clair */
-[data-theme="day"] .theme-sw {
-  background: rgba(0,0,0,.05);
-  border-color: rgba(0,0,0,.1);
+/* ── AdminRefPage (barre d'onglets référentiel) ───────────────── */
+html[data-theme="night"] .ar-tabs,
+html[data-theme="workshop"] .ar-tabs {
+  background: var(--th-topbar);
+  border-bottom-color: var(--th-border);
 }
-[data-theme="day"] .tsw-btn.active {
-  background: rgba(0,0,0,.1);
-  border-color: rgba(0,0,0,.2);
-}
-
-/* Atelier — active state vert vif */
-[data-theme="workshop"] .theme-sw {
-  background: rgba(255,255,255,.04);
-  border-color: rgba(255,255,255,.08);
-}
-[data-theme="workshop"] .tsw-btn.active {
-  background: rgba(0,200,83,.15);
-  border-color: rgba(0,200,83,.4);
+html[data-theme="night"] .ar-tab,
+html[data-theme="workshop"] .ar-tab { color: var(--th-text2); background: transparent; }
+html[data-theme="night"] .ar-tab:hover,
+html[data-theme="workshop"] .ar-tab:hover { color: var(--th-text); background: var(--th-bg2); }
+html[data-theme="night"] .ar-tab.active,
+html[data-theme="workshop"] .ar-tab.active {
+  color: var(--th-accent);
+  border-bottom-color: var(--th-accent);
+  background: transparent;
 }
