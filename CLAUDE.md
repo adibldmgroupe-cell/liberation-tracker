@@ -7,6 +7,42 @@
 
 ---
 
+## DÉMARRAGE LOCAL (dev) — checklist anti-échec
+
+> But : relancer l'app en local **sans fail** depuis une nouvelle session. Lire cette section AVANT de lancer.
+
+### Environnement (PC verrouillé, pas d'admin)
+- **Node portable** : `node` v24.16.0 dans `C:\Users\adib.nouar\nodejs`, déjà dans le PATH ; `npm.cmd` au même endroit.
+- `node_modules` déjà installés (sinon `npm install`).
+- Config preview prête : `.claude/launch.json` → `npm run dev`, port **5173** (runtimeExecutable = npm.cmd portable).
+- Préférer l'outil **`preview_start`** (config `liberation-tracker`) pour lancer le serveur, pas Bash.
+
+### `.env` à la racine — OBLIGATOIRE au runtime
+Sans `.env` → **écran blanc silencieux** : `createClient()` lève `supabaseUrl is required.` au bootstrap.
+App Vue jamais montée (`#app` vide), **aucune erreur** dans la console preview, **pas d'overlay Vite** → piège classique, ne pas chercher ailleurs.
+
+Contenu (fichier **gitignoré**) :
+```
+VITE_SUPABASE_URL=https://okitrbcybiekuhzoyvvx.supabase.co
+VITE_SUPABASE_ANON_KEY=<clé anon — NE PAS committer>
+VITE_SUPABASE_SERVICE_KEY=<optionnel — seulement adminAuth / création-suppression comptes>
+```
+- Le `.env` **persiste sur le disque** entre les sessions → vérifier d'abord s'il existe (`Test-Path .env`) ; ne le recréer que s'il manque.
+- URL dérivable du champ `ref` du JWT anon : `ref` → `https://<ref>.supabase.co`.
+- Clé anon perdue → Supabase **Settings → API** (`anon public`), ou secrets GitHub du repo (`VITE_SUPABASE_*`, injectés au build CI par `deploy.yml`).
+- ⚠️ Ne **jamais** committer le `.env` ni coller la clé dans un fichier versionné (dont ce CLAUDE.md) — cohérent avec le `.gitignore`.
+
+### Séquence de lancement
+1. Vérifier que `.env` existe (sinon le créer).
+2. `preview_start` (ou `npm run dev`) → http://localhost:5173/liberation-tracker/
+3. **Après création/modif du `.env`, redémarrer Vite (stop + start)** — il ne relit les variables qu'au démarrage.
+4. Vérifier OK = **page de login affichée** + 0 erreur console.
+
+### Vérifier seulement que ça COMPILE (sans secrets)
+`npm run build` réussit même sans `.env` (les `import.meta.env.VITE_*` valent `undefined` mais ne sont pas exécutés au build) → test « est-ce que ça compile ? », ~7 s, 502 modules. Avertissements de taille de chunk (LotsPage, exceljs > 500 kB) = normaux, pas des erreurs.
+
+---
+
 ## RÈGLE CRITIQUE N°1 — Schéma table `lots`
 
 La table `lots` **N'A PAS** de colonnes `prod_desc` ni `prod_code`.
