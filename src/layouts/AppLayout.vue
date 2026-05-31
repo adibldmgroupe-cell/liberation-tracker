@@ -7,7 +7,6 @@
         <router-link to="/dashboard" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">◻</span>Dashboard</router-link>
 <router-link to="/lots" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">▥</span>Lots</router-link>
         <router-link to="/planifier" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">+</span>Planifier</router-link>
-<router-link to="/import" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">↑</span>Import Excel</router-link>
         <router-link to="/notifications" class="nav-item" active-class="active" @click="mobileMenuOpen=false">
           <span class="nav-icon">🔔</span>Notifications
           <span class="notif-badge" v-if="unreadCount>0">{{unreadCount}}</span>

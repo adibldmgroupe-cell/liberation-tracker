@@ -15,7 +15,6 @@ const routes = [
       { path: 'lots', name: 'Lots', component: () => import('../pages/LotsPage.vue') },
       { path: 'lots/:id', name: 'LotDetail', component: () => import('../pages/LotDetailPage.vue') },
       { path: 'lots/:lotId/documents/:docId', name: 'DocumentDetail', component: () => import('../pages/DocumentDetailPage.vue') },
-      { path: 'import', name: 'Import', component: () => import('../pages/ImportPage.vue') },
       { path: 'planifier', name: 'Planifier', component: () => import('../pages/PlanifierPage.vue') },
 { path: 'notifications', name: 'Notifications', component: () => import('../pages/NotificationsPage.vue') },
       { path: 'tasks', name: 'Tasks', component: () => import('../pages/TasksPage.vue') },
