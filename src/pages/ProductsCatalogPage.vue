@@ -401,7 +401,7 @@ export default {
 .em { text-align:center; padding:40px; color:#9ca3af; font-size:13px }
 .table-wrap { overflow-x:auto; overflow-y:auto; max-height:calc(100vh - 260px); border:1px solid #e5e7eb; border-radius:8px; margin-top:0 }
 .pt-table { width:100%; border-collapse:collapse; font-size:12px }
-.pt-table th { text-align:left; font-size:11px; font-weight:700; letter-spacing:.3px; text-transform:uppercase; color:#6b7280; padding:10px 12px; border-bottom:1px solid #e5e7eb; white-space:nowrap; background:#f9fafb; position:sticky; top:0; z-index:2 }
+.pt-table th { text-align:left; font-size:11px; font-weight:700; letter-spacing:.3px; text-transform:uppercase; color:#7c3aed; padding:10px 12px; border-bottom:1px solid #ede9fe; white-space:nowrap; background:#f5f3ff; position:sticky; top:0; z-index:2 }
 .pt-table td { padding:9px 10px; border-bottom:1px solid #f5f5f5; vertical-align:middle }
 .pt-table tr:last-child td { border-bottom:none }
 .pt-table tr:hover td { background:#fafbfd }

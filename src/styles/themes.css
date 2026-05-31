@@ -554,11 +554,11 @@ html[data-theme="day"] .ar-tab.active {
 
 /* ── En-têtes tableaux — couleurs par thème ──────────────────── */
 html[data-theme="day"] .pt-table th {
-  background: #f9fafb;
-  color: #6b7280;
+  background: #f5f3ff;
+  color: #7c3aed;
   font-size: 11px;
   font-weight: 700;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid #ede9fe;
 }
 html[data-theme="day"] .admin-table th {
   color: #6b7280;
