@@ -18,7 +18,9 @@ html, html[data-theme="day"] {
   --th-input-bg:  #ffffff;
   --th-topbar:    #ffffff;
   --th-sidebar:   #0a0a0a;
-  --th-accent:    #185FA5;
+  --th-accent:    #7c3aed;
+  --th-font:      'Inter', sans-serif;
+  --th-font-size: 13px;
 }
 html[data-theme="night"] {
   --th-bg:        #0a0a1e;

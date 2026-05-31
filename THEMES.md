@@ -11,24 +11,46 @@ et géré par `src/composables/useTheme.js`.
 
 ## ☀️ Jour — `data-theme="day"`
 
-> Référence : AdminRefPage / AdminFluxPage
+> Référence : AdminFluxPage (Référentiel → Flux produits)
 
 | Variable | Valeur | Rôle |
 |---|---|---|
 | `--th-bg` | `#ffffff` | Fond principal |
 | `--th-bg2` | `#f9fafb` | Fond secondaire (inputs, tableaux) |
-| `--th-bg3` | `#f3f4f6` | Fond tertiaire (hover, sections) |
-| `--th-border` | `#e5e7eb` | Bordures |
+| `--th-bg3` | `#f3f4f6` | Fond tertiaire (hover, separators) |
+| `--th-border` | `#e5e7eb` | Bordures standard |
 | `--th-text` | `#111827` | Texte principal |
 | `--th-text2` | `#6b7280` | Texte secondaire |
-| `--th-text3` | `#9ca3af` | Labels discrets |
+| `--th-text3` | `#9ca3af` | Labels discrets / placeholders |
 | `--th-input-bg` | `#ffffff` | Fond inputs |
 | `--th-topbar` | `#ffffff` | Fond topbar / header |
 | `--th-sidebar` | `#0a0a0a` | Fond sidebar |
-| `--th-accent` | `#185FA5` | Accent principal (bleu) |
+| `--th-accent` | `#7c3aed` | Accent principal (violet) |
+| `--th-font` | `'Inter', sans-serif` | Police |
+| `--th-font-size` | `13px` | Taille de base |
 
-**Police :** `-apple-system, BlinkMacSystemFont, 'Inter', sans-serif`
-**Taille de base :** `13px`
+**Hiérarchie typographique :**
+| Élément | Taille | Poids |
+|---|---|---|
+| Titre page | 18px | 800 |
+| Titre modal | 14px | 800 |
+| Corps / boutons | 12px | 400–600 |
+| Recherche | 13px | 400 |
+| Codes / chips | 11px | 700–800 |
+| Labels | 10px | 700 |
+| Tiny chips | 9px | 700 |
+
+**Accents secondaires :**
+| Usage | Valeur |
+|---|---|
+| Bouton action principal | `#7c3aed` fond, `#fff` texte |
+| Hover | `#6d28d9` |
+| Fond badges violet | `#ede9fe` fond, `#7c3aed` texte |
+| Pivot accent (bordure machine) | `#ede9fe` / `#7c3aed` 2px |
+| Erreur | `#ef4444` |
+| Succès | `#059669` |
+
+**Pages couvertes :** *(à appliquer)*
 
 ---
 
