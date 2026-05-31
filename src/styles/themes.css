@@ -456,6 +456,49 @@ html[data-theme="workshop"] .theme-sw { background: rgba(255,255,255,.04); borde
 html[data-theme="workshop"] .tsw-btn.active { background: rgba(255,152,0,.15); border-color: rgba(255,152,0,.4); }
 
 /* ══════════════════════════════════════════════════════════════════
+   RÉFÉRENTIEL — thème jour
+   Remplace #185FA5 (bleu) → #7c3aed (violet) dans les pages qui
+   ont encore le bleu codé en dur dans leur scoped CSS.
+══════════════════════════════════════════════════════════════════ */
+
+/* ── AdminRefPage ─────────────────────────────────────────────── */
+html[data-theme="day"] .ar-tab.active {
+  color: var(--th-accent);
+  border-bottom-color: var(--th-accent);
+}
+
+/* ── ProductsCatalogPage ──────────────────────────────────────── */
+html[data-theme="day"] .search-inp:focus { border-color: var(--th-accent); }
+html[data-theme="day"] .gs-label { color: #6d28d9; }
+html[data-theme="day"] .gs-url-btn { color: var(--th-accent); }
+html[data-theme="day"] .gs-import-btn { background: var(--th-accent); }
+html[data-theme="day"] .gs-import-btn:hover:not(:disabled) { background: #6d28d9; }
+html[data-theme="day"] .gs-url-inp:focus { border-color: var(--th-accent); }
+html[data-theme="day"] .gs-prog-fill { background: var(--th-accent); }
+html[data-theme="day"] .gs-stat.u { color: var(--th-accent); }
+html[data-theme="day"] .inp:focus { border-color: var(--th-accent); }
+
+/* ── AdminAteliersPage ────────────────────────────────────────── */
+html[data-theme="day"] .btn-sync { border-color: var(--th-accent); background: #f5f3ff; color: #6d28d9; }
+html[data-theme="day"] .btn-sync:hover:not(:disabled) { background: #ede9fe; }
+
+/* ── AdminShiftsPage ──────────────────────────────────────────── */
+html[data-theme="day"] .pg-assign:hover { border-color: var(--th-accent); color: var(--th-accent); background: #f5f3ff; }
+html[data-theme="day"] .btn-save { background: var(--th-accent); }
+html[data-theme="day"] .btn-save:hover:not(:disabled) { background: #6d28d9; }
+html[data-theme="day"] .wn-btn.today { background: var(--th-accent); border-color: var(--th-accent); color: #fff; }
+html[data-theme="day"] .cv-tab.active { background: var(--th-accent); color: #fff; }
+html[data-theme="day"] .mth-day-num.today { background: var(--th-accent); color: #fff; }
+
+/* ── AdminArretTypesPage ──────────────────────────────────────── */
+html[data-theme="day"] .tree-item.active { background: #f5f3ff; border-left-color: var(--th-accent); }
+
+/* ── AppLayout ────────────────────────────────────────────────── */
+html[data-theme="day"] .user-avatar { background: var(--th-accent); }
+html[data-theme="day"] .search-input:focus { border-color: var(--th-accent); }
+html[data-theme="day"] .t-lot { background: #ede9fe; color: #6d28d9; }
+
+/* ══════════════════════════════════════════════════════════════════
    RÉFÉRENTIEL — thème deep-night
    Couvre : ProductsCatalogPage, AdminAteliersPage, AdminFluxPage,
             AdminShiftsPage, AdminArretTypesPage
