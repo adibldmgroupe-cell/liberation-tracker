@@ -50,7 +50,13 @@ et géré par `src/composables/useTheme.js`.
 | Erreur | `#ef4444` |
 | Succès | `#059669` |
 
-**Pages couvertes :** *(à appliquer)*
+**Pages couvertes (layout + couleurs validés) :**
+- ✅ AdminRefPage (barre d'onglets)
+- ✅ ProductsCatalogPage — layout restructuré pattern AdminFluxPage
+- ⏳ AdminAteliersPage
+- ⏳ AdminFluxPage (référence, déjà correct)
+- ⏳ AdminShiftsPage
+- ⏳ AdminArretTypesPage
 
 ---
 
