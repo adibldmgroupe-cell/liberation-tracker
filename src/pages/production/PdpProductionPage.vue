@@ -1146,6 +1146,40 @@ export default {
 .pdp-prod[data-theme="day"] .sc-clôturé,
 .pdp-prod[data-theme="day"] .sc-cl { background:#f3f4f6; color:#9ca3af; }
 
+/* Polices / espacement tableau (alignement AdminFluxPage) */
+.pdp-prod[data-theme="day"] .dt { font-size:13px; }
+.pdp-prod[data-theme="day"] .dt th { font-size:11px; font-weight:700; padding:10px 12px; }
+.pdp-prod[data-theme="day"] .dt td { padding:10px 12px; color:#374151; }
+.pdp-prod[data-theme="day"] .dt-wrap { border:1px solid #e5e7eb; border-radius:8px; overflow-x:auto; overflow-y:auto; max-height:calc(100vh - 140px); }
+/* Boutons add */
+.pdp-prod[data-theme="day"] .btn-add { background:#7c3aed; border-radius:5px; font-size:12px; }
+.pdp-prod[data-theme="day"] .btn-add:hover { background:#6d28d9; }
+.pdp-prod[data-theme="day"] .btn-add-cond { background:#7c3aed; }
+.pdp-prod[data-theme="day"] .btn-add-cond:hover { background:#6d28d9; }
+/* Actions inline */
+.pdp-prod[data-theme="day"] .ia { border-color:#e5e7eb; color:#6b7280; background:#fff; }
+.pdp-prod[data-theme="day"] .ia:hover { background:#f9fafb; color:#374151; border-color:#d1d5db; }
+.pdp-prod[data-theme="day"] .ia.ok { color:#059669; border-color:#bbf7d0; background:#f0fdf4; }
+.pdp-prod[data-theme="day"] .ia.ok:hover { background:#dcfce7; }
+.pdp-prod[data-theme="day"] .ia.del { color:#ef4444; border-color:#fecaca; background:#fff; }
+.pdp-prod[data-theme="day"] .ia.del:hover { background:#fef2f2; }
+/* Badges famille (règle N°15c) */
+.pdp-prod[data-theme="day"] .fb-fab { background:#f5f3ff; color:#7c3aed; border-color:#ede9fe; }
+.pdp-prod[data-theme="day"] .fb-cond { background:#dbeafe; color:#1e40af; border-color:#bfdbfe; }
+/* Textes */
+.pdp-prod[data-theme="day"] .dim { color:#9ca3af; }
+.pdp-prod[data-theme="day"] .empty { color:#9ca3af; }
+.pdp-prod[data-theme="day"] .ldg { color:#9ca3af; }
+.pdp-prod[data-theme="day"] .arr-stat { color:#6b7280; }
+.pdp-prod[data-theme="day"] .mono { color:#374151; }
+/* Barre filtres */
+.pdp-prod[data-theme="day"] .t-bar { background:#fff; border-bottom:1px solid #e5e7eb; }
+.pdp-prod[data-theme="day"] .t-srch:focus { border-color:#7c3aed; }
+/* Section title */
+.pdp-prod[data-theme="day"] .pdp-section-title { background:#f9fafb; }
+/* Row running */
+.pdp-prod[data-theme="day"] .row-running td { background:#fef9c3; }
+
 /* Thème ATELIER */
 .pdp-prod[data-theme="workshop"] { background:#161616; color:#f0f0f0; }
 .pdp-prod[data-theme="workshop"] .ph { background:#1a1a1a; border-bottom-color:#2a2a2a; }
