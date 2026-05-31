@@ -74,24 +74,38 @@ et géré par `src/composables/useTheme.js`.
 
 ## 🏭 Workshop — `data-theme="workshop"`
 
-> Référence : PdpProductionPage — `[data-theme="workshop"]`
+> Référence : ProductionFlowPage (SCHÉMA FLUX PRODUCTION) — `[data-theme="workshop"]`
 > *(à valider)*
 
 | Variable | Valeur | Rôle |
 |---|---|---|
 | `--th-bg` | `#161616` | Fond principal |
-| `--th-bg2` | `#1e1e1e` | Fond secondaire |
-| `--th-bg3` | `#252525` | Fond tertiaire |
+| `--th-bg2` | `#1e1e1e` | Fond secondaire (panneaux, inputs) |
+| `--th-bg3` | `#1c1c1c` | Fond tertiaire (hover, dropdowns) |
 | `--th-border` | `#2a2a2a` | Bordures |
 | `--th-text` | `#f0f0f0` | Texte principal |
-| `--th-text2` | `#aaaaaa` | Texte secondaire |
-| `--th-text3` | `#666666` | Labels discrets |
+| `--th-text2` | `#888888` | Texte secondaire |
+| `--th-text3` | `#555555` | Labels discrets |
 | `--th-input-bg` | `#1e1e1e` | Fond inputs |
-| `--th-topbar` | `#1a1a1a` | Fond topbar / header |
+| `--th-topbar` | `#0e0e0e` | Fond topbar / header |
 | `--th-sidebar` | `#111111` | Fond sidebar |
 | `--th-accent` | `#ff9800` | Accent principal (orange) |
+| `--th-font` | `'Inter', sans-serif` | Police |
+| `--th-font-size` | `13px` | Taille de base |
 
-**Police :** à définir lors de la validation
-**Taille de base :** à définir lors de la validation
+**Accents secondaires (hardcodés) :**
+| Usage | Valeur |
+|---|---|
+| Bouton action principal (save, add) | `#ff9800` fond, `#000` texte |
+| Bouton action hover | `#e65100` |
+| Sélection active (pivot, tree) | `#2a1500` fond orange sombre |
+| Succès / sessions actives | `#10b981` |
+| Erreur | `#ef4444` |
 
-**Pages couvertes :** *(à faire)*
+**Pages couvertes :**
+- ✅ AdminRefPage (barre d'onglets)
+- ✅ ProductsCatalogPage
+- ✅ AdminAteliersPage
+- ✅ AdminFluxPage
+- ✅ AdminShiftsPage
+- ✅ AdminArretTypesPage

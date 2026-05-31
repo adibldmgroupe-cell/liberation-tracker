@@ -38,15 +38,17 @@ html[data-theme="night"] {
 html[data-theme="workshop"] {
   --th-bg:        #161616;
   --th-bg2:       #1e1e1e;
-  --th-bg3:       #252525;
+  --th-bg3:       #1c1c1c;
   --th-border:    #2a2a2a;
   --th-text:      #f0f0f0;
-  --th-text2:     #aaaaaa;
-  --th-text3:     #666666;
+  --th-text2:     #888888;
+  --th-text3:     #555555;
   --th-input-bg:  #1e1e1e;
-  --th-topbar:    #1a1a1a;
+  --th-topbar:    #0e0e0e;
   --th-sidebar:   #111111;
   --th-accent:    #ff9800;
+  --th-font:      'Inter', sans-serif;
+  --th-font-size: 13px;
 }
 
 /* ── Layout principal ─────────────────────────────────────────── */
@@ -646,6 +648,200 @@ html[data-theme="night"] .btn-clear { background: var(--th-bg2); border-color: v
 html[data-theme="night"] .btn-clear:hover { background: var(--th-bg3); }
 html[data-theme="night"] .flag-item { background: var(--th-bg2); border-color: var(--th-border); color: var(--th-text); }
 html[data-theme="night"] .flag-item:hover { background: var(--th-bg3); }
+
+/* ══════════════════════════════════════════════════════════════════
+   RÉFÉRENTIEL — thème workshop
+   Mêmes pages, palette noir chaud + accent orange #ff9800
+══════════════════════════════════════════════════════════════════ */
+
+/* ── Classes partagées ────────────────────────────────────────── */
+html[data-theme="workshop"] .overlay { background: rgba(0,0,0,.75); }
+html[data-theme="workshop"] .modal { background: var(--th-bg2); color: var(--th-text); }
+html[data-theme="workshop"] .modal-hd { color: var(--th-text); border-bottom-color: var(--th-border); }
+html[data-theme="workshop"] .modal-ft { border-top-color: var(--th-border); }
+html[data-theme="workshop"] .modal-ctx { background: var(--th-bg); color: var(--th-text2); }
+html[data-theme="workshop"] .lbl { color: var(--th-text2); }
+html[data-theme="workshop"] .inp { background: var(--th-bg); color: var(--th-text); border-color: var(--th-border); }
+html[data-theme="workshop"] .inp:focus { border-color: var(--th-accent); }
+html[data-theme="workshop"] .inp:disabled { background: var(--th-bg); color: var(--th-text3); }
+html[data-theme="workshop"] .btn-add { background: var(--th-accent); color: #000; border-color: var(--th-accent); }
+html[data-theme="workshop"] .btn-add:hover:not(:disabled) { background: #e65100; border-color: #e65100; }
+html[data-theme="workshop"] .btn-save { background: var(--th-accent); color: #000; }
+html[data-theme="workshop"] .btn-save:hover:not(:disabled) { background: #e65100; }
+html[data-theme="workshop"] .btn-cancel { background: var(--th-bg2); color: var(--th-text2); border-color: var(--th-border); }
+html[data-theme="workshop"] .btn-cancel:hover { background: var(--th-bg3); }
+html[data-theme="workshop"] .btn-del { background: #991b1b; color: #fff; }
+html[data-theme="workshop"] .btn-del:hover:not(:disabled) { background: #7f1d1d; }
+html[data-theme="workshop"] .empty { color: var(--th-text3); }
+html[data-theme="workshop"] .loading { color: var(--th-text3); }
+html[data-theme="workshop"] .err { background: #2a0a0a; color: #ef4444; }
+html[data-theme="workshop"] .ia:hover { background: var(--th-bg3); opacity: 1; }
+html[data-theme="workshop"] .ia.del { color: #ef4444; }
+html[data-theme="workshop"] .ia.del:hover { background: #2a0a0a; color: #ef4444; }
+html[data-theme="workshop"] .color-pick { border-color: var(--th-border); }
+html[data-theme="workshop"] .cp.selected { border-color: var(--th-accent); }
+
+/* ── ProductsCatalogPage ──────────────────────────────────────── */
+html[data-theme="workshop"] .ps { color: var(--th-text3); }
+html[data-theme="workshop"] .gs-bar,
+html[data-theme="workshop"] .gs-config { background: var(--th-bg2); border-color: var(--th-border); }
+html[data-theme="workshop"] .gs-label { color: var(--th-accent); }
+html[data-theme="workshop"] .gs-url-hint { color: var(--th-text3); }
+html[data-theme="workshop"] .gs-url-btn { color: var(--th-accent); }
+html[data-theme="workshop"] .gs-import-btn { background: var(--th-accent); color: #000; }
+html[data-theme="workshop"] .gs-import-btn:hover:not(:disabled) { background: #e65100; }
+html[data-theme="workshop"] .gs-prog-bar { background: var(--th-bg3); }
+html[data-theme="workshop"] .gs-prog-fill { background: var(--th-accent); }
+html[data-theme="workshop"] .gs-result { background: #0a1a0f; border-color: #064e35; }
+html[data-theme="workshop"] .bc2 { background: var(--th-bg2); color: var(--th-text2); border-color: var(--th-border); }
+html[data-theme="workshop"] .button-sm { background: var(--th-bg2); border-color: var(--th-border); color: var(--th-text); }
+html[data-theme="workshop"] .button-sm:hover { background: var(--th-bg3); }
+html[data-theme="workshop"] .em { color: var(--th-text3); }
+html[data-theme="workshop"] .pt-table { border-bottom-color: var(--th-border); }
+html[data-theme="workshop"] .pt-table th { background: var(--th-bg2); color: var(--th-text2); border-bottom-color: var(--th-border); }
+html[data-theme="workshop"] .pt-table td { border-bottom-color: var(--th-bg3); color: var(--th-text); }
+html[data-theme="workshop"] .pt-table tr:hover td { background: var(--th-bg3); }
+
+/* ── AdminAteliersPage ────────────────────────────────────────── */
+html[data-theme="workshop"] .tab-btn { background: var(--th-bg2); border-color: var(--th-border); color: var(--th-text2); }
+html[data-theme="workshop"] .tab-btn.active { background: var(--th-accent); border-color: var(--th-accent); color: #000; }
+html[data-theme="workshop"] .tab-btn-gs { border-color: var(--th-border); color: var(--th-accent); }
+html[data-theme="workshop"] .tab-btn-gs.active { background: var(--th-accent); border-color: var(--th-accent); color: #000; }
+html[data-theme="workshop"] .sec-desc { color: var(--th-text2); }
+html[data-theme="workshop"] .admin-table th { background: var(--th-bg2); color: var(--th-text2); border-bottom-color: var(--th-border); }
+html[data-theme="workshop"] .admin-table td { border-bottom-color: var(--th-bg3); color: var(--th-text); }
+html[data-theme="workshop"] .admin-table tr:hover td { background: var(--th-bg3); }
+html[data-theme="workshop"] .proc-group-hd td { background: var(--th-bg3); color: var(--th-text2); border-bottom-color: var(--th-border); }
+html[data-theme="workshop"] .color-code { color: var(--th-text2); }
+html[data-theme="workshop"] .warn-box { background: #2a1500; border-color: #d97706; color: #fbbf24; }
+html[data-theme="workshop"] .btn-gs-reload { background: var(--th-bg2); border-color: var(--th-border); color: var(--th-text2); }
+html[data-theme="workshop"] .btn-sync { background: var(--th-bg3); border-color: var(--th-accent); color: var(--th-accent); }
+html[data-theme="workshop"] .btn-sync:hover:not(:disabled) { background: #2a1500; }
+html[data-theme="workshop"] .link-btn { color: var(--th-accent); }
+
+/* ── AdminFluxPage ────────────────────────────────────────────── */
+html[data-theme="workshop"] .fa-title { color: var(--th-text); }
+html[data-theme="workshop"] .fa-sub { color: var(--th-text2); }
+html[data-theme="workshop"] .fa-btn-gs-reload { background: var(--th-bg2); border-color: var(--th-border); color: var(--th-text2); }
+html[data-theme="workshop"] .fa-btn-gs-reload:hover:not(:disabled) { background: var(--th-bg3); }
+html[data-theme="workshop"] .tb-search-wrap { background: var(--th-bg2); border-color: var(--th-border); }
+html[data-theme="workshop"] .ts-icon { color: var(--th-text3); }
+html[data-theme="workshop"] .tb-search { color: var(--th-text); }
+html[data-theme="workshop"] .tb-sel { background: var(--th-bg2); border-color: var(--th-border); color: var(--th-text); }
+html[data-theme="workshop"] .tb-btn-clear { background: var(--th-bg2); border-color: var(--th-border); color: #ef4444; }
+html[data-theme="workshop"] .tb-btn-clear:hover { background: #2a0a0a; border-color: #ef4444; }
+html[data-theme="workshop"] .vt-btn { background: var(--th-bg2); color: var(--th-text2); border-color: var(--th-border); }
+html[data-theme="workshop"] .vt-btn.active { background: var(--th-accent); color: #000; }
+html[data-theme="workshop"] .table-scroll { border-color: var(--th-border); }
+html[data-theme="workshop"] .pt-r-op th { background: var(--th-bg3); border-color: var(--th-border); }
+html[data-theme="workshop"] .pt-r-mach th { background: var(--th-bg2); border-bottom-color: var(--th-accent); border-right-color: var(--th-border); color: var(--th-text2); }
+html[data-theme="workshop"] .pivot-table tbody .pt-sc { background: var(--th-bg); }
+html[data-theme="workshop"] .pivot-table tbody .pt-r2 .pt-sc { background: var(--th-bg2); }
+html[data-theme="workshop"] .pt-r2 { background: var(--th-bg2); }
+html[data-theme="workshop"] .ptg-num { color: var(--th-accent); }
+html[data-theme="workshop"] .ptg-lbl { color: var(--th-text3); }
+html[data-theme="workshop"] .pt-pname { color: var(--th-text2); }
+html[data-theme="workshop"] .pt-route-num { color: var(--th-text); }
+html[data-theme="workshop"] .pt-sel td { background: #2a1800 !important; }
+html[data-theme="workshop"] .pt-cc:hover { background: var(--th-bg3); }
+html[data-theme="workshop"] .pt-cb { border-color: var(--th-border); }
+html[data-theme="workshop"] .pt-cb.on { background: var(--th-accent); border-color: var(--th-accent); }
+html[data-theme="workshop"] .pt-cc:hover .pt-cb:not(.on) { border-color: var(--th-accent); background: var(--th-bg3); }
+html[data-theme="workshop"] .bulk-assign-bar { background: #1a0f00; color: var(--th-text); border-radius: 10px; }
+html[data-theme="workshop"] .ba-sel { background: var(--th-bg2); color: var(--th-text); }
+html[data-theme="workshop"] .ba-off { background: var(--th-bg3); color: var(--th-text2); }
+html[data-theme="workshop"] .ba-off:hover:not(:disabled) { background: #252525; }
+html[data-theme="workshop"] .ba-clear { border-color: var(--th-border); color: var(--th-text2); }
+html[data-theme="workshop"] .ba-clear:hover { background: var(--th-bg3); }
+html[data-theme="workshop"] .modal-box { background: var(--th-bg2); }
+html[data-theme="workshop"] .mf-input { background: var(--th-bg); border-color: var(--th-border); color: var(--th-text); }
+html[data-theme="workshop"] .mf-input:focus { border-color: var(--th-accent); }
+html[data-theme="workshop"] .mf-err { background: #2a0a0a; color: #ef4444; }
+html[data-theme="workshop"] .mb-cancel { background: transparent; border-color: var(--th-border); color: var(--th-text2); }
+html[data-theme="workshop"] .mb-cancel:hover { color: var(--th-text); border-color: var(--th-text2); }
+html[data-theme="workshop"] .mh-sub { color: var(--th-text2); }
+html[data-theme="workshop"] .mf-opt { color: var(--th-text2); }
+html[data-theme="workshop"] .lot-dropdown { background: var(--th-bg3); border-color: var(--th-border); box-shadow: 0 8px 24px rgba(0,0,0,.6); }
+html[data-theme="workshop"] .ld-item { color: var(--th-text); border-bottom-color: var(--th-border); }
+html[data-theme="workshop"] .ld-item:hover { background: #222; color: #fff; }
+html[data-theme="workshop"] .lot-chip { color: #6ee7b7; background: #05966911; }
+html[data-theme="workshop"] .empty-row,
+html[data-theme="workshop"] .loading-row { color: var(--th-text3); }
+html[data-theme="workshop"] .gs-row-err { background: #2a0a0a; }
+html[data-theme="workshop"] .prod-card { background: var(--th-bg2); border-color: var(--th-border); }
+html[data-theme="workshop"] .pc-code { color: var(--th-accent); }
+html[data-theme="workshop"] .pc-name { color: var(--th-text); }
+html[data-theme="workshop"] .pc-routes { background: var(--th-bg3); color: var(--th-text2); }
+html[data-theme="workshop"] .pr-step { background: var(--th-bg3); }
+html[data-theme="workshop"] .prs-num { background: var(--th-bg); color: var(--th-text2); }
+html[data-theme="workshop"] .prs-room-code { background: #2a1500; color: var(--th-accent); }
+html[data-theme="workshop"] .prs-btn { border-color: var(--th-border); color: var(--th-text2); }
+html[data-theme="workshop"] .prs-btn:hover { color: var(--th-text); border-color: var(--th-text2); }
+html[data-theme="workshop"] .prs-del:hover { color: #ef4444; border-color: #ef4444; }
+html[data-theme="workshop"] .pr-add-step { border-color: var(--th-border); color: var(--th-text3); }
+html[data-theme="workshop"] .pr-add-step:hover { border-color: var(--th-accent); color: var(--th-accent); background: var(--th-bg3); }
+html[data-theme="workshop"] .pc-add-route { border-color: #2a1500; color: var(--th-accent); }
+html[data-theme="workshop"] .pc-add-route:hover { background: var(--th-bg3); }
+html[data-theme="workshop"] .cad-table th { background: var(--th-bg2); color: var(--th-text2); border-bottom-color: var(--th-border); }
+html[data-theme="workshop"] .cad-table td { border-bottom-color: var(--th-bg3); }
+html[data-theme="workshop"] .room-chip { background: #2a1500; color: var(--th-accent); }
+html[data-theme="workshop"] .op-num { background: #2a1500; color: var(--th-accent); }
+html[data-theme="workshop"] .unit-chip { background: var(--th-bg3); color: var(--th-text); }
+html[data-theme="workshop"] .cad-prod-code { color: var(--th-accent); }
+
+/* ── AdminShiftsPage ──────────────────────────────────────────── */
+html[data-theme="workshop"] .card { background: var(--th-bg2); border-color: var(--th-border); }
+html[data-theme="workshop"] .card-hd { background: var(--th-bg); border-bottom-color: var(--th-border); color: var(--th-text); }
+html[data-theme="workshop"] .shift-nom { color: var(--th-text); }
+html[data-theme="workshop"] .mono { color: var(--th-text2); }
+html[data-theme="workshop"] .arrow { color: var(--th-text3); }
+html[data-theme="workshop"] .dur-badge { background: var(--th-bg3); color: var(--th-text2); }
+html[data-theme="workshop"] .actif { background: #0a2a1a; color: #10b981; }
+html[data-theme="workshop"] .inactif { background: var(--th-bg3); color: var(--th-text3); }
+html[data-theme="workshop"] .planning-grid { border-color: var(--th-border); }
+html[data-theme="workshop"] .pg-head { background: var(--th-bg2); border-color: var(--th-border); }
+html[data-theme="workshop"] .pg-eq-site { color: var(--th-text3); }
+html[data-theme="workshop"] .pg-label { background: var(--th-topbar); border-bottom-color: var(--th-bg3); border-right-color: var(--th-border); }
+html[data-theme="workshop"] .pg-label.today { background: var(--th-bg3); }
+html[data-theme="workshop"] .day-label { color: var(--th-text2); }
+html[data-theme="workshop"] .pg-cell { border-bottom-color: var(--th-bg3); border-right-color: var(--th-border); }
+html[data-theme="workshop"] .pg-cell.today { background: #1a1200; }
+html[data-theme="workshop"] .pg-assign { border-color: var(--th-border); color: var(--th-text3); }
+html[data-theme="workshop"] .pg-assign:hover { border-color: var(--th-accent); color: var(--th-accent); background: var(--th-bg3); }
+html[data-theme="workshop"] .wn-btn { background: var(--th-bg2); border-color: var(--th-border); color: var(--th-text2); }
+html[data-theme="workshop"] .wn-btn:hover { background: var(--th-bg3); }
+html[data-theme="workshop"] .wn-btn.today { background: var(--th-accent); color: #000; border-color: var(--th-accent); }
+html[data-theme="workshop"] .assign-ctx { background: var(--th-bg); border-radius: 3px; color: var(--th-text2); }
+html[data-theme="workshop"] .cal-view-tabs { border-color: var(--th-border); }
+html[data-theme="workshop"] .cv-tab { background: var(--th-bg2); color: var(--th-text2); border-right-color: var(--th-border); }
+html[data-theme="workshop"] .cv-tab.active { background: var(--th-accent); color: #000; }
+html[data-theme="workshop"] .cal-nav { background: var(--th-topbar); border-bottom-color: var(--th-border); }
+html[data-theme="workshop"] .cal-period { color: var(--th-text); }
+html[data-theme="workshop"] .month-grid { border-left-color: var(--th-border); border-top-color: var(--th-border); }
+html[data-theme="workshop"] .mth-head { background: var(--th-bg2); color: var(--th-text2); border-right-color: var(--th-border); border-bottom-color: var(--th-border); }
+html[data-theme="workshop"] .mth-cell { border-right-color: var(--th-border); border-bottom-color: var(--th-bg3); }
+html[data-theme="workshop"] .mth-cell.other-month { background: #111; }
+html[data-theme="workshop"] .mth-day-num { color: var(--th-text2); }
+html[data-theme="workshop"] .mth-day-num.today { background: var(--th-accent); color: #000; }
+html[data-theme="workshop"] .mth-more { color: var(--th-text3); }
+
+/* ── AdminArretTypesPage ──────────────────────────────────────── */
+html[data-theme="workshop"] .pt-sub { color: var(--th-text2); }
+html[data-theme="workshop"] .tree-layout { border-color: var(--th-border); }
+html[data-theme="workshop"] .tree-col { border-right-color: var(--th-border); }
+html[data-theme="workshop"] .col-hd { background: var(--th-bg2); border-bottom-color: var(--th-border); color: var(--th-text); }
+html[data-theme="workshop"] .col-title.muted { color: var(--th-text3); }
+html[data-theme="workshop"] .tree-item { border-bottom-color: var(--th-bg3); color: var(--th-text); }
+html[data-theme="workshop"] .tree-item:hover { background: var(--th-bg2); }
+html[data-theme="workshop"] .tree-item.active { background: #2a1500; border-left-color: var(--th-accent); }
+html[data-theme="workshop"] .item-badge { background: var(--th-bg3); color: var(--th-text2); }
+html[data-theme="workshop"] .type-row { border-bottom-color: var(--th-bg3); color: var(--th-text); }
+html[data-theme="workshop"] .type-row:hover { background: var(--th-bg2); }
+html[data-theme="workshop"] .color-val { color: var(--th-text2); }
+html[data-theme="workshop"] .btn-clear { background: var(--th-bg2); border-color: var(--th-border); color: var(--th-text2); }
+html[data-theme="workshop"] .btn-clear:hover { background: var(--th-bg3); }
+html[data-theme="workshop"] .flag-item { background: var(--th-bg2); border-color: var(--th-border); color: var(--th-text); }
+html[data-theme="workshop"] .flag-item:hover { background: var(--th-bg3); }
 
 /* ── AdminRefPage (barre d'onglets référentiel) ───────────────── */
 html[data-theme="night"] .ar-tabs,
