@@ -404,6 +404,33 @@ Quand une page est restructurée pour adopter le pattern AdminFluxPage, **tous l
 
 ---
 
+## RÈGLE N°15b — `position: sticky` exige un conteneur scrollable
+
+`position: sticky` sur un en-tête **ne fonctionne que si le conteneur parent** a :
+- `overflow-y: auto` (ou `scroll`)
+- une hauteur contrainte : `max-height: calc(100vh - Xpx)`
+
+### Checklist avant tout `position: sticky` sur un en-tête
+
+```css
+/* ✅ TOUJOURS vérifier que le parent a : */
+.conteneur {
+  overflow-y: auto;
+  max-height: calc(100vh - 220px); /* ajuster selon la hauteur du header page */
+}
+
+/* Puis l'en-tête peut être sticky : */
+.th-ou-hd {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+```
+
+Si le conteneur n'a que `overflow-x: auto` sans `overflow-y`, le sticky ne fonctionne pas en vertical.
+
+---
+
 ## RÈGLE N°16 — Cohérence scoped CSS ↔ themes.css
 
 ### Problème rencontré (mai 2026 — AdminShiftsPage)
