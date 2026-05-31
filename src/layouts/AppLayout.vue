@@ -73,8 +73,8 @@
   </div>
 </template>
 <script>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { supabase } from '../supabase'
 import { loadPermissions } from '../services/permissions'
 import { getUnreadCount, getNewNotifications, check48hDeviations } from '../services/notifications'
@@ -83,6 +83,7 @@ import { playSoundForEvent } from '../services/sounds'
 export default {
   setup() {
     var router = useRouter()
+    var route  = useRoute()
     var profile = ref(null), searchQuery = ref(''), suggestions = ref([]), showSug = ref(false)
     var clock = ref(''), unreadCount = ref(0), pendingTasksCount = ref(0), searchInput = ref(null), mobileMenuOpen = ref(false)
     var toasts = ref([]), lastCheck = ref(new Date().toISOString()), toastId = ref(0)
@@ -203,6 +204,15 @@ export default {
       }
     })
     onUnmounted(function(){clearInterval(clockInt);clearInterval(notifInt);clearInterval(planningInt);clearInterval(devAlertInt);clearInterval(tasksInt)})
+
+    // Vider la barre de recherche quand on quitte la page Lots
+    watch(function(){ return route.path }, function(newPath) {
+      if (!newPath.startsWith('/lots')) {
+        searchQuery.value = ''
+        suggestions.value = []
+        showSug.value = false
+      }
+    })
 
     return {profile,initials,isAdmin,searchQuery,suggestions,showSug,clock,unreadCount,pendingTasksCount,searchInput,
       mobileMenuOpen,toasts,serviceLabels,onSearch,submitSearch,selectSug,hideSug,logout,goToLot,
