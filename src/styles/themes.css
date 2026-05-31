@@ -463,12 +463,9 @@ html[data-theme="workshop"] .tsw-btn.active { background: rgba(255,152,0,.15); b
    ont encore le bleu codé en dur dans leur scoped CSS.
 ══════════════════════════════════════════════════════════════════ */
 
-/* ── Font globale (tous thèmes) ───────────────────────────────── */
+/* ── Font globale (containers existants) ──────────────────────── */
 html[data-theme="day"] .flux-admin,
 html[data-theme="day"] .admin-ateliers,
-html[data-theme="day"] .admin-shifts,
-html[data-theme="day"] .admin-arrets,
-html[data-theme="day"] .products-catalog,
 html[data-theme="day"] .ar-body { font-family: var(--th-font); font-size: var(--th-font-size); }
 
 /* ── Page headers .ph — remplace le noir #0a0a0a ─────────────── */
@@ -504,11 +501,17 @@ html[data-theme="day"] .lbl {
   color: var(--th-text2);
 }
 
-/* ── Boutons — border-radius 5px ─────────────────────────────── */
-html[data-theme="day"] .btn-save,
-html[data-theme="day"] .btn-add,
-html[data-theme="day"] .btn-cancel,
+/* ── Boutons — fond violet + border-radius 5px ───────────────── */
+html[data-theme="day"] .btn-add { background: var(--th-accent); color: #fff; border-color: var(--th-accent); border-radius: 5px; }
+html[data-theme="day"] .btn-add:hover:not(:disabled) { background: #6d28d9; }
+html[data-theme="day"] .btn-save { color: #fff; border-radius: 5px; }
+html[data-theme="day"] .btn-cancel { border-radius: 5px; }
 html[data-theme="day"] .tab-btn { border-radius: 5px; }
+html[data-theme="day"] .tab-btn.active { background: var(--th-accent); border-color: var(--th-accent); color: #fff; }
+html[data-theme="day"] .tab-btn-gs { border-color: var(--th-accent); color: var(--th-accent); background: #f5f3ff; }
+html[data-theme="day"] .tab-btn-gs.active { background: var(--th-accent); border-color: var(--th-accent); color: #fff; }
+html[data-theme="day"] .bg { background: var(--th-accent); color: #fff; }
+html[data-theme="day"] .bg:hover { background: #6d28d9; }
 
 /* ── AdminRefPage ─────────────────────────────────────────────── */
 html[data-theme="day"] .ar-tab.active {
