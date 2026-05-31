@@ -36,6 +36,7 @@
         </div>
         <button class="btn-exp" @click="doExportExcel">📥 Excel</button>
         <button class="btn-exp" @click="doExportPDF">📄 PDF</button>
+        <button class="btn-data" @click.stop="openDataModal">⬆ Données</button>
       </div>
     </div>
 
@@ -325,6 +326,68 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal Données : import GS (Réception PF + Historique) + vidage -->
+    <div class="m-overlay" v-if="showDataModal" @click.self="closeDataModal">
+      <div class="m-box">
+        <div class="m-title">Données — Import &amp; réinitialisation</div>
+
+        <div v-if="dataBusy" class="dm-busy">
+          <div class="dm-busy-label">{{dataAction}} — {{dataProgress}}%</div>
+          <div class="dm-prog"><div class="dm-prog-fill" :style="{width:dataProgress+'%'}"></div></div>
+          <div class="dm-busy-hint">Traitement par lot, peut prendre un moment…</div>
+        </div>
+
+        <div v-else-if="dataStats" class="dm-result-wrap">
+          <div class="m-result">
+            <div class="m-rh">{{dataAction}} — terminé</div>
+            <div class="m-rg" v-if="dataStats.created !== undefined">
+              <div class="m-rc"><div class="m-rv" style="color:#1D9E75">{{dataStats.created}}</div><div class="m-rl">Créés</div></div>
+              <div class="m-rc"><div class="m-rv" style="color:#7c3aed">{{dataStats.updated}}</div><div class="m-rl">Màj</div></div>
+              <div class="m-rc"><div class="m-rv" style="color:#999">{{dataStats.skipped}}</div><div class="m-rl">Ignorés</div></div>
+              <div class="m-rc"><div class="m-rv" style="color:#E24B4A">{{(dataStats.errors||[]).length}}</div><div class="m-rl">Erreurs</div></div>
+            </div>
+            <div v-else class="dm-done">✓ Opération terminée</div>
+            <div v-if="dataStats.errors && dataStats.errors.length" class="m-errs">
+              <div v-for="(e,i) in dataStats.errors.slice(0,12)" :key="i" class="m-err">{{e}}</div>
+            </div>
+          </div>
+          <div class="m-actions"><button class="m-btn-cancel" @click="dataStats=null">← Retour</button></div>
+        </div>
+
+        <div v-else class="dm-body">
+          <div class="dm-section">
+            <div class="dm-sec-title">🔄 Réception PF (SAP)</div>
+            <div class="dm-sec-desc">Synchronise les lots depuis la feuille SAP « Réception PF ».</div>
+            <button class="dm-btn-primary" :disabled="!gsReceptionUrl" @click="syncReceptionPF">Synchroniser Réception PF</button>
+            <div v-if="!gsReceptionUrl" class="dm-warn">URL non configurée (voir page Import).</div>
+          </div>
+
+          <div class="dm-section">
+            <div class="dm-sec-title">🔄 Historique</div>
+            <div class="dm-sec-desc">Importe l'état complet depuis la feuille « Historique » (Google Sheets).</div>
+            <input v-model="gsHistoUrl" class="dm-url" type="url" placeholder="URL CSV publiée…" @change="saveHistoUrl" />
+            <button class="dm-btn-primary" :disabled="!gsHistoUrl" @click="syncHistorique">Synchroniser Historique</button>
+          </div>
+
+          <div class="dm-section dm-danger">
+            <div class="dm-sec-title">🗑 Vider &amp; réimporter</div>
+            <div class="dm-sec-desc">Efface <strong>tous les lots</strong> (Réception SAP + Historique + saisie manuelle de tests), puis réimporte l'Historique. Le référentiel (produits, comptes, permissions) est conservé.</div>
+            <button v-if="!confirmVider" class="dm-btn-danger" @click="confirmVider=true">Vider &amp; réimporter…</button>
+            <template v-else>
+              <div class="dm-confirm-lbl">Tape <strong>VIDER</strong> pour confirmer la suppression définitive :</div>
+              <input v-model="confirmText" class="dm-url" placeholder="VIDER" @keydown.enter="viderEtReimporter" />
+              <div class="dm-confirm-acts">
+                <button class="dm-btn-danger" :disabled="confirmText!=='VIDER'" @click="viderEtReimporter">Confirmer</button>
+                <button class="m-btn-cancel" @click="confirmVider=false;confirmText=''">Annuler</button>
+              </div>
+            </template>
+          </div>
+
+          <div class="m-actions"><button class="m-btn-cancel" @click="closeDataModal">Fermer</button></div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 <script>
@@ -334,6 +397,7 @@ import { supabase } from '../supabase'
 import { exportToExcel, exportToPDF } from '../services/export'
 import { createNotification } from '../services/notifications'
 import { canPerform, loadPermissions, getPermissionForBulkAction, getPermissionForEtape } from '../services/permissions'
+import { importFromGoogleSheets, importHistoriqueDepuisGoogleSheets, viderDonneesOperationnelles } from '../services/import'
 export default {
   setup() {
     var route = useRoute(), router = useRouter()
@@ -2046,6 +2110,46 @@ var loadCharge = async function() {
     watch(function(){return route.query},load,{deep:true})
     watch([hiddenStatuts, columnFilters, sortCol, sortDir], function(){ tablePage.value = 0 }, {deep:true})
 
+    // ── Modale Données : import GS (Réception PF + Historique) + vidage ──
+    var GS_HISTO_URL_DEFAULT = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vScTWm9jzHYQT2sJEZopWbjxkUYSv5LZobGsjdET0ZXKVUaRcJ3S2n-Fpo4y8br_SBWCqRFEqr2D8D7/pub?gid=1271101139&single=true&output=csv'
+    var showDataModal = ref(false), dataBusy = ref(false), dataProgress = ref(0), dataStats = ref(null), dataAction = ref('')
+    var gsReceptionUrl = ref(''), gsHistoUrl = ref(''), confirmVider = ref(false), confirmText = ref('')
+
+    var openDataModal = async function() {
+      showDataModal.value = true; dataStats.value = null; confirmVider.value = false; confirmText.value = ''
+      var rRec = await supabase.from('app_settings').select('value').eq('key','gs_url').maybeSingle()
+      gsReceptionUrl.value = (rRec.data && rRec.data.value) || localStorage.getItem('liberation_gs_url') || ''
+      var rHis = await supabase.from('app_settings').select('value').eq('key','gs_historique_url').maybeSingle()
+      gsHistoUrl.value = (rHis.data && rHis.data.value) || GS_HISTO_URL_DEFAULT
+    }
+    var closeDataModal = function() { showDataModal.value = false }
+    var saveHistoUrl = async function() {
+      await supabase.from('app_settings').upsert({ key:'gs_historique_url', value: gsHistoUrl.value || '' }, { onConflict:'key' })
+    }
+    var runData = async function(label, fn) {
+      dataBusy.value = true; dataProgress.value = 0; dataStats.value = null; dataAction.value = label
+      try { dataStats.value = await fn(function(p){ dataProgress.value = p }) }
+      catch(e) { dataStats.value = { errors: ['Erreur : ' + (e.message || e)] } }
+      dataBusy.value = false
+      await load()
+    }
+    var syncReceptionPF = function() {
+      if (gsReceptionUrl.value) runData('Sync Réception PF', function(cb){ return importFromGoogleSheets(gsReceptionUrl.value, cb) })
+    }
+    var syncHistorique = function() {
+      if (gsHistoUrl.value) runData('Sync Historique', function(cb){ return importHistoriqueDepuisGoogleSheets(gsHistoUrl.value, cb) })
+    }
+    var viderEtReimporter = function() {
+      if (confirmText.value !== 'VIDER') return
+      confirmVider.value = false; confirmText.value = ''
+      runData('Vidage + réimport Historique', async function(cb){
+        var vid = await viderDonneesOperationnelles(function(p){ cb(Math.round(p * 0.3)) })
+        var imp = await importHistoriqueDepuisGoogleSheets(gsHistoUrl.value, function(p){ cb(30 + Math.round(p * 0.7)) })
+        imp.errors = (vid.errors || []).concat(imp.errors || [])
+        return imp
+      })
+    }
+
     return{lots,total,lotsLoading,hiddenStatuts,toggleStatutVisibility,showStatutPanel,showDates,filteredLots,pagedLots,tablePage,totalPages,filterOptions,
       sortBy,sortIcon,goToLot,doExportExcel,doExportPDF,
       selected,actionType,showConfirm,executing,progress,execResult,bulkDate,
@@ -2060,7 +2164,9 @@ var loadCharge = async function() {
       bulkDevBloquante,bulkDevNumeroDn,bulkDevObs,
       datePicker,dpInput,openDatePicker,savePlanning,getPlanClass,getPhaseClass,
       chargeCount,chargeLoading,loadCharge,
-      planHistory,planHistLoading}
+      planHistory,planHistLoading,
+      showDataModal,dataBusy,dataProgress,dataStats,dataAction,gsReceptionUrl,gsHistoUrl,confirmVider,confirmText,
+      openDataModal,closeDataModal,saveHistoUrl,syncReceptionPF,syncHistorique,viderEtReimporter}
   }
 }
 </script>
@@ -2308,4 +2414,26 @@ var loadCharge = async function() {
   .m-overlay{padding:12px}
   .m-box{width:100%}
 }
+/* ── Bouton + Modale Données (var(--th-*) → compatible 3 thèmes) ── */
+.btn-data{font-size:11px;padding:4px 10px;border:1px solid var(--th-accent,#7c3aed);border-radius:3px;background:var(--th-bg3,#f5f3ff);cursor:pointer;color:var(--th-accent,#6d28d9);font-family:inherit;font-weight:600;white-space:nowrap}
+.dm-body{display:flex;flex-direction:column;gap:14px}
+.dm-section{border:1px solid var(--th-border,#e5e7eb);border-radius:8px;padding:14px}
+.dm-sec-title{font-size:13px;font-weight:700;color:var(--th-text,#1a1a2e);margin-bottom:4px}
+.dm-sec-desc{font-size:12px;color:var(--th-text2,#6b7280);line-height:1.5;margin-bottom:10px}
+.dm-url{width:100%;box-sizing:border-box;font-size:12px;font-family:'SF Mono',monospace;border:1px solid var(--th-border,#ddd);border-radius:5px;padding:8px;outline:none;background:var(--th-input-bg,#fff);color:var(--th-text,#333);margin-bottom:10px}
+.dm-url:focus{border-color:var(--th-accent,#7c3aed)}
+.dm-btn-primary{width:100%;padding:10px;font-size:13px;font-weight:600;font-family:inherit;background:#7c3aed;color:#fff;border:none;border-radius:5px;cursor:pointer}.dm-btn-primary:hover:not(:disabled){background:#6d28d9}.dm-btn-primary:disabled{opacity:.45;cursor:not-allowed}
+.dm-danger{border-color:#f0b4b4}
+.dm-btn-danger{width:100%;padding:10px;font-size:13px;font-weight:600;font-family:inherit;background:#E24B4A;color:#fff;border:none;border-radius:5px;cursor:pointer}.dm-btn-danger:hover:not(:disabled){background:#c0392b}.dm-btn-danger:disabled{opacity:.45;cursor:not-allowed}
+.dm-warn{font-size:11px;color:#E24B4A;margin-top:6px}
+.dm-confirm-lbl{font-size:12px;color:var(--th-text,#333);margin-bottom:8px}
+.dm-confirm-acts{display:flex;gap:8px}
+.dm-confirm-acts .m-btn-cancel{flex:1}
+.dm-busy{padding:20px 4px;text-align:center}
+.dm-busy-label{font-size:13px;color:var(--th-text,#333);margin-bottom:10px;font-weight:600}
+.dm-busy-hint{font-size:11px;color:var(--th-text2,#999);margin-top:10px}
+.dm-prog{height:6px;background:var(--th-bg3,#f0f0f0);border-radius:3px;overflow:hidden}
+.dm-prog-fill{height:100%;background:#7c3aed;border-radius:3px;transition:width .3s}
+.dm-done{font-size:14px;color:#1D9E75;font-weight:600;text-align:center;padding:16px 0}
+.dm-result-wrap{display:flex;flex-direction:column}
 </style>

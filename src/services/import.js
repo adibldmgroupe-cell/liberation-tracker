@@ -411,6 +411,219 @@ export async function importFromGoogleSheets(url, onProgress) {
   return stats
 }
 
+// ══════════════ IMPORT HISTORIQUE depuis GOOGLE SHEETS (batch) ══════════════
+// Source : feuille "Historique" publiée en CSV (mêmes colonnes que l'import Excel
+// Historique). Particularité : 1re ligne = groupes de services → on détecte la vraie
+// ligne d'en-têtes (celle contenant "N°LOT"). Optimisé en batch (upserts groupés).
+// Prérequis migration : UNIQUE(lot_id,type_document) sur liberation_documents.
+function chunk(arr, size) { var out = []; for (var i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size)); return out }
+
+export async function importHistoriqueDepuisGoogleSheets(url, onProgress) {
+  var stats = { created: 0, updated: 0, skipped: 0, errors: [], type: 'Historique GS' }
+  var P = function(n) { if (onProgress) onProgress(n) }
+  P(3)
+
+  // ── 1. Fetch CSV ──
+  var text
+  try {
+    var res = await fetch(url)
+    if (!res.ok) throw new Error('HTTP ' + res.status)
+    text = await res.text()
+  } catch (e) { return Object.assign(stats, { errors: ['Lecture URL impossible : ' + e.message] }) }
+  P(10)
+
+  // ── 2. Parse + détection ligne d'en-têtes (saute la ligne de groupes) ──
+  var rows = parseCSV(text)
+  if (!rows.length) return Object.assign(stats, { errors: ['Fichier vide'] })
+  var headerIdx = rows.findIndex(function(r) { return r.some(function(c) { return norm(c).toUpperCase().indexOf('LOT') !== -1 }) })
+  if (headerIdx === -1) return Object.assign(stats, { errors: ['En-têtes introuvables (colonne N°LOT absente)'] })
+  var headers = {}
+  rows[headerIdx].forEach(function(h, i) { headers[norm(h)] = i })
+  var dataRows = rows.slice(headerIdx + 1)
+  P(15)
+
+  // ── 3. Parser les lignes → objets (dédup par numero_lot) ──
+  var map = {}
+  dataRows.forEach(function(row) {
+    var g = makeCsvGetVal(row, headers)
+    var numLot = clean(g('N°LOT')) || clean(g('LOT'))
+    var codeArticle = clean(g('Code SAP'))
+    if (!numLot || !codeArticle) { stats.skipped++; return }
+    map[numLot] = {
+      numLot: numLot, codeArticle: codeArticle,
+      description: clean(g('Description article')) || codeArticle,
+      statut: mapStatut(clean(g('Statut')) || ''),
+      qte: parseQuantite(g('Quantité entrée en stock')),
+      dateEntree: parseDate(g('Date entrée Stock PF')),
+      dateIF: parseDate(g('DDL Fab')), dateIC: parseDate(g('DDL condt')),
+      dateDAPC: parseDate(g('D.A Physico')), dateDAMicro: parseDate(g('D.A Microbio')),
+      demandeAQL: parseDate(g('demande AQL')), finAQL: parseDate(g('Date fin AQL')),
+      deviation: clean(g('DEVIATION')), dateLib: parseDate(g('libération réelle')),
+      dateFinFab: parseDate(g('Date fin fab')), dateFinCdt: parseDate(g('Date fin cdt')),
+    }
+  })
+  var parsed = Object.values(map)
+  if (!parsed.length) return Object.assign(stats, { errors: ['Aucune ligne valide (N°LOT + Code SAP requis)'] })
+  P(25)
+
+  // ── 4. Produits (batch) ──
+  var codes = parsed.map(function(p) { return p.codeArticle }).filter(function(c, i, a) { return a.indexOf(c) === i })
+  var prodMap = {}
+  for (var ccodes of chunk(codes, 800)) {
+    var exProds = await supabase.from('products').select('id,code_article').in('code_article', ccodes)
+    ;(exProds.data || []).forEach(function(p) { prodMap[p.code_article] = p.id })
+  }
+  var newProds = codes.filter(function(c) { return !prodMap[c] }).map(function(c) {
+    var it = parsed.find(function(p) { return p.codeArticle === c })
+    return { code_article: c, description: it.description, is_semi_solide: isSemiSolide(it.description) }
+  })
+  for (var pc of chunk(newProds, 500)) {
+    var insP = await supabase.from('products').insert(pc).select('id,code_article')
+    if (insP.error) stats.errors.push('Produits : ' + insP.error.message)
+    ;(insP.data || []).forEach(function(p) { prodMap[p.code_article] = p.id })
+  }
+  P(40)
+
+  // ── 5. Lots existants (distinguer créés/màj) ──
+  var numLots = parsed.map(function(p) { return p.numLot })
+  var existing = {}
+  for (var nc of chunk(numLots, 800)) {
+    var ex = await supabase.from('lots').select('numero_lot').in('numero_lot', nc)
+    ;(ex.data || []).forEach(function(l) { existing[l.numero_lot] = true })
+  }
+  var now = new Date().toISOString()
+
+  // ── 6. Upsert lots (batch, onConflict numero_lot comme la sync SAP) ──
+  var lotRows = []
+  parsed.forEach(function(p) {
+    var pid = prodMap[p.codeArticle]
+    if (!pid) { stats.errors.push('Produit introuvable : ' + p.codeArticle); return }
+    lotRows.push({
+      numero_lot: p.numLot, product_id: pid, statut_sap: p.statut,
+      quantite: p.qte, date_enregistrement: p.dateEntree,
+      date_liberation: p.dateLib || null, synced_from_excel_at: now, updated_at: now,
+    })
+  })
+  var lotIdMap = {}
+  for (var lc of chunk(lotRows, 500)) {
+    var up = await supabase.from('lots').upsert(lc, { onConflict: 'numero_lot' }).select('id,numero_lot')
+    if (up.error) return Object.assign(stats, { errors: ['Lots : ' + up.error.message] })
+    ;(up.data || []).forEach(function(l) { lotIdMap[l.numero_lot] = l.id })
+  }
+  parsed.forEach(function(p) { if (existing[p.numLot]) stats.updated++; else stats.created++ })
+  P(60)
+
+  // ── 7. Construire docs / dossiers / OF / OC / AQL / déviations ──
+  var docRows = [], dossierRows = [], ofRows = [], ocRows = [], aqlCand = [], devCand = []
+  var SVC = { if: 'fabrication', ic: 'conditionnement', da_pc: 'lcq', da_micro: 'lcq', ccl: 'aq' }
+  parsed.forEach(function(p) {
+    var lotId = lotIdMap[p.numLot]; if (!lotId) return
+    var libere = !!p.dateLib
+    var microApp = !!(p.dateDAMicro && p.dateDAMicro !== '1970-01-01')
+    function doc(type, emittedDate, applicable) {
+      var d = { lot_id: lotId, type_document: type, is_applicable: applicable, is_required: applicable, service_emetteur: SVC[type], statut: 'non_emis', emitted_at: null, approved_at: null, updated_at: now }
+      if (emittedDate) { d.statut = 'emis'; d.emitted_at = emittedDate + 'T00:00:00Z' }
+      if (libere && applicable) { d.statut = 'approuve_dt'; d.approved_at = p.dateLib + 'T00:00:00Z' }
+      return d
+    }
+    docRows.push(doc('if', p.dateIF, true), doc('ic', p.dateIC, true), doc('da_pc', p.dateDAPC, true), doc('da_micro', microApp ? p.dateDAMicro : null, microApp), doc('ccl', null, true))
+
+    var dossier = { lot_id: lotId, da_micro_applicable: microApp, updated_at: now }
+    if (libere) {
+      dossier.statut = 'libere'; dossier.liberated_at = p.dateLib + 'T00:00:00Z'
+      dossier.if_approved = true; dossier.ic_approved = true; dossier.da_pc_approved = true
+      dossier.da_micro_approved = microApp; dossier.deviations_closed = true; dossier.pieces_complementaires_ok = true
+    } else if (p.deviation && p.deviation !== '0') { dossier.deviations_closed = false }
+    dossierRows.push(dossier)
+
+    var ofT = !!(p.dateIF || p.dateDAPC || p.dateFinFab)
+    ofRows.push({ lot_id: lotId, statut: ofT ? 'termine' : 'planifie', etape_circuit: ofT ? 'production' : 'planification', updated_at: now })
+    var ocT = !!(p.dateIC || p.dateFinCdt)
+    ocRows.push({ lot_id: lotId, statut: ocT ? 'termine' : 'planifie', etape_circuit: ocT ? 'production' : 'planification', updated_at: now })
+
+    if (p.demandeAQL || p.finAQL) aqlCand.push({ lotId: lotId, demandeAQL: p.demandeAQL, finAQL: p.finAQL })
+    if (p.deviation && p.deviation !== '0') devCand.push({ lotId: lotId, description: p.deviation })
+  })
+
+  // ── 8. Upsert docs / dossiers / OF / OC (batch) ──
+  for (var dc of chunk(docRows, 500)) {
+    var rD = await supabase.from('liberation_documents').upsert(dc, { onConflict: 'lot_id,type_document' })
+    if (rD.error) stats.errors.push('Documents : ' + rD.error.message + ' — exécuter la migration UNIQUE(lot_id,type_document)')
+  }
+  for (var dsc of chunk(dossierRows, 500)) {
+    var rDs = await supabase.from('liberation_dossiers').upsert(dsc, { onConflict: 'lot_id' })
+    if (rDs.error) stats.errors.push('Dossiers : ' + rDs.error.message)
+  }
+  for (var ofc of chunk(ofRows, 500)) {
+    var rOf = await supabase.from('orders_of').upsert(ofc, { onConflict: 'lot_id' })
+    if (rOf.error) stats.errors.push('OF : ' + rOf.error.message)
+  }
+  for (var occ of chunk(ocRows, 500)) {
+    var rOc = await supabase.from('orders_oc').upsert(occ, { onConflict: 'lot_id' })
+    if (rOc.error) stats.errors.push('OC : ' + rOc.error.message)
+  }
+  P(80)
+
+  // ── 9. AQL : insérer les manquants (pas de contrainte unique → select existants) ──
+  if (aqlCand.length) {
+    var exAql = {}
+    for (var alc of chunk(aqlCand.map(function(a) { return a.lotId }), 800)) {
+      var ea = await supabase.from('aql_inspections').select('lot_id').in('lot_id', alc).eq('type', 'fabrication')
+      ;(ea.data || []).forEach(function(x) { exAql[x.lot_id] = true })
+    }
+    var aqlRows = aqlCand.filter(function(a) { return !exAql[a.lotId] }).map(function(a) {
+      return { lot_id: a.lotId, type: 'fabrication', resultat: a.finAQL ? 'conforme' : 'en_attente', requested_at: a.demandeAQL ? a.demandeAQL + 'T00:00:00Z' : null, inspected_at: a.finAQL ? a.finAQL + 'T00:00:00Z' : null }
+    })
+    for (var aqc of chunk(aqlRows, 500)) {
+      var rA = await supabase.from('aql_inspections').insert(aqc)
+      if (rA.error) stats.errors.push('AQL : ' + rA.error.message)
+    }
+  }
+  P(90)
+
+  // ── 10. Déviations : insérer les manquantes ──
+  if (devCand.length) {
+    var u = await supabase.auth.getUser()
+    var uid = u.data.user ? u.data.user.id : null
+    var exDev = {}
+    for (var dlc of chunk(devCand.map(function(d) { return d.lotId }), 800)) {
+      var ed = await supabase.from('deviations').select('lot_id').in('lot_id', dlc)
+      ;(ed.data || []).forEach(function(x) { exDev[x.lot_id] = true })
+    }
+    var devRows = devCand.filter(function(d) { return !exDev[d.lotId] }).map(function(d) {
+      return { lot_id: d.lotId, type: 'deviation', statut: 'ouverte', description: d.description, declared_by: uid, declared_at: now }
+    })
+    for (var dvc of chunk(devRows, 500)) {
+      var rDv = await supabase.from('deviations').insert(dvc)
+      if (rDv.error) stats.errors.push('Déviations : ' + rDv.error.message)
+    }
+  }
+  P(100)
+  return stats
+}
+
+// ══════════════ VIDAGE COMPLET (reset opérationnel) ══════════════
+// Efface tous les lots et leur cycle de vie (SAP + Historique + saisie manuelle).
+// Conserve le référentiel : produits, profils, permissions, config, ateliers.
+// notifications + order_validations n'ont pas de FK cascade → suppression explicite
+// (nécessite policies DELETE — voir migration).
+export async function viderDonneesOperationnelles(onProgress) {
+  var stats = { errors: [] }
+  var P = function(n) { if (onProgress) onProgress(n) }
+  P(10)
+  var n1 = await supabase.from('notifications').delete().gt('id', 0)
+  if (n1.error) stats.errors.push('notifications : ' + n1.error.message + ' — policy DELETE requise')
+  P(35)
+  var n2 = await supabase.from('order_validations').delete().gt('id', 0)
+  if (n2.error) stats.errors.push('order_validations : ' + n2.error.message + ' — policy DELETE requise')
+  P(60)
+  // lots en dernier → cascade OF/OC, documents, mouvements, AQL, déviations, dossiers, events, étapes fab
+  var n3 = await supabase.from('lots').delete().gt('id', 0)
+  if (n3.error) stats.errors.push('lots : ' + n3.error.message)
+  P(100)
+  return stats
+}
+
 // ══════════════ HELPERS ══════════════
 async function upsertProduct(code, description, getVal) {
   var existing = await supabase.from('products').select('id').eq('code_article', code).maybeSingle()
