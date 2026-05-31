@@ -1511,3 +1511,53 @@ html[data-theme="night"] .tp-modal, html[data-theme="workshop"] .tp-modal { back
 html[data-theme="night"] .tp-modal-ctx, html[data-theme="workshop"] .tp-modal-ctx { background: var(--th-bg3); color: var(--th-text2); }
 html[data-theme="night"] .tp-modal-lbl, html[data-theme="workshop"] .tp-modal-lbl { color: var(--th-text2); }
 html[data-theme="night"] .tp-modal-ta, html[data-theme="workshop"] .tp-modal-ta { background: var(--th-input-bg); border-color: var(--th-border); color: var(--th-text); }
+
+/* ══════════════════════════════════════════════════════════════════
+   PlanifierPage — night + workshop
+   (.ph/.pt/input/.modal-overlay>.modal déjà couverts)
+══════════════════════════════════════════════════════════════════ */
+html[data-theme="night"] .last-lot, html[data-theme="workshop"] .last-lot { background: var(--th-bg2); border-color: var(--th-border); color: var(--th-text2); }
+html[data-theme="night"] .ll-num, html[data-theme="workshop"] .ll-num,
+html[data-theme="night"] .auto-code, html[data-theme="workshop"] .auto-code,
+html[data-theme="night"] .count-val, html[data-theme="workshop"] .count-val { color: var(--th-accent); }
+html[data-theme="night"] .field label, html[data-theme="workshop"] .field label,
+html[data-theme="night"] .auto-desc, html[data-theme="workshop"] .auto-desc,
+html[data-theme="night"] .ml, html[data-theme="workshop"] .ml,
+html[data-theme="night"] .rl, html[data-theme="workshop"] .rl { color: var(--th-text2); }
+html[data-theme="night"] .count-range, html[data-theme="workshop"] .count-range { color: var(--th-text3); }
+html[data-theme="night"] .auto-list, html[data-theme="workshop"] .auto-list { background: var(--th-bg2); border-color: var(--th-border); }
+html[data-theme="night"] .auto-item:hover, html[data-theme="workshop"] .auto-item:hover { background: var(--th-bg3); }
+html[data-theme="night"] .product-info, html[data-theme="workshop"] .product-info { background: rgba(52,211,153,.1); border-color: rgba(52,211,153,.3); }
+html[data-theme="night"] .pi-code, html[data-theme="workshop"] .pi-code,
+html[data-theme="night"] .pi-desc, html[data-theme="workshop"] .pi-desc { color: #6ee7b7; }
+html[data-theme="night"] .count-box, html[data-theme="workshop"] .count-box,
+html[data-theme="night"] .result, html[data-theme="workshop"] .result,
+html[data-theme="night"] .rg, html[data-theme="workshop"] .rg,
+html[data-theme="night"] .rc, html[data-theme="workshop"] .rc { border-color: var(--th-border); }
+html[data-theme="night"] .count-err, html[data-theme="workshop"] .count-err { color: #fca5a5; border-color: #ef4444; }
+html[data-theme="night"] .modal-title, html[data-theme="workshop"] .modal-title,
+html[data-theme="night"] .rh, html[data-theme="workshop"] .rh { color: var(--th-text); }
+html[data-theme="night"] .modal-line, html[data-theme="workshop"] .modal-line { border-bottom-color: var(--th-bg3); }
+html[data-theme="night"] .btn-cancel, html[data-theme="workshop"] .btn-cancel { background: var(--th-bg3); color: var(--th-text2); }
+html[data-theme="night"] .btn-cancel:hover, html[data-theme="workshop"] .btn-cancel:hover { background: var(--th-border); }
+/* btn-plan noir -> accent en dark (invisible sinon) */
+html[data-theme="night"] .btn-plan { background: #7c3aed; color: #fff; }
+html[data-theme="night"] .btn-plan:hover { background: #6d28d9; }
+html[data-theme="workshop"] .btn-plan, html[data-theme="workshop"] .btn-confirm, html[data-theme="workshop"] .btn-see { background: var(--th-accent); color: #000; }
+html[data-theme="workshop"] .btn-plan:hover, html[data-theme="workshop"] .btn-confirm:hover, html[data-theme="workshop"] .btn-see:hover { background: #e65100; }
+
+/* ══════════════════════════════════════════════════════════════════
+   NotificationsPage — night + workshop  (.ph/.pt déjà couverts)
+══════════════════════════════════════════════════════════════════ */
+html[data-theme="night"] .btn-mark, html[data-theme="workshop"] .btn-mark { background: var(--th-bg2); border-color: var(--th-border); color: var(--th-text2); }
+html[data-theme="night"] .btn-mark:hover, html[data-theme="workshop"] .btn-mark:hover { background: var(--th-bg3); }
+html[data-theme="night"] .nitem, html[data-theme="workshop"] .nitem { border-bottom-color: var(--th-bg3); }
+html[data-theme="night"] .nitem:hover, html[data-theme="workshop"] .nitem:hover { background: var(--th-bg2); }
+html[data-theme="night"] .nitem.unread, html[data-theme="workshop"] .nitem.unread { background: var(--th-bg3); }
+html[data-theme="night"] .nmsg, html[data-theme="workshop"] .nmsg { color: var(--th-text); }
+html[data-theme="night"] .nsvc, html[data-theme="workshop"] .nsvc { background: var(--th-bg3); color: var(--th-text2); }
+html[data-theme="night"] .nlot, html[data-theme="workshop"] .nlot,
+html[data-theme="night"] .ndot, html[data-theme="workshop"] .ndot { color: var(--th-accent); }
+html[data-theme="night"] .ndot, html[data-theme="workshop"] .ndot { background: var(--th-accent); }
+html[data-theme="night"] .ntime, html[data-theme="workshop"] .ntime,
+html[data-theme="night"] .empty, html[data-theme="workshop"] .empty { color: var(--th-text3); }

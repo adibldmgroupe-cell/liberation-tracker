@@ -216,21 +216,21 @@ export default {
 <style scoped>
 .ph{padding-bottom:10px;border-bottom:2px solid #0a0a0a;margin-bottom:16px}.pt{font-size:11px;font-weight:500;letter-spacing:1.5px}
 .last-lot{padding:10px 12px;border:1px solid #e8e8e8;background:#fafafa;font-size:13px;color:#666;margin-bottom:16px;border-radius:2px}
-.ll-num{font-family:'SF Mono',monospace;font-weight:500;font-size:16px;color:#185FA5;margin-left:4px}
+.ll-num{font-family:'SF Mono',monospace;font-weight:500;font-size:16px;color:#7c3aed;margin-left:4px}
 .form{margin-top:8px}
 .field{margin-bottom:14px}.field label{display:block;font-size:11px;color:#666;text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px}
-.input{width:100%;padding:8px 10px;border:1px solid #ddd;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit}.input:focus{border-color:#185FA5}
+.input{width:100%;padding:8px 10px;border:1px solid #ddd;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit}.input:focus{border-color:#7c3aed}
 .row{display:flex;gap:12px}.half{flex:1}
 .auto-wrap{position:relative}
 .auto-list{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ddd;border-radius:4px;margin-top:2px;box-shadow:0 4px 12px rgba(0,0,0,.08);z-index:10;max-height:240px;overflow-y:auto}
 .auto-item{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;font-size:13px}.auto-item:hover{background:#f5f5f5}
-.auto-code{font-family:'SF Mono',monospace;font-size:12px;font-weight:500;color:#185FA5;min-width:90px}
+.auto-code{font-family:'SF Mono',monospace;font-size:12px;font-weight:500;color:#7c3aed;min-width:90px}
 .auto-desc{color:#666;font-size:12px}
 .product-info{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid #1D9E75;background:#EAF3DE;border-radius:2px;margin-bottom:14px}
 .pi-code{font-family:'SF Mono',monospace;font-size:13px;font-weight:500;color:#3B6D11}
 .pi-desc{font-size:13px;color:#3B6D11}
 .count-box{padding:12px;border:1px solid #e8e8e8;text-align:center;font-size:14px;margin-bottom:14px;border-radius:2px}
-.count-val{font-size:24px;font-weight:500;font-family:'SF Mono',monospace;color:#185FA5;margin-right:6px}
+.count-val{font-size:24px;font-weight:500;font-family:'SF Mono',monospace;color:#7c3aed;margin-right:6px}
 .count-range{font-size:12px;color:#999;font-family:'SF Mono',monospace}
 .count-err{color:#E24B4A;border-color:#E24B4A;font-size:12px}
 .btn-plan{width:100%;padding:12px;font-size:14px;font-weight:500;background:#0a0a0a;color:#fff;border:none;cursor:pointer;border-radius:2px;letter-spacing:.3px}.btn-plan:hover{background:#222}.btn-plan:disabled{opacity:.3;cursor:not-allowed}
@@ -242,14 +242,14 @@ export default {
 .ml{color:#999}
 .mono{font-family:'SF Mono',monospace}
 .modal-actions{display:flex;gap:8px}
-.btn-confirm{flex:1;padding:10px;background:#185FA5;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer;border-radius:2px}.btn-confirm:hover{background:#0C447C}.btn-confirm:disabled{opacity:.5}
+.btn-confirm{flex:1;padding:10px;background:#7c3aed;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer;border-radius:2px}.btn-confirm:hover{background:#6d28d9}.btn-confirm:disabled{opacity:.5}
 .btn-cancel{flex:1;padding:10px;background:#f5f5f5;color:#666;border:none;font-size:13px;cursor:pointer;border-radius:2px}.btn-cancel:hover{background:#eee}
 .result{border:1px solid #e8e8e8;padding:20px;margin-top:20px}
 .rh{font-size:14px;font-weight:500;margin-bottom:12px}
 .rg{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid #e8e8e8}
 .rc{padding:12px;text-align:center;border-right:1px solid #e8e8e8}.rc:last-child{border-right:none}
 .rv{font-size:20px;font-weight:500;font-family:'SF Mono',monospace}.rl{font-size:10px;color:#999;text-transform:uppercase;margin-top:2px}
-.btn-see{margin-top:14px;padding:8px 20px;background:#185FA5;color:#fff;border:none;font-size:13px;cursor:pointer;border-radius:2px}.btn-see:hover{background:#0C447C}
+.btn-see{margin-top:14px;padding:8px 20px;background:#7c3aed;color:#fff;border:none;font-size:13px;cursor:pointer;border-radius:2px}.btn-see:hover{background:#6d28d9}
 @media(max-width:600px){
   .row{flex-direction:column}
   .input,.auto-list{font-size:16px}
