@@ -1,6 +1,13 @@
 <template>
-  <div>
-    <div class="ph"><span class="pt">TYPES D'ARRÊTS</span><span class="pt-sub">Arbre famille → sous-famille → code arrêt</span></div>
+  <div class="arrets-page">
+
+    <!-- ── En-tête ── -->
+    <div class="fa-header">
+      <div>
+        <div class="fa-title">🛑 Types d'arrêts</div>
+        <div class="fa-sub">Arbre famille → sous-famille → code arrêt</div>
+      </div>
+    </div>
 
     <div class="tree-layout">
 
@@ -89,6 +96,7 @@
     <div class="overlay" v-if="modal.show" @click.self="modal.show=false">
       <div class="modal">
         <div class="modal-hd">{{modal.title}}</div>
+        <div class="modal-inner">
 
         <!-- FAMILLE -->
         <template v-if="modal.kind==='famille'">
@@ -171,6 +179,7 @@
         </template>
 
         <div class="err" v-if="modal.error">{{modal.error}}</div>
+        </div><!-- /modal-inner -->
         <div class="modal-acts">
           <button class="btn-save" @click="saveModal" :disabled="modal.saving">
             {{modal.saving ? 'Enregistrement…' : (modal.editing ? 'Modifier' : 'Ajouter')}}
@@ -188,7 +197,7 @@
           <span v-if="delConfirm.kind==='famille'">Toutes les sous-familles et codes arrêts associés seront supprimés.</span>
           <span v-if="delConfirm.kind==='sf'">Tous les codes arrêts associés seront supprimés.</span>
         </p>
-        <div class="modal-acts">
+        <div class="modal-acts" style="margin-top:8px">
           <button class="btn-del" @click="doDelete" :disabled="delConfirm.saving">
             {{delConfirm.saving ? 'Suppression…' : 'Supprimer'}}
           </button>
@@ -366,22 +375,17 @@ export default {
 </script>
 
 <style scoped>
-.ph{padding-bottom:10px;border-bottom:2px solid #0a0a0a;margin-bottom:16px;display:flex;align-items:baseline;gap:12px}
-.pt{font-size:11px;font-weight:500;letter-spacing:1.5px}
-.pt-sub{font-size:11px;color:#999}
+.arrets-page{font-family:'Inter',sans-serif;font-size:13px;}
 
-.tree-layout{display:grid;grid-template-columns:200px 220px 1fr;gap:0;border:1px solid #e0e0e0;border-radius:4px;overflow:hidden;min-height:500px;max-height:calc(100vh - 160px)}
-.tree-col{border-right:1px solid #e0e0e0;display:flex;flex-direction:column;min-height:0;overflow-y:auto}
+.tree-layout{display:grid;grid-template-columns:200px 220px 1fr;gap:0;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;min-height:500px;max-height:calc(100vh - 160px)}
+.tree-col{border-right:1px solid #e5e7eb;display:flex;flex-direction:column;min-height:0;overflow-y:auto}
 .tree-col.wide{border-right:none}
-.col-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#f8f8f8;border-bottom:1px solid #e0e0e0;flex-shrink:0;position:sticky;top:0;z-index:2}
-.col-title{font-size:11px;font-weight:600;letter-spacing:.5px;display:flex;align-items:center;gap:6px}
-.col-title.muted{color:#aaa}
-.btn-add{font-size:11px;padding:3px 8px;background:#0a0a0a;color:#fff;border:none;border-radius:2px;cursor:pointer;white-space:nowrap}
-.btn-add:disabled{opacity:.3;cursor:not-allowed}
-.btn-add:hover:not(:disabled){background:#333}
+.col-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#f5f3ff;border-bottom:1px solid #ede9fe;flex-shrink:0;position:sticky;top:0;z-index:2}
+.col-title{font-size:11px;font-weight:700;color:#7c3aed;letter-spacing:.3px;display:flex;align-items:center;gap:6px}
+.col-title.muted{color:#a78bfa}
 .tree-item{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #f0f0f0;position:relative}
 .tree-item:hover{background:#fafafa}
-.tree-item.active{background:#EBF5FF;border-left:3px solid #185FA5}
+.tree-item.active{background:#f5f3ff;border-left:3px solid #7c3aed}
 .tree-item.inactive{opacity:.5}
 .cdot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 .item-nom{flex:1;font-size:12px;font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -413,43 +417,44 @@ export default {
 
 /* Modal */
 .overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:100}
-.modal{background:#fff;padding:24px;width:480px;max-width:96vw;border-radius:6px;max-height:90vh;overflow-y:auto}
+.modal{background:#fff;padding:0;width:480px;max-width:96vw;border-radius:10px;box-shadow:0 20px 50px rgba(0,0,0,.2);max-height:90vh;overflow-y:auto}
 .modal-sm{width:360px}
-.modal-hd{font-size:14px;font-weight:600;margin-bottom:16px}
-.modal-ctx{font-size:11px;color:#666;background:#f5f5f5;padding:6px 10px;border-radius:3px;margin-bottom:12px}
-.lbl{display:block;font-size:11px;color:#666;text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px;margin-top:12px}
-.lbl.chk{display:flex;align-items:center;gap:6px;cursor:pointer;margin-top:12px}
-.inp{width:100%;padding:8px 10px;border:1px solid #ddd;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit;border-radius:2px}
-.inp:focus{border-color:#185FA5}
+.modal-hd{font-size:14px;font-weight:800;padding:16px 20px 12px;border-bottom:1px solid #f3f4f6;margin-bottom:0}
+.modal-inner{padding:16px 20px}
+.modal-ctx{font-size:11px;color:#6b7280;background:#f9fafb;padding:6px 10px;border-radius:5px;margin-bottom:12px}
+.lbl{display:block;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;margin-top:10px}
+.lbl.chk{display:flex;align-items:center;gap:6px;cursor:pointer;margin-top:10px;text-transform:none;font-size:13px}
+.inp{width:100%;padding:8px 10px;border:1px solid #e5e7eb;font-size:12px;outline:none;box-sizing:border-box;font-family:'Inter',sans-serif;border-radius:5px}
+.inp:focus{border-color:#7c3aed}
 .inp-sm{width:100px}
 .mono{font-family:'SF Mono',monospace;text-transform:uppercase}
-.hint{font-weight:400;text-transform:none;font-size:10px;color:#aaa;letter-spacing:0}
+.hint{font-weight:400;text-transform:none;font-size:10px;color:#9ca3af;letter-spacing:0}
 .form-row{display:flex;gap:16px}
 .form-field{flex:1}
 .color-row{display:flex;align-items:center;gap:10px;margin-bottom:4px}
-.color-pick{width:44px;height:32px;padding:1px;border:1px solid #ddd;border-radius:2px;cursor:pointer}
-.color-val{font-family:'SF Mono',monospace;font-size:11px;color:#666}
+.color-pick{width:44px;height:32px;padding:1px;border:1px solid #e5e7eb;border-radius:4px;cursor:pointer}
+.color-val{font-family:'SF Mono',monospace;font-size:11px;color:#6b7280}
 .color-presets{display:flex;gap:4px;flex-wrap:wrap}
 .cp{width:20px;height:20px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:.1s}
 .cp:hover{transform:scale(1.2)}
-.cp.selected{border-color:#0a0a0a}
-.btn-clear{font-size:11px;padding:3px 8px;border:1px solid #ddd;background:#fff;border-radius:2px;cursor:pointer;color:#666}
+.cp.selected{border-color:#7c3aed}
+.btn-clear{font-size:11px;padding:3px 8px;border:1px solid #e5e7eb;background:#fff;border-radius:4px;cursor:pointer;color:#6b7280}
 .flags-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
-.flag-item{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border:1px solid #e8e8e8;border-radius:4px;cursor:pointer;background:#fafafa}
-.flag-item:hover{background:#f0f0f0}
+.flag-item{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:5px;cursor:pointer;background:#f9fafb}
+.flag-item:hover{background:#f5f3ff}
 .flag-label{display:flex;flex-direction:column}
 .flag-label strong{font-size:12px}
-.flag-label small{font-size:10px;color:#888;margin-top:1px}
-.err{color:#E24B4A;font-size:12px;margin-top:10px;padding:6px 10px;background:#FEF2F2;border-radius:3px}
-.modal-acts{display:flex;gap:8px;margin-top:16px}
-.btn-save{flex:1;padding:10px;background:#185FA5;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer;border-radius:2px}
-.btn-save:hover:not(:disabled){background:#0C447C}
+.flag-label small{font-size:10px;color:#9ca3af;margin-top:1px}
+.err{color:#ef4444;font-size:11px;margin-top:10px;padding:6px 10px;background:#fef2f2;border-radius:4px}
+.modal-acts{display:flex;gap:8px;padding:12px 20px;border-top:1px solid #f3f4f6;margin-top:0}
+.btn-save{flex:1;padding:10px;background:#7c3aed;color:#fff;border:none;font-size:12px;font-weight:600;cursor:pointer;border-radius:5px}
+.btn-save:hover:not(:disabled){background:#6d28d9}
 .btn-save:disabled{opacity:.5}
-.btn-cancel{flex:1;padding:10px;background:#f5f5f5;color:#666;border:none;font-size:13px;cursor:pointer;border-radius:2px}
+.btn-cancel{flex:1;padding:10px;background:#f5f5f5;color:#6b7280;border:1px solid #e5e7eb;font-size:12px;cursor:pointer;border-radius:5px}
 .btn-cancel:hover{background:#eee}
-.btn-del{flex:1;padding:10px;background:#E24B4A;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer;border-radius:2px}
-.btn-del:hover:not(:disabled){background:#c53030}
-.del-msg{font-size:13px;color:#444;line-height:1.5;margin-bottom:4px}
+.btn-del{flex:1;padding:10px;background:#ef4444;color:#fff;border:none;font-size:12px;font-weight:600;cursor:pointer;border-radius:5px}
+.btn-del:hover:not(:disabled){background:#dc2626}
+.del-msg{font-size:13px;color:#374151;line-height:1.5;padding:0 20px 4px}
 
 @media(max-width:768px){
   .tree-layout{grid-template-columns:1fr;border:none;gap:12px}

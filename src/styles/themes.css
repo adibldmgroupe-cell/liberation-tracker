@@ -630,7 +630,10 @@ html[data-theme="day"] .planning-grid { border-radius: 8px; }
 
 /* ── AdminArretTypesPage ──────────────────────────────────────── */
 html[data-theme="day"] .tree-item.active { background: #f5f3ff; border-left-color: var(--th-accent); }
-html[data-theme="day"] .tree-layout { border-radius: 8px; }
+html[data-theme="day"] .tree-layout { border-radius: 8px; border-color: #e5e7eb; }
+html[data-theme="day"] .tree-col { border-right-color: #e5e7eb; }
+html[data-theme="day"] .flag-item { background: #f9fafb; border-color: #e5e7eb; }
+html[data-theme="day"] .flag-item:hover { background: #f5f3ff; }
 
 /* ── AppLayout ────────────────────────────────────────────────── */
 html[data-theme="day"] .user-avatar { background: var(--th-accent); }
