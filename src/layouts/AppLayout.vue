@@ -40,7 +40,7 @@
       </nav>
       <div class="sidebar-user" v-if="profile">
         <div class="user-avatar">{{initials}}</div>
-        <div class="user-info"><div class="user-name">{{profile.prenom}} {{profile.nom}}</div><div class="user-service">{{serviceLabels[profile.service]}}</div></div>
+        <div class="user-info"><div class="user-name">{{displayName}}</div><div class="user-service">{{serviceLabels[profile.service]}}</div></div>
         <button class="logout-btn" @click="logout" title="Déconnexion">✕</button>
       </div>
     </aside>
@@ -106,7 +106,16 @@ export default {
       localStorage.setItem('nav_grp_open', JSON.stringify(navGrpOpen.value))
     }
     var serviceLabels = {planification:'Planification',stock:'Stock',aq:'Assurance Qualité',aq_dap:'AQ DAP',dt:'Direction Technique',fabrication:'Fabrication',conditionnement:'Conditionnement',lcq:'Laboratoire CQ',admin:'Administration'}
-    var initials = computed(function(){return profile.value?(profile.value.prenom[0]+profile.value.nom[0]).toUpperCase():''})
+    var initials = computed(function(){
+      if(!profile.value) return ''
+      var p=(profile.value.prenom||'').trim(), n=(profile.value.nom||'').trim()
+      var i=(p[0]||'')+(n[0]||'')
+      return (i || (profile.value.email||'?')[0]).toUpperCase()
+    })
+    var displayName = computed(function(){
+      if(!profile.value) return ''
+      return (((profile.value.prenom||'')+' '+(profile.value.nom||'')).trim()) || profile.value.email || ''
+    })
     var isAdmin = computed(function(){return profile.value && profile.value.service === 'admin'})
 
     var updateClock = function(){var n=new Date(),p=function(v){return String(v).padStart(2,'0')};clock.value=p(n.getHours())+':'+p(n.getMinutes())+':'+p(n.getSeconds())}
@@ -224,7 +233,7 @@ export default {
       }
     })
 
-    return {profile,initials,isAdmin,searchQuery,suggestions,showSug,clock,unreadCount,pendingTasksCount,searchInput,
+    return {profile,initials,displayName,isAdmin,searchQuery,suggestions,showSug,clock,unreadCount,pendingTasksCount,searchInput,
       mobileMenuOpen,toasts,serviceLabels,onSearch,submitSearch,selectSug,hideSug,logout,goToLot,
       navGrpOpen,toggleNavGrp,theme,cycleTheme,themeIcon}
   }
