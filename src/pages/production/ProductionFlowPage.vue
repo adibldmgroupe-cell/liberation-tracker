@@ -109,7 +109,7 @@
             <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e1e3a" stroke-width="0.5"/>
           </pattern>
           <pattern id="grid-day" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#c8ccd8" stroke-width="0.4"/>
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#e2e6f0" stroke-width="0.3"/>
           </pattern>
           <filter id="glow">
             <feGaussianBlur stdDeviation="3" result="blur"/>
@@ -133,43 +133,49 @@
 
         <!-- ── ZONES BACKGROUND ── -->
         <rect :x="TRACK_X" :y="ZONE_FS_Y" :width="TRACKS_W" :height="ZONE_FS_H"
-          rx="12" fill="#7c3aed" opacity="0.06"/>
-        <text :x="TRACK_X+12" :y="ZONE_FS_Y+22" fill="#7c3aed" font-size="11"
-          font-weight="700" letter-spacing="2" opacity="0.8">FORMES SÈCHES</text>
+          rx="12" fill="#7c3aed" :opacity="theme==='day'?0.05:0.06"
+          :stroke="theme==='day'?'#7c3aed':'none'" :stroke-opacity="theme==='day'?0.15:0" stroke-width="1"/>
+        <text :x="TRACK_X+12" :y="ZONE_FS_Y+22" fill="#7c3aed" font-size="10"
+          font-weight="800" letter-spacing="2.5" opacity="1">FORMES SÈCHES</text>
 
         <rect :x="TRACK_X" :y="ZONE_SS_Y" :width="TRACKS_W" :height="ZONE_SS_H"
-          rx="12" fill="#2563eb" opacity="0.06"/>
-        <text :x="TRACK_X+12" :y="ZONE_SS_Y+22" fill="#2563eb" font-size="11"
-          font-weight="700" letter-spacing="2" opacity="0.8">FORMES SEMI-SOLIDES</text>
+          rx="12" fill="#2563eb" :opacity="theme==='day'?0.05:0.06"
+          :stroke="theme==='day'?'#2563eb':'none'" :stroke-opacity="theme==='day'?0.15:0" stroke-width="1"/>
+        <text :x="TRACK_X+12" :y="ZONE_SS_Y+22" fill="#2563eb" font-size="10"
+          font-weight="800" letter-spacing="2.5" opacity="1">FORMES SEMI-SOLIDES</text>
 
         <!-- Zone OTC -->
         <rect :x="TRACK_X" :y="ZONE_OTC_Y" :width="5*STEP+NW" :height="ZONE_OTC_H"
-          rx="12" fill="#0891b2" opacity="0.06"/>
-        <text :x="TRACK_X+12" :y="ZONE_OTC_Y+22" fill="#0891b2" font-size="11"
-          font-weight="700" letter-spacing="2" opacity="0.8">OTC</text>
+          rx="12" fill="#0891b2" :opacity="theme==='day'?0.05:0.06"
+          :stroke="theme==='day'?'#0891b2':'none'" :stroke-opacity="theme==='day'?0.15:0" stroke-width="1"/>
+        <text :x="TRACK_X+12" :y="ZONE_OTC_Y+22" fill="#0891b2" font-size="10"
+          font-weight="800" letter-spacing="2.5" opacity="1">OTC</text>
 
         <rect :x="COND_X" :y="COND_Y" :width="COND_W" :height="COND_H"
-          rx="12" fill="#059669" opacity="0.06"/>
+          rx="12" fill="#059669" :opacity="theme==='day'?0.05:0.06"
+          :stroke="theme==='day'?'#059669':'none'" :stroke-opacity="theme==='day'?0.15:0" stroke-width="1"/>
         <text :x="COND_X+COND_W/2" :y="COND_Y+20" text-anchor="middle" fill="#059669"
-          font-size="10" font-weight="700" letter-spacing="2" opacity="0.8">CONDITIONNEMENT</text>
+          font-size="10" font-weight="800" letter-spacing="2" opacity="1">CONDITIONNEMENT</text>
         <text :x="COND_X+COND_W/2" :y="COND_Y+34" text-anchor="middle" fill="#059669"
-          font-size="8" opacity="0.6">PRIMAIRE — 7 LIGNES</text>
+          font-size="8" opacity="0.7">PRIMAIRE — 7 LIGNES</text>
 
         <rect :x="PESEE_X" :y="PESEE_Y" :width="PESEE_W" :height="PESEE_H"
-          rx="12" fill="#d97706" opacity="0.06"/>
-        <text :x="PESEE_X+12" :y="PESEE_Y+22" fill="#d97706" font-size="11"
-          font-weight="700" letter-spacing="2" opacity="0.8">PESÉE</text>
+          rx="12" fill="#d97706" :opacity="theme==='day'?0.05:0.06"
+          :stroke="theme==='day'?'#d97706':'none'" :stroke-opacity="theme==='day'?0.15:0" stroke-width="1"/>
+        <text :x="PESEE_X+12" :y="PESEE_Y+22" fill="#d97706" font-size="10"
+          font-weight="800" letter-spacing="2.5" opacity="1">PESÉE</text>
 
         <!-- Zone SAS Livraison PF (à droite du COND) -->
         <rect :x="COND_X+COND_W+10" :y="COND_Y" :width="NW+40" height="360"
-          rx="8" fill="#7c2d12" opacity="0.04" stroke="#7c2d12" stroke-opacity="0.15" stroke-width="1"/>
+          rx="8" fill="#7c2d12" :opacity="theme==='day'?0.04:0.04"
+          stroke="#7c2d12" :stroke-opacity="theme==='day'?0.25:0.15" stroke-width="1"/>
         <text :x="COND_X+COND_W+10+(NW+40)/2" :y="COND_Y+18" text-anchor="middle" fill="#7c2d12"
-          font-size="9" font-weight="700" letter-spacing="1" opacity="0.7">LIVRAISON PF</text>
+          font-size="9" font-weight="700" letter-spacing="1" opacity="0.8">LIVRAISON PF</text>
 
         <!-- ── FLÈCHES ── -->
         <g v-for="arr in arrows" :key="arr.id">
           <path :d="arr.d" fill="none"
-            :stroke="arr.fluxHighlight?'#fbbf24':arr.active?'#10b981':(theme==='day'?'#94a3b8':'#374151')"
+            :stroke="arr.fluxHighlight?'#fbbf24':arr.active?'#10b981':(theme==='day'?'#c4cad8':'#374151')"
             :stroke-width="arr.fluxHighlight?3:2"
             :stroke-dasharray="arr.fluxHighlight?'none':arr.active?'none':'6,3'"
             :marker-end="arr.fluxHighlight?'url(#arr-flux)':arr.active?'url(#arr-active)':'url(#arr)'"
@@ -300,24 +306,28 @@
 
         <!-- ── TITRE COIN SUP GAUCHE ── -->
         <rect x="16" y="16" width="200" height="44"
-          rx="8" :fill="theme==='day' ? '#fff' : '#1a1a3e'" :stroke="theme==='day' ? '#d8dce8' : '#3b3b6e'" stroke-width="1.5"/>
-        <text x="116" y="36" text-anchor="middle"
+          rx="8" :fill="theme==='day' ? '#fff' : '#1a1a3e'"
+          :stroke="theme==='day' ? '#ede9fe' : '#3b3b6e'" stroke-width="1.5"/>
+        <rect x="16" y="16" width="4" height="44"
+          rx="2" :fill="theme==='day' ? '#7c3aed' : '#7c7cff'" :opacity="theme==='day'?1:0"/>
+        <text x="118" y="36" text-anchor="middle"
           :fill="theme==='day' ? '#7c3aed' : '#7c7cff'" font-size="12" font-weight="800" letter-spacing="2">
           PRODUCTION
         </text>
-        <text x="116" y="52" text-anchor="middle"
-          :fill="theme==='day' ? '#aaa' : '#4b4b8a'" font-size="9" letter-spacing="3">
+        <text x="118" y="52" text-anchor="middle"
+          :fill="theme==='day' ? '#9ca3af' : '#4b4b8a'" font-size="8" letter-spacing="3" font-weight="600">
           LDM GROUPE
         </text>
 
         <!-- ── STEP LABELS ── -->
         <g v-for="step in stepLabels" :key="step.id">
           <line :x1="step.x" :y1="step.y1" :x2="step.x" :y2="step.y2"
-            :stroke="theme==='day' ? '#c8ccd8' : '#2a2a4a'" stroke-width="1" stroke-dasharray="3,3"/>
+            :stroke="theme==='day' ? '#e2e6f0' : '#2a2a4a'" stroke-width="1" stroke-dasharray="4,4"/>
           <rect :x="step.x-step.tw/2" :y="step.y2+2" :width="step.tw" height="18"
-            rx="3" :fill="theme==='day' ? '#fff' : '#12122a'" :stroke="theme==='day' ? '#d8dce8' : 'none'" stroke-width="1"/>
+            rx="4" :fill="theme==='day' ? '#f5f3ff' : '#12122a'"
+            :stroke="theme==='day' ? '#ede9fe' : 'none'" stroke-width="1"/>
           <text :x="step.x" :y="step.y2+14" text-anchor="middle"
-            :fill="theme==='day' ? '#666' : '#4b5563'" font-size="9" font-weight="600" letter-spacing="1">
+            :fill="theme==='day' ? '#7c3aed' : '#4b5563'" font-size="9" font-weight="700" letter-spacing="1">
             {{step.label}}
           </text>
         </g>
@@ -2191,7 +2201,7 @@ export default {
       var isDay = theme.value === 'day'
       if (trsMode.value) {
         var t = nodeTrs(node)
-        if (!t || t.trs == null) return isDay ? '#e8eaf0' : '#12122a'
+        if (!t || t.trs == null) return isDay ? '#f8f9fb' : '#12122a'
         if (t.trs >= 85) return isDay ? '#d1fae5' : '#062216'
         if (t.trs >= 60) return isDay ? '#fef3c7' : '#231500'
         return isDay ? '#fee2e2' : '#1f0808'
@@ -2202,7 +2212,7 @@ export default {
       if (st.label === 'En cours')  return isDay ? '#dcfce7' : '#0d2e20'
       if (nodeIsFlux(node)) return isDay ? '#fef9c3' : '#2a2000'
       var z = zones.find(function(x) { return x.key === node.zone })
-      return isDay ? (z ? z.color + '18' : '#f0f2f8') : (z ? z.color + '22' : '#1e1e3a')
+      return isDay ? '#ffffff' : (z ? z.color + '22' : '#1e1e3a')
     }
 
     var nodeStroke = function(node) {
@@ -2211,24 +2221,25 @@ export default {
       if (trsMode.value) {
         var t = nodeTrs(node)
         if (t && t.trs != null) return trsColor(t.trs)
-        return isDay ? '#c0c4d0' : '#2a2a4a'
+        return isDay ? '#d1d5db' : '#2a2a4a'
       }
       if (nodeIsFlux(node)) return '#fbbf24'
       var st = nodeStatus(node)
       if (st.label === 'Arrêt')     return '#ef4444'
       if (st.label === 'Déviation') return '#f59e0b'
       if (st.label === 'En cours')  return '#10b981'
-      return isDay ? zoneColor(node.zone) + '44' : zoneColor(node.zone) + '88'
+      return isDay ? zoneColor(node.zone) : zoneColor(node.zone) + '88'
     }
 
     var nodeStrokeWidth = function(node) {
+      var isDay = theme.value === 'day'
       if (selectedNode.value && selectedNode.value.id === node.id) return 2.5
       if (trsMode.value) {
         var t = nodeTrs(node)
-        return (t && t.trs != null) ? 2 : 1
+        return (t && t.trs != null) ? 2 : (isDay ? 1.5 : 1)
       }
       if (nodeIsFlux(node)) return 2
-      return 1.5
+      return isDay ? 2 : 1.5
     }
 
     var activeLotCount = function(node) {
@@ -3049,9 +3060,9 @@ export default {
    THÈME JOUR ☀️
 ══════════════════════════════════════════ */
 .flow-page[data-theme="day"] { background: #ffffff; }
-.flow-page[data-theme="day"] .flow-header { background: #ffffff; border-bottom-color: #e5e7eb; }
-.flow-page[data-theme="day"] .fh-title { color: #7c3aed; }
-.flow-page[data-theme="day"] .fh-sub   { color: #6b7280; }
+.flow-page[data-theme="day"] .flow-header { background: #ffffff; border-bottom-color: #e5e7eb; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+.flow-page[data-theme="day"] .fh-title { color: #7c3aed; font-size: 13px; letter-spacing: 3px; }
+.flow-page[data-theme="day"] .fh-sub   { color: #9ca3af; }
 .flow-page[data-theme="day"] .fh-btn { border-color: #e5e7eb; color: #6b7280; }
 .flow-page[data-theme="day"] .fh-btn:hover { color: #374151; border-color: #7c3aed; }
 .flow-page[data-theme="day"] .fl { color: #6b7280; }
@@ -3074,8 +3085,8 @@ export default {
 .flow-page[data-theme="day"] .dp-lot-prod { color: #888; }
 .flow-page[data-theme="day"] .dp-empty { color: #ccc; }
 /* ── TRS bandeau ── */
-.flow-page[data-theme="day"] .trs-band { background: #fff; border-bottom: 1px solid #e5e7eb; }
-.flow-page[data-theme="day"] .trs-band-label { color: #7c3aed; }
+.flow-page[data-theme="day"] .trs-band { background: #faf9ff; border-bottom: 1px solid #ede9fe; box-shadow: 0 1px 4px rgba(124,58,237,.06); }
+.flow-page[data-theme="day"] .trs-band-label { color: #7c3aed; font-weight: 800; letter-spacing: 2px; }
 .flow-page[data-theme="day"] .trs-kpi-val { color: #1a1a2e; }
 .flow-page[data-theme="day"] .trs-kpi-tot { color: #aaa; }
 .flow-page[data-theme="day"] .trs-kpi-lbl { color: #6b7280; }
@@ -3162,7 +3173,8 @@ export default {
 /* ── Historique modal ── */
 .flow-page[data-theme="day"] .trs-histo-wrap { border-color: #e5e7eb; }
 /* SVG body */
-.flow-page[data-theme="day"] .flow-body { background: #f5f3ff22; }
+.flow-page[data-theme="day"] .flow-body { background: #fafbff; }
+.flow-page[data-theme="day"] .flow-svg { filter: drop-shadow(0 1px 0 #e5e7eb); }
 /* Modal */
 .flow-page[data-theme="day"] .modal-overlay { background: rgba(0,0,0,.4); }
 .flow-page[data-theme="day"] .modal-box { background: #fff; box-shadow: 0 16px 48px rgba(0,0,0,.2); }
