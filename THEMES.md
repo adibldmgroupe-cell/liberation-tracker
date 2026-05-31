@@ -93,7 +93,7 @@ et géré par `src/composables/useTheme.js`.
 **Pages couvertes (couleurs) :**
 - ✅ AdminRefPage (barre d'onglets)
 - ✅ ProductsCatalogPage — layout restructuré ✅
-- ✅ AdminAteliersPage — layout ⏳
+- ✅ AdminAteliersPage — layout restructuré ✅
 - ✅ AdminFluxPage (référence)
 - ✅ AdminShiftsPage — layout ⏳
 - ✅ AdminArretTypesPage — layout ⏳
@@ -133,7 +133,7 @@ et géré par `src/composables/useTheme.js`.
 **Pages couvertes (couleurs) :**
 - ✅ AdminRefPage (barre d'onglets)
 - ✅ ProductsCatalogPage — layout restructuré ✅
-- ✅ AdminAteliersPage — layout ⏳
+- ✅ AdminAteliersPage — layout restructuré ✅
 - ✅ AdminFluxPage (référence)
 - ✅ AdminShiftsPage — layout ⏳
 - ✅ AdminArretTypesPage — layout ⏳
