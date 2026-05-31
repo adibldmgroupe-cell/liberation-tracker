@@ -701,8 +701,7 @@ export default {
   font-size: 10px;
   font-weight: 600;
   color: #4b5563;
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
+  writing-mode: vertical-lr;
   height: 130px;
   width: 36px;
   min-width: 36px;
