@@ -1436,3 +1436,78 @@ html[data-theme="workshop"] .btn:hover:not(.bd),
 html[data-theme="workshop"] .lb:hover:not(:disabled) { background: #e65100; }
 html[data-theme="workshop"] .aql-type-val,
 html[data-theme="workshop"] .dn-active { color: var(--th-accent); }
+
+/* ══════════════════════════════════════════════════════════════════
+   TasksPage — night + workshop
+   (.tp/.tp-h1/.tp-h2/.tp-search-*/.tp-refresh/.tp-svc-sel déjà couverts)
+══════════════════════════════════════════════════════════════════ */
+/* Totaux + compteur recherche */
+html[data-theme="night"] .tp-total-bad, html[data-theme="workshop"] .tp-total-bad { background: rgba(239,68,68,.12); color: #fca5a5; }
+html[data-theme="night"] .tp-total-ok, html[data-theme="workshop"] .tp-total-ok { background: rgba(52,211,153,.1); color: #6ee7b7; }
+html[data-theme="night"] .tp-search-count, html[data-theme="workshop"] .tp-search-count { background: var(--th-bg3); color: var(--th-accent); }
+/* Cartes catégories */
+html[data-theme="night"] .tp-cat, html[data-theme="workshop"] .tp-cat { background: var(--th-bg2); border-color: var(--th-border); box-shadow: none; }
+html[data-theme="night"] .tp-cat-hd, html[data-theme="workshop"] .tp-cat-hd { background: var(--th-bg3); border-left-color: var(--th-accent); }
+html[data-theme="night"] .tp-cat-hd:hover, html[data-theme="workshop"] .tp-cat-hd:hover { background: var(--th-bg); }
+html[data-theme="night"] .tp-cat-urgent, html[data-theme="workshop"] .tp-cat-urgent { background: rgba(239,68,68,.08); border-left-color: #ef4444; }
+html[data-theme="night"] .tp-cat-urgent:hover, html[data-theme="workshop"] .tp-cat-urgent:hover { background: rgba(239,68,68,.14); }
+html[data-theme="night"] .tp-cat-title, html[data-theme="workshop"] .tp-cat-title { color: var(--th-text); }
+html[data-theme="night"] .tp-cat-chev, html[data-theme="workshop"] .tp-cat-chev,
+html[data-theme="night"] .tp-grp-chev, html[data-theme="workshop"] .tp-grp-chev,
+html[data-theme="night"] .tp-grp-sep, html[data-theme="workshop"] .tp-grp-sep { color: var(--th-text3); }
+html[data-theme="night"] .tp-badge-blue, html[data-theme="workshop"] .tp-badge-blue,
+html[data-theme="night"] .tp-grp-badge, html[data-theme="workshop"] .tp-grp-badge,
+html[data-theme="night"] .tp-doc-type-tag, html[data-theme="workshop"] .tp-doc-type-tag { background: var(--th-bg3); color: var(--th-accent); }
+html[data-theme="night"] .tp-badge-red, html[data-theme="workshop"] .tp-badge-red { background: rgba(239,68,68,.12); color: #fca5a5; }
+html[data-theme="night"] .tp-cat-list, html[data-theme="workshop"] .tp-cat-list,
+html[data-theme="night"] .tp-grp, html[data-theme="workshop"] .tp-grp { border-color: var(--th-border); }
+/* En-têtes groupe */
+html[data-theme="night"] .tp-grp-hd, html[data-theme="workshop"] .tp-grp-hd { background: var(--th-bg2); border-left-color: var(--th-border); }
+html[data-theme="night"] .tp-grp-hd:hover, html[data-theme="workshop"] .tp-grp-hd:hover { background: var(--th-bg3); border-left-color: var(--th-accent); }
+html[data-theme="night"] .tp-grp-action, html[data-theme="workshop"] .tp-grp-action { color: var(--th-text); }
+/* Badges statut SAP */
+html[data-theme="night"] .sap-quarantaine, html[data-theme="workshop"] .sap-quarantaine { background: rgba(251,191,36,.12); color: #fbbf24; }
+html[data-theme="night"] .sap-sous_investigation, html[data-theme="workshop"] .sap-sous_investigation { background: rgba(239,68,68,.12); color: #fca5a5; }
+html[data-theme="night"] .sap-refuse, html[data-theme="workshop"] .sap-refuse { background: var(--th-bg3); color: var(--th-text2); }
+/* Corps groupe + tri */
+html[data-theme="night"] .tp-grp-body, html[data-theme="workshop"] .tp-grp-body { background: var(--th-bg); border-color: var(--th-border); }
+html[data-theme="night"] .tp-grp-sort-hd, html[data-theme="workshop"] .tp-grp-sort-hd { background: var(--th-bg2); border-color: var(--th-border); }
+html[data-theme="night"] .tp-sort-col, html[data-theme="workshop"] .tp-sort-col { color: var(--th-text3); }
+html[data-theme="night"] .tp-sort-col.tp-sort-lot:hover, html[data-theme="workshop"] .tp-sort-col.tp-sort-lot:hover,
+html[data-theme="night"] .tp-sort-col.tp-sort-desc:hover, html[data-theme="workshop"] .tp-sort-col.tp-sort-desc:hover { color: var(--th-accent); }
+/* Items document */
+html[data-theme="night"] .tp-doc-item, html[data-theme="workshop"] .tp-doc-item { border-bottom-color: var(--th-bg3); }
+html[data-theme="night"] .tp-doc-item:hover, html[data-theme="workshop"] .tp-doc-item:hover { background: var(--th-bg2); }
+html[data-theme="night"] .tp-lot-mono, html[data-theme="workshop"] .tp-lot-mono,
+html[data-theme="night"] .tp-item-lot, html[data-theme="workshop"] .tp-item-lot { background: var(--th-bg3); color: var(--th-accent); }
+html[data-theme="night"] .tp-prod-desc, html[data-theme="workshop"] .tp-prod-desc,
+html[data-theme="night"] .tp-item-prod, html[data-theme="workshop"] .tp-item-prod { color: var(--th-text); }
+html[data-theme="night"] .tp-prod-code, html[data-theme="workshop"] .tp-prod-code,
+html[data-theme="night"] .tp-item-arr, html[data-theme="workshop"] .tp-item-arr { color: var(--th-text3); }
+html[data-theme="night"] .since-ok, html[data-theme="workshop"] .since-ok { background: rgba(52,211,153,.1); color: #6ee7b7; }
+html[data-theme="night"] .since-orange, html[data-theme="workshop"] .since-orange { background: rgba(251,191,36,.12); color: #fbbf24; }
+html[data-theme="night"] .since-red, html[data-theme="workshop"] .since-red { background: rgba(239,68,68,.12); color: #fca5a5; }
+/* Boutons d'action */
+html[data-theme="night"] .tp-do-btn, html[data-theme="workshop"] .tp-do-btn { background: var(--th-bg3); border-color: var(--th-accent); color: var(--th-accent); }
+html[data-theme="night"] .tp-do-ok, html[data-theme="workshop"] .tp-do-ok { background: rgba(52,211,153,.1); border-color: #34d399; color: #6ee7b7; }
+html[data-theme="night"] .tp-do-nok, html[data-theme="workshop"] .tp-do-nok { background: rgba(239,68,68,.12); border-color: #ef4444; color: #fca5a5; }
+html[data-theme="night"] .tp-do-ret, html[data-theme="workshop"] .tp-do-ret { background: rgba(251,191,36,.12); border-color: #d97706; color: #fbbf24; }
+/* Motif retour */
+html[data-theme="night"] .tp-return-row, html[data-theme="workshop"] .tp-return-row { background: rgba(251,191,36,.08); border-color: rgba(251,191,36,.25); }
+html[data-theme="night"] .tp-return-label, html[data-theme="workshop"] .tp-return-label { color: #fbbf24; }
+html[data-theme="night"] .tp-btn-cancel, html[data-theme="workshop"] .tp-btn-cancel { background: var(--th-bg3); border-color: var(--th-border); color: var(--th-text2); }
+/* Items plats */
+html[data-theme="night"] .tp-item, html[data-theme="workshop"] .tp-item { border-bottom-color: var(--th-bg3); }
+html[data-theme="night"] .tp-item:hover, html[data-theme="workshop"] .tp-item:hover { background: var(--th-bg2); border-left-color: var(--th-accent); }
+html[data-theme="night"] .tp-item-bl, html[data-theme="workshop"] .tp-item-bl,
+html[data-theme="night"] .tp-action-red, html[data-theme="workshop"] .tp-action-red { color: #fca5a5; }
+html[data-theme="night"] .tp-item-bl, html[data-theme="workshop"] .tp-item-bl { background: rgba(239,68,68,.12); }
+html[data-theme="night"] .tp-action-blue, html[data-theme="workshop"] .tp-action-blue { color: var(--th-accent); }
+/* Loading / empty */
+html[data-theme="night"] .tp-loading, html[data-theme="workshop"] .tp-loading,
+html[data-theme="night"] .tp-empty, html[data-theme="workshop"] .tp-empty { color: var(--th-text3); }
+/* Modal avis AQL */
+html[data-theme="night"] .tp-modal, html[data-theme="workshop"] .tp-modal { background: var(--th-bg2); color: var(--th-text); }
+html[data-theme="night"] .tp-modal-ctx, html[data-theme="workshop"] .tp-modal-ctx { background: var(--th-bg3); color: var(--th-text2); }
+html[data-theme="night"] .tp-modal-lbl, html[data-theme="workshop"] .tp-modal-lbl { color: var(--th-text2); }
+html[data-theme="night"] .tp-modal-ta, html[data-theme="workshop"] .tp-modal-ta { background: var(--th-input-bg); border-color: var(--th-border); color: var(--th-text); }
