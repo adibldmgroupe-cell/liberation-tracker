@@ -55,8 +55,8 @@ et géré par `src/composables/useTheme.js`.
 - ✅ ProductsCatalogPage — layout restructuré pattern AdminFluxPage
 - ✅ AdminAteliersPage — layout restructuré ✅
 - ⏳ AdminFluxPage (référence, déjà correct)
-- ⏳ AdminShiftsPage
-- ⏳ AdminArretTypesPage
+- ✅ AdminShiftsPage — layout restructuré ✅
+- ✅ AdminArretTypesPage — layout restructuré ✅
 
 ---
 
@@ -95,8 +95,8 @@ et géré par `src/composables/useTheme.js`.
 - ✅ ProductsCatalogPage — layout restructuré ✅
 - ✅ AdminAteliersPage — layout restructuré ✅
 - ✅ AdminFluxPage (référence)
-- ✅ AdminShiftsPage — layout ⏳
-- ✅ AdminArretTypesPage — layout ⏳
+- ✅ AdminShiftsPage — layout restructuré ✅
+- ✅ AdminArretTypesPage — layout restructuré ✅
 
 ---
 
@@ -135,5 +135,5 @@ et géré par `src/composables/useTheme.js`.
 - ✅ ProductsCatalogPage — layout restructuré ✅
 - ✅ AdminAteliersPage — layout restructuré ✅
 - ✅ AdminFluxPage (référence)
-- ✅ AdminShiftsPage — layout ⏳
-- ✅ AdminArretTypesPage — layout ⏳
+- ✅ AdminShiftsPage — layout restructuré ✅
+- ✅ AdminArretTypesPage — layout restructuré ✅
