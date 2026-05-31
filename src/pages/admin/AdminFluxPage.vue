@@ -18,20 +18,13 @@
           <input class="tb-search" placeholder="Rechercher produit ou code…" v-model="fluxSearch"/>
         </div>
         <div class="tb-filters">
-          <select class="tb-sel" v-model="fluxTypeFilter">
-            <option value="">Tous les types</option>
-            <option value="COM_PELLI">COM_PELLI</option>
-            <option value="COM_SEC">COM_SEC</option>
-            <option value="GLE">GLE</option>
-            <option value="CREME_POMMADE">CREME_POMMADE</option>
-            <option value="OTC">OTC</option>
-          </select>
           <div class="view-toggle">
             <button class="vt-btn" :class="{active:fluxView==='pivot'}" @click="fluxView='pivot'" title="Vue tableau croisé machines">⊞ Pivot</button>
             <button class="vt-btn" :class="{active:fluxView==='cards'}" @click="fluxView='cards'" title="Vue fiches">▤ Fiches</button>
           </div>
           <button class="tb-btn-gs" @click="openGsImport">↑ Google Sheets</button>
           <button class="tb-btn-add" @click="openNewFlux">+ Nouveau flux</button>
+          <button class="tb-btn-clear" @click="clearFlux" title="Vider tous les flux importés">🗑 Vider l'import</button>
         </div>
       </div>
 
@@ -45,8 +38,7 @@
             <!-- Ligne 1 : groupes opérations -->
             <tr class="pt-r-op">
               <th class="pt-h-prod pt-sc pt-sc1">Produit</th>
-              <th class="pt-h-type pt-sc pt-sc2">Type</th>
-              <th class="pt-h-r    pt-sc pt-sc3">R</th>
+              <th class="pt-h-r    pt-sc pt-sc2">R</th>
               <th v-for="g in machineColGroups" :key="g.op_number"
                   :colspan="g.rooms.length" class="pt-h-grp">
                 <span class="ptg-num">{{g.op_number}}</span>
@@ -57,7 +49,6 @@
             <tr class="pt-r-mach">
               <th class="pt-sc pt-sc1"></th>
               <th class="pt-sc pt-sc2"></th>
-              <th class="pt-sc pt-sc3"></th>
               <th v-for="room in machineColsFlat" :key="room.code" class="pt-h-mach"
                   :title="room.nom">
                 {{room.nom}}
@@ -71,10 +62,7 @@
                 <div class="pt-pcode">{{row.product_code}}</div>
                 <div class="pt-pname">{{row.product_name}}</div>
               </td>
-              <td class="pt-sc pt-sc2">
-                <span class="pc-type" :class="'pct-'+row.type_flux">{{row.type_flux}}</span>
-              </td>
-              <td class="pt-route-num pt-sc pt-sc3">R{{row.route}}</td>
+              <td class="pt-route-num pt-sc pt-sc2">R{{row.route}}</td>
               <td v-for="room in machineColsFlat" :key="room.code"
                   class="pt-cc" @click="toggleMachineFlux(row, room)">
                 <span class="pt-cb" :class="{on: row.activeRoomCodes.has(room.code)}"></span>
@@ -93,7 +81,6 @@
               <div class="pc-name">{{p.product_name}}</div>
             </div>
             <div class="pc-badges">
-              <span class="pc-type" :class="'pct-'+p.type_flux">{{p.type_flux}}</span>
               <span class="pc-routes" v-if="p.has_route_2">2 routes</span>
             </div>
           </div>
@@ -297,8 +284,7 @@ export default {
     var filteredProducts = computed(function() {
       var q = fluxSearch.value.toLowerCase()
       return groupedProducts.value.filter(function(p) {
-        return (!q || p.product_code.toLowerCase().includes(q) || p.product_name.toLowerCase().includes(q)) &&
-               (!fluxTypeFilter.value || p.type_flux === fluxTypeFilter.value)
+        return !q || p.product_code.toLowerCase().includes(q) || p.product_name.toLowerCase().includes(q)
       })
     })
 
@@ -439,6 +425,14 @@ export default {
       if (!res.error) await loadAll()
     }
 
+    // ── VIDER L'IMPORT ────────────────────────────────────────────
+    var clearFlux = async function() {
+      if (!confirm('Vider tous les flux produits importés ?\nCette action est irréversible.')) return
+      var res = await supabase.from('product_flux').delete().neq('id', 0)
+      if (res.error) { alert('Erreur : ' + res.error.message); return }
+      await loadAll()
+    }
+
     // ── GOOGLE SHEETS IMPORT ─────────────────────────────────────
     var openGsImport = function() {
       Object.assign(gsModal, { open: true, url: '', csvText: '', fetching: false, saving: false, err: '', preview: [] })
@@ -551,14 +545,14 @@ export default {
     onMounted(loadAll)
 
     return {
-      fluxSearch, fluxTypeFilter, fluxView, fluxLoading,
+      fluxSearch, fluxView, fluxLoading,
       gsReloading, reloadGs,
       filteredProducts, opMaster, opOptions, roomsForOp,
       machineColsFlat, machineColGroups, pivotMachineRows,
       stepModal, gsModal,
       getRoomName, onOpChange,
       openNewFlux, openAddStep, openEditStep, saveStep, deleteStep,
-      toggleMachineFlux,
+      toggleMachineFlux, clearFlux,
       openGsImport, loadGsCsv, parseGsCsv, confirmGsImport,
     }
   }
@@ -592,6 +586,8 @@ export default {
 .tb-btn-add:hover { background: #6d28d9; }
 .tb-btn-gs { background: #059669; border: none; border-radius: 5px; color: #fff; padding: 7px 12px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .tb-btn-gs:hover { background: #047857; }
+.tb-btn-clear { background: #fff; border: 1px solid #e5e7eb; border-radius: 5px; color: #E24B4A; padding: 7px 12px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.tb-btn-clear:hover { background: #FCEBEB; border-color: #E24B4A; }
 .view-toggle { display: flex; border: 1px solid #e5e7eb; border-radius: 5px; overflow: hidden; }
 .vt-btn { border: none; background: #f9fafb; color: #6b7280; font-size: 11px; padding: 5px 10px; cursor: pointer; font-weight: 600; }
 .vt-btn.active { background: #7c3aed; color: #fff; }
