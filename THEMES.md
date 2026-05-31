@@ -90,20 +90,20 @@ et géré par `src/composables/useTheme.js`.
 | Erreur | `#ef4444` |
 | Avertissement | `#f59e0b` |
 
-**Pages couvertes :**
+**Pages couvertes (couleurs) :**
 - ✅ AdminRefPage (barre d'onglets)
-- ✅ ProductsCatalogPage
-- ✅ AdminAteliersPage
-- ✅ AdminFluxPage
-- ✅ AdminShiftsPage
-- ✅ AdminArretTypesPage
+- ✅ ProductsCatalogPage — layout restructuré ✅
+- ✅ AdminAteliersPage — layout ⏳
+- ✅ AdminFluxPage (référence)
+- ✅ AdminShiftsPage — layout ⏳
+- ✅ AdminArretTypesPage — layout ⏳
 
 ---
 
 ## 🏭 Workshop — `data-theme="workshop"`
 
 > Référence : ProductionFlowPage (SCHÉMA FLUX PRODUCTION) — `[data-theme="workshop"]`
-> *(à valider)*
+> ✅ Validé
 
 | Variable | Valeur | Rôle |
 |---|---|---|
@@ -130,10 +130,10 @@ et géré par `src/composables/useTheme.js`.
 | Succès / sessions actives | `#10b981` |
 | Erreur | `#ef4444` |
 
-**Pages couvertes :**
+**Pages couvertes (couleurs) :**
 - ✅ AdminRefPage (barre d'onglets)
-- ✅ ProductsCatalogPage
-- ✅ AdminAteliersPage
-- ✅ AdminFluxPage
-- ✅ AdminShiftsPage
-- ✅ AdminArretTypesPage
+- ✅ ProductsCatalogPage — layout restructuré ✅
+- ✅ AdminAteliersPage — layout ⏳
+- ✅ AdminFluxPage (référence)
+- ✅ AdminShiftsPage — layout ⏳
+- ✅ AdminArretTypesPage — layout ⏳
