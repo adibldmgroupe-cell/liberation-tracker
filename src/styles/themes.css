@@ -32,6 +32,8 @@ html[data-theme="night"] {
   --th-topbar:    #0f0f23;
   --th-sidebar:   #07071a;
   --th-accent:    #7c7cff;
+  --th-font:      'Inter', sans-serif;
+  --th-font-size: 13px;
 }
 html[data-theme="workshop"] {
   --th-bg:        #161616;
@@ -50,6 +52,11 @@ html[data-theme="workshop"] {
 /* ── Layout principal ─────────────────────────────────────────── */
 html[data-theme="night"] body,
 html[data-theme="workshop"] body { background: var(--th-bg); }
+
+html[data-theme="night"] body {
+  font-family: var(--th-font);
+  font-size: var(--th-font-size);
+}
 
 html[data-theme="night"] .app-layout,
 html[data-theme="workshop"] .app-layout { background: var(--th-bg); }
