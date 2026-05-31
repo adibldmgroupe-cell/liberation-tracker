@@ -1156,3 +1156,21 @@ html[data-theme="night"] .ton,
 html[data-theme="workshop"] .ton { background: rgba(52,211,153,.1); color: #6ee7b7; }
 html[data-theme="night"] .toff,
 html[data-theme="workshop"] .toff { background: var(--th-bg3); color: var(--th-text3); }
+
+/* ── Badges statut génériques (badge-on/off) — night/workshop ── */
+html[data-theme="night"] .badge-on,
+html[data-theme="workshop"] .badge-on { background: rgba(16,185,129,.12); color: #6ee7b7; }
+html[data-theme="night"] .badge-off,
+html[data-theme="workshop"] .badge-off { background: var(--th-bg3); color: var(--th-text3); }
+
+/* ── Selects/inputs filtres (t-sel, t-inp) — night/workshop ──── */
+html[data-theme="night"] .t-sel,
+html[data-theme="workshop"] .t-sel { background: var(--th-bg2); border-color: var(--th-border); color: var(--th-text); }
+html[data-theme="night"] .t-inp,
+html[data-theme="workshop"] .t-inp { background: var(--th-bg2); border-color: var(--th-border); color: var(--th-text); }
+
+/* ── Ton/toff atténués (AdminUsersPage + partout) ──────────────── */
+html[data-theme="night"] .ton,
+html[data-theme="workshop"] .ton { background: rgba(16,185,129,.12); color: #34d399; }
+html[data-theme="night"] .toff,
+html[data-theme="workshop"] .toff { background: var(--th-bg3); color: var(--th-text3); }
