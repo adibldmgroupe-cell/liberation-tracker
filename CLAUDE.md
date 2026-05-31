@@ -379,6 +379,32 @@ Pour lire des fichiers, extraire du CSS, chercher des patterns → **toujours ut
 
 ---
 
+## RÈGLE N°15 — Cohérence scoped CSS ↔ themes.css
+
+### Problème rencontré (mai 2026 — AdminShiftsPage)
+
+`.pg-head` mis à jour en violet dans le scoped CSS du `.vue`, mais `themes.css` avait déjà
+un override `html[data-theme="day"] .pg-head` en gris qui **écrasait silencieusement** le scoped CSS.
+
+**Pourquoi :** `html[data-theme="day"] .class` a une spécificité `(0,2,1)` > scoped `(0,2,0)`.
+
+### Règle à appliquer TOUJOURS
+
+Avant de modifier une couleur dans un fichier `.vue` scoped, **vérifier si `themes.css` contient
+un override pour la même classe** :
+
+```bash
+grep "nom-de-la-classe" src/styles/themes.css
+```
+
+Si un override existe → **mettre à jour les deux en même temps** :
+1. Modifier le scoped CSS dans le `.vue`
+2. Mettre à jour l'override correspondant dans `themes.css`
+
+Ne jamais modifier l'un sans l'autre.
+
+---
+
 ## Déploiement
 
 - Push sur `main` → GitHub Actions build + deploy GitHub Pages automatiquement
