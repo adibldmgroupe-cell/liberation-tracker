@@ -37,6 +37,7 @@
           <thead>
             <!-- Ligne 1 : groupes opérations -->
             <tr class="pt-r-op">
+              <th class="pt-sc pt-sc0"><input type="checkbox" :checked="allRowsSelected" @change="toggleAllSelect" class="pt-chkbox" /></th>
               <th class="pt-h-prod pt-sc pt-sc1">Produit</th>
               <th class="pt-h-r    pt-sc pt-sc2">R</th>
               <th v-for="g in machineColGroups" :key="g.op_number"
@@ -47,17 +48,18 @@
             </tr>
             <!-- Ligne 2 : noms machines -->
             <tr class="pt-r-mach">
+              <th class="pt-sc pt-sc0"></th>
               <th class="pt-sc pt-sc1"></th>
               <th class="pt-sc pt-sc2"></th>
-              <th v-for="room in machineColsFlat" :key="room.code" class="pt-h-mach"
-                  :title="room.nom">
-                {{room.nom}}
-              </th>
+              <th v-for="room in machineColsFlat" :key="room.code" class="pt-h-mach">{{room.nom}}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="row in pivotMachineRows" :key="row.product_code+'_'+row.route"
-                :class="{'pt-r2':row.route===2}">
+                :class="{'pt-r2':row.route===2, 'pt-sel':isRowSelected(row)}">
+              <td class="pt-chk pt-sc pt-sc0" @click.stop="toggleSelectRow(row)">
+                <input type="checkbox" :checked="isRowSelected(row)" @change="toggleSelectRow(row)" class="pt-chkbox" />
+              </td>
               <td class="pt-prod-cell pt-sc pt-sc1">
                 <div class="pt-pcode">{{row.product_code}}</div>
                 <div class="pt-pname">{{row.product_name}}</div>
@@ -71,6 +73,22 @@
           </tbody>
         </table>
       </div>
+
+      <!-- ── BARRE SÉLECTION MULTIPLE ── -->
+      <transition name="bulk-slide">
+        <div class="bulk-assign-bar" v-if="selectedRows.length">
+          <span class="ba-count">{{selectedRows.length}} produit(s) sélectionné(s)</span>
+          <select v-model="bulkRoom" class="ba-sel">
+            <option :value="null">— Choisir une machine —</option>
+            <optgroup v-for="g in machineColGroups" :key="g.op_number" :label="g.op_number+' — '+g.label">
+              <option v-for="r in g.rooms" :key="r.code" :value="r">{{r.nom}}</option>
+            </optgroup>
+          </select>
+          <button class="ba-btn ba-on" :disabled="!bulkRoom" @click="bulkAssign(true)">✓ Cocher</button>
+          <button class="ba-btn ba-off" :disabled="!bulkRoom" @click="bulkAssign(false)">✕ Décocher</button>
+          <button class="ba-clear" @click="selectedRows=[]">✕ Tout désélectionner</button>
+        </div>
+      </transition>
 
       <!-- ── VUE FICHES ── -->
       <div class="products-grid" v-else>
@@ -242,6 +260,52 @@ export default {
 
     var productsSummary = ref([])
     var allFluxRows     = ref([])
+
+    // ── Sélection multiple ────────────────────────────────────────
+    var selectedRows = ref([])   // array de "product_code||route"
+    var bulkRoom     = ref(null)
+    var rowKey = function(row) { return row.product_code + '||' + row.route }
+    var isRowSelected = function(row) { return selectedRows.value.indexOf(rowKey(row)) >= 0 }
+    var toggleSelectRow = function(row) {
+      var k = rowKey(row), idx = selectedRows.value.indexOf(k)
+      if (idx >= 0) selectedRows.value.splice(idx, 1); else selectedRows.value.push(k)
+    }
+    var allRowsSelected = computed(function() {
+      return pivotMachineRows.value.length > 0 &&
+        pivotMachineRows.value.every(function(r) { return isRowSelected(r) })
+    })
+    var toggleAllSelect = function() {
+      if (allRowsSelected.value) selectedRows.value = []
+      else selectedRows.value = pivotMachineRows.value.map(rowKey)
+    }
+    var bulkAssign = async function(assign) {
+      if (!bulkRoom.value || !selectedRows.value.length) return
+      var room = bulkRoom.value
+      var toInsert = [], toDelete = []
+      selectedRows.value.forEach(function(k) {
+        var parts = k.split('||'), pcode = parts[0], route = parseInt(parts[1])
+        var row = pivotMachineRows.value.find(function(r) { return r.product_code === pcode && r.route === route })
+        if (!row) return
+        if (assign && !row.activeRoomCodes.has(room.code))
+          toInsert.push({ product_code: pcode, product_name: row.product_name, op_number: room.op_number, route: route, room_code: room.code })
+        else if (!assign && row.activeRoomCodes.has(room.code))
+          toDelete.push({ pcode: pcode, route: route })
+      })
+      if (toInsert.length) {
+        await supabase.from('product_flux').insert(toInsert)
+        toInsert.forEach(function(r) { allFluxRows.value.push(Object.assign({ id: Date.now() }, r)) })
+      }
+      if (toDelete.length) {
+        var pcodes = toDelete.map(function(d) { return d.pcode })
+        await supabase.from('product_flux').delete().in('product_code', pcodes).eq('op_number', room.op_number).eq('room_code', room.code)
+        toDelete.forEach(function(d) {
+          var idx = allFluxRows.value.findIndex(function(fr) {
+            return fr.product_code === d.pcode && fr.route === d.route && fr.op_number === room.op_number && fr.room_code === room.code
+          })
+          if (idx >= 0) allFluxRows.value.splice(idx, 1)
+        })
+      }
+    }
     var opMaster        = ref([])
     var planRooms       = ref([])   // plan_rooms avec op_number renseigné
 
@@ -333,25 +397,28 @@ export default {
       return rows
     })
 
-    // Clic case à cocher → toggle product_flux
+    // Clic case à cocher → toggle product_flux (mise à jour locale, pas de loadAll)
     var toggleMachineFlux = async function(row, room) {
       var isActive = row.activeRoomCodes.has(room.code)
       if (isActive) {
         await supabase.from('product_flux').delete()
-          .eq('product_code', row.product_code)
-          .eq('route', row.route)
-          .eq('op_number', room.op_number)
-          .eq('room_code', room.code)
+          .eq('product_code', row.product_code).eq('route', row.route)
+          .eq('op_number', room.op_number).eq('room_code', room.code)
+        var idx = allFluxRows.value.findIndex(function(fr) {
+          return fr.product_code === row.product_code && fr.route === row.route &&
+                 fr.op_number === room.op_number && fr.room_code === room.code
+        })
+        if (idx >= 0) allFluxRows.value.splice(idx, 1)
       } else {
         await supabase.from('product_flux').insert({
-          product_code: row.product_code,
-          product_name: row.product_name,
-          op_number: room.op_number,
-          route: row.route,
-          room_code: room.code
+          product_code: row.product_code, product_name: row.product_name,
+          op_number: room.op_number, route: row.route, room_code: room.code
+        })
+        allFluxRows.value.push({
+          id: Date.now(), product_code: row.product_code, product_name: row.product_name,
+          op_number: room.op_number, route: row.route, room_code: room.code
         })
       }
-      await loadAll()
     }
 
     // ── MODAL STEP ───────────────────────────────────────────────
@@ -549,6 +616,7 @@ export default {
       gsReloading, reloadGs,
       filteredProducts, opMaster, opOptions, roomsForOp,
       machineColsFlat, machineColGroups, pivotMachineRows,
+      selectedRows, bulkRoom, isRowSelected, allRowsSelected, toggleSelectRow, toggleAllSelect, bulkAssign,
       stepModal, gsModal,
       getRoomName, onOpChange,
       openNewFlux, openAddStep, openEditStep, saveStep, deleteStep,
@@ -620,31 +688,34 @@ export default {
   white-space: nowrap;
 }
 
-/* ── Ligne 2 : noms machines ── */
+/* ── Ligne 2 : noms machines (texte vertical) ── */
 .pt-r-mach th {
   position: sticky;
-  top: 38px;
+  top: 40px;
   z-index: 3;
   background: #faf5ff;
-  padding: 5px 4px;
+  padding: 6px 2px;
   text-align: center;
   border-bottom: 2px solid #7c3aed;
   border-right: 1px solid #ede9fe;
   font-size: 10px;
   font-weight: 600;
   color: #4b5563;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  height: 130px;
+  width: 36px;
+  min-width: 36px;
+  max-width: 36px;
   white-space: nowrap;
-  min-width: 52px;
-  max-width: 80px;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-/* ── Colonnes fixes (Produit / Type / R) ── */
+/* ── Colonnes fixes (Checkbox / Produit / R) ── */
 .pt-sc { position: sticky; background: inherit; }
-.pt-sc1 { left: 0; }
-.pt-sc2 { left: 160px; }
-.pt-sc3 { left: 250px; border-right: 2px solid #c4b5fd !important; }
+.pt-sc0 { left: 0;   width: 36px; min-width: 36px; }
+.pt-sc1 { left: 36px; }
+.pt-sc2 { left: 196px; border-right: 2px solid #c4b5fd !important; }
 
 /* bump z-index pour que les coins restent au-dessus */
 .pt-r-op .pt-sc  { z-index: 6 !important; }
@@ -656,7 +727,6 @@ export default {
 
 /* ── En-têtes op ── */
 .pt-h-prod { min-width: 160px; text-align: left !important; }
-.pt-h-type { min-width: 90px; text-align: left !important; }
 .pt-h-r    { width: 40px; text-align: center !important; }
 .pt-h-grp  { text-align: center; }
 .ptg-num   { display: block; font-family: monospace; font-size: 12px; font-weight: 800; color: #7c3aed; }
@@ -675,11 +745,17 @@ export default {
 .pt-pname { font-size: 10px; color: #6b7280; margin-top: 1px; }
 .pt-route-num { text-align: center; font-family: monospace; font-size: 11px; font-weight: 700; color: #374151; }
 
-/* ── Case à cocher ── */
+/* ── Checkbox sélection ── */
+.pt-chk { text-align: center; cursor: pointer; width: 36px; padding: 4px 2px; }
+.pt-chkbox { cursor: pointer; accent-color: #7c3aed; width: 14px; height: 14px; }
+.pt-sel td { background: #f5f3ff !important; }
+
+/* ── Case à cocher machine ── */
 .pt-cc {
   text-align: center;
   cursor: pointer;
-  min-width: 52px;
+  width: 36px;
+  min-width: 36px;
   padding: 4px 2px;
   transition: background .1s;
 }
@@ -711,6 +787,26 @@ export default {
   border-color: #a78bfa;
   background: #f5f3ff;
 }
+
+/* ── Barre sélection multiple ── */
+.bulk-assign-bar {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  background: #1e1b4b; color: #e0e7ff; border-radius: 10px;
+  padding: 12px 18px; box-shadow: 0 8px 32px rgba(0,0,0,.25); z-index: 200;
+}
+.ba-count { font-size: 13px; font-weight: 600; white-space: nowrap; }
+.ba-sel { padding: 6px 10px; border-radius: 5px; font-size: 12px; border: none; background: #312e81; color: #e0e7ff; cursor: pointer; min-width: 200px; }
+.ba-btn { padding: 7px 16px; border: none; border-radius: 5px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.ba-btn:disabled { opacity: .4; cursor: not-allowed; }
+.ba-on  { background: #7c3aed; color: #fff; }
+.ba-on:hover:not(:disabled)  { background: #6d28d9; }
+.ba-off { background: #374151; color: #e5e7eb; }
+.ba-off:hover:not(:disabled) { background: #1f2937; }
+.ba-clear { background: none; border: 1px solid #4338ca; color: #a5b4fc; border-radius: 5px; padding: 6px 12px; font-size: 11px; cursor: pointer; }
+.ba-clear:hover { background: #312e81; }
+.bulk-slide-enter-active, .bulk-slide-leave-active { transition: all .2s ease; }
+.bulk-slide-enter-from, .bulk-slide-leave-to { transform: translateX(-50%) translateY(20px); opacity: 0; }
 
 /* ═══ VUE FICHES ════════════════════════════════════════════════ */
 .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 16px; }
