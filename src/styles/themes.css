@@ -57,7 +57,9 @@ html[data-theme="workshop"] {
 html[data-theme="night"] body,
 html[data-theme="workshop"] body { background: var(--th-bg); }
 
-html[data-theme="night"] body {
+html[data-theme="day"] body,
+html[data-theme="night"] body,
+html[data-theme="workshop"] body {
   font-family: var(--th-font);
   font-size: var(--th-font-size);
 }
@@ -460,6 +462,53 @@ html[data-theme="workshop"] .tsw-btn.active { background: rgba(255,152,0,.15); b
    Remplace #185FA5 (bleu) → #7c3aed (violet) dans les pages qui
    ont encore le bleu codé en dur dans leur scoped CSS.
 ══════════════════════════════════════════════════════════════════ */
+
+/* ── Font globale (tous thèmes) ───────────────────────────────── */
+html[data-theme="day"] .flux-admin,
+html[data-theme="day"] .admin-ateliers,
+html[data-theme="day"] .admin-shifts,
+html[data-theme="day"] .admin-arrets,
+html[data-theme="day"] .products-catalog,
+html[data-theme="day"] .ar-body { font-family: var(--th-font); font-size: var(--th-font-size); }
+
+/* ── Page headers .ph — remplace le noir #0a0a0a ─────────────── */
+html[data-theme="day"] .ph {
+  border-bottom-color: var(--th-border);
+  border-bottom-width: 1px;
+}
+
+/* ── Modals — alignement sur AdminFluxPage ───────────────────── */
+html[data-theme="day"] .modal {
+  border-radius: 10px;
+  box-shadow: 0 20px 50px rgba(0,0,0,.2);
+}
+html[data-theme="day"] .modal-hd {
+  font-size: 14px;
+  font-weight: 800;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid #f3f4f6;
+}
+html[data-theme="day"] .modal-ft {
+  padding: 12px 20px;
+  border-top: 1px solid #f3f4f6;
+}
+html[data-theme="day"] .modal-body { padding: 16px 20px; }
+
+/* ── Inputs — border-radius 5px comme AdminFluxPage ─────────── */
+html[data-theme="day"] .inp { border-radius: 5px; font-size: 12px; }
+html[data-theme="day"] .lbl {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--th-text2);
+}
+
+/* ── Boutons — border-radius 5px ─────────────────────────────── */
+html[data-theme="day"] .btn-save,
+html[data-theme="day"] .btn-add,
+html[data-theme="day"] .btn-cancel,
+html[data-theme="day"] .tab-btn { border-radius: 5px; }
 
 /* ── AdminRefPage ─────────────────────────────────────────────── */
 html[data-theme="day"] .ar-tab.active {
