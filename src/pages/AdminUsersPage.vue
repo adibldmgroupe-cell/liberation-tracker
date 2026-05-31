@@ -1,15 +1,20 @@
 <template>
-  <div>
-    <div class="ph">
+  <div class="users-page">
+
+    <!-- ── En-tête ── -->
+    <div class="fa-header">
       <div>
-        <div class="pt">Gestion des utilisateurs</div>
-        <div class="ps">{{ profiles.length }} compte(s)</div>
+        <div class="fa-title">👤 Utilisateurs</div>
+        <div class="fa-sub">{{ profiles.length }} compte(s) enregistré(s)</div>
       </div>
-      <button class="btn bg" @click="openCreate">+ Nouveau compte</button>
+      <div class="fa-actions">
+        <button class="tb-btn-add" @click="openCreate">+ Nouveau compte</button>
+      </div>
     </div>
 
     <div v-if="loading" class="em">Chargement...</div>
-    <table class="ut" v-else-if="profiles.length">
+    <div v-else-if="profiles.length" class="ut-wrap">
+    <table class="ut">
       <thead>
         <tr>
           <th>Utilisateur</th>
@@ -46,39 +51,42 @@
         </tr>
       </tbody>
     </table>
+    </div><!-- /ut-wrap -->
     <div v-else class="em">Aucun utilisateur</div>
 
     <!-- Modal créer / modifier -->
     <div class="overlay" v-if="showModal" @click.self="showModal=false">
       <div class="modal">
-        <div class="mt">{{ isEdit ? 'Modifier le compte' : 'Nouveau compte' }}</div>
-        <div class="fg">
-          <div class="fi"><label>Prénom</label><input v-model="form.prenom" class="inp" /></div>
-          <div class="fi"><label>Nom</label><input v-model="form.nom" class="inp" /></div>
-        </div>
-        <template v-if="!isEdit">
-          <div class="fi"><label>Email</label><input v-model="form.email" type="email" class="inp" /></div>
-          <div class="fi"><label>Mot de passe temporaire</label><input v-model="form.password" type="text" class="inp" placeholder="min. 6 caractères" /></div>
-        </template>
-        <div class="fg">
-          <div class="fi">
-            <label>Service</label>
-            <select v-model="form.service" class="inp">
-              <option v-for="svc in servicesList" :key="svc.id" :value="svc.id">{{ svc.label }}</option>
-            </select>
+        <div class="modal-hd">{{ isEdit ? 'Modifier le compte' : 'Nouveau compte' }}</div>
+        <div class="modal-body-inner">
+          <div class="fg">
+            <div class="fi"><label class="lbl">Prénom</label><input v-model="form.prenom" class="inp" /></div>
+            <div class="fi"><label class="lbl">Nom</label><input v-model="form.nom" class="inp" /></div>
           </div>
-          <div class="fi">
-            <label>Rôle</label>
-            <select v-model="form.role" class="inp">
-              <option v-for="(label, key) in roleLabels" :key="key" :value="key">{{ label }}</option>
-            </select>
+          <template v-if="!isEdit">
+            <div class="fi"><label class="lbl">Email</label><input v-model="form.email" type="email" class="inp" /></div>
+            <div class="fi"><label class="lbl">Mot de passe temporaire</label><input v-model="form.password" type="text" class="inp" placeholder="min. 6 caractères" /></div>
+          </template>
+          <div class="fg">
+            <div class="fi">
+              <label class="lbl">Service</label>
+              <select v-model="form.service" class="inp">
+                <option v-for="svc in servicesList" :key="svc.id" :value="svc.id">{{ svc.label }}</option>
+              </select>
+            </div>
+            <div class="fi">
+              <label class="lbl">Rôle</label>
+              <select v-model="form.role" class="inp">
+                <option v-for="(label, key) in roleLabels" :key="key" :value="key">{{ label }}</option>
+              </select>
+            </div>
           </div>
+          <div class="merr" v-if="formErr">{{ formErr }}</div>
         </div>
-        <div class="merr" v-if="formErr">{{ formErr }}</div>
-        <div class="ma">
-          <button class="btn bg" @click="submitForm" :disabled="saving">{{ saving ? '...' : isEdit ? 'Enregistrer' : 'Créer le compte' }}</button>
-          <button class="btn bc2" @click="showModal=false">Annuler</button>
-          <button v-if="isEdit" class="btn" style="margin-left:auto" @click="sendReset">Réinitialiser MDP</button>
+        <div class="modal-acts">
+          <button class="tb-btn-add" @click="submitForm" :disabled="saving">{{ saving ? '...' : isEdit ? 'Enregistrer' : 'Créer le compte' }}</button>
+          <button class="btn-cancel" @click="showModal=false">Annuler</button>
+          <button v-if="isEdit" class="btn-reset" @click="sendReset">Réinitialiser MDP</button>
         </div>
       </div>
     </div>
@@ -205,34 +213,60 @@ export default {
 }
 </script>
 <style scoped>
-.ph{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px}
-.pt{font-size:18px;font-weight:500}.ps{font-size:12px;color:#999;margin-top:4px}
-.btn{font-size:12px;padding:7px 16px;border:none;border-radius:2px;cursor:pointer;font-weight:500;background:#185FA5;color:#fff}.btn:hover{opacity:.9}
-.bg{background:#1D9E75}.bc2{background:#f5f5f5;color:#666;border:1px solid #e8e8e8}
-.btn-sm{font-size:11px;padding:3px 10px;border:1px solid #ddd;border-radius:2px;background:#fff;cursor:pointer;margin-left:4px}.btn-sm:hover{background:#f5f5f5}
-.bd{border-color:#E24B4A;color:#E24B4A}.bd:hover{background:#FCEBEB}.bd:disabled{opacity:.3;cursor:not-allowed}
+.users-page{font-family:'Inter',sans-serif;font-size:13px;}
+.fa-actions{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+
+/* Table */
+.ut-wrap{overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 220px);border:1px solid #e5e7eb;border-radius:8px;}
 .ut{width:100%;border-collapse:collapse;font-size:13px}
-.ut th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#999;padding:8px;border-bottom:2px solid #e8e8e8;font-weight:500}
-.ut td{padding:10px 8px;border-bottom:1px solid #f5f5f5;vertical-align:middle}
+.ut th{text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#7c3aed;padding:10px 12px;border-bottom:1px solid #ede9fe;background:#f5f3ff;position:sticky;top:0;z-index:2}
+.ut td{padding:10px 12px;border-bottom:1px solid #f3f4f6;vertical-align:middle}
 .row-off{opacity:.4}
+
+/* User cell */
 .ua{display:flex;align-items:center;gap:10px}
-.av{width:32px;height:32px;border-radius:50%;background:#185FA5;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0}
-.un{font-size:13px;font-weight:500}.ue{font-size:11px;color:#999;margin-top:1px}
-.sb{font-size:11px;background:#E6F1FB;color:#0C447C;padding:2px 8px;border-radius:2px;font-weight:500;white-space:nowrap}
-.rb{font-size:11px;padding:2px 8px;border-radius:2px;font-weight:500}
-.rb-admin{background:#FFF3CD;color:#664D03}.rb-responsable{background:#EAF3DE;color:#3B6D11}.rb-operateur{background:#f5f5f5;color:#666}
+.av{width:32px;height:32px;border-radius:50%;background:#7c3aed;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.un{font-size:13px;font-weight:500;color:#111827}
+.ue{font-size:11px;color:#9ca3af;margin-top:1px}
+
+/* Badges */
+.sb{font-size:11px;background:#ede9fe;color:#7c3aed;padding:2px 8px;border-radius:4px;font-weight:500;white-space:nowrap}
+.rb{font-size:11px;padding:2px 8px;border-radius:4px;font-weight:500}
+.rb-admin{background:#fef3c7;color:#92400e}
+.rb-responsable{background:#d1fae5;color:#065f46}
+.rb-operateur{background:#f3f4f6;color:#6b7280}
+
+/* Toggle actif */
 .tog{font-size:11px;padding:3px 12px;border:none;border-radius:10px;cursor:pointer;font-weight:500}
-.ton{background:#EAF3DE;color:#3B6D11}.toff{background:#f5f5f5;color:#999}
-.dim{color:#999}.mono{font-family:'SF Mono',monospace;font-size:12px}.tar{text-align:right}
-.em{text-align:center;padding:40px;color:#999;font-size:13px}
+.ton{background:#d1fae5;color:#065f46}
+.toff{background:#f3f4f6;color:#9ca3af}
+
+/* Action buttons */
+.btn-sm{font-size:11px;padding:3px 10px;border:1px solid #e5e7eb;border-radius:4px;background:#fff;cursor:pointer;margin-left:4px;color:#374151}
+.btn-sm:hover{background:#f9fafb}
+.bd{border-color:#fecaca;color:#ef4444}
+.bd:hover{background:#fef2f2}
+.bd:disabled{opacity:.3;cursor:not-allowed}
+
+.dim{color:#9ca3af}.mono{font-family:'SF Mono',monospace;font-size:12px}.tar{text-align:right}
+.em{text-align:center;padding:40px;color:#9ca3af;font-size:13px}
+
+/* Modal */
 .overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:100}
-.modal{background:#fff;padding:24px;width:480px;border-radius:4px;max-height:90vh;overflow-y:auto}
-.mt{font-size:16px;font-weight:500;margin-bottom:16px}
+.modal{background:#fff;width:480px;max-width:96vw;border-radius:10px;box-shadow:0 20px 50px rgba(0,0,0,.2);max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;}
+.modal-hd{font-size:14px;font-weight:800;padding:16px 20px 12px;border-bottom:1px solid #f3f4f6;flex-shrink:0}
+.modal-body-inner{padding:16px 20px;display:flex;flex-direction:column;gap:4px;}
+.modal-acts{display:flex;gap:8px;padding:12px 20px;border-top:1px solid #f3f4f6;align-items:center;flex-wrap:wrap;flex-shrink:0}
 .fg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.fi{margin-bottom:12px}.fi label{display:block;font-size:11px;color:#666;text-transform:uppercase;margin-bottom:4px}
-.inp{width:100%;padding:7px 10px;border:1px solid #ddd;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit;border-radius:2px}.inp:focus{border-color:#185FA5}
-.merr{background:#FCEBEB;color:#A32D2D;font-size:12px;padding:8px;margin-bottom:12px;border-radius:2px}
-.ma{display:flex;gap:8px;margin-top:16px;align-items:center;flex-wrap:wrap}
+.fi{margin-bottom:4px}
+.lbl{display:block;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;margin-top:8px}
+.inp{width:100%;padding:8px 10px;border:1px solid #e5e7eb;font-size:12px;outline:none;box-sizing:border-box;font-family:'Inter',sans-serif;border-radius:5px}
+.inp:focus{border-color:#7c3aed}
+.merr{background:#fef2f2;color:#dc2626;font-size:11px;padding:7px 10px;border-radius:4px;margin-top:4px}
+.btn-cancel{padding:9px 16px;background:#f5f5f5;color:#6b7280;border:1px solid #e5e7eb;font-size:12px;cursor:pointer;border-radius:5px;font-family:'Inter',sans-serif}
+.btn-cancel:hover{background:#eee}
+.btn-reset{margin-left:auto;padding:9px 14px;background:none;border:1px solid #e5e7eb;color:#6b7280;font-size:12px;cursor:pointer;border-radius:5px;font-family:'Inter',sans-serif}
+.btn-reset:hover{background:#f9fafb;color:#374151}
 @media(max-width:768px){
   .fg{grid-template-columns:1fr}
   .modal{width:min(92vw,480px)}
