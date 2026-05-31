@@ -370,10 +370,10 @@ export default {
 .pt{font-size:11px;font-weight:500;letter-spacing:1.5px}
 .pt-sub{font-size:11px;color:#999}
 
-.tree-layout{display:grid;grid-template-columns:200px 220px 1fr;gap:0;border:1px solid #e0e0e0;border-radius:4px;overflow:hidden;min-height:500px}
-.tree-col{border-right:1px solid #e0e0e0;display:flex;flex-direction:column;min-height:0}
+.tree-layout{display:grid;grid-template-columns:200px 220px 1fr;gap:0;border:1px solid #e0e0e0;border-radius:4px;overflow:hidden;min-height:500px;max-height:calc(100vh - 160px)}
+.tree-col{border-right:1px solid #e0e0e0;display:flex;flex-direction:column;min-height:0;overflow-y:auto}
 .tree-col.wide{border-right:none}
-.col-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#f8f8f8;border-bottom:1px solid #e0e0e0;flex-shrink:0}
+.col-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#f8f8f8;border-bottom:1px solid #e0e0e0;flex-shrink:0;position:sticky;top:0;z-index:2}
 .col-title{font-size:11px;font-weight:600;letter-spacing:.5px;display:flex;align-items:center;gap:6px}
 .col-title.muted{color:#aaa}
 .btn-add{font-size:11px;padding:3px 8px;background:#0a0a0a;color:#fff;border:none;border-radius:2px;cursor:pointer;white-space:nowrap}

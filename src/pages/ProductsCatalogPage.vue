@@ -408,9 +408,9 @@ export default {
 .btn-sm:hover { background:#f5f5f5 }
 
 .em { text-align:center; padding:40px; color:#999; font-size:13px }
-.table-wrap { overflow-x:auto; border:1px solid #e8e8e8; border-radius:2px; margin-top:8px }
+.table-wrap { overflow-x:auto; overflow-y:auto; max-height:calc(100vh - 220px); border:1px solid #e8e8e8; border-radius:2px; margin-top:8px }
 .pt-table { width:100%; border-collapse:collapse; font-size:13px }
-.pt-table th { text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.5px; color:#999; padding:8px 10px; border-bottom:2px solid #e8e8e8; font-weight:500; white-space:nowrap; background:#fafafa }
+.pt-table th { text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.5px; color:#999; padding:8px 10px; border-bottom:2px solid #e8e8e8; font-weight:500; white-space:nowrap; background:#fafafa; position:sticky; top:0; z-index:2 }
 .pt-table td { padding:9px 10px; border-bottom:1px solid #f5f5f5; vertical-align:middle }
 .pt-table tr:last-child td { border-bottom:none }
 .pt-table tr:hover td { background:#fafbfd }

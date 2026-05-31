@@ -537,8 +537,8 @@ export default {
 .equipe-nom{flex:1;font-size:13px;font-weight:500}
 
 /* Planning grid */
-.planning-grid{display:grid;grid-template-columns:140px repeat(var(--cols, 4), 1fr);border:1px solid #e0e0e0;border-radius:4px;overflow:auto;font-size:11px}
-.pg-head{padding:6px 8px;background:#f5f5f5;border-bottom:2px solid #e0e0e0;border-right:1px solid #e0e0e0;font-size:10px;font-weight:600;text-align:center}
+.planning-grid{display:grid;grid-template-columns:140px repeat(var(--cols, 4), 1fr);border:1px solid #e0e0e0;border-radius:4px;overflow:auto;max-height:calc(100vh - 280px);font-size:11px}
+.pg-head{padding:6px 8px;background:#f5f5f5;border-bottom:2px solid #e0e0e0;border-right:1px solid #e0e0e0;font-size:10px;font-weight:600;text-align:center;position:sticky;top:0;z-index:2}
 .pg-corner{}
 .pg-equip{text-align:center}
 .pg-eq-nom{font-size:11px;font-weight:600}
@@ -597,7 +597,7 @@ export default {
 
 /* Month grid */
 .month-grid{display:grid;grid-template-columns:repeat(7,1fr);border-left:1px solid #e8e8e8;border-top:1px solid #e8e8e8}
-.mth-head{text-align:center;font-size:10px;font-weight:700;color:#999;text-transform:uppercase;padding:6px 0;background:#f8f8f8;border-right:1px solid #e8e8e8;border-bottom:2px solid #e0e0e0}
+.mth-head{text-align:center;font-size:10px;font-weight:700;color:#999;text-transform:uppercase;padding:6px 0;background:#f8f8f8;border-right:1px solid #e8e8e8;border-bottom:2px solid #e0e0e0;position:sticky;top:0;z-index:2}
 .mth-cell{min-height:76px;border-right:1px solid #e8e8e8;border-bottom:1px solid #e8e8e8;padding:4px 5px;vertical-align:top;position:relative}
 .mth-cell.other-month{background:#f9f9f9}
 .mth-day-num{font-size:11px;font-weight:600;color:#555;margin-bottom:3px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;border-radius:50%}
