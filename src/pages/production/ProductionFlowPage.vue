@@ -1238,22 +1238,28 @@ export default {
       var now   = new Date()
       var totalMin = (now - start) / 60000
       if (totalMin <= 0) return { d: null, p: null, q: null, trs: null, statut: sess.statut }
+      // ── Aligné sur la formule OFFICIELLE de clôture (trsDoClose) ──
+      // Seuls les arrêts imprévus (non planifiés, non pause) réduisent la disponibilité
       var arretImpro = (sessArrets || []).reduce(function(acc, a) {
         return acc + (!a.est_planifie && !a.est_pause ? (a.duree_minutes || 0) : 0)
       }, 0)
-      var pauses = (sessArrets || []).reduce(function(acc, a) {
-        return acc + (a.est_pause ? (a.duree_minutes || 0) : 0)
-      }, 0)
-      var to = totalMin - pauses
-      var tf = Math.max(0, to - arretImpro)
-      var colisTotal = sess.colis_produits || 0
-      var colisBon   = Math.max(0, colisTotal - (sess.colis_rebuts || 0))
-      var cadNom     = sess.cadence_nominale_snapshot || 0
-      var d   = to > 0 ? Math.min(100, Math.round((tf / to) * 100)) : null
-      var p   = tf > 0 && cadNom > 0 ? Math.min(100, Math.round((colisTotal / (cadNom * tf)) * 100)) : null
-      var q   = colisTotal > 0 ? Math.min(100, Math.round((colisBon / colisTotal) * 100)) : null
-      var trs = (d != null && p != null && q != null) ? Math.round((d * p * q) / 10000) : null
-      return { d, p, q, trs, statut: sess.statut }
+      // TO net de référence = snapshot GS posé au démarrage (déjà net des arrêts planifiés/pauses/micro)
+      var toNetRef = sess.temps_ouverture_min || 0
+      var tf = Math.max(0, toNetRef - arretImpro)
+      // Production en BOÎTES (colis × colisage), comme à la clôture
+      var colisage  = sess.colisage_confirme || null
+      var total     = colisage ? (sess.colis_produits || 0) * colisage : (sess.colis_produits || 0)
+      var rebutsBte = colisage ? (sess.colis_rebuts || 0) * colisage : (sess.colis_rebuts || 0)
+      var good      = total - rebutsBte
+      var cadObj    = sess.cadence_objectif_snapshot || 0   // cadence objectif GS (onglet 2)
+      // D = TF / TO_net_ref(GS)
+      var d   = toNetRef > 0 ? Math.round((tf / toNetRef) * 100) : null
+      // P = boîtes / (cadObj_GS × TF) — cap 150 %
+      var p   = (tf > 0 && cadObj > 0) ? Math.min(150, Math.round((total / (cadObj * tf)) * 100)) : null
+      // Q = boîtes bonnes / boîtes totales
+      var q   = total > 0 ? Math.round((good / total) * 100) : null
+      var trs = (d != null && p != null && q != null) ? Math.round((d / 100) * (p / 100) * (q / 100) * 100) : null
+      return { d: d, p: p, q: q, trs: trs, statut: sess.statut }
     }
 
     var trsDataByEquipId = computed(function() {
@@ -1301,7 +1307,7 @@ export default {
       var today = new Date().toISOString().slice(0, 10)
       var [rS, rA] = await Promise.all([
         supabase.from('production_sessions')
-          .select('id,equipement_id,statut,date,heure_debut,heure_fin,disponibilite,performance,qualite,trs,colis_produits,colis_rebuts,objectif_boites,cadence_nominale_snapshot')
+          .select('id,equipement_id,statut,date,heure_debut,heure_fin,disponibilite,performance,qualite,trs,colis_produits,colis_rebuts,objectif_boites,cadence_nominale_snapshot,cadence_objectif_snapshot,temps_ouverture_min,colisage_confirme')
           .eq('date', today)
           .neq('statut', 'Annulé'),
         supabase.from('production_arrets')
@@ -1623,7 +1629,7 @@ export default {
       // Sync TRS overlay data
       var today = new Date().toISOString().slice(0, 10)
       var [rS, rA] = await Promise.all([
-        supabase.from('production_sessions').select('id,equipement_id,statut,date,heure_debut,heure_fin,disponibilite,performance,qualite,trs,colis_produits,colis_rebuts,objectif_boites,cadence_nominale_snapshot').eq('date', today).neq('statut', 'Annulé'),
+        supabase.from('production_sessions').select('id,equipement_id,statut,date,heure_debut,heure_fin,disponibilite,performance,qualite,trs,colis_produits,colis_rebuts,objectif_boites,cadence_nominale_snapshot,cadence_objectif_snapshot,temps_ouverture_min,colisage_confirme').eq('date', today).neq('statut', 'Annulé'),
         supabase.from('production_arrets').select('id,session_id,duree_minutes,est_planifie,est_pause,is_running')
       ])
       if (!rS.error) trsSessionsFull.value = rS.data || []
