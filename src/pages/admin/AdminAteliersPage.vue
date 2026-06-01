@@ -646,7 +646,13 @@ export default {
       })
     })
 
-    onMounted(loadAll)
+    onMounted(function() {
+      loadAll()
+      // Précharge le référentiel GS (Google Sheets) pour que les compteurs des onglets
+      // « GS Référentiel » / « GS Cadences » affichent les vrais nombres dès l'ouverture,
+      // au lieu de (0) tant qu'on n'a pas cliqué l'onglet. Cache 5 min côté service.
+      loadGs()
+    })
 
     return {
       tab, processus, ateliers, suiviFab, filterProcId, showInactif, colorPresets,
