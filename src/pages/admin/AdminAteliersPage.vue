@@ -8,7 +8,9 @@
         <div class="fa-sub">{{ tabSub }}</div>
       </div>
       <div class="fa-actions">
-        <button class="fa-btn-gs-reload" v-if="tab==='gs-ref'||tab==='gs-cad'" @click="reloadGs" :disabled="gsLoading" :class="{spinning:gsLoading}">↻ Recharger GS</button>
+        <button class="fa-btn-gs-reload" v-if="tab==='gs-ref'||tab==='gs-cad'" @click="reloadGs" :disabled="gsLoading||syncAllSaving" :class="{spinning:gsLoading}">↻ Recharger GS</button>
+        <button class="btn-sync" v-if="tab==='gs-ref'||tab==='gs-cad'" @click="syncAll" :disabled="gsLoading||syncAllSaving||syncRefSaving||syncOpSaving||syncCadSaving" :class="{spinning:syncAllSaving}">{{syncAllSaving?'⟳ Synchronisation…':'🔄 Tout synchroniser GS → base'}}</button>
+        <span v-if="syncAllResult" class="sync-result sync-ok">{{syncAllResult.msg}}</span>
         <button class="tb-btn-add" v-if="tab==='processus'" @click="openProc(null)">+ Nouveau processus</button>
         <button class="tb-btn-add" v-if="tab==='ateliers'" @click="openAtelier(null)" :disabled="!processus.length">+ Nouvel atelier</button>
       </div>
@@ -38,9 +40,9 @@
           <option value="">Tous processus</option>
           <option v-for="p in gsProcessusUniques" :key="p" :value="p">{{p}}</option>
         </select>
-        <button class="btn-sync" @click="syncRefToSupabase" :disabled="syncRefSaving||gsLoading||!gsRows.length">{{syncRefSaving?'⟳ …':'💾 Sync plan_rooms'}}</button>
+        <button class="btn-sync" @click="syncRefToSupabase()" :disabled="syncRefSaving||gsLoading||syncAllSaving">{{syncRefSaving?'⟳ …':'💾 Sync plan_rooms'}}</button>
         <span v-if="syncRefResult" class="sync-result" :class="syncRefResult.errors&&syncRefResult.errors.length?'sync-warn':'sync-ok'">{{syncRefResult.errors&&syncRefResult.errors.length?syncRefResult.errors.length+' erreur(s)':syncRefResult.updated+' salles'}}</span>
-        <button class="btn-sync" @click="syncOpMasterToSupabase" :disabled="syncOpSaving||gsLoading||!gsRows.length">{{syncOpSaving?'⟳ …':'💾 Sync operations'}}</button>
+        <button class="btn-sync" @click="syncOpMasterToSupabase()" :disabled="syncOpSaving||gsLoading||syncAllSaving">{{syncOpSaving?'⟳ …':'💾 Sync operations'}}</button>
         <span v-if="syncOpResult" class="sync-result" :class="syncOpResult.err?'sync-warn':'sync-ok'">{{syncOpResult.err || (syncOpResult.updated+' opérations')}}</span>
       </div>
       <div class="gs-filters-inline" v-if="tab==='gs-cad'">
@@ -50,7 +52,7 @@
         </div>
         <input class="t-sel" style="max-width:100px" v-model="gsCadSalle" placeholder="N° salle…" />
         <input class="t-sel" v-model="gsCadDesc" placeholder="Description…" />
-        <button class="btn-sync" @click="syncCadencesToSupabase" :disabled="syncCadSaving||gsLoading||!gsCadences.length">{{syncCadSaving?'⟳ …':'💾 Synchroniser'}}</button>
+        <button class="btn-sync" @click="syncCadencesToSupabase()" :disabled="syncCadSaving||gsLoading||syncAllSaving">{{syncCadSaving?'⟳ …':'💾 Synchroniser'}}</button>
         <span v-if="syncCadResult" class="sync-result" :class="syncCadResult.err?'sync-warn':'sync-ok'">{{syncCadResult.err || (syncCadResult.updated+' cadences')}}</span>
       </div>
     </div>
@@ -458,6 +460,7 @@ export default {
     var syncRefSaving = ref(false), syncRefResult = ref(null)
     var syncCadSaving = ref(false), syncCadResult = ref(null)
     var syncOpSaving  = ref(false), syncOpResult  = ref(null)
+    var syncAllSaving = ref(false), syncAllResult = ref(null)
 
     // Filtres GS onglet 1
     var gsFilterProc = ref('')
@@ -503,9 +506,10 @@ export default {
     }
 
     // ── Synchroniser GS Référentiel → plan_rooms (colonnes TRS) ──
-    var syncRefToSupabase = async function() {
-      if (!gsRows.value.length) return
+    var syncRefToSupabase = async function(skipReload) {
+      if (skipReload !== true) { gsClearCache(); await loadGs() }   // 1 clic = recharge GS frais + stocke (comme Réception SAP)
       syncRefSaving.value = true; syncRefResult.value = null
+      if (!gsRows.value.length) { syncRefResult.value = { updated: 0, errors: ['Aucune donnée GS chargée'] }; syncRefSaving.value = false; return }
       var updated = 0, errors = []
       for (var i = 0; i < gsRows.value.length; i++) {
         var r = gsRows.value[i]
@@ -534,9 +538,10 @@ export default {
     }
 
     // ── Synchroniser GS Cadences → table cadences ──
-    var syncCadencesToSupabase = async function() {
-      if (!gsCadences.value.length) return
+    var syncCadencesToSupabase = async function(skipReload) {
+      if (skipReload !== true) { gsClearCache(); await loadGs() }   // 1 clic = recharge GS frais + stocke
       syncCadSaving.value = true; syncCadResult.value = null
+      if (!gsCadences.value.length) { syncCadResult.value = { err: 'Aucune cadence dans Google Sheets' }; syncCadSaving.value = false; return }
       var rows = gsCadences.value
         .filter(function(c) { return c.numero_atelier && c.code_article && c.taille_lot != null && c.cadence_objectif_b_min != null })
         .map(function(c) {
@@ -557,9 +562,10 @@ export default {
     }
 
     // ── Synchroniser GS Référentiel → operations_master ──
-    var syncOpMasterToSupabase = async function() {
-      if (!gsRows.value.length) return
+    var syncOpMasterToSupabase = async function(skipReload) {
+      if (skipReload !== true) { gsClearCache(); await loadGs() }   // 1 clic = recharge GS frais + stocke
       syncOpSaving.value = true; syncOpResult.value = null
+      if (!gsRows.value.length) { syncOpResult.value = { err: 'Aucune donnée GS chargée' }; syncOpSaving.value = false; return }
       var rows = gsRows.value
         .filter(function(r) { return r.room_code && r.op_number != null })
         .map(function(r) {
@@ -586,6 +592,22 @@ export default {
       if (res.error) syncOpResult.value = { err: res.error.message }
       else syncOpResult.value = { updated: rows.length }
       syncOpSaving.value = false
+    }
+
+    // ── Tout synchroniser GS → base en 1 clic (référentiel plan_rooms + operations_master + cadences) ──
+    var syncAll = async function() {
+      syncAllSaving.value = true; syncAllResult.value = null
+      gsClearCache()
+      await loadGs()                       // 1 seul rechargement frais depuis Google Sheets
+      await syncRefToSupabase(true)        // → plan_rooms      (skipReload : déjà rechargé)
+      await syncOpMasterToSupabase(true)   // → operations_master
+      await syncCadencesToSupabase(true)   // → cadences
+      var parts = []
+      if (syncRefResult.value && !(syncRefResult.value.errors && syncRefResult.value.errors.length)) parts.push((syncRefResult.value.updated || 0) + ' salles')
+      if (syncOpResult.value && !syncOpResult.value.err) parts.push((syncOpResult.value.updated || 0) + ' opérations')
+      if (syncCadResult.value && !syncCadResult.value.err) parts.push((syncCadResult.value.updated || 0) + ' cadences')
+      syncAllResult.value = { msg: parts.length ? parts.join(' · ') : 'Terminé (voir détails par onglet)' }
+      syncAllSaving.value = false
     }
 
     var switchGsTab = async function(t) {
@@ -669,6 +691,7 @@ export default {
       syncRefSaving, syncRefResult, syncRefToSupabase,
       syncCadSaving, syncCadResult, syncCadencesToSupabase,
       syncOpSaving,  syncOpResult,  syncOpMasterToSupabase,
+      syncAll, syncAllSaving, syncAllResult,
       tabSub,
     }
   }
