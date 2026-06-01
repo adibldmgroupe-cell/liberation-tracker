@@ -1561,3 +1561,26 @@ html[data-theme="night"] .ndot, html[data-theme="workshop"] .ndot { color: var(-
 html[data-theme="night"] .ndot, html[data-theme="workshop"] .ndot { background: var(--th-accent); }
 html[data-theme="night"] .ntime, html[data-theme="workshop"] .ntime,
 html[data-theme="night"] .empty, html[data-theme="workshop"] .empty { color: var(--th-text3); }
+
+/* ══════════════════════════════════════════════════════════════════
+   DashboardPage — night + workshop
+   (couleurs KPI sémantiques en style inline → conservées)
+══════════════════════════════════════════════════════════════════ */
+html[data-theme="night"] .dt, html[data-theme="workshop"] .dt { color: var(--th-text); }
+html[data-theme="night"] .dh, html[data-theme="workshop"] .dh { border-bottom-color: var(--th-border); }
+html[data-theme="night"] .dp, html[data-theme="workshop"] .dp,
+html[data-theme="night"] .ku, html[data-theme="workshop"] .ku,
+html[data-theme="night"] .kl, html[data-theme="workshop"] .kl { color: var(--th-text2); }
+html[data-theme="night"] .sh, html[data-theme="workshop"] .sh { color: var(--th-text2); border-bottom-color: var(--th-border); }
+html[data-theme="night"] .ks, html[data-theme="workshop"] .ks { border-color: var(--th-border); }
+html[data-theme="night"] .k, html[data-theme="workshop"] .k { border-right-color: var(--th-border); border-top-color: var(--th-border); }
+html[data-theme="night"] .row-label, html[data-theme="workshop"] .row-label,
+html[data-theme="night"] .am, html[data-theme="workshop"] .am { color: var(--th-text); }
+html[data-theme="night"] .mtb th, html[data-theme="workshop"] .mtb th { background: var(--th-bg2); color: var(--th-text2); border-bottom-color: var(--th-border); }
+html[data-theme="night"] .mtb td, html[data-theme="workshop"] .mtb td { border-bottom-color: var(--th-bg3); color: var(--th-text); }
+html[data-theme="night"] .ytd, html[data-theme="workshop"] .ytd { background: var(--th-bg2); }
+html[data-theme="night"] .ytd-val, html[data-theme="workshop"] .ytd-val { background: var(--th-bg2); color: var(--th-accent); }
+html[data-theme="night"] .al, html[data-theme="workshop"] .al { border-bottom-color: var(--th-bg3); }
+html[data-theme="night"] .al:hover, html[data-theme="workshop"] .al:hover { background: var(--th-bg2); }
+html[data-theme="night"] .aln, html[data-theme="workshop"] .aln { color: var(--th-text2); }
+html[data-theme="night"] .loading, html[data-theme="workshop"] .loading { color: var(--th-text3); }
