@@ -13,6 +13,9 @@ dist/
 .vscode/
 .idea/
 
+# Claude Code / config preview locale (chemins machine-spécifiques)
+.claude/
+
 # OS
 .DS_Store
 Thumbs.db
