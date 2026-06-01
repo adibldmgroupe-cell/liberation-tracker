@@ -518,19 +518,19 @@ export async function importHistoriqueDepuisGoogleSheets(url, onProgress) {
   var SVC = { if: 'fabrication', ic: 'conditionnement', da_pc: 'lcq', da_micro: 'lcq', ccl: 'aq' }
   parsed.forEach(function(p) {
     var lotId = lotIdMap[p.numLot]; if (!lotId) return
-    var libere = !!p.dateLib
+    var libere = !!p.dateLib || p.statut === 'accepte'
     var microApp = !!(p.dateDAMicro && p.dateDAMicro !== '1970-01-01')
     function doc(type, emittedDate, applicable) {
       var d = { lot_id: lotId, type_document: type, is_applicable: applicable, is_required: applicable, service_emetteur: SVC[type], statut: 'non_emis', emitted_at: null, approved_at: null, updated_at: now }
-      if (emittedDate) { d.statut = 'emis'; d.emitted_at = emittedDate + 'T00:00:00Z' }
-      if (libere && applicable) { d.statut = 'approuve_dt'; d.approved_at = p.dateLib + 'T00:00:00Z' }
+      if (emittedDate && p.statut !== 'vide') { d.statut = 'emis'; d.emitted_at = emittedDate + 'T00:00:00Z' }
+      if (libere && applicable) { d.statut = 'approuve_dt'; if (p.dateLib) d.approved_at = p.dateLib + 'T00:00:00Z' }
       return d
     }
     docRows.push(doc('if', p.dateIF, true), doc('ic', p.dateIC, true), doc('da_pc', p.dateDAPC, true), doc('da_micro', microApp ? p.dateDAMicro : null, microApp), doc('ccl', null, true))
 
     var dossier = { lot_id: lotId, da_micro_applicable: microApp, updated_at: now }
     if (libere) {
-      dossier.statut = 'libere'; dossier.liberated_at = p.dateLib + 'T00:00:00Z'
+      dossier.statut = 'libere'; if (p.dateLib) dossier.liberated_at = p.dateLib + 'T00:00:00Z'
       dossier.if_approved = true; dossier.ic_approved = true; dossier.da_pc_approved = true
       dossier.da_micro_approved = microApp; dossier.deviations_closed = true; dossier.pieces_complementaires_ok = true
     } else if (p.deviation && p.deviation !== '0') { dossier.deviations_closed = false }

@@ -132,7 +132,7 @@ export default {
       if (!svc) return
       var total = 0
       // Récupérer les IDs des lots acceptés pour les exclure
-      var accRes = await supabase.from('lots').select('id').eq('statut_sap','accepte')
+      var accRes = await supabase.from('lots').select('id').in('statut_sap',['accepte','vide'])
       var accIds = (accRes.data||[]).map(function(l){return l.id})
       var excl = function(q){ return accIds.length ? q.not('lot_id','in','('+accIds.join(',')+')') : q }
       // Circuits

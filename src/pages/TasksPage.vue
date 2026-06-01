@@ -589,12 +589,12 @@ export default {
       if (svc==='aq') {
         var daqRes = await supabase.from('liberation_documents')
           .select('id,type_document,statut,lot_id,updated_at')
-          .in('statut',['emis','verification_aq']).eq('is_applicable',true).is('pending_ar_service',null).neq('type_document','ccl').limit(500)
+          .in('statut',['emis','verification_aq']).eq('is_applicable',true).is('pending_ar_service',null).neq('type_document','ccl').limit(5000)
         docRaw = daqRes.data||[]
         var daqMap = await getLotsMap(docRaw.map(function(d){return d.lot_id}))
         var grpMap = {}
         docRaw.forEach(function(d){
-          var l=daqMap[d.lot_id]; if(!l) return
+          var l=daqMap[d.lot_id]; if(!l||l.statut_sap==='vide') return
           var lbl=d.statut==='verification_aq'?'Vérifier (retour DT)':'Vérifier AQ → DT'
           var since=fmtSince(d.updated_at)
           var typeKey=d.type_document||'autre'; var typeLabel=DOC_TYPE_LABELS[typeKey]||typeKey
@@ -613,10 +613,10 @@ export default {
         // CCL non émis (AQ doit transmettre au DT)
         var cclAqRes = await supabase.from('liberation_documents')
           .select('id,type_document,statut,lot_id,updated_at')
-          .eq('type_document','ccl').eq('statut','non_emis').eq('is_applicable',true).limit(200)
+          .eq('type_document','ccl').eq('statut','non_emis').eq('is_applicable',true).limit(5000)
         var cclAqMap = await getLotsMap((cclAqRes.data||[]).map(function(d){return d.lot_id}))
         ;(cclAqRes.data||[]).forEach(function(d){
-          var l=cclAqMap[d.lot_id]; if(!l) return
+          var l=cclAqMap[d.lot_id]; if(!l||l.statut_sap==='vide') return
           var since=fmtSince(d.updated_at)
           var canAct=isAdm||canPerform('emettre_ccl')
           docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',statutSap:l.statut_sap||''})
@@ -631,7 +631,7 @@ export default {
       } else if (svc==='dt') {
         var ddtRes = await supabase.from('liberation_documents')
           .select('id,type_document,statut,lot_id,updated_at')
-          .eq('statut','approuve_aq').eq('is_applicable',true).is('pending_ar_service',null).limit(500)
+          .eq('statut','approuve_aq').eq('is_applicable',true).is('pending_ar_service',null).limit(5000)
         docRaw = ddtRes.data||[]
         var ddtMap = await getLotsMap(docRaw.map(function(d){return d.lot_id}))
         var grpMapDt = {}
@@ -653,7 +653,7 @@ export default {
         // CCL émis en attente de libération DT
         var cclDtRes = await supabase.from('liberation_documents')
           .select('id,type_document,statut,lot_id,updated_at')
-          .eq('type_document','ccl').eq('statut','emis').eq('is_applicable',true).is('pending_ar_service',null).limit(200)
+          .eq('type_document','ccl').eq('statut','emis').eq('is_applicable',true).is('pending_ar_service',null).limit(5000)
         var cclDtMap = await getLotsMap((cclDtRes.data||[]).map(function(d){return d.lot_id}))
         ;(cclDtRes.data||[]).forEach(function(d){
           var l=cclDtMap[d.lot_id]; if(!l) return
@@ -673,7 +673,7 @@ export default {
       } else {
         var dEmtRes = await supabase.from('liberation_documents')
           .select('id,type_document,lot_id,updated_at')
-          .eq('statut','retour_emetteur').eq('service_emetteur',svc).eq('is_applicable',true).is('pending_ar_service',null).limit(500)
+          .eq('statut','retour_emetteur').eq('service_emetteur',svc).eq('is_applicable',true).is('pending_ar_service',null).limit(5000)
         docRaw = dEmtRes.data||[]
         var dEmtMap = await getLotsMap(docRaw.map(function(d){return d.lot_id}))
         var grpMapEmt = {}
