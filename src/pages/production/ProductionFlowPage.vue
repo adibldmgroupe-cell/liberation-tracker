@@ -1337,6 +1337,7 @@ export default {
 
     // ── TRS LIVE STATE ─────────────────────────────────────────────
     var trsPanels        = ref([])
+    var trsPlanRoomByEquip = ref({})   // equipement_id → plan_room (params TRS), réutilisé par le fallback de selectNode
     var trsShifts        = ref([])
     var trsEquipes       = ref([])
     var trsArretFamilles = ref([])
@@ -1547,6 +1548,23 @@ export default {
       trsTimers.value = newT; trsArretTimers.value = newAT; trsTheoCounters.value = newTheo
     }
 
+    // Enrichit un équipement avec ses paramètres TRS issus de plan_rooms (numero_atelier + temps de référence).
+    // Utilisé par loadTrsFull ET par le fallback de selectNode → equip toujours complet (parité avec TRS Live).
+    var trsEnrichEquip = function(eq, pr) {
+      var numAtelier = pr ? parseInt(pr.code.replace(/^[a-z]+/i, ''), 10) : null
+      return Object.assign({}, eq, {
+        numero_atelier:     numAtelier,
+        to_shift_ref:       (pr && pr.to_shift_min)      || 480,
+        pause_ref:          (pr && pr.pause_min)         || 0,
+        vdlp_ref:           (pr && pr.vdlp_min)          || 0,
+        vdlc_ref:           (pr && pr.vdlc_min)          || 0,
+        chgt_format_ref:    (pr && pr.chgt_format_min)   || 0,
+        reglage_ref:        (pr && pr.reglage_min)       || 0,
+        micro_arrets_ref:   (pr && pr.micro_arrets_min)  || 0,
+        maint_curative_ref: (pr && pr.maint_min)         || 0,
+      })
+    }
+
     var loadTrsFull = async function() {
       trsLoading.value = true
       var [rEq, rSh, rEq2, rFam, rRooms, rCadences] = await Promise.all([
@@ -1563,68 +1581,67 @@ export default {
       trsCadences.value = (rCadences.data || []).map(function(c) {
         return { numero_atelier: c.numero_salle, code_article: c.code_article, cadence_objectif_b_min: c.cadence_objectif_b_min }
       })
-      // Construire map equipement_id → plan_room (TRS params) via plan_rooms.code
+      // Map equipement_id → plan_room (params TRS) — stockée pour le fallback de selectNode (parité avec TRS Live)
       var equipToPlanRoom = {}
       ;(rRooms.data || []).forEach(function(r) {
         if (r.equipement_id && r.code) equipToPlanRoom[r.equipement_id] = r
       })
+      trsPlanRoomByEquip.value = equipToPlanRoom
       var equipList = (rEq.data || []).map(function(eq) {
-        var pr = equipToPlanRoom[eq.id] || null
-        var numAtelier = pr ? parseInt(pr.code.replace(/^[a-z]+/i, ''), 10) : null
-        return Object.assign({}, eq, {
-          numero_atelier:     numAtelier,
-          to_shift_ref:       (pr && pr.to_shift_min)      || 480,
-          pause_ref:          (pr && pr.pause_min)         || 0,
-          vdlp_ref:           (pr && pr.vdlp_min)          || 0,
-          vdlc_ref:           (pr && pr.vdlc_min)          || 0,
-          chgt_format_ref:    (pr && pr.chgt_format_min)   || 0,
-          reglage_ref:        (pr && pr.reglage_min)       || 0,
-          micro_arrets_ref:   (pr && pr.micro_arrets_min)  || 0,
-          maint_curative_ref: (pr && pr.maint_min)         || 0,
-        })
+        return trsEnrichEquip(eq, equipToPlanRoom[eq.id])
       })
-      var newPanels = []
-      for (var i = 0; i < equipList.length; i++) {
-        var eq = equipList[i]
-        var rSess = await supabase.from('production_sessions')
-          .select('*').eq('equipement_id', eq.id).neq('statut', 'Clôturé')
-          .is('deleted_at', null).order('created_at', { ascending: false }).limit(1).maybeSingle()
-        var session = rSess.data || null
+      // ── Chargement BATCH (remplace la boucle séquentielle ~6 req × N machines) ──
+      var equipIds = equipList.map(function(e){ return e.id })
+      var rSessAll = equipIds.length
+        ? await supabase.from('production_sessions').select('*').in('equipement_id', equipIds).neq('statut', 'Clôturé').is('deleted_at', null).order('created_at', { ascending: false })
+        : { data: [] }
+      var sessByEquip = {}
+      ;(rSessAll.data || []).forEach(function(s){ if (!sessByEquip[s.equipement_id]) sessByEquip[s.equipement_id] = s })   // 1re = plus récente (tri desc)
+      var sessList = Object.keys(sessByEquip).map(function(k){ return sessByEquip[k] })
+      var sessIds  = sessList.map(function(s){ return s.id })
+      var lotIds   = sessList.map(function(s){ return s.lot_id }).filter(Boolean)
+      var rLots   = lotIds.length  ? await supabase.from('lots').select('id, numero_lot, product_id').in('id', lotIds)              : { data: [] }
+      var prodIds = (rLots.data || []).map(function(l){ return l.product_id }).filter(Boolean)
+      var rProds  = prodIds.length ? await supabase.from('products').select('id, code_article, description').in('id', prodIds)     : { data: [] }
+      var rArrAll = sessIds.length ? await supabase.from('production_arrets').select('*').in('session_id', sessIds).order('created_at', { ascending: false }) : { data: [] }
+      var rCadAll = sessIds.length ? await supabase.from('session_cadences').select('*').in('session_id', sessIds).order('started_at')                       : { data: [] }
+      var rCptAll = sessIds.length ? await supabase.from('production_comptages').select('id, session_id, heure, colis_cumules, created_at').in('session_id', sessIds).order('created_at', { ascending: false }) : { data: [] }
+      var lotById  = {}; (rLots.data  || []).forEach(function(l){ lotById[l.id] = l })
+      var prodById = {}; (rProds.data || []).forEach(function(p){ prodById[p.id] = p })
+      var arretsBySess = {}; (rArrAll.data || []).forEach(function(a){ (arretsBySess[a.session_id] = arretsBySess[a.session_id] || []).push(a) })
+      var cadBySess    = {}; (rCadAll.data || []).forEach(function(c){ (cadBySess[c.session_id]    = cadBySess[c.session_id]    || []).push(c) })
+      var lastCptBySess = {}; (rCptAll.data || []).forEach(function(c){ if (!lastCptBySess[c.session_id]) lastCptBySess[c.session_id] = c })   // 1re = dernière (tri desc)
+      var newPanels = equipList.map(function(eq) {
+        var session = sessByEquip[eq.id] || null
         var lotNum = '—', lotProd = '—'
         if (session) {
-          var rLot = await supabase.from('lots').select('numero_lot, product_id').eq('id', session.lot_id).maybeSingle()
-          if (rLot.data) {
-            lotNum = rLot.data.numero_lot
-            var rProd = await supabase.from('products').select('code_article, description').eq('id', rLot.data.product_id).maybeSingle()
-            if (rProd.data) lotProd = rProd.data.code_article + ' — ' + rProd.data.description
+          var l = lotById[session.lot_id]
+          if (l) {
+            lotNum = l.numero_lot
+            var p = prodById[l.product_id]
+            if (p) lotProd = p.code_article + ' — ' + p.description
           }
         }
-        var panelArrets = [], activeArret = null
-        var cadences = [], lastComptage = null
-        if (session) {
-          var rArr = await supabase.from('production_arrets').select('*').eq('session_id', session.id).order('created_at', { ascending: false })
-          if (rArr.data) { panelArrets = rArr.data; activeArret = panelArrets.find(function(a){ return a.is_running }) || null }
-          var rCad = await supabase.from('session_cadences').select('*').eq('session_id', session.id).order('started_at')
-          if (!rCad.error) cadences = rCad.data || []
-          var rLastCpt = await supabase.from('production_comptages').select('id,heure,colis_cumules,created_at').eq('session_id', session.id).order('created_at', { ascending: false }).limit(1).maybeSingle()
-          if (!rLastCpt.error) lastComptage = rLastCpt.data || null
-        }
+        var panelArrets = session ? (arretsBySess[session.id] || []) : []
+        var activeArret = panelArrets.find(function(a){ return a.is_running }) || null
+        var cadences = session ? (cadBySess[session.id] || []) : []
+        var lastComptage = session ? (lastCptBySess[session.id] || null) : null
         var shiftNom = '', shiftCouleur = '#3B82F6', equipeNom = '', equipeCouleur = '#8B5CF6'
         if (session && session.shift_id) {
           var sh = trsShifts.value.find(function(s){ return s.id === session.shift_id })
           if (sh) { shiftNom = sh.nom; shiftCouleur = sh.couleur }
         }
         if (session && session.equipe_id) {
-          var eq2 = trsEquipes.value.find(function(e){ return e.id === session.equipe_id })
-          if (eq2) { equipeNom = eq2.nom; equipeCouleur = eq2.couleur }
+          var e2 = trsEquipes.value.find(function(e){ return e.id === session.equipe_id })
+          if (e2) { equipeNom = e2.nom; equipeCouleur = e2.couleur }
         }
         var rendPct = 0
         if (session && session.objectif_boites && session.colis_produits) {
           var boitesProdR = session.colisage_confirme ? session.colis_produits * session.colisage_confirme : session.colis_produits
           rendPct = Math.round((boitesProdR / session.objectif_boites) * 100)
         }
-        newPanels.push({ equip: eq, session, activeArret, arrets: panelArrets, cadences, lastComptage, lotNum, lotProd, shiftNom, shiftCouleur, equipeNom, equipeCouleur, rendPct })
-      }
+        return { equip: eq, session: session, activeArret: activeArret, arrets: panelArrets, cadences: cadences, lastComptage: lastComptage, lotNum: lotNum, lotProd: lotProd, shiftNom: shiftNom, shiftCouleur: shiftCouleur, equipeNom: equipeNom, equipeCouleur: equipeCouleur, rendPct: rendPct }
+      })
       trsPanels.value = newPanels
       // Sync TRS overlay data
       var today = new Date().toISOString().slice(0, 10)
@@ -2621,7 +2638,13 @@ export default {
         if (!panel && node.equipement_id) {
           var rEqDirect = await supabase.from('equipements_conditionnement').select('*').eq('id', node.equipement_id).maybeSingle()
           if (rEqDirect.data) {
-            panel = { equip: rEqDirect.data, session: null, activeArret: null, arrets: [], cadences: [], lastComptage: null, lotNum: null, lotProd: null, shiftNom: '', shiftCouleur: '#3B82F6', equipeNom: '', equipeCouleur: '#8B5CF6', rendPct: 0 }
+            // Enrichir avec les params plan_rooms (numero_atelier, TO/pause/micro) → même rendu que TRS Live
+            var prDirect = trsPlanRoomByEquip.value[node.equipement_id] || null
+            if (!prDirect) {
+              var rPrDirect = await supabase.from('plan_rooms').select('code,to_shift_min,pause_min,vdlp_min,vdlc_min,chgt_format_min,reglage_min,micro_arrets_min,maint_min').eq('equipement_id', node.equipement_id).limit(1).maybeSingle()
+              prDirect = rPrDirect.data || null
+            }
+            panel = { equip: trsEnrichEquip(rEqDirect.data, prDirect), session: null, activeArret: null, arrets: [], cadences: [], lastComptage: null, lotNum: null, lotProd: null, shiftNom: '', shiftCouleur: '#3B82F6', equipeNom: '', equipeCouleur: '#8B5CF6', rendPct: 0 }
             trsPanels.value = trsPanels.value.concat([panel])
           }
         }
