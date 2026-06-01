@@ -519,11 +519,15 @@ export async function importHistoriqueDepuisGoogleSheets(url, onProgress) {
   parsed.forEach(function(p) {
     var lotId = lotIdMap[p.numLot]; if (!lotId) return
     var libere = !!p.dateLib || p.statut === 'accepte'
+    // Lot "actif" = a une activité documentaire dans l'historique (ou libéré).
+    // À l'import, ses documents sont posés à l'état TERMINAL (approuvé) : la date
+    // reste affichée mais aucune tâche n'est générée (import = photo, zéro action).
+    var lotActif = libere || !!(p.dateIF || p.dateIC || p.dateDAPC || p.dateDAMicro || p.dateFinFab || p.dateFinCdt)
     var microApp = !!(p.dateDAMicro && p.dateDAMicro !== '1970-01-01')
     function doc(type, emittedDate, applicable) {
       var d = { lot_id: lotId, type_document: type, is_applicable: applicable, is_required: applicable, service_emetteur: SVC[type], statut: 'non_emis', emitted_at: null, approved_at: null, updated_at: now }
-      if (emittedDate && p.statut !== 'vide') { d.statut = 'emis'; d.emitted_at = emittedDate + 'T00:00:00Z' }
-      if (libere && applicable) { d.statut = 'approuve_dt'; if (p.dateLib) d.approved_at = p.dateLib + 'T00:00:00Z' }
+      if (emittedDate) d.emitted_at = emittedDate + 'T00:00:00Z'
+      if (lotActif && applicable) { d.statut = 'approuve_dt'; if (p.dateLib) d.approved_at = p.dateLib + 'T00:00:00Z' }
       return d
     }
     docRows.push(doc('if', p.dateIF, true), doc('ic', p.dateIC, true), doc('da_pc', p.dateDAPC, true), doc('da_micro', microApp ? p.dateDAMicro : null, microApp), doc('ccl', null, true))
