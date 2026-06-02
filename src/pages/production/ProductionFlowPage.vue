@@ -637,8 +637,8 @@
               <input class="mf-input" placeholder="Décrivez le motif…" v-model="modal.motif"/>
             </div>
             <div class="mf-row">
-              <label>Heure début arrêt</label>
-              <input class="mf-input" type="datetime-local" v-model="modal.dateDebut"/>
+              <label>Date début arrêt</label>
+              <input class="mf-input" type="date" v-model="modal.dateDebut"/>
             </div>
             <div class="mf-err" v-if="modal.err">{{modal.err}}</div>
           </div>
@@ -2426,12 +2426,11 @@ export default {
     }
 
     var resetModal = function(type) {
-      var nowFull = new Date().toISOString().slice(0, 16)
       var nowDate = new Date().toISOString().slice(0, 10)
       modal.value = {
         open: true, type: type, saving: false, err: '',
         lotSearch: '', lotDropdown: [], selectedLot: null, lots: [],
-        dateDebut: (type === 'stop') ? nowFull : nowDate, dateFin: nowDate,
+        dateDebut: nowDate, dateFin: nowDate,
         quantite: null, motif: '', fabId: '', lotId: '',
         description: '', numeroDn: '', bloquante: false,
         nodeType: selectedNode.value?.type || 'fab'
@@ -2527,7 +2526,7 @@ export default {
             lot_id: lotsToStart[ci].id,
             equipement_id: eqId,
             statut: 'En cours',
-            date_debut: modal.value.dateDebut || new Date().toISOString()
+            date_debut: modal.value.dateDebut || new Date().toISOString().slice(0,10)
           })
           if (res.error) { modal.value.err = 'Lot '+lotsToStart[ci].numero_lot+' : '+res.error.message; modal.value.saving=false; return }
         }
@@ -2591,7 +2590,7 @@ export default {
         res = await supabase.from('atelier_arrets').insert({
           atelier_id: node.atelier_id,
           motif: modal.value.motif,
-          heure_debut: modal.value.dateDebut || new Date().toISOString()
+          heure_debut: modal.value.dateDebut || new Date().toISOString().slice(0,10)
         })
         if (!res.error) {
           await supabase.from('suivi_fabrication').update({ statut: 'Arrêt' }).eq('id', modal.value.fabId)
@@ -2611,13 +2610,13 @@ export default {
       if (node.type === 'cond') {
         res = await supabase.from('suivi_conditionnement').update({
           statut: 'Clôturé',
-          date_fin: modal.value.dateFin || new Date().toISOString(),
+          date_fin: modal.value.dateFin || new Date().toISOString().slice(0,10),
           updated_at: new Date().toISOString()
         }).eq('id', modal.value.fabId)
       } else {
         res = await supabase.from('suivi_fabrication').update({
           statut: 'Clôturé',
-          date_fin: modal.value.dateFin || new Date().toISOString()
+          date_fin: modal.value.dateFin || new Date().toISOString().slice(0,10)
         }).eq('id', modal.value.fabId)
       }
       modal.value.saving = false

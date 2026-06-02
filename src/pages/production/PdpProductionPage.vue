@@ -128,8 +128,8 @@
               <td class="sm">{{a.lieu}}</td>
               <td class="mono">{{a.numero_lot}}</td>
               <td class="sm">{{a.motif}}</td>
-              <td class="mono sm">{{fmtDt(a.heure_debut)}}</td>
-              <td class="mono sm">{{a.heure_fin?fmtDt(a.heure_fin):'⏱ en cours'}}</td>
+              <td class="mono sm">{{fmtDate(a.heure_debut)}}</td>
+              <td class="mono sm">{{a.heure_fin?fmtDate(a.heure_fin):'⏱ en cours'}}</td>
               <td class="num">{{arretDuree(a)}}</td>
               <td class="acts">
                 <button class="ia ok" @click="closeArret(a)" v-if="!a.heure_fin" title="Clôturer arrêt">✓</button>
@@ -302,8 +302,8 @@
         <div class="modal-ctx">{{arretModal.numero_lot}}</div>
         <label class="lbl">Motif *</label>
         <textarea v-model="arretModal.motif" class="inp" rows="2" placeholder="Motif de l'arrêt…"></textarea>
-        <label class="lbl">Heure début</label>
-        <input type="datetime-local" v-model="arretModal.heure_debut" class="inp" />
+        <label class="lbl">Date début</label>
+        <input type="date" v-model="arretModal.heure_debut" class="inp" />
         <div class="modal-err" v-if="arretModal.err">{{arretModal.err}}</div>
         <div class="modal-acts">
           <button class="btn-save btn-warn" @click="saveArret" :disabled="arretModal.saving">{{arretModal.saving?'…':'Déclarer'}}</button>
@@ -447,9 +447,8 @@ export default {
     var arretDuree = function(a) {
       if (!a.heure_debut) return '—'
       var end = a.heure_fin ? new Date(a.heure_fin) : new Date()
-      var min = Math.floor((end - new Date(a.heure_debut)) / 60000)
-      if (min < 60) return min + ' min'
-      return Math.floor(min / 60) + 'h' + String(min % 60).padStart(2, '0')
+      var jours = Math.max(0, Math.round((end - new Date(a.heure_debut)) / 86400000))
+      return jours <= 0 ? '< 1 j' : (jours + (jours > 1 ? ' jours' : ' jour'))
     }
     var getAtelierNom = function(id) {
       var at = ateliers.value.find(function(a) { return a.id === id })
@@ -778,7 +777,7 @@ export default {
       if (arretModal.famille === 'fab') {
         res = await supabase.from('atelier_arrets').insert({
           atelier_id: arretModal.atelier_id, lot_id: arretModal.lot_id,
-          motif: arretModal.motif, heure_debut: arretModal.heure_debut || new Date().toISOString()
+          motif: arretModal.motif, heure_debut: arretModal.heure_debut || new Date().toISOString().slice(0,10)
         })
         if (!res.error) {
           await supabase.from('suivi_fabrication').update({ statut: 'Arrêt' }).eq('id', arretModal.suivi_id)
@@ -787,7 +786,7 @@ export default {
         res = await supabase.from('arret_conditionnement').insert({
           suivi_id: arretModal.suivi_id, equipement_id: arretModal.equipement_id,
           lot_id: arretModal.lot_id, motif: arretModal.motif,
-          heure_debut: arretModal.heure_debut || new Date().toISOString()
+          heure_debut: arretModal.heure_debut || new Date().toISOString().slice(0,10)
         })
         if (!res.error) {
           await supabase.from('suivi_conditionnement').update({ statut: 'Arrêt', updated_at: new Date().toISOString() }).eq('id', arretModal.suivi_id)
@@ -799,7 +798,7 @@ export default {
     }
 
     var closeArret = async function(a) {
-      var now = new Date().toISOString()
+      var now = new Date().toISOString().slice(0,10)
       if (a.famille === 'fab') {
         await supabase.from('atelier_arrets').update({ heure_fin: now }).eq('id', a.id)
         var sf = suiviFab.value.find(function(s) { return s.lot_id === a.lot_id && s.atelier_id === a.atelier_id })
