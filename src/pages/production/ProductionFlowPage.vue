@@ -2215,9 +2215,39 @@ export default {
       return s
     })
     var arrows = computed(function() {
-      var nbo = nodesByOp.value
-      var fo = fluxOps.value
       var out = []
+      var nodeById = {}
+      allNodes.value.forEach(function(n) { nodeById[n.id] = n })
+      var pushArrow = function(nA, nB, hl) {
+        if (!nA || !nB) return
+        var x1 = nA.x + nA.w, y1 = nA.y + nA.h / 2, x2 = nB.x, y2 = nB.y + nB.h / 2
+        if (x2 - x1 < 30) { x1 = nA.x + nA.w / 2; y1 = nA.y + nA.h; x2 = nB.x + nB.w / 2; y2 = nB.y }
+        var mx = (x1 + x2) / 2
+        out.push({ id: 'a' + nA.id + '_' + nB.id, active: false, fluxHighlight: hl,
+          d: 'M' + x1 + ',' + y1 + ' C' + mx + ',' + y1 + ' ' + mx + ',' + y2 + ' ' + x2 + ',' + y2 })
+      }
+      var fNodes = fluxNodeIds.value
+      if (fNodes !== null) {
+        // ── PRODUIT SÉLECTIONNÉ : flèches du parcours RÉEL, salle → salle ──
+        var opByRoom = {}
+        opMaster.value.forEach(function(om) { if (om.room_code) opByRoom[om.room_code] = om.op_number })
+        var sallesByOp = {}
+        fNodes.forEach(function(id) { var op = opByRoom[id]; if (op != null) { (sallesByOp[op] = sallesByOp[op] || []).push(id) } })
+        var ops = Object.keys(sallesByOp).map(Number).sort(function(a, b) { return a - b })
+        var fabOps  = ops.filter(function(o) { return o < 300 })
+        var condOps = ops.filter(function(o) { return o >= 300 && o < 400 })
+        var link = function(aIds, bIds) { aIds.forEach(function(ia) { bIds.forEach(function(ib) { pushArrow(nodeById[ia], nodeById[ib], true) }) }) }
+        // fabrication : enchaînement séquentiel des étapes du produit
+        for (var i = 0; i < fabOps.length - 1; i++) { link(sallesByOp[fabOps[i]], sallesByOp[fabOps[i + 1]]) }
+        // dernière étape de fabrication → chaque machine de conditionnement (alternatives)
+        if (fabOps.length && condOps.length) {
+          var lastFab = sallesByOp[fabOps[fabOps.length - 1]]
+          condOps.forEach(function(co) { link(lastFab, sallesByOp[co]) })
+        }
+        return out
+      }
+      // ── AUCUN produit sélectionné : flèches de fond, processus → processus ──
+      var nbo = nodesByOp.value
       opTransitions.value.forEach(function(t) {
         var gA = nbo[t.a], gB = nbo[t.b]
         if (!gA || !gB || !gA.length || !gB.length) return
@@ -2226,14 +2256,12 @@ export default {
         var xLeftB  = Math.min.apply(null, gB.map(function(n) { return n.x }))
         var yMidB   = gB.reduce(function(s, n) { return s + n.y + n.h / 2 }, 0) / gB.length
         var x1 = xRightA, y1 = yMidA, x2 = xLeftB, y2 = yMidB
-        // cible à gauche/superposée (ex. retour vers stock) → sortir par le bas, entrer par le haut
         if (x2 - x1 < 30) {
           x1 = gA[0].x + gA[0].w / 2; y1 = Math.max.apply(null, gA.map(function(n) { return n.y + n.h }))
           x2 = gB[0].x + gB[0].w / 2; y2 = Math.min.apply(null, gB.map(function(n) { return n.y }))
         }
         var mx = (x1 + x2) / 2
-        var hl = fo !== null && !!fo[t.a] && !!fo[t.b]
-        out.push({ id: 'op' + t.a + '-' + t.b, from: t.a, to: t.b, active: false, fluxHighlight: hl,
+        out.push({ id: 'op' + t.a + '-' + t.b, active: false, fluxHighlight: false,
           d: 'M' + x1 + ',' + y1 + ' C' + mx + ',' + y1 + ' ' + mx + ',' + y2 + ' ' + x2 + ',' + y2 })
       })
       return out
