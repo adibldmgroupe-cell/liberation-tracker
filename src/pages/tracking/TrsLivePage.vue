@@ -93,6 +93,9 @@
                   <span class="dim">/</span>
                   <span class="po mono dim">{{p.session.objectif_boites||'—'}}</span>
                 </div>
+                <div class="theo-row mono" v-if="theoCounters[p.equip.id]" title="Compteur théorique automatique (cadence × temps net hors arrêts)">
+                  <span class="theo-lbl">théo</span> {{theoCounters[p.equip.id].boites.toLocaleString('fr-FR')}}
+                </div>
                 <template v-if="p.session.objectif_boites">
                   <div class="rend-bar">
                     <div class="rend-fill" :style="{width:Math.min(p.rendPct,100)+'%',background:p.rendPct>=100?'#10b981':p.rendPct>=80?'#f59e0b':'#ef4444'}"></div>
@@ -520,6 +523,7 @@ export default {
     var filterSite    = ref('Tous')
     var timers        = ref({})
     var arretTimers   = ref({})
+    var theoCounters  = ref({})   // compteur théorique temps réel (parité avec le Schéma) : { boites, colis, currentCadence }
     var clockInt      = null
     var refreshInt    = null
     var autoStopInt   = null
@@ -748,6 +752,8 @@ export default {
 
         var arrets = []
         var activeArret = null
+        var cadences = []
+        var lastComptage = null
         if (session) {
           var rArr = await supabase.from('production_arrets')
             .select('*')
@@ -757,6 +763,10 @@ export default {
             arrets = rArr.data
             activeArret = arrets.find(function(a){ return a.is_running }) || null
           }
+          var rCad = await supabase.from('session_cadences').select('*').eq('session_id', session.id).order('started_at')
+          cadences = rCad.data || []
+          var rCpt = await supabase.from('production_comptages').select('id, created_at').eq('session_id', session.id).order('created_at', { ascending: false }).limit(1).maybeSingle()
+          lastComptage = rCpt.data || null
         }
 
         var shiftNom = '', shiftCouleur = '#3B82F6', equipeNom = '', equipeCouleur = '#8B5CF6'
@@ -776,7 +786,8 @@ export default {
 
         newPanels.push({
           equip: eq, session: session, activeArret: activeArret,
-          arrets: arrets, lotNum: lotNum, lotProd: lotProd,
+          arrets: arrets, cadences: cadences, lastComptage: lastComptage,
+          lotNum: lotNum, lotProd: lotProd,
           shiftNom: shiftNom, shiftCouleur: shiftCouleur,
           equipeNom: equipeNom, equipeCouleur: equipeCouleur,
           rendPct: rendPct
@@ -792,20 +803,65 @@ export default {
       var p2 = function(v){ return String(v).padStart(2,'0') }
       clock.value = p2(n.getHours())+':'+p2(n.getMinutes())+':'+p2(n.getSeconds())
 
-      var newT = {}, newAT = {}
+      var newT = {}, newAT = {}, newTheo = {}
       for (var i = 0; i < panels.value.length; i++) {
         var p = panels.value[i]
+        var start = null
         if (p.session && p.session.statut === 'En cours') {
-          var start = toDateTime(p.session.date, p.session.heure_debut)
+          start = toDateTime(p.session.date, p.session.heure_debut)
           if (start) newT[p.equip.id] = formatElapsed(n - start)
         }
         if (p.activeArret && p.activeArret.is_running) {
           var aStart = toDateTime(p.session ? p.session.date : new Date().toISOString().slice(0,10), p.activeArret.heure_debut)
           if (aStart) newAT[p.activeArret.id] = formatElapsed(n - aStart)
         }
+        // ── Compteur théorique (cadence × temps net hors arrêts) — parité avec le Schéma (trsTick) ──
+        if (p.session && p.session.statut === 'En cours') {
+          var cads = p.cadences || []
+          var isFallbackCad = false
+          if (cads.length === 0) {
+            var fallCad = p.session.cadence_objectif_snapshot || (p.equip && p.equip.cadence_objectif_boite_min)
+            if (fallCad && start) { cads = [{ cadence_bpm: fallCad, started_at: start.toISOString() }]; isFallbackCad = true }
+          }
+          if (cads.length > 0) {
+            var colisageT = p.session.colisage_confirme || null
+            var arretsT   = p.arrets || []
+            var boitesTheo = 0
+            for (var ci = 0; ci < cads.length; ci++) {
+              var cad = cads[ci]
+              var segStart = new Date(cad.started_at)
+              var segEnd = (ci < cads.length - 1) ? new Date(cads[ci + 1].started_at) : n
+              if (segStart >= segEnd) continue
+              var netMs = segEnd.getTime() - segStart.getTime()
+              for (var ai = 0; ai < arretsT.length; ai++) {
+                var arr = arretsT[ai]
+                var aS  = toDateTime(p.session.date, arr.heure_debut)
+                if (!aS) continue
+                var aE  = arr.is_running ? n : (arr.duree_minutes ? new Date(aS.getTime() + arr.duree_minutes * 60000) : null)
+                if (!aE) continue
+                var ovS = Math.max(segStart.getTime(), aS.getTime())
+                var ovE = Math.min(segEnd.getTime(), aE.getTime())
+                if (ovE > ovS) netMs -= (ovE - ovS)
+              }
+              boitesTheo += cad.cadence_bpm * Math.max(0, netMs / 60000)
+            }
+            var needsComptage = false, minsSinceCpt = null
+            if (!p.activeArret) {
+              var refTime = (p.lastComptage && p.lastComptage.created_at) ? new Date(p.lastComptage.created_at) : start
+              if (refTime) { minsSinceCpt = Math.floor((n - refTime) / 60000); needsComptage = minsSinceCpt >= 30 }
+            }
+            newTheo[p.equip.id] = {
+              boites: Math.floor(boitesTheo),
+              colis: (colisageT && colisageT > 0) ? Math.round(boitesTheo / colisageT * 100) / 100 : null,
+              currentCadence: cads[cads.length - 1].cadence_bpm,
+              needsComptage: needsComptage, minsSinceCpt: minsSinceCpt, isFallback: isFallbackCad
+            }
+          }
+        }
       }
-      timers.value      = newT
-      arretTimers.value = newAT
+      timers.value       = newT
+      arretTimers.value  = newAT
+      theoCounters.value = newTheo
     }
 
     // ── Démarrer session ──
@@ -1323,7 +1379,7 @@ export default {
     return {
       theme, cycleTheme, themeIcon, themeTitle,
       panels, shifts, equipes, arretFamilles, loading, clock, filterSite,
-      timers, arretTimers, filteredPanels,
+      timers, arretTimers, theoCounters, filteredPanels,
       startModal, arretModal, requalModal, comptageModal, closeModal, devModal,
       panelClass, panelColor, oeeClass, sessBoites, sessColis,
       gsTotalPlanRef, gsNetRef, modalOpts, modalMicro,
@@ -1480,6 +1536,8 @@ export default {
 .rend-bar  { width: 90%; height: 4px; background: rgba(255,255,255,.07); border-radius: 2px; overflow: hidden; }
 .rend-fill { height: 100%; border-radius: 2px; transition: width .5s; }
 .rend-pct  { font-size: 10px; font-weight: 700; }
+.theo-row  { font-size: 11px; color: #60a5fa; font-weight: 600; margin-top: 2px; }
+.theo-lbl  { font-size: 8px; text-transform: uppercase; letter-spacing: .4px; color: #64748b; font-weight: 700; margin-right: 2px; }
 
 /* b/min */
 .cad-r { font-size: 14px; font-weight: 600; }
@@ -1748,6 +1806,7 @@ export default {
 .trs-live[data-theme="day"] .type-prev-nom { color: #333; }
 /* Éléments manquants en day */
 .trs-live[data-theme="day"] .pv { color: #111827; }
+.trs-live[data-theme="day"] .theo-row { color: #2563eb; }
 .trs-live[data-theme="day"] .arrets-sub { background: #faf9ff; border-left-color: #ede9fe; }
 .trs-live[data-theme="day"] .arrets-sub-lbl { color: #7c3aed; }
 .trs-live[data-theme="day"] .arret-tag { background: #f5f3ff; }
