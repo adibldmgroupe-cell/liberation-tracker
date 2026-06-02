@@ -504,7 +504,7 @@ export default {
 
     // ── GOOGLE SHEETS IMPORT ─────────────────────────────────────
     var openGsImport = function() {
-      Object.assign(gsModal, { open: true, url: '', csvText: '', fetching: false, saving: false, err: '', preview: [] })
+      Object.assign(gsModal, { open: true, url: GS_FLUX_URL_DEFAULT, csvText: '', fetching: false, saving: false, err: '', preview: [] })
     }
 
     var loadGsCsv = async function() {
