@@ -575,6 +575,23 @@ Ce module provient d'une **application incomplète développée par un tiers**, 
 
 ---
 
+## RÈGLE N°19 — Capitaliser les sélecteurs / chemins de test preview
+
+À **chaque** nouveau sélecteur CSS ou chemin de clic découvert pendant un test preview
+(Schéma Production, TRS Live, modales, autocomplete, cascade de selects…), l'ajouter
+**immédiatement** dans `memory/trs-preview-test-playbook.md` (mémoire locale).
+But : ne plus jamais re-tâtonner sur l'UI lors des prochains tests/dev.
+
+Le playbook contient déjà : nav via `location.hash` (le clic sidebar échoue en plein écran) ;
+Schéma → `button[title="Mode TRS OEE"]`, nœud = `g.flow-node` (dispatch click), boutons `.tdp-btn-*`,
+modales `.trs-overlay` / `.trs-btn-save` / `.trs-btn-go`, autocomplete `.trs-auto-item` (mousedown) ;
+TRS Live → boutons `.ab-*`, modales `.overlay` / `.btn-save` / `.btn-go`, autocomplete `.auto-item` ;
+pièges → champ lot = `input[placeholder*="lot"]` (pas `[type=text]`), saisie via `dispatchEvent('input')`,
+cascade arrêt asynchrone (~1,1 s entre selects), vues dupliquées (filtrer `offsetParent!==null`),
+`loadAll` séquentiel lent (≥3 s après Démarrer/Clôturer).
+
+---
+
 ## Déploiement
 
 - Push sur `main` → GitHub Actions build + deploy GitHub Pages automatiquement
