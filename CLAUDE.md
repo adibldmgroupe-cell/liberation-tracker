@@ -530,6 +530,36 @@ Ne jamais modifier l'un sans l'autre.
 
 ---
 
+## RÈGLE CRITIQUE N°17 — Module Production / Schéma flux / TRS : origine des bugs
+
+### Root cause commune (chantier mai-juin 2026)
+Quasi TOUS les bugs du **Schéma Production** et de **Flux produits** venaient de **données dupliquées sans source unique de vérité**, aggravées par des **écritures bloquées en silence**. À retenir avant toute modif de ce module :
+
+### 1. `operations_master` = SOURCE UNIQUE DE VÉRITÉ (liaison opération × machine)
+Le n° d'opération de chaque machine + le périmètre des machines viennent **TOUJOURS** de `operations_master` (alimenté par le GS référentiel), **JAMAIS** de :
+- `plan_rooms.op_number` (réplique qui DIVERGE — toutes les machines de conditionnement y avaient `op=310` → regroupement faux dans la vue pivot),
+- `NODES_DEF` / `ARROWS_DEF` codés en dur dans `ProductionFlowPage` (avait créé un nœud fantôme « Formulation » absent du référentiel + flèches arbitraires).
+
+→ Colonnes pivot, mapping op→salles du schéma, flèches : **dériver de `operations_master`** (`map room_code → op_number`). N'afficher que les salles présentes dans `operations_master` (sinon résidus `plan_rooms` : Cond. Sec., Réception Injectables…).
+→ Le flux d'un produit = `product_flux` : `room_code` null = **flexible** (toutes les salles de l'op) ; `room_code` renseigné = **salle spécifique cochée** (prioritaire à l'affichage). Les machines de conditionnement d'un même flux sont des **alternatives** (jamais reliées entre elles : dernière étape fab → chacune).
+
+### 2. RLS incomplet (voir règle N°13) — tables TRS créées hors migrations
+`cadences`, `production_sessions`, `production_comptages`, `production_arrets`, `session_cadences` créées directement dans Supabase → policies INSERT/UPDATE souvent absentes → écriture bloquée EN SILENCE : INSERT sans policy → 403 ; UPDATE sans policy → **204 mais 0 ligne**. Symptôme : « ça marche en apparence mais rien n'est sauvé ». Migrations 020 (production_sessions) + 021 (cadences).
+
+### 3. Échecs silencieux — toujours vérifier
+Vérifier `res.error` après CHAQUE write Supabase. Suspecter un parseur qui ignore des lignes (`isNaN → continue`) quand des données « disparaissent ».
+
+### 4. Parsing CSV : jamais `split(',')` naïf
+Tout import GS doit utiliser un **vrai parseur de champs entre guillemets** (cf. `_parseLine` dans `services/googleSheets.js`). `split(',')` casse sur les descriptions à virgule (« ATOSTINE 10mg, COM PELLI ») → produits sautés.
+
+### 5. Import GS vs cochage manuel (Flux produits)
+Import = flux **en masse / flexible** (`room_code` null). Cochage manuel = **détail / salle spécifique**. Le ré-import ne doit **JAMAIS écraser les cochages** : ne (dé)synchroniser que les lignes flexibles (`.is('room_code', null)`). Seul « Vider l'import » efface tout.
+
+### 6. Parité Schéma TRS ↔ TRS Live
+Mêmes tables. L'équipement doit TOUJOURS être enrichi des params `plan_rooms` (numero_atelier, TO, pause…) via une fonction commune ; `selectNode` (Schéma) avait un fallback qui chargeait l'équipement **brut** (sans params) → modale à « — » / 0 et cadence introuvable. Charger en **batch** (pas de boucle séquentielle) pour réduire la fenêtre de race.
+
+---
+
 ## Déploiement
 
 - Push sur `main` → GitHub Actions build + deploy GitHub Pages automatiquement
