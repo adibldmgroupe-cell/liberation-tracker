@@ -75,9 +75,9 @@
               <td class="mono">{{s.numero_lot}}</td>
               <td class="sm">{{s.description}}</td>
               <td class="num">{{s.taille_lot||'—'}}</td>
-              <td class="mono sm">{{fmtDt(s.date_debut)}}</td>
+              <td class="mono sm">{{fmtDate(s.date_debut)}}</td>
               <td class="mono sm" :class="s.famille==='fab'?'dim':''">{{s.famille==='cond'&&s.date_fin_estimee?fmtDate(s.date_fin_estimee):'—'}}</td>
-              <td class="mono sm">{{fmtDt(s.date_fin_reelle)}}</td>
+              <td class="mono sm">{{fmtDate(s.date_fin_reelle)}}</td>
               <td><span class="schip" :class="'sc-'+s.statut.toLowerCase().replace(/\s/g,'-')">{{s.statut}}</span></td>
               <td class="acts">
                 <button class="ia" @click="openSuiviModal(s, s.famille)" title="Modifier">✏</button>
@@ -210,7 +210,7 @@
                 <td class="sm">{{sf.nom_atelier||'—'}}</td>
                 <td class="mono">{{sf.lots&&sf.lots.numero_lot||'—'}}</td>
                 <td class="sm">{{sf.lots&&sf.lots.products&&sf.lots.products.description||'—'}}</td>
-                <td class="mono sm">{{fmtDt(sf.date_debut)}}</td>
+                <td class="mono sm">{{fmtDate(sf.date_debut)}}</td>
                 <td><span class="schip" :class="'sc-'+sf.statut.toLowerCase().replace(/\s/g,'-')">{{sf.statut}}</span></td>
                 <td class="acts">
                   <button class="ia" @click="openSuiviModal({rawId:sf.id,famille:'fab',raw_fab:sf},'fab')" title="Modifier">✏</button>
@@ -242,9 +242,9 @@
           <option v-for="at in ateliers" :key="at.id" :value="at.id">{{at.nom_atelier}}</option>
         </select>
         <label class="lbl">Date début</label>
-        <input type="datetime-local" v-model="suiviModal.date_debut" class="inp" />
+        <input type="date" v-model="suiviModal.date_debut" class="inp" />
         <label class="lbl">Date fin réelle</label>
-        <input type="datetime-local" v-model="suiviModal.date_fin" class="inp" />
+        <input type="date" v-model="suiviModal.date_fin" class="inp" />
         <label class="lbl">Statut</label>
         <select v-model="suiviModal.statut" class="inp">
           <option>Planifié</option><option>En cours</option><option>Arrêt</option><option>Clôturé</option>
@@ -278,11 +278,11 @@
         <label class="lbl">Taille lot</label>
         <input type="number" v-model.number="suiviModal.taille_lot" class="inp" placeholder="Ex: 500000" />
         <label class="lbl">Date début</label>
-        <input type="datetime-local" v-model="suiviModal.date_debut" class="inp" />
+        <input type="date" v-model="suiviModal.date_debut" class="inp" />
         <label class="lbl">Date fin estimée (PDP)</label>
         <input type="date" v-model="suiviModal.date_fin_estimee" class="inp" />
         <label class="lbl">Date fin réelle</label>
-        <input type="datetime-local" v-model="suiviModal.date_fin" class="inp" />
+        <input type="date" v-model="suiviModal.date_fin" class="inp" />
         <label class="lbl">Statut</label>
         <select v-model="suiviModal.statut" class="inp">
           <option>Planifié</option><option>En cours</option><option>Arrêt</option><option>Clôturé</option>
@@ -661,7 +661,7 @@ export default {
     })
 
     var openSuiviModal = function(s, famille) {
-      var now2 = new Date().toISOString().slice(0, 16)
+      var now2 = new Date().toISOString().slice(0, 10)
       suiviModal.famille = famille
       suiviModal.err = ''; suiviModal.saving = false
       lotSuggestions.value = []
@@ -673,8 +673,8 @@ export default {
           suiviModal.lotSearch = sf.lots ? sf.lots.numero_lot : ''
           suiviModal.atelier_id = sf.atelier_id || ''
           suiviModal.statut = sf.statut || 'En cours'
-          suiviModal.date_debut = sf.date_debut ? sf.date_debut.slice(0, 16) : ''
-          suiviModal.date_fin = sf.date_fin ? sf.date_fin.slice(0, 16) : ''
+          suiviModal.date_debut = sf.date_debut ? sf.date_debut.slice(0, 10) : ''
+          suiviModal.date_fin = sf.date_fin ? sf.date_fin.slice(0, 10) : ''
           suiviModal.date_fin_estimee = ''
         } else if (famille === 'cond' && s.raw_cond) {
           var sc = s.raw_cond
@@ -683,8 +683,8 @@ export default {
           suiviModal.equipement_id = sc.equipement_id || ''
           suiviModal.taille_lot = sc.taille_lot
           suiviModal.statut = sc.statut || 'En cours'
-          suiviModal.date_debut = sc.date_debut ? sc.date_debut.slice(0, 16) : ''
-          suiviModal.date_fin = sc.date_fin ? sc.date_fin.slice(0, 16) : ''
+          suiviModal.date_debut = sc.date_debut ? sc.date_debut.slice(0, 10) : ''
+          suiviModal.date_fin = sc.date_fin ? sc.date_fin.slice(0, 10) : ''
           suiviModal.date_fin_estimee = sc.date_fin_estimee || ''
         }
       } else {
@@ -758,7 +758,7 @@ export default {
     }
 
     var openArretModal = function(s) {
-      var now2 = new Date().toISOString().slice(0, 16)
+      var now2 = new Date().toISOString().slice(0, 10)
       arretModal.famille = s.famille
       arretModal.suivi_id = s.rawId
       arretModal.lot_id = s.lot_id

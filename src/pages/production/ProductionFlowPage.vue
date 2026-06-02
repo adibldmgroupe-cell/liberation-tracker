@@ -605,8 +605,8 @@
               <div class="mf-hint" v-else>Aucun lot sélectionné — rechercher ci-dessus</div>
             </div>
             <div class="mf-row">
-              <label>Date/heure début</label>
-              <input class="mf-input" type="datetime-local" v-model="modal.dateDebut"/>
+              <label>Date début</label>
+              <input class="mf-input" type="date" v-model="modal.dateDebut"/>
             </div>
             <div class="mf-err" v-if="modal.err">{{modal.err}}</div>
           </div>
@@ -663,8 +663,8 @@
               </select>
             </div>
             <div class="mf-row">
-              <label>Date/heure fin</label>
-              <input class="mf-input" type="datetime-local" v-model="modal.dateFin"/>
+              <label>Date fin</label>
+              <input class="mf-input" type="date" v-model="modal.dateFin"/>
             </div>
             <div class="mf-note">Cette action clôture définitivement la session.</div>
             <div class="mf-err" v-if="modal.err">{{modal.err}}</div>
@@ -2426,11 +2426,12 @@ export default {
     }
 
     var resetModal = function(type) {
-      var now2 = new Date().toISOString().slice(0, 16)
+      var nowFull = new Date().toISOString().slice(0, 16)
+      var nowDate = new Date().toISOString().slice(0, 10)
       modal.value = {
         open: true, type: type, saving: false, err: '',
         lotSearch: '', lotDropdown: [], selectedLot: null, lots: [],
-        dateDebut: now2, dateFin: now2,
+        dateDebut: (type === 'stop') ? nowFull : nowDate, dateFin: nowDate,
         quantite: null, motif: '', fabId: '', lotId: '',
         description: '', numeroDn: '', bloquante: false,
         nodeType: selectedNode.value?.type || 'fab'
