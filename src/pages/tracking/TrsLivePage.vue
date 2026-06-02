@@ -25,7 +25,7 @@
       </div>
       <div class="ltv-body">
         <!-- Cartes machines -->
-        <div class="ltv-cards">
+        <div class="ltv-cards" :style="liveGrid">
           <div v-for="p in liveCards" :key="p.equip.id"
                class="ltv-card"
                :class="{ 'ltv-stop': p.session.statut==='Arrêt'||p.session.statut==='Pause', 'ltv-win': p.rendPct>=100 }">
@@ -1400,6 +1400,26 @@ export default {
     var lineRecords   = ref({})   // equipement_id → { boites, date }
     var liveStatsInt  = null
     var liveCards     = computed(function(){ return filteredPanels.value.filter(function(p){ return !!p.session }) })
+    var winSize       = ref({ w: 1280, h: 720 })
+    var onResizeLive  = function(){ winSize.value = { w: window.innerWidth, h: window.innerHeight } }
+    // Grille calculée pour que TOUTES les cartes tiennent sans scroll (plein écran)
+    var liveGrid = computed(function(){
+      var n = liveCards.value.length || 1
+      var w = winSize.value.w, h = winSize.value.h
+      var wide = w > 820
+      var availW = wide ? (w - Math.min(w * 0.22, 420) - 48) : (w - 20)
+      var availH = (h - 76) - (wide ? 0 : Math.min(h * 0.18, 150))
+      var best = { cols: 1, rows: n, score: -1 }
+      for (var c = 1; c <= n; c++) {
+        var r = Math.ceil(n / c)
+        var cw = (availW - (c - 1) * 14) / c
+        var ch = (availH - (r - 1) * 14) / r
+        if (cw <= 0 || ch <= 0) continue
+        var score = Math.min(cw, ch * 1.4)   // vise un ratio carte ~1.4, maximise la dimension limitante
+        if (score > best.score) best = { cols: c, rows: r, score: score }
+      }
+      return { gridTemplateColumns: 'repeat(' + best.cols + ',minmax(0,1fr))', gridTemplateRows: 'repeat(' + best.rows + ',minmax(0,1fr))' }
+    })
 
     var rendClass = function(r) {
       if (r == null) return 'rc-dim'
@@ -1448,10 +1468,12 @@ export default {
 
     var openLiveView = async function() {
       liveView.value = true
+      onResizeLive()
+      window.addEventListener('resize', onResizeLive)
       await loadLiveStats()
       if (!liveStatsInt) liveStatsInt = setInterval(loadLiveStats, 120000)
     }
-    var closeLiveView = function() { liveView.value = false }
+    var closeLiveView = function() { liveView.value = false; window.removeEventListener('resize', onResizeLive) }
     var onKeyLive = function(e) { if (e.key === 'Escape' && liveView.value) closeLiveView() }
 
     onMounted(async function() {
@@ -1487,7 +1509,7 @@ export default {
       theme, cycleTheme, themeIcon, themeTitle,
       panels, shifts, equipes, arretFamilles, loading, clock, filterSite,
       timers, arretTimers, theoCounters, filteredPanels,
-      liveView, openLiveView, closeLiveView, liveCards, teamRankMonth, teamRankYear, lineRecords, rendClass,
+      liveView, openLiveView, closeLiveView, liveCards, liveGrid, teamRankMonth, teamRankYear, lineRecords, rendClass,
       startModal, arretModal, requalModal, comptageModal, closeModal, devModal,
       panelClass, panelColor, oeeClass, sessBoites, sessColis,
       gsTotalPlanRef, gsNetRef, modalOpts, modalMicro,
@@ -1987,38 +2009,37 @@ export default {
 .ltv-exit { background:rgba(239,68,68,.15); color:#f87171; border:1px solid rgba(239,68,68,.4); border-radius:12px;
   width:clamp(40px,4vw,60px); height:clamp(40px,4vw,60px); font-size:clamp(18px,2vw,28px); cursor:pointer; line-height:1; }
 .ltv-exit:hover { background:rgba(239,68,68,.32); }
-.ltv-body { flex:1; display:grid; grid-template-columns:1fr clamp(250px,22vw,420px);
-  gap:clamp(10px,1.5vw,28px); padding:clamp(10px,1.5vw,28px); overflow:hidden; }
-.ltv-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(clamp(280px,25vw,400px),1fr));
-  grid-auto-rows:min-content; gap:clamp(10px,1.4vw,24px); overflow-y:auto; align-content:start; padding-right:4px; }
-.ltv-card { position:relative; background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.02));
-  border:2px solid rgba(255,255,255,.10); border-radius:clamp(14px,1.4vw,26px); padding:clamp(12px,1.4vw,26px);
-  display:flex; flex-direction:column; gap:clamp(3px,.5vh,10px); box-shadow:0 8px 40px rgba(0,0,0,.4); overflow:hidden; }
-.ltv-card-hd { display:flex; flex-direction:column; align-items:flex-start; gap:5px; }
-.ltv-mach { font-size:clamp(17px,1.7vw,30px); font-weight:800; color:#fff; line-height:1.1; }
-.ltv-eq { font-size:clamp(10px,.85vw,15px); font-weight:700; padding:3px 10px; border-radius:999px; border:1px solid; white-space:nowrap; align-self:flex-start; }
-.ltv-lot { font-size:clamp(12px,1vw,18px); color:#94a3b8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ltv-body { flex:1; min-height:0; display:grid; grid-template-columns:1fr clamp(220px,20vw,380px);
+  gap:clamp(8px,1.2vw,22px); padding:clamp(8px,1.2vw,22px); overflow:hidden; }
+.ltv-cards { display:grid; gap:clamp(8px,1vw,18px); height:100%; min-height:0; overflow:hidden; }
+.ltv-card { position:relative; container-type:size; background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.02));
+  border:2px solid rgba(255,255,255,.10); border-radius:clamp(12px,2cqmin,24px); padding:clamp(8px,4cqmin,24px);
+  display:flex; flex-direction:column; justify-content:center; gap:clamp(2px,1.2cqmin,10px); box-shadow:0 6px 30px rgba(0,0,0,.4); overflow:hidden; min-height:0; }
+.ltv-card-hd { display:flex; flex-direction:column; align-items:flex-start; gap:clamp(2px,1cqmin,6px); }
+.ltv-mach { font-size:clamp(13px,10cqmin,30px); font-weight:800; color:#fff; line-height:1.08; }
+.ltv-eq { font-size:clamp(9px,5cqmin,15px); font-weight:700; padding:2px 9px; border-radius:999px; border:1px solid; white-space:nowrap; align-self:flex-start; }
+.ltv-lot { font-size:clamp(9px,5.5cqmin,18px); color:#94a3b8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
 .ltv-prod { color:#64748b; }
-.ltv-rend { font-size:clamp(54px,8vw,148px); font-weight:900; line-height:.95; text-align:center; margin-top:clamp(2px,.4vh,8px); }
+.ltv-rend { font-size:clamp(30px,34cqmin,150px); font-weight:900; line-height:.95; text-align:center; }
 .ltv-pct { font-size:.45em; font-weight:800; opacity:.8; }
-.ltv-rend-lbl { text-align:center; font-size:clamp(10px,.8vw,15px); letter-spacing:3px; color:#64748b; font-weight:700; margin-top:-4px; }
+.ltv-rend-lbl { text-align:center; font-size:clamp(8px,4.5cqmin,15px); letter-spacing:3px; color:#64748b; font-weight:700; margin-top:-2px; }
 .rc-win { color:#34d399; text-shadow:0 0 30px rgba(52,211,153,.5); }
 .rc-ok  { color:#fbbf24; }
 .rc-low { color:#f87171; }
 .rc-dim { color:#64748b; }
-.ltv-nums { display:flex; justify-content:space-between; gap:4px; margin-top:clamp(4px,.6vh,12px);
-  border-top:1px solid rgba(255,255,255,.08); padding-top:clamp(6px,.8vh,14px); }
+.ltv-nums { display:flex; justify-content:space-between; gap:4px; margin-top:clamp(3px,1.5cqmin,12px);
+  border-top:1px solid rgba(255,255,255,.08); padding-top:clamp(4px,2cqmin,14px); }
 .ltv-num { display:flex; flex-direction:column; align-items:center; flex:1; min-width:0; }
-.ltv-num b { font-size:clamp(15px,1.5vw,28px); font-weight:800; color:#e8eef9; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.ltv-num b { font-size:clamp(12px,8.5cqmin,28px); font-weight:800; color:#e8eef9; font-variant-numeric:tabular-nums; white-space:nowrap; }
 .ltv-num .ltv-theo { color:#60a5fa; }
-.ltv-num span { font-size:clamp(8px,.65vw,12px); letter-spacing:.5px; color:#64748b; text-transform:uppercase; white-space:nowrap; }
-.ltv-foot { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:clamp(2px,.4vh,8px); }
-.ltv-status { font-size:clamp(12px,1vw,18px); font-weight:700; color:#94a3b8; }
-.ltv-rec { font-size:clamp(12px,1vw,18px); font-weight:800; color:#fbbf24; white-space:nowrap; }
-.ltv-arr { margin-top:4px; background:rgba(239,68,68,.18); color:#fca5a5; font-weight:700;
-  font-size:clamp(12px,1vw,18px); padding:6px 12px; border-radius:10px; text-align:center; }
-.ltv-win-badge { position:absolute; top:clamp(10px,1.1vw,18px); right:-36px; transform:rotate(35deg);
-  background:#16a34a; color:#fff; font-size:clamp(9px,.72vw,13px); font-weight:800; padding:4px 42px; box-shadow:0 2px 10px rgba(0,0,0,.4); letter-spacing:.5px; }
+.ltv-num span { font-size:clamp(7px,3.6cqmin,12px); letter-spacing:.5px; color:#64748b; text-transform:uppercase; white-space:nowrap; }
+.ltv-foot { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:clamp(2px,1cqmin,8px); }
+.ltv-status { font-size:clamp(10px,5cqmin,18px); font-weight:700; color:#94a3b8; }
+.ltv-rec { font-size:clamp(10px,5cqmin,18px); font-weight:800; color:#fbbf24; white-space:nowrap; }
+.ltv-arr { margin-top:clamp(3px,1.5cqmin,8px); background:rgba(239,68,68,.18); color:#fca5a5; font-weight:700;
+  font-size:clamp(9px,5cqmin,18px); padding:clamp(3px,1.5cqmin,8px) clamp(6px,3cqmin,14px); border-radius:10px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ltv-win-badge { position:absolute; top:clamp(10px,3cqmin,20px); right:-36px; transform:rotate(35deg);
+  background:#16a34a; color:#fff; font-size:clamp(8px,3.4cqmin,13px); font-weight:800; padding:4px 42px; box-shadow:0 2px 10px rgba(0,0,0,.4); letter-spacing:.5px; }
 .ltv-empty { grid-column:1/-1; text-align:center; color:#475569; font-size:clamp(18px,2vw,32px); padding:10vh 0; }
 .ltv-card.ltv-stop { border-color:#ef4444; animation:ltv-blink 1.1s ease-in-out infinite; }
 @keyframes ltv-blink {
@@ -2030,8 +2051,8 @@ export default {
   0%,100% { box-shadow:0 8px 40px rgba(0,0,0,.4),0 0 0 rgba(52,211,153,0); }
   50%     { box-shadow:0 8px 40px rgba(0,0,0,.4),0 0 55px rgba(52,211,153,.6); }
 }
-.ltv-side { display:flex; flex-direction:column; gap:clamp(10px,1.4vw,22px); overflow-y:auto; }
-.ltv-rank { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:clamp(10px,1vw,20px); }
+.ltv-side { display:flex; flex-direction:column; gap:clamp(8px,1.2vw,20px); overflow:hidden; min-height:0; }
+.ltv-rank { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:clamp(8px,1vw,18px); overflow:hidden; min-height:0; flex:1; display:flex; flex-direction:column; }
 .ltv-rank-hd { font-size:clamp(13px,1.1vw,20px); font-weight:800; letter-spacing:1px; color:#cbd5e1; margin-bottom:clamp(6px,.8vh,14px); }
 .ltv-rank-row { display:flex; align-items:center; gap:10px; padding:clamp(5px,.7vh,11px) 4px; border-bottom:1px solid rgba(255,255,255,.05); }
 .ltv-rank-row.first { background:linear-gradient(90deg,rgba(251,191,36,.16),transparent); border-radius:10px; }
@@ -2040,14 +2061,11 @@ export default {
 .ltv-team-rend { font-size:clamp(14px,1.2vw,24px); font-weight:800; font-variant-numeric:tabular-nums; }
 .ltv-rank-empty { color:#475569; font-size:clamp(11px,.9vw,15px); padding:8px 4px; }
 @media (max-width: 820px) {
-  .ltv-body { grid-template-columns:1fr; grid-template-rows:auto auto; overflow-y:auto; }
-  .ltv-cards { grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); }
-  .ltv-side { flex-direction:row; }
+  .ltv-body { grid-template-columns:1fr; grid-template-rows:1fr auto; overflow:hidden; }
+  .ltv-side { flex-direction:row; max-height:20vh; }
   .ltv-rank { flex:1; }
 }
 @media (max-width: 480px) {
-  .ltv-cards { grid-template-columns:1fr; }
-  .ltv-side { flex-direction:column; }
   .ltv-head { padding:8px 12px; }
 }
 </style>
