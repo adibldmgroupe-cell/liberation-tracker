@@ -1106,13 +1106,12 @@ var NODES_DEF = [
   buildNode('n445', '445', 'Compression 04',     'formes_seches', 'fab', 2, T3Y),
   buildNode('n429', '429', 'Pelliculage 02',     'formes_seches', 'fab', 3, T3Y),
 
-  // ── ZONE 400 — Track 4 : Formulation→Gélules
-  buildNode('n442', '442', 'Formulation',        'formes_seches', 'fab', 0, T4Y),
-  buildNode('n436', '436', 'Remplissage Gélules','formes_seches', 'fab', 1, T4Y),
+  // ── ZONE 400 — Remplissage Gélules (alimenté par un Mélange — il n'existe pas de "Formulation" au référentiel)
+  buildNode('n436', '436', 'Remplissage Gélules','formes_seches', 'fab', 2, T4Y),
 
-  // ── FORMES SEMI-SOLIDES / OTC
-  buildNode('n200', '200', 'Mélange Homogén.',   'formes_semi', 'fab', 0, T5Y),
-  buildNode('n206', '206', 'Remplissage Tubes',  'formes_semi', 'fab', 1, T5Y),
+  // ── FORMES SEMI-SOLIDES : Mélange pâteux (op 270) → Conditionnement R,T (c206, op 360)
+  buildNode('n200', '200', 'Mélange Pâteux',     'formes_semi', 'fab',  1, T5Y),
+  buildNode('c206', '206', 'MARCH. R,T',         'formes_semi', 'cond', 2, T5Y),
 
   // ── CONDITIONNEMENT PRIMAIRE — 7 lignes
   buildNode('c149', '149', 'MB421',          'cond_primaire', 'cond', 0, COND_PRIM_Y + 0*70,  COND_X+31),
@@ -1155,16 +1154,17 @@ var ARROWS_DEF = [
   { id: 'a9',  from: 'n425', to: 'n448' },
   { id: 'a10', from: 'n448', to: 'n445' },
   { id: 'a11', from: 'n445', to: 'n429' },
-  // Track 4
-  { id: 'a12', from: 'n442', to: 'n436' },
-  // Semi-solides
-  { id: 'a13', from: 'n200', to: 'n206' },
+  // Gélules : alimenté par un Mélange (flux gélules), conditionné ensuite
+  { id: 'a12', from: 'n138', to: 'n436' },
+  // Semi-solides : Pesée → Mélange pâteux → R,T (conditionnement forme pâteuse)
+  { id: 'a13', from: 'n200', to: 'c206' },
+  { id: 'a13b', from: 'p471', to: 'n200' },
   // Fab → Cond Prim (generic connections)
   { id: 'a14', from: 'n143', to: 'c149' },
   { id: 'a15', from: 'n136', to: 'c147' },
   { id: 'a16', from: 'n429', to: 'c146' },
   { id: 'a17', from: 'n436', to: 'c148' },
-  { id: 'a18', from: 'n206', to: 'c220' },
+  { id: 'a18', from: 'c206', to: 'n155' },
   { id: 'a19', from: 'n131', to: 'c222' },
   { id: 'a20', from: 'n445', to: 'c223' },
   { id: 'a21', from: 'n128', to: 'c147' },
