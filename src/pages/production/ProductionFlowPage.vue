@@ -2077,6 +2077,7 @@ export default {
     var selectedProduct   = ref(null)
     var activeRoute       = ref(1)
     var productFluxData   = ref([])   // product_flux rows for selected product
+    var productFluxAll    = ref([])   // toutes les lignes product_flux → dérive les flèches du flux réel (op_number)
     var opMaster          = ref([])   // operations_master rows
 
     // ── MODAL STATE ───────────────────────────────────────────────
@@ -2175,31 +2176,67 @@ export default {
       return fluxNodeIds.value.has(node.id) ? 1 : 0.18
     }
 
-    // ─── ARROWS ─────────────────────────────────────────────────
-    var arrows = computed(function() {
-      return ARROWS_DEF.map(function(a) {
-        var fromNode = allNodes.value.find(function(n) { return n.id === a.from })
-        var toNode   = allNodes.value.find(function(n) { return n.id === a.to   })
-        if (!fromNode || !toNode) return null
-        var x1 = fromNode.x + fromNode.w
-        var y1 = fromNode.y + fromNode.h / 2
-        var x2 = toNode.x
-        var y2 = toNode.y + toNode.h / 2
-        if (Math.abs(x1 - x2) < 20) {
-          x1 = fromNode.x + fromNode.w / 2
-          y1 = fromNode.y + fromNode.h
-          x2 = toNode.x + toNode.w / 2
-          y2 = toNode.y - 2
+    // ─── ARROWS — dérivées du flux RÉEL (transitions d'op_number de product_flux) ───
+    // op_number → nœuds (salles) de ce processus, via operations_master (room_code → op_number)
+    var nodesByOp = computed(function() {
+      var opByRoom = {}
+      opMaster.value.forEach(function(om) { if (om.room_code) opByRoom[om.room_code] = om.op_number })
+      var m = {}
+      allNodes.value.forEach(function(n) {
+        var op = opByRoom[n.id]
+        if (op != null) { (m[op] = m[op] || []).push(n) }
+      })
+      return m
+    })
+    // Transitions op_number distinctes observées dans tous les flux produits
+    var opTransitions = computed(function() {
+      var byPR = {}
+      productFluxAll.value.forEach(function(pf) {
+        var k = pf.product_code + '|' + pf.route
+        ;(byPR[k] = byPR[k] || []).push(pf.op_number)
+      })
+      var trans = {}
+      Object.keys(byPR).forEach(function(k) {
+        var ops = byPR[k].slice().sort(function(a, b) { return a - b })
+        var uniq = []
+        ops.forEach(function(o) { if (uniq[uniq.length - 1] !== o) uniq.push(o) })
+        for (var i = 0; i < uniq.length - 1; i++) {
+          trans[uniq[i] + '-' + uniq[i + 1]] = { a: uniq[i], b: uniq[i + 1] }
         }
-        var active = nodeStatus(fromNode).label === 'En cours'
-        var fluxHighlight = fluxNodeIds.value !== null &&
-          fluxNodeIds.value.has(a.from) && fluxNodeIds.value.has(a.to)
+      })
+      return Object.keys(trans).map(function(k) { return trans[k] })
+    })
+    // op_number du parcours du produit sélectionné (surligne les flèches correspondantes)
+    var fluxOps = computed(function() {
+      if (!selectedProduct.value || !productFluxData.value.length) return null
+      var s = {}
+      productFluxData.value.filter(function(pf) { return pf.route === activeRoute.value })
+        .forEach(function(pf) { s[pf.op_number] = true })
+      return s
+    })
+    var arrows = computed(function() {
+      var nbo = nodesByOp.value
+      var fo = fluxOps.value
+      var out = []
+      opTransitions.value.forEach(function(t) {
+        var gA = nbo[t.a], gB = nbo[t.b]
+        if (!gA || !gB || !gA.length || !gB.length) return
+        var xRightA = Math.max.apply(null, gA.map(function(n) { return n.x + n.w }))
+        var yMidA   = gA.reduce(function(s, n) { return s + n.y + n.h / 2 }, 0) / gA.length
+        var xLeftB  = Math.min.apply(null, gB.map(function(n) { return n.x }))
+        var yMidB   = gB.reduce(function(s, n) { return s + n.y + n.h / 2 }, 0) / gB.length
+        var x1 = xRightA, y1 = yMidA, x2 = xLeftB, y2 = yMidB
+        // cible à gauche/superposée (ex. retour vers stock) → sortir par le bas, entrer par le haut
+        if (x2 - x1 < 30) {
+          x1 = gA[0].x + gA[0].w / 2; y1 = Math.max.apply(null, gA.map(function(n) { return n.y + n.h }))
+          x2 = gB[0].x + gB[0].w / 2; y2 = Math.min.apply(null, gB.map(function(n) { return n.y }))
+        }
         var mx = (x1 + x2) / 2
-        return Object.assign({}, a, {
-          d: 'M'+x1+','+y1+' C'+mx+','+y1+' '+mx+','+y2+' '+x2+','+y2,
-          active, fluxHighlight
-        })
-      }).filter(Boolean)
+        var hl = fo !== null && !!fo[t.a] && !!fo[t.b]
+        out.push({ id: 'op' + t.a + '-' + t.b, from: t.a, to: t.b, active: false, fluxHighlight: hl,
+          d: 'M' + x1 + ',' + y1 + ' C' + mx + ',' + y1 + ' ' + mx + ',' + y2 + ' ' + x2 + ',' + y2 })
+      })
+      return out
     })
 
     // ─── LIVE DATA HELPERS ───────────────────────────────────────
@@ -2579,7 +2616,7 @@ export default {
     // ─── LOAD ────────────────────────────────────────────────────
     var loadLive = async function() {
       loading.value = true
-      var [rRoomsAll, rOm, rCadences, r2, r2b, r3, r4, r5, r6] = await Promise.all([
+      var [rRoomsAll, rOm, rCadences, r2, r2b, r3, r4, r5, r6, r7] = await Promise.all([
         supabase.from('plan_rooms').select('code,nom,zone,type,op_number,actif,atelier_id,equipement_id'),
         supabase.from('operations_master').select('op_number,equipment_name,room_code,processus,room_name'),
         supabase.from('cadences').select('numero_salle,code_article,cadence_objectif_b_min'),
@@ -2597,9 +2634,11 @@ export default {
         supabase.from('production_arrets')
           .select('id,session_id,is_running').eq('is_running', true),
         supabase.from('v_product_flux_summary').select('*').order('product_name'),
+        supabase.from('product_flux').select('product_code,route,op_number'),
       ])
       rooms.value = rRoomsAll.data || []
       opMaster.value = rOm.data || []
+      productFluxAll.value = (r7 && !r7.error) ? (r7.data || []) : []
       trsCadences.value = (rCadences.data || []).map(function(c) {
         return { numero_atelier: c.numero_salle, code_article: c.code_article, cadence_objectif_b_min: c.cadence_objectif_b_min }
       })
