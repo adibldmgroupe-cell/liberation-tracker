@@ -1196,6 +1196,38 @@ export default {
       closeModal.show            = true
     }
 
+    // Calcule l'objet d'update de clôture (OEE complet) — partagé par doClose (manuel) ET doAutoClose (fin de shift).
+    var buildSessionCloseUpdate = function(s, eq, arrs, heureFinHHMM, boitesTotal, boitesRebuts) {
+      var start    = toDateTime(s.date, s.heure_debut)
+      var end      = toDateTime(s.date, heureFinHHMM)
+      var totalMin = (start && end) ? Math.round((end - start) / 60000) : 0
+      var arretImpro = arrs.reduce(function(a,x){ return (!x.est_planifie && !x.est_pause) ? a+(x.duree_minutes||0) : a }, 0)
+      var arretPlan  = arrs.reduce(function(a,x){ return (x.est_planifie  && !x.est_pause) ? a+(x.duree_minutes||0) : a }, 0)
+      var pauses     = arrs.reduce(function(a,x){ return x.est_pause ? a+(x.duree_minutes||0) : a }, 0)
+      var toNetRef = s.temps_ouverture_min || gsNetRef(eq)
+      var tf = Math.max(0, toNetRef - arretImpro)
+      var total     = boitesTotal || 0
+      var good      = total - (boitesRebuts || 0)
+      var cadObj    = s.cadence_objectif_snapshot
+      var cadReelle = (totalMin > 0 && total > 0) ? parseFloat((total / totalMin).toFixed(2)) : null
+      var rendPct   = (s.objectif_boites && total) ? Math.round((total / s.objectif_boites) * 100) : null
+      var D = toNetRef > 0 ? Math.round((tf / toNetRef) * 100) : null
+      var P = (tf > 0 && cadObj > 0) ? Math.min(150, Math.round((total / (cadObj * tf)) * 100)) : null
+      var Q = total > 0 ? Math.round((good / total) * 100) : null
+      var TRS = (D != null && P != null && Q != null) ? Math.round((D/100) * (P/100) * (Q/100) * 100) : null
+      var colisage = s.colisage_confirme || 1
+      return {
+        heure_fin: heureFinHHMM + ':00', statut: 'Clôturé',
+        boites_produites: total, boites_rebuts: (boitesRebuts || 0),
+        colis_produits: Math.floor(total / colisage), colis_rebuts: Math.floor((boitesRebuts || 0) / colisage),
+        cadence_reelle_boite_min: cadReelle, rendement_pct: rendPct,
+        temps_ouverture_min: toNetRef, temps_fonctionnement_min: tf,
+        temps_arret_planifie_min: arretPlan, temps_arret_impro_min: arretImpro, temps_pause_min: pauses,
+        disponibilite: D, performance: P, qualite: Q, trs: TRS,
+        updated_at: new Date().toISOString()
+      }
+    }
+
     var doClose = async function() {
       if (!closeModal.heure_fin) { closeModal.error = 'Heure de fin requise.'; return }
       closeModal.saving = true
@@ -1203,71 +1235,20 @@ export default {
       var eq   = closeModal.panel.equip
       var arrs = closeModal.panel.arrets || []
 
-      var start    = toDateTime(s.date, s.heure_debut)
-      var end      = toDateTime(s.date, closeModal.heure_fin)
-      var totalMin = (start && end) ? Math.round((end - start) / 60000) : 0
-
-      // Arrêts déclarés — classés par nature
-      var arretImpro = arrs.reduce(function(a,x){ return (!x.est_planifie && !x.est_pause) ? a+(x.duree_minutes||0) : a }, 0)
-      var arretPlan  = arrs.reduce(function(a,x){ return (x.est_planifie  && !x.est_pause) ? a+(x.duree_minutes||0) : a }, 0)
-      var pauses     = arrs.reduce(function(a,x){ return x.est_pause ? a+(x.duree_minutes||0) : a }, 0)
-
-      // ── TRS basé sur données GS ────────────────────────────────────
-      // TO net de référence : snapshot au démarrage (s.temps_ouverture_min)
-      //   ou recalcul GS si session antérieure au déploiement du snapshot
-      var toNetRef = s.temps_ouverture_min || gsNetRef(eq)
-
-      // Temps de fonctionnement = TO_net − arrêts imprévus déclarés
-      var tf = Math.max(0, toNetRef - arretImpro)
-
-      var total     = closeModal.boites_produits || 0
-      var good      = total - (closeModal.boites_rebuts || 0)
-      var cadObj    = s.cadence_objectif_snapshot       // cadence GS onglet 2
-      var cadReelle = (totalMin > 0 && total > 0) ? parseFloat((total / totalMin).toFixed(2)) : null
-      var rendPct   = (s.objectif_boites && total) ? Math.round((total / s.objectif_boites) * 100) : null
-
-      // D = TF / TO_net_ref (GS)
-      var D = toNetRef > 0 ? Math.round((tf / toNetRef) * 100) : null
-      // P = boites_produites / (cadence_objectif_GS × TF)  — cap 150 %
-      var P = (tf > 0 && cadObj > 0) ? Math.min(150, Math.round((total / (cadObj * tf)) * 100)) : null
-      // Q = boites bonnes / boites totales
-      var Q = total > 0 ? Math.round((good / total) * 100) : null
-      var TRS = (D != null && P != null && Q != null) ? Math.round((D/100) * (P/100) * (Q/100) * 100) : null
-
-      var colisage    = s.colisage_confirme || 1
-      var colisFinal  = Math.floor(total / colisage)
-      var colisRebuts = Math.floor((closeModal.boites_rebuts || 0) / colisage)
-
+      var end = toDateTime(s.date, closeModal.heure_fin)
+      // Clôturer l'arrêt actif éventuel (comportement préservé : non recompté dans le TRS de clôture manuelle)
       if (closeModal.panel.activeArret) {
-        var now    = nowTime()
+        var nowH   = nowTime()
         var aStart = toDateTime(s.date, closeModal.panel.activeArret.heure_debut)
         var aDur   = aStart ? Math.round((end - aStart) / 60000) : null
         await supabase.from('production_arrets').update({
-          heure_fin: now+':00', duree_minutes: aDur, is_running: false, updated_at: new Date().toISOString()
+          heure_fin: nowH+':00', duree_minutes: aDur, is_running: false, updated_at: new Date().toISOString()
         }).eq('id', closeModal.panel.activeArret.id)
       }
 
-      var r = await supabase.from('production_sessions').update({
-        heure_fin:                closeModal.heure_fin + ':00',
-        statut:                   'Clôturé',
-        boites_produites:         total,
-        boites_rebuts:            (closeModal.boites_rebuts || 0),
-        colis_produits:           colisFinal,
-        colis_rebuts:             colisRebuts,
-        cadence_reelle_boite_min: cadReelle,
-        rendement_pct:            rendPct,
-        temps_ouverture_min:      toNetRef,        // référence GS
-        temps_fonctionnement_min: tf,
-        temps_arret_planifie_min: arretPlan,
-        temps_arret_impro_min:    arretImpro,
-        temps_pause_min:          pauses,
-        disponibilite:            D,
-        performance:              P,
-        qualite:                  Q,
-        trs:                      TRS,
-        observation:              closeModal.observation || null,
-        updated_at:               new Date().toISOString()
-      }).eq('id', s.id)
+      var upd = buildSessionCloseUpdate(s, eq, arrs, closeModal.heure_fin, closeModal.boites_produits, closeModal.boites_rebuts)
+      upd.observation = closeModal.observation || null
+      var r = await supabase.from('production_sessions').update(upd).eq('id', s.id)
 
       if (r.error) { closeModal.error = r.error.message; closeModal.saving = false; return }
       // MAJ locale instantanée sur le panel VIVANT (règle N°8) — la machine repasse « Disponible »
@@ -1315,19 +1296,22 @@ export default {
       if (autoClosing[sessId]) return
       autoClosing[sessId] = true
       var heureFin = sh.heure_fin.slice(0, 5)
+      var arrs = (p.arrets || []).slice()
       if (p.activeArret) {
         var aStart  = toDateTime(p.session.date, p.activeArret.heure_debut)
-        var finDate = new Date(p.session.date + 'T' + heureFin + ':00')
+        var finDate = toDateTime(p.session.date, heureFin)
         var aDur    = aStart ? Math.max(0, Math.round((finDate - aStart) / 60000)) : null
         await supabase.from('production_arrets').update({
           heure_fin: heureFin + ':00', duree_minutes: aDur, is_running: false,
           updated_at: new Date().toISOString()
         }).eq('id', p.activeArret.id)
+        // recompter l'arrêt fraîchement clôturé dans le calcul OEE (machine à l'arrêt jusqu'à la fin de shift)
+        arrs = arrs.map(function(a){ return a.id === p.activeArret.id ? Object.assign({}, a, { duree_minutes: aDur, is_running: false }) : a })
       }
-      await supabase.from('production_sessions').update({
-        statut: 'Clôturé', heure_fin: heureFin + ':00',
-        updated_at: new Date().toISOString()
-      }).eq('id', sessId)
+      // Clôture PROPRE avec OEE calculé (comme une clôture manuelle) — boîtes = dernier comptage stocké
+      var upd = buildSessionCloseUpdate(p.session, p.equip, arrs, heureFin, sessBoites(p.session), sessBoitesRebuts(p.session))
+      upd.observation = 'Clôture automatique (fin de shift +10 min)'
+      await supabase.from('production_sessions').update(upd).eq('id', sessId)
       delete autoClosing[sessId]
       await loadAll()
     }
