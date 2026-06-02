@@ -89,7 +89,7 @@
             <div class="td td-c td-prod">
               <template v-if="p.session">
                 <div class="prod-nums">
-                  <span class="pv mono">{{p.session.colisage_confirme ? p.session.colis_produits * p.session.colisage_confirme : p.session.colis_produits}}</span>
+                  <span class="pv mono">{{sessBoites(p.session).toLocaleString('fr-FR')}}</span>
                   <span class="dim">/</span>
                   <span class="po mono dim">{{p.session.objectif_boites||'—'}}</span>
                 </div>
@@ -377,7 +377,7 @@
         <div class="modal-hd">+ Saisie comptage — {{comptageModal.panel?.equip.nom_equipement}}</div>
         <div class="modal-ctx" v-if="comptageModal.panel?.session">
           Session en cours · Boîtes actuelles :
-          <strong>{{comptageModal.panel.session.colisage_confirme ? comptageModal.panel.session.colis_produits * comptageModal.panel.session.colisage_confirme : comptageModal.panel.session.colis_produits}}</strong>
+          <strong>{{sessBoites(comptageModal.panel.session).toLocaleString('fr-FR')}}</strong>
         </div>
         <div class="form-row">
           <div class="form-field">
@@ -770,9 +770,8 @@ export default {
         }
 
         var rendPct = 0
-        if (session && session.objectif_boites && session.colis_produits) {
-          var colisage_rend = session.colisage_confirme || 1
-          rendPct = Math.round((session.colis_produits * colisage_rend / session.objectif_boites) * 100)
+        if (session && session.objectif_boites && sessBoites(session)) {
+          rendPct = Math.round((sessBoites(session) / session.objectif_boites) * 100)
         }
 
         newPanels.push({
@@ -927,7 +926,7 @@ export default {
         cadence_objectif_snapshot: cadObj                         || null,
         objectif_boites:           objBoites,
         temps_ouverture_min:       netRef,                         // snapshot GS au démarrage
-        colis_produits: 0, colis_rebuts: 0,
+        colis_produits: 0, colis_rebuts: 0, boites_produites: 0, boites_rebuts: 0,
         colisage_confirme:         startModal.colisage            || null
       })
       if (r.error) { startModal.error = r.error.message; startModal.saving = false; return }
@@ -1062,12 +1061,15 @@ export default {
     }
 
     // ── Comptage ──
+    // Boîtes/rebuts d'une session — boîtes EXACTES (fallback colis × colisage pour sessions < migration 025)
+    var sessBoites = function(s){ if(!s) return 0; return (s.boites_produites != null) ? s.boites_produites : ((s.colis_produits||0) * (s.colisage_confirme||1)) }
+    var sessBoitesRebuts = function(s){ if(!s) return 0; return (s.boites_rebuts != null) ? s.boites_rebuts : ((s.colis_rebuts||0) * (s.colisage_confirme||1)) }
+    var sessColis = function(s){ if(!s) return 0; var c = s.colisage_confirme||0; return c>0 ? Math.round(sessBoites(s)/c*100)/100 : (s.colis_produits||0) }
     var openComptageModal = function(p) {
       comptageModal.panel   = p
       comptageModal.heure   = nowTime()
-      var colisage = p.session ? (p.session.colisage_confirme || 1) : 1
-      comptageModal.boites  = p.session ? p.session.colis_produits * colisage : null
-      comptageModal.rebuts  = p.session ? p.session.colis_rebuts * colisage : 0
+      comptageModal.boites  = p.session ? sessBoites(p.session) : null
+      comptageModal.rebuts  = p.session ? sessBoitesRebuts(p.session) : 0
       comptageModal.saving  = false
       comptageModal.show    = true
     }
@@ -1077,20 +1079,27 @@ export default {
       comptageModal.saving = true
       var s        = comptageModal.panel.session
       var colisage = s.colisage_confirme || 1
-      var colisCumul = Math.floor(comptageModal.boites / colisage)
+      var boites   = comptageModal.boites                                  // BOÎTES exactes saisies
+      var rebutsBte = comptageModal.rebuts || 0
+      var colisCumul = Math.round(boites / colisage)                       // colis rétrocompat
+      var rebutsColis = Math.round(rebutsBte / colisage)
       var start    = toDateTime(s.date, s.heure_debut)
       var minEl    = start ? (new Date() - start) / 60000 : null
-      var cadInst  = (minEl && minEl > 0) ? parseFloat((comptageModal.boites / minEl).toFixed(2)) : null
+      var cadInst  = (minEl && minEl > 0) ? parseFloat((boites / minEl).toFixed(2)) : null
 
       await supabase.from('production_comptages').insert({
         session_id: s.id, heure: comptageModal.heure + ':00',
         colis_cumules: colisCumul,
-        rebuts_cumules: Math.floor((comptageModal.rebuts || 0) / colisage),
+        rebuts_cumules: rebutsColis,
+        boites_cumules: boites,
+        boites_rebuts_cumules: rebutsBte,
         cadence_instantanee: cadInst
       })
       await supabase.from('production_sessions').update({
+        boites_produites: boites,
+        boites_rebuts: rebutsBte,
         colis_produits: colisCumul,
-        colis_rebuts: Math.floor((comptageModal.rebuts || 0) / colisage),
+        colis_rebuts: rebutsColis,
         cadence_reelle_boite_min: cadInst,
         updated_at: new Date().toISOString()
       }).eq('id', s.id)
@@ -1102,9 +1111,8 @@ export default {
     var openCloseModal = function(p) {
       closeModal.panel           = p
       closeModal.heure_fin       = nowTime()
-      var colisage = p.session ? (p.session.colisage_confirme || 1) : 1
-      closeModal.boites_produits = p.session ? p.session.colis_produits * colisage : null
-      closeModal.boites_rebuts   = p.session ? p.session.colis_rebuts * colisage : 0
+      closeModal.boites_produits = p.session ? sessBoites(p.session) : null
+      closeModal.boites_rebuts   = p.session ? sessBoitesRebuts(p.session) : 0
       closeModal.observation     = ''
       closeModal.error           = ''
       closeModal.saving          = false
@@ -1165,6 +1173,8 @@ export default {
       var r = await supabase.from('production_sessions').update({
         heure_fin:                closeModal.heure_fin + ':00',
         statut:                   'Clôturé',
+        boites_produites:         total,
+        boites_rebuts:            (closeModal.boites_rebuts || 0),
         colis_produits:           colisFinal,
         colis_rebuts:             colisRebuts,
         cadence_reelle_boite_min: cadReelle,
@@ -1291,7 +1301,7 @@ export default {
       panels, shifts, equipes, arretFamilles, loading, clock, filterSite,
       timers, arretTimers, filteredPanels,
       startModal, arretModal, requalModal, comptageModal, closeModal, devModal,
-      panelClass, panelColor, oeeClass,
+      panelClass, panelColor, oeeClass, sessBoites, sessColis,
       gsTotalPlanRef, gsNetRef, modalOpts, modalMicro,
       computeObjShift, computeCadence, computeCadenceVsObj, computeOEEPreview,
       loadAll,

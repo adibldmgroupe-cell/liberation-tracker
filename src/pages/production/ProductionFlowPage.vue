@@ -397,7 +397,7 @@
           <!-- Métriques -->
           <div class="tdp-metrics" v-if="selectedTrsPanel.session">
             <div class="tdp-metric">
-              <div class="tdp-metric-val">{{selectedTrsPanel.session.colisage_confirme && selectedTrsPanel.session.colis_produits ? (selectedTrsPanel.session.colis_produits * selectedTrsPanel.session.colisage_confirme).toLocaleString('fr-FR') : (selectedTrsPanel.session.colis_produits || 0)}}</div>
+              <div class="tdp-metric-val">{{trsSessBoites(selectedTrsPanel.session).toLocaleString('fr-FR')}}</div>
               <div class="tdp-metric-lbl">{{selectedTrsPanel.session.colisage_confirme ? 'Boîtes prod.' : 'Colis prod.'}}</div>
             </div>
             <div class="tdp-metric">
@@ -440,12 +440,12 @@
               <div class="tdp-cpt-row">
                 <div class="tdp-cpt-cell tdp-cpt-lbl">Boîtes</div>
                 <div class="tdp-cpt-cell tdp-cpt-theo">{{trsTheoCounters[selectedTrsPanel.equip.id]?.boites != null ? trsTheoCounters[selectedTrsPanel.equip.id].boites.toLocaleString('fr-FR') : '—'}}</div>
-                <div class="tdp-cpt-cell tdp-cpt-reel">{{selectedTrsPanel.session.colis_produits && selectedTrsPanel.session.colisage_confirme ? (selectedTrsPanel.session.colis_produits * selectedTrsPanel.session.colisage_confirme).toLocaleString('fr-FR') : '—'}}</div>
+                <div class="tdp-cpt-cell tdp-cpt-reel">{{selectedTrsPanel.session.colisage_confirme ? trsSessBoites(selectedTrsPanel.session).toLocaleString('fr-FR') : '—'}}</div>
               </div>
               <div class="tdp-cpt-row">
                 <div class="tdp-cpt-cell tdp-cpt-lbl">Colis</div>
                 <div class="tdp-cpt-cell tdp-cpt-theo">{{trsTheoCounters[selectedTrsPanel.equip.id]?.colis != null ? trsTheoCounters[selectedTrsPanel.equip.id].colis.toLocaleString('fr-FR') : '—'}}</div>
-                <div class="tdp-cpt-cell tdp-cpt-reel">{{selectedTrsPanel.session.colis_produits || 0}}</div>
+                <div class="tdp-cpt-cell tdp-cpt-reel">{{trsSessColis(selectedTrsPanel.session).toLocaleString('fr-FR')}}</div>
               </div>
             </div>
             <div class="tdp-reminder" v-if="trsTheoCounters[selectedTrsPanel.equip.id]?.needsComptage">
@@ -944,7 +944,7 @@
                 <td>{{s._shiftNom || '—'}}</td>
                 <td class="mono">{{s.heure_debut ? s.heure_debut.slice(0,5) : '—'}}</td>
                 <td class="mono">{{s.heure_fin ? s.heure_fin.slice(0,5) : '—'}}</td>
-                <td class="mono">{{s.colis_produits && s._colisage ? (s.colis_produits * s._colisage).toLocaleString('fr-FR') : (s.colis_produits || '—')}}</td>
+                <td class="mono">{{trsSessBoites(s) ? trsSessBoites(s).toLocaleString('fr-FR') : '—'}}</td>
                 <td :style="{color: s.disponibilite!=null ? trsColor(s.disponibilite) : '#4b5563'}">{{s.disponibilite != null ? s.disponibilite+'%' : '—'}}</td>
                 <td :style="{color: s.performance!=null ? trsColor(s.performance) : '#4b5563'}">{{s.performance != null ? s.performance+'%' : '—'}}</td>
                 <td :style="{color: s.qualite!=null ? trsColor(s.qualite) : '#4b5563'}">{{s.qualite != null ? s.qualite+'%' : '—'}}</td>
@@ -1246,10 +1246,9 @@ export default {
       // TO net de référence = snapshot GS posé au démarrage (déjà net des arrêts planifiés/pauses/micro)
       var toNetRef = sess.temps_ouverture_min || 0
       var tf = Math.max(0, toNetRef - arretImpro)
-      // Production en BOÎTES (colis × colisage), comme à la clôture
-      var colisage  = sess.colisage_confirme || null
-      var total     = colisage ? (sess.colis_produits || 0) * colisage : (sess.colis_produits || 0)
-      var rebutsBte = colisage ? (sess.colis_rebuts || 0) * colisage : (sess.colis_rebuts || 0)
+      // Production en BOÎTES exactes (fallback colis × colisage pour sessions < migration 025)
+      var total     = trsSessBoites(sess)
+      var rebutsBte = trsSessBoitesRebuts(sess)
       var good      = total - rebutsBte
       var cadObj    = sess.cadence_objectif_snapshot || 0   // cadence objectif GS (onglet 2)
       // D = TF / TO_net_ref(GS)
@@ -1307,7 +1306,7 @@ export default {
       var today = new Date().toISOString().slice(0, 10)
       var [rS, rA] = await Promise.all([
         supabase.from('production_sessions')
-          .select('id,equipement_id,statut,date,heure_debut,heure_fin,disponibilite,performance,qualite,trs,colis_produits,colis_rebuts,objectif_boites,cadence_nominale_snapshot,cadence_objectif_snapshot,temps_ouverture_min,colisage_confirme')
+          .select('id,equipement_id,statut,date,heure_debut,heure_fin,disponibilite,performance,qualite,trs,colis_produits,colis_rebuts,boites_produites,boites_rebuts,objectif_boites,cadence_nominale_snapshot,cadence_objectif_snapshot,temps_ouverture_min,colisage_confirme')
           .eq('date', today)
           .neq('statut', 'Annulé'),
         supabase.from('production_arrets')
@@ -1636,9 +1635,8 @@ export default {
           if (e2) { equipeNom = e2.nom; equipeCouleur = e2.couleur }
         }
         var rendPct = 0
-        if (session && session.objectif_boites && session.colis_produits) {
-          var boitesProdR = session.colisage_confirme ? session.colis_produits * session.colisage_confirme : session.colis_produits
-          rendPct = Math.round((boitesProdR / session.objectif_boites) * 100)
+        if (session && session.objectif_boites && trsSessBoites(session)) {
+          rendPct = Math.round((trsSessBoites(session) / session.objectif_boites) * 100)
         }
         return { equip: eq, session: session, activeArret: activeArret, arrets: panelArrets, cadences: cadences, lastComptage: lastComptage, lotNum: lotNum, lotProd: lotProd, shiftNom: shiftNom, shiftCouleur: shiftCouleur, equipeNom: equipeNom, equipeCouleur: equipeCouleur, rendPct: rendPct }
       })
@@ -1646,7 +1644,7 @@ export default {
       // Sync TRS overlay data
       var today = new Date().toISOString().slice(0, 10)
       var [rS, rA] = await Promise.all([
-        supabase.from('production_sessions').select('id,equipement_id,statut,date,heure_debut,heure_fin,disponibilite,performance,qualite,trs,colis_produits,colis_rebuts,objectif_boites,cadence_nominale_snapshot,cadence_objectif_snapshot,temps_ouverture_min,colisage_confirme').eq('date', today).neq('statut', 'Annulé'),
+        supabase.from('production_sessions').select('id,equipement_id,statut,date,heure_debut,heure_fin,disponibilite,performance,qualite,trs,colis_produits,colis_rebuts,boites_produites,boites_rebuts,objectif_boites,cadence_nominale_snapshot,cadence_objectif_snapshot,temps_ouverture_min,colisage_confirme').eq('date', today).neq('statut', 'Annulé'),
         supabase.from('production_arrets').select('id,session_id,duree_minutes,est_planifie,est_pause,is_running')
       ])
       if (!rS.error) trsSessionsFull.value = rS.data || []
@@ -1952,7 +1950,7 @@ export default {
     var loadTrsHistoData = async function() {
       trsHistoModal.loading = true
       var q = supabase.from('production_sessions')
-        .select('id,equipement_id,lot_id,shift_id,statut,date,heure_debut,heure_fin,colis_produits,colis_rebuts,colisage_confirme,disponibilite,performance,qualite,trs,objectif_boites')
+        .select('id,equipement_id,lot_id,shift_id,statut,date,heure_debut,heure_fin,colis_produits,colis_rebuts,boites_produites,boites_rebuts,colisage_confirme,disponibilite,performance,qualite,trs,objectif_boites')
         .eq('date', trsHistoModal.date)
         .order('heure_debut', { ascending: true })
       if (trsHistoModal.equip_id) q = q.eq('equipement_id', trsHistoModal.equip_id)
@@ -1985,11 +1983,15 @@ export default {
       trsHistoModal.loading  = false
     }
 
+    // Boîtes/colis d'une session — boîtes EXACTES (fallback colis × colisage pour sessions < migration 025)
+    var trsSessBoites = function(s){ if(!s) return 0; return (s.boites_produites != null) ? s.boites_produites : ((s.colis_produits||0) * (s.colisage_confirme||1)) }
+    var trsSessBoitesRebuts = function(s){ if(!s) return 0; return (s.boites_rebuts != null) ? s.boites_rebuts : ((s.colis_rebuts||0) * (s.colisage_confirme||1)) }
+    var trsSessColis = function(s){ if(!s) return 0; var c = s.colisage_confirme||0; return c>0 ? Math.round(trsSessBoites(s)/c*100)/100 : (s.colis_produits||0) }
+
     var trsOpenComptage = function(p) {
       trsComptageModal.panel  = p; trsComptageModal.heure  = trsNowTime()
-      var colisageCpt = p.session ? p.session.colisage_confirme : null
-      trsComptageModal.boites = p.session ? (colisageCpt && p.session.colis_produits ? p.session.colis_produits * colisageCpt : p.session.colis_produits) : null
-      trsComptageModal.rebuts = p.session ? (colisageCpt && p.session.colis_rebuts ? p.session.colis_rebuts * colisageCpt : (p.session.colis_rebuts || 0)) : 0
+      trsComptageModal.boites = p.session ? trsSessBoites(p.session) : null
+      trsComptageModal.rebuts = p.session ? trsSessBoitesRebuts(p.session) : 0
       trsComptageModal.saving = false; trsComptageModal.show = true
     }
 
@@ -1998,24 +2000,23 @@ export default {
       trsComptageModal.saving = true
       var s = trsComptageModal.panel.session
       var colisageCpt2 = s.colisage_confirme || null
-      var boitesCpt = trsComptageModal.boites
-      var colisCpt  = (colisageCpt2 && colisageCpt2 > 0) ? Math.floor(boitesCpt / colisageCpt2) : boitesCpt
+      var boitesCpt = trsComptageModal.boites                                  // BOÎTES exactes saisies
       var rebutsBte = trsComptageModal.rebuts || 0
-      var rebuts    = (colisageCpt2 && colisageCpt2 > 0) ? Math.floor(rebutsBte / colisageCpt2) : rebutsBte
+      var colisCpt  = (colisageCpt2 && colisageCpt2 > 0) ? Math.round(boitesCpt / colisageCpt2) : boitesCpt   // colis rétrocompat
+      var rebuts    = (colisageCpt2 && colisageCpt2 > 0) ? Math.round(rebutsBte / colisageCpt2) : rebutsBte
       var start = trsToDateTime(s.date, s.heure_debut)
       var minEl = start ? (new Date() - start) / 60000 : null
       var cadInst = (minEl && minEl > 0) ? parseFloat((boitesCpt / minEl).toFixed(2)) : null
-      await supabase.from('production_comptages').insert({ session_id: s.id, heure: trsComptageModal.heure+':00', colis_cumules: colisCpt, rebuts_cumules: rebuts, cadence_instantanee: cadInst })
-      await supabase.from('production_sessions').update({ colis_produits: colisCpt, colis_rebuts: rebuts, cadence_reelle_boite_min: cadInst, updated_at: new Date().toISOString() }).eq('id', s.id)
+      await supabase.from('production_comptages').insert({ session_id: s.id, heure: trsComptageModal.heure+':00', colis_cumules: colisCpt, rebuts_cumules: rebuts, boites_cumules: boitesCpt, boites_rebuts_cumules: rebutsBte, cadence_instantanee: cadInst })
+      await supabase.from('production_sessions').update({ boites_produites: boitesCpt, boites_rebuts: rebutsBte, colis_produits: colisCpt, colis_rebuts: rebuts, cadence_reelle_boite_min: cadInst, updated_at: new Date().toISOString() }).eq('id', s.id)
       trsComptageModal.show = false; trsComptageModal.saving = false
       await loadTrsFull()
     }
 
     var trsOpenClose = function(p) {
       trsCloseModal.panel = p; trsCloseModal.heure_fin = trsNowTime()
-      var colisageClose = p.session ? p.session.colisage_confirme : null
-      trsCloseModal.colis_produits = p.session ? (colisageClose && p.session.colis_produits ? p.session.colis_produits * colisageClose : p.session.colis_produits) : null
-      trsCloseModal.colis_rebuts   = p.session ? (colisageClose && p.session.colis_rebuts ? p.session.colis_rebuts * colisageClose : (p.session.colis_rebuts || 0)) : 0
+      trsCloseModal.colis_produits = p.session ? trsSessBoites(p.session) : null
+      trsCloseModal.colis_rebuts   = p.session ? trsSessBoitesRebuts(p.session) : 0
       trsCloseModal.observation = ''; trsCloseModal.error = ''; trsCloseModal.saving = false; trsCloseModal.show = true
     }
 
@@ -2054,6 +2055,7 @@ export default {
       }
       var r = await supabase.from('production_sessions').update({
         heure_fin: trsCloseModal.heure_fin+':00', statut: 'Clôturé',
+        boites_produites: boitesClose, boites_rebuts: rebuts_bte,
         colis_produits: colisClose, colis_rebuts: colisRbtClose,
         cadence_reelle_boite_min: cadReelle, rendement_pct: rendPct,
         temps_ouverture_min: toNetRef, temps_fonctionnement_min: tf,
@@ -2763,7 +2765,7 @@ export default {
       trsDetectShift, trsOpenStart, trsSearchLots, trsSelectLot, trsDoStart,
       trsOpenArret, trsOnFamilleChange, trsOnSFChange, trsOnTypeChange, trsDoArret,
       trsClotureArret, trsOpenRequalif, trsOnRequalFamilleChange, trsOnRequalSFChange, trsDoRequalif,
-      trsTheoCounters, trsCadenceModal, trsOpenCadence, trsDoChangeCadence,
+      trsTheoCounters, trsSessBoites, trsSessColis, trsCadenceModal, trsOpenCadence, trsDoChangeCadence,
       trsHistoModal, trsEquipes_list, openTrsHisto, loadTrsHistoData,
       trsOpenComptage, trsDoComptage,
       trsOpenClose, trsDoClose,
