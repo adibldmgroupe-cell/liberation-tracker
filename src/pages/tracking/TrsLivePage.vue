@@ -1989,14 +1989,14 @@ export default {
 .ltv-exit:hover { background:rgba(239,68,68,.32); }
 .ltv-body { flex:1; display:grid; grid-template-columns:1fr clamp(250px,22vw,420px);
   gap:clamp(10px,1.5vw,28px); padding:clamp(10px,1.5vw,28px); overflow:hidden; }
-.ltv-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(clamp(230px,26vw,380px),1fr));
+.ltv-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(clamp(280px,25vw,400px),1fr));
   grid-auto-rows:min-content; gap:clamp(10px,1.4vw,24px); overflow-y:auto; align-content:start; padding-right:4px; }
 .ltv-card { position:relative; background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.02));
   border:2px solid rgba(255,255,255,.10); border-radius:clamp(14px,1.4vw,26px); padding:clamp(12px,1.4vw,26px);
   display:flex; flex-direction:column; gap:clamp(3px,.5vh,10px); box-shadow:0 8px 40px rgba(0,0,0,.4); overflow:hidden; }
-.ltv-card-hd { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-.ltv-mach { font-size:clamp(18px,1.8vw,32px); font-weight:800; color:#fff; }
-.ltv-eq { font-size:clamp(11px,.9vw,16px); font-weight:700; padding:2px 10px; border-radius:999px; border:1px solid; white-space:nowrap; }
+.ltv-card-hd { display:flex; flex-direction:column; align-items:flex-start; gap:5px; }
+.ltv-mach { font-size:clamp(17px,1.7vw,30px); font-weight:800; color:#fff; line-height:1.1; }
+.ltv-eq { font-size:clamp(10px,.85vw,15px); font-weight:700; padding:3px 10px; border-radius:999px; border:1px solid; white-space:nowrap; align-self:flex-start; }
 .ltv-lot { font-size:clamp(12px,1vw,18px); color:#94a3b8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .ltv-prod { color:#64748b; }
 .ltv-rend { font-size:clamp(54px,8vw,148px); font-weight:900; line-height:.95; text-align:center; margin-top:clamp(2px,.4vh,8px); }
@@ -2006,12 +2006,12 @@ export default {
 .rc-ok  { color:#fbbf24; }
 .rc-low { color:#f87171; }
 .rc-dim { color:#64748b; }
-.ltv-nums { display:flex; justify-content:space-around; gap:6px; margin-top:clamp(4px,.6vh,12px);
+.ltv-nums { display:flex; justify-content:space-between; gap:4px; margin-top:clamp(4px,.6vh,12px);
   border-top:1px solid rgba(255,255,255,.08); padding-top:clamp(6px,.8vh,14px); }
-.ltv-num { display:flex; flex-direction:column; align-items:center; }
-.ltv-num b { font-size:clamp(16px,1.6vw,30px); font-weight:800; color:#e8eef9; font-variant-numeric:tabular-nums; }
+.ltv-num { display:flex; flex-direction:column; align-items:center; flex:1; min-width:0; }
+.ltv-num b { font-size:clamp(15px,1.5vw,28px); font-weight:800; color:#e8eef9; font-variant-numeric:tabular-nums; white-space:nowrap; }
 .ltv-num .ltv-theo { color:#60a5fa; }
-.ltv-num span { font-size:clamp(9px,.7vw,13px); letter-spacing:1px; color:#64748b; text-transform:uppercase; }
+.ltv-num span { font-size:clamp(8px,.65vw,12px); letter-spacing:.5px; color:#64748b; text-transform:uppercase; white-space:nowrap; }
 .ltv-foot { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:clamp(2px,.4vh,8px); }
 .ltv-status { font-size:clamp(12px,1vw,18px); font-weight:700; color:#94a3b8; }
 .ltv-rec { font-size:clamp(12px,1vw,18px); font-weight:800; color:#fbbf24; white-space:nowrap; }
@@ -2040,9 +2040,14 @@ export default {
 .ltv-team-rend { font-size:clamp(14px,1.2vw,24px); font-weight:800; font-variant-numeric:tabular-nums; }
 .ltv-rank-empty { color:#475569; font-size:clamp(11px,.9vw,15px); padding:8px 4px; }
 @media (max-width: 820px) {
-  .ltv-body { grid-template-columns:1fr; grid-template-rows:1fr auto; overflow-y:auto; }
-  .ltv-cards { grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); }
+  .ltv-body { grid-template-columns:1fr; grid-template-rows:auto auto; overflow-y:auto; }
+  .ltv-cards { grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); }
   .ltv-side { flex-direction:row; }
   .ltv-rank { flex:1; }
+}
+@media (max-width: 480px) {
+  .ltv-cards { grid-template-columns:1fr; }
+  .ltv-side { flex-direction:column; }
+  .ltv-head { padding:8px 12px; }
 }
 </style>
