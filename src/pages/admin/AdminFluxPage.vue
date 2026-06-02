@@ -359,12 +359,12 @@ export default {
       var opByRoom = {}
       opMaster.value.forEach(function(om) { if (om.room_code) opByRoom[om.room_code] = om.op_number })
       return planRooms.value
-        .filter(function(r) { return r.actif !== false })
+        // n'afficher que les machines réellement référencées dans operations_master
+        // (exclut les salles résiduelles de plan_rooms : Formulation, Remplissage Tubes, Cond. Sec., Réception Injectables…)
+        .filter(function(r) { return r.actif !== false && opByRoom[r.code] != null })
         .map(function(r) {
-          var op = (opByRoom[r.code] != null) ? opByRoom[r.code] : r.op_number
-          return Object.assign({}, r, { op_number: op })
+          return Object.assign({}, r, { op_number: opByRoom[r.code] })
         })
-        .filter(function(r) { return r.op_number != null })
         .sort(function(a, b) {
           if (a.op_number !== b.op_number) return a.op_number - b.op_number
           return (a.nom || '').localeCompare(b.nom || '')
