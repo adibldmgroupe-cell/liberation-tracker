@@ -12,6 +12,65 @@
         </div>
         <button class="btn-refresh" @click="loadAll" :class="{spinning:loading}" title="Rafraîchir">↻</button>
         <button class="btn-refresh" @click="cycleTheme" :title="themeTitle">{{themeIcon}}</button>
+        <button class="btn-live-open" @click="openLiveView" title="Mode Live — affichage production plein écran">📺 Mode Live</button>
+      </div>
+    </div>
+
+    <!-- ══ VUE MODE LIVE GÉANTE (plein écran production) ══ -->
+    <div class="live-tv" v-if="liveView" :data-theme="theme">
+      <div class="ltv-head">
+        <div class="ltv-title">⚡ PRODUCTION&nbsp;LIVE</div>
+        <div class="ltv-clock">{{clock}}</div>
+        <button class="ltv-exit" @click="closeLiveView" title="Quitter (Échap)">✕</button>
+      </div>
+      <div class="ltv-body">
+        <!-- Cartes machines -->
+        <div class="ltv-cards">
+          <div v-for="p in liveCards" :key="p.equip.id"
+               class="ltv-card"
+               :class="{ 'ltv-stop': p.session.statut==='Arrêt'||p.session.statut==='Pause', 'ltv-win': p.rendPct>=100 }">
+            <div class="ltv-card-hd">
+              <span class="ltv-mach">{{p.equip.nom_equipement}}</span>
+              <span class="ltv-eq" v-if="p.equipeNom" :style="{background:p.equipeCouleur+'22',color:p.equipeCouleur,borderColor:p.equipeCouleur+'66'}">{{p.equipeNom}}</span>
+            </div>
+            <div class="ltv-lot">{{p.lotNum}}<span v-if="p.lotProd && p.lotProd!=='—'" class="ltv-prod"> · {{p.lotProd}}</span></div>
+            <div class="ltv-rend" :class="rendClass(p.rendPct)">{{p.rendPct}}<span class="ltv-pct">%</span></div>
+            <div class="ltv-rend-lbl">RENDEMENT</div>
+            <div class="ltv-nums">
+              <div class="ltv-num"><b>{{sessBoites(p.session).toLocaleString('fr-FR')}}</b><span>réel</span></div>
+              <div class="ltv-num" v-if="theoCounters[p.equip.id]"><b class="ltv-theo">{{theoCounters[p.equip.id].boites.toLocaleString('fr-FR')}}</b><span>théo</span></div>
+              <div class="ltv-num"><b>{{(p.session.objectif_boites||0).toLocaleString('fr-FR')}}</b><span>objectif</span></div>
+            </div>
+            <div class="ltv-foot">
+              <span class="ltv-status">{{p.session.statut}}</span>
+              <span class="ltv-rec" v-if="lineRecords[p.equip.id]">🏆 {{lineRecords[p.equip.id].boites.toLocaleString('fr-FR')}}</span>
+            </div>
+            <div class="ltv-arr" v-if="p.activeArret">⛔ {{p.activeArret.arret_code}} — {{p.activeArret.arret_nom||p.activeArret.famille_nom}}</div>
+            <div class="ltv-win-badge" v-if="p.rendPct>=100">🎉 OBJECTIF DÉPASSÉ</div>
+          </div>
+          <div v-if="!liveCards.length" class="ltv-empty">Aucune machine en production</div>
+        </div>
+        <!-- Classement équipes + records -->
+        <div class="ltv-side">
+          <div class="ltv-rank">
+            <div class="ltv-rank-hd">🏆 ÉQUIPES — MOIS</div>
+            <div v-for="(t,i) in teamRankMonth.slice(0,5)" :key="'m'+t.equipe_id" class="ltv-rank-row" :class="{first:i===0}">
+              <span class="ltv-medal">{{['🥇','🥈','🥉'][i]||(i+1)}}</span>
+              <span class="ltv-team" :style="{color:t.couleur}">{{t.nom}}</span>
+              <span class="ltv-team-rend" :class="rendClass(t.rendement)">{{t.rendement}}%</span>
+            </div>
+            <div v-if="!teamRankMonth.length" class="ltv-rank-empty">— pas encore de données —</div>
+          </div>
+          <div class="ltv-rank">
+            <div class="ltv-rank-hd">👑 ÉQUIPES — ANNÉE</div>
+            <div v-for="(t,i) in teamRankYear.slice(0,5)" :key="'y'+t.equipe_id" class="ltv-rank-row" :class="{first:i===0}">
+              <span class="ltv-medal">{{['🥇','🥈','🥉'][i]||(i+1)}}</span>
+              <span class="ltv-team" :style="{color:t.couleur}">{{t.nom}}</span>
+              <span class="ltv-team-rend" :class="rendClass(t.rendement)">{{t.rendement}}%</span>
+            </div>
+            <div v-if="!teamRankYear.length" class="ltv-rank-empty">— pas encore de données —</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1334,11 +1393,73 @@ export default {
       }
     }
 
+    // ══ VUE « MODE LIVE » GÉANTE (affichage production plein écran) ══
+    var liveView      = ref(false)
+    var teamRankMonth = ref([])   // [{equipe_id, nom, couleur, rendement, n}]
+    var teamRankYear  = ref([])
+    var lineRecords   = ref({})   // equipement_id → { boites, date }
+    var liveStatsInt  = null
+    var liveCards     = computed(function(){ return filteredPanels.value.filter(function(p){ return !!p.session }) })
+
+    var rendClass = function(r) {
+      if (r == null) return 'rc-dim'
+      if (r >= 100) return 'rc-win'
+      if (r >= 80)  return 'rc-ok'
+      return 'rc-low'
+    }
+
+    var loadLiveStats = async function() {
+      var d = new Date()
+      var year         = d.getFullYear()
+      var jan1         = year + '-01-01'
+      var firstOfMonth = year + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-01'
+      var r = await supabase.from('production_sessions')
+        .select('equipe_id, equipement_id, rendement_pct, boites_produites, colis_produits, colisage_confirme, date')
+        .eq('statut', 'Clôturé')
+        .gte('date', jan1)
+        .limit(20000)
+      if (r.error) return
+      var rows = r.data || []
+      var bof = function(s){ return (s.boites_produites != null) ? s.boites_produites : ((s.colis_produits || 0) * (s.colisage_confirme || 1)) }
+      // Records par ligne = MAX boîtes sur un shift
+      var rec = {}
+      rows.forEach(function(s){
+        if (!s.equipement_id) return
+        var b = bof(s)
+        if (!rec[s.equipement_id] || b > rec[s.equipement_id].boites) rec[s.equipement_id] = { boites: b, date: s.date }
+      })
+      lineRecords.value = rec
+      // Classement équipes = rendement moyen (réel/objectif)
+      var rank = function(filterFn) {
+        var agg = {}
+        rows.forEach(function(s){
+          if (!s.equipe_id || s.rendement_pct == null || !filterFn(s)) return
+          if (!agg[s.equipe_id]) agg[s.equipe_id] = { sum: 0, n: 0 }
+          agg[s.equipe_id].sum += s.rendement_pct; agg[s.equipe_id].n++
+        })
+        return Object.keys(agg).map(function(eid){
+          var e = equipes.value.find(function(x){ return String(x.id) === String(eid) })
+          return { equipe_id: eid, nom: e ? e.nom : '?', couleur: e ? e.couleur : '#8B5CF6', rendement: Math.round(agg[eid].sum / agg[eid].n), n: agg[eid].n }
+        }).sort(function(a, b){ return b.rendement - a.rendement })
+      }
+      teamRankYear.value  = rank(function(){ return true })
+      teamRankMonth.value = rank(function(s){ return s.date >= firstOfMonth })
+    }
+
+    var openLiveView = async function() {
+      liveView.value = true
+      await loadLiveStats()
+      if (!liveStatsInt) liveStatsInt = setInterval(loadLiveStats, 120000)
+    }
+    var closeLiveView = function() { liveView.value = false }
+    var onKeyLive = function(e) { if (e.key === 'Escape' && liveView.value) closeLiveView() }
+
     onMounted(async function() {
       await loadAll()
       clockInt      = setInterval(tick, 1000)
       refreshInt    = setInterval(loadAll, 60000)
       autoStopInt   = setInterval(autoStopCheck, 60000)
+      window.addEventListener('keydown', onKeyLive)
       tick()
     })
 
@@ -1346,6 +1467,8 @@ export default {
       clearInterval(clockInt)
       clearInterval(refreshInt)
       clearInterval(autoStopInt)
+      clearInterval(liveStatsInt)
+      window.removeEventListener('keydown', onKeyLive)
     })
 
     var THEME_ORDER = ['night', 'day', 'workshop']
@@ -1364,6 +1487,7 @@ export default {
       theme, cycleTheme, themeIcon, themeTitle,
       panels, shifts, equipes, arretFamilles, loading, clock, filterSite,
       timers, arretTimers, theoCounters, filteredPanels,
+      liveView, openLiveView, closeLiveView, liveCards, teamRankMonth, teamRankYear, lineRecords, rendClass,
       startModal, arretModal, requalModal, comptageModal, closeModal, devModal,
       panelClass, panelColor, oeeClass, sessBoites, sessColis,
       gsTotalPlanRef, gsNetRef, modalOpts, modalMicro,
@@ -1846,4 +1970,79 @@ export default {
 .trs-live[data-theme="workshop"] .op-title { color: #00c853; }
 .trs-live[data-theme="workshop"] .err { background: #2a0000; color: #ff6b6b; }
 .trs-live[data-theme="workshop"] .type-prev-nom { color: #e0e0e0; }
+
+/* ═══════════ VUE MODE LIVE GÉANTE (affichage production plein écran) ═══════════ */
+.btn-live-open { background: linear-gradient(90deg,#3b82f6,#8b5cf6); color:#fff; border:none; border-radius:10px;
+  font-weight:800; padding:8px 16px; cursor:pointer; font-size:14px; white-space:nowrap; box-shadow:0 2px 12px rgba(59,130,246,.45); }
+.btn-live-open:hover { filter: brightness(1.12); }
+
+.live-tv { position: fixed; inset: 0; z-index: 9000;
+  background: radial-gradient(circle at 30% -10%, #16213e 0%, #0a0f1d 55%, #05070d 100%);
+  color:#e8eef9; display:flex; flex-direction:column; overflow:hidden; }
+.ltv-head { display:flex; align-items:center; justify-content:space-between;
+  padding: clamp(8px,1.4vh,22px) clamp(16px,3vw,48px); border-bottom:2px solid rgba(255,255,255,.08); background:rgba(255,255,255,.02); }
+.ltv-title { font-size: clamp(20px,3.4vw,58px); font-weight:900; letter-spacing:1px;
+  background:linear-gradient(90deg,#60a5fa,#a78bfa,#f472b6); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+.ltv-clock { font-size: clamp(20px,3vw,54px); font-weight:800; font-variant-numeric:tabular-nums; color:#cbd5e1; letter-spacing:1px; }
+.ltv-exit { background:rgba(239,68,68,.15); color:#f87171; border:1px solid rgba(239,68,68,.4); border-radius:12px;
+  width:clamp(40px,4vw,60px); height:clamp(40px,4vw,60px); font-size:clamp(18px,2vw,28px); cursor:pointer; line-height:1; }
+.ltv-exit:hover { background:rgba(239,68,68,.32); }
+.ltv-body { flex:1; display:grid; grid-template-columns:1fr clamp(250px,22vw,420px);
+  gap:clamp(10px,1.5vw,28px); padding:clamp(10px,1.5vw,28px); overflow:hidden; }
+.ltv-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(clamp(230px,26vw,380px),1fr));
+  grid-auto-rows:min-content; gap:clamp(10px,1.4vw,24px); overflow-y:auto; align-content:start; padding-right:4px; }
+.ltv-card { position:relative; background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.02));
+  border:2px solid rgba(255,255,255,.10); border-radius:clamp(14px,1.4vw,26px); padding:clamp(12px,1.4vw,26px);
+  display:flex; flex-direction:column; gap:clamp(3px,.5vh,10px); box-shadow:0 8px 40px rgba(0,0,0,.4); overflow:hidden; }
+.ltv-card-hd { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.ltv-mach { font-size:clamp(18px,1.8vw,32px); font-weight:800; color:#fff; }
+.ltv-eq { font-size:clamp(11px,.9vw,16px); font-weight:700; padding:2px 10px; border-radius:999px; border:1px solid; white-space:nowrap; }
+.ltv-lot { font-size:clamp(12px,1vw,18px); color:#94a3b8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ltv-prod { color:#64748b; }
+.ltv-rend { font-size:clamp(54px,8vw,148px); font-weight:900; line-height:.95; text-align:center; margin-top:clamp(2px,.4vh,8px); }
+.ltv-pct { font-size:.45em; font-weight:800; opacity:.8; }
+.ltv-rend-lbl { text-align:center; font-size:clamp(10px,.8vw,15px); letter-spacing:3px; color:#64748b; font-weight:700; margin-top:-4px; }
+.rc-win { color:#34d399; text-shadow:0 0 30px rgba(52,211,153,.5); }
+.rc-ok  { color:#fbbf24; }
+.rc-low { color:#f87171; }
+.rc-dim { color:#64748b; }
+.ltv-nums { display:flex; justify-content:space-around; gap:6px; margin-top:clamp(4px,.6vh,12px);
+  border-top:1px solid rgba(255,255,255,.08); padding-top:clamp(6px,.8vh,14px); }
+.ltv-num { display:flex; flex-direction:column; align-items:center; }
+.ltv-num b { font-size:clamp(16px,1.6vw,30px); font-weight:800; color:#e8eef9; font-variant-numeric:tabular-nums; }
+.ltv-num .ltv-theo { color:#60a5fa; }
+.ltv-num span { font-size:clamp(9px,.7vw,13px); letter-spacing:1px; color:#64748b; text-transform:uppercase; }
+.ltv-foot { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:clamp(2px,.4vh,8px); }
+.ltv-status { font-size:clamp(12px,1vw,18px); font-weight:700; color:#94a3b8; }
+.ltv-rec { font-size:clamp(12px,1vw,18px); font-weight:800; color:#fbbf24; white-space:nowrap; }
+.ltv-arr { margin-top:4px; background:rgba(239,68,68,.18); color:#fca5a5; font-weight:700;
+  font-size:clamp(12px,1vw,18px); padding:6px 12px; border-radius:10px; text-align:center; }
+.ltv-win-badge { position:absolute; top:clamp(10px,1.1vw,18px); right:-36px; transform:rotate(35deg);
+  background:#16a34a; color:#fff; font-size:clamp(9px,.72vw,13px); font-weight:800; padding:4px 42px; box-shadow:0 2px 10px rgba(0,0,0,.4); letter-spacing:.5px; }
+.ltv-empty { grid-column:1/-1; text-align:center; color:#475569; font-size:clamp(18px,2vw,32px); padding:10vh 0; }
+.ltv-card.ltv-stop { border-color:#ef4444; animation:ltv-blink 1.1s ease-in-out infinite; }
+@keyframes ltv-blink {
+  0%,100% { box-shadow:0 8px 40px rgba(0,0,0,.4),0 0 0 rgba(239,68,68,0); border-color:rgba(239,68,68,.45); }
+  50%     { box-shadow:0 8px 40px rgba(0,0,0,.4),0 0 55px rgba(239,68,68,.75); border-color:#ef4444; }
+}
+.ltv-card.ltv-win { border-color:#34d399; animation:ltv-glow 1.8s ease-in-out infinite; }
+@keyframes ltv-glow {
+  0%,100% { box-shadow:0 8px 40px rgba(0,0,0,.4),0 0 0 rgba(52,211,153,0); }
+  50%     { box-shadow:0 8px 40px rgba(0,0,0,.4),0 0 55px rgba(52,211,153,.6); }
+}
+.ltv-side { display:flex; flex-direction:column; gap:clamp(10px,1.4vw,22px); overflow-y:auto; }
+.ltv-rank { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:clamp(10px,1vw,20px); }
+.ltv-rank-hd { font-size:clamp(13px,1.1vw,20px); font-weight:800; letter-spacing:1px; color:#cbd5e1; margin-bottom:clamp(6px,.8vh,14px); }
+.ltv-rank-row { display:flex; align-items:center; gap:10px; padding:clamp(5px,.7vh,11px) 4px; border-bottom:1px solid rgba(255,255,255,.05); }
+.ltv-rank-row.first { background:linear-gradient(90deg,rgba(251,191,36,.16),transparent); border-radius:10px; }
+.ltv-medal { font-size:clamp(15px,1.3vw,24px); width:1.6em; text-align:center; }
+.ltv-team { flex:1; font-size:clamp(13px,1.1vw,22px); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ltv-team-rend { font-size:clamp(14px,1.2vw,24px); font-weight:800; font-variant-numeric:tabular-nums; }
+.ltv-rank-empty { color:#475569; font-size:clamp(11px,.9vw,15px); padding:8px 4px; }
+@media (max-width: 820px) {
+  .ltv-body { grid-template-columns:1fr; grid-template-rows:1fr auto; overflow-y:auto; }
+  .ltv-cards { grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); }
+  .ltv-side { flex-direction:row; }
+  .ltv-rank { flex:1; }
+}
 </style>
