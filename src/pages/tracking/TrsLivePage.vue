@@ -996,14 +996,17 @@ export default {
         heure_debut:      arretModal.heure_debut + ':00',
         is_running:       true,
         commentaire:      arretModal.commentaire || null
-      })
+      }).select().maybeSingle()
       if (r.error) { arretModal.error = r.error.message; arretModal.saving = false; return }
 
       var newStatut = t.est_pause ? 'Pause' : 'Arrêt'
       await supabase.from('production_sessions').update({ statut: newStatut, updated_at: new Date().toISOString() }).eq('id', arretModal.panel.session.id)
 
+      // MAJ locale instantanée sur le panel VIVANT (règle N°8)
+      var lp = liveP(arretModal.panel.equip.id)
+      if (lp && lp.session) lp.session.statut = newStatut
+      if (lp && r.data) { lp.activeArret = r.data; lp.arrets = (lp.arrets || []).concat([r.data]) }
       arretModal.show = false; arretModal.saving = false
-      await loadAll()
     }
 
     // ── Clôturer arrêt (reprendre) ──
@@ -1012,11 +1015,17 @@ export default {
       var now   = nowTime()
       var start = toDateTime(p.session.date, p.activeArret.heure_debut)
       var dur   = start ? Math.round((new Date() - start) / 60000) : null
+      var arretId = p.activeArret.id
       await supabase.from('production_arrets').update({
         heure_fin: now + ':00', duree_minutes: dur, is_running: false, updated_at: new Date().toISOString()
-      }).eq('id', p.activeArret.id)
+      }).eq('id', arretId)
       await supabase.from('production_sessions').update({ statut: 'En cours', updated_at: new Date().toISOString() }).eq('id', p.session.id)
-      await loadAll()
+      // MAJ locale instantanée sur le panel VIVANT (règle N°8)
+      var lp = liveP(p.equip.id) || p
+      if (lp.session) lp.session.statut = 'En cours'
+      var fa = (lp.arrets || []).find(function(x){ return x.id === arretId })
+      if (fa) { fa.heure_fin = now + ':00'; fa.duree_minutes = dur; fa.is_running = false }
+      lp.activeArret = null
     }
 
     // ── Requalifier arrêt ──
@@ -1056,8 +1065,11 @@ export default {
         arret_code: t.code, arret_nom: t.nom, couleur: t.couleur || (f ? f.couleur : '#EF4444'),
         est_planifie: t.est_planifie, est_pause: t.est_pause, updated_at: new Date().toISOString()
       }).eq('id', requalModal.panel.activeArret.id)
+      // MAJ locale instantanée sur le panel VIVANT (règle N°8)
+      var lpr = liveP(requalModal.panel.equip.id)
+      var aa = lpr && lpr.activeArret
+      if (aa) { aa.arret_code = t.code; aa.arret_nom = t.nom; aa.famille_nom = f ? f.nom : ''; aa.sous_famille_nom = sf ? sf.nom : ''; aa.couleur = t.couleur || (f ? f.couleur : '#EF4444'); aa.est_planifie = t.est_planifie; aa.est_pause = t.est_pause }
       requalModal.show = false; requalModal.saving = false
-      await loadAll()
     }
 
     // ── Comptage ──
@@ -1065,6 +1077,8 @@ export default {
     var sessBoites = function(s){ if(!s) return 0; return (s.boites_produites != null) ? s.boites_produites : ((s.colis_produits||0) * (s.colisage_confirme||1)) }
     var sessBoitesRebuts = function(s){ if(!s) return 0; return (s.boites_rebuts != null) ? s.boites_rebuts : ((s.colis_rebuts||0) * (s.colisage_confirme||1)) }
     var sessColis = function(s){ if(!s) return 0; var c = s.colisage_confirme||0; return c>0 ? Math.round(sessBoites(s)/c*100)/100 : (s.colis_produits||0) }
+    // Panel VIVANT de panels.value (par equip.id) — pour muter l'objet réellement rendu, jamais une référence orpheline post-loadAll
+    var liveP = function(eid){ for (var i=0;i<panels.value.length;i++){ if (panels.value[i].equip.id === eid) return panels.value[i] } return null }
     var openComptageModal = function(p) {
       comptageModal.panel   = p
       comptageModal.heure   = nowTime()
@@ -1103,8 +1117,15 @@ export default {
         cadence_reelle_boite_min: cadInst,
         updated_at: new Date().toISOString()
       }).eq('id', s.id)
+      // MAJ locale instantanée sur le panel VIVANT (règle N°8) — pas de loadAll (sa reconstruction orphelinerait les refs)
+      var lp = liveP(comptageModal.panel.equip.id)
+      if (lp && lp.session) {
+        lp.session.boites_produites = boites; lp.session.boites_rebuts = rebutsBte
+        lp.session.colis_produits = colisCumul; lp.session.colis_rebuts = rebutsColis
+        lp.session.cadence_reelle_boite_min = cadInst
+        if (lp.session.objectif_boites) lp.rendPct = Math.round((boites / lp.session.objectif_boites) * 100)
+      }
       comptageModal.show = false; comptageModal.saving = false
-      await loadAll()
     }
 
     // ── Clôturer session ──
@@ -1193,8 +1214,11 @@ export default {
       }).eq('id', s.id)
 
       if (r.error) { closeModal.error = r.error.message; closeModal.saving = false; return }
+      // MAJ locale instantanée sur le panel VIVANT (règle N°8) — la machine repasse « Disponible »
+      var pc = liveP(closeModal.panel.equip.id)
+      if (pc) { pc.session = null; pc.activeArret = null; pc.arrets = [] }
       closeModal.show = false; closeModal.saving = false
-      await loadAll()
+      loadAll()
     }
 
     // ── Déclarer déviation ──
