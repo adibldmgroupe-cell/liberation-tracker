@@ -896,13 +896,9 @@ export default {
           }
         }
       }
-      // Colisage : catalogue_produits en priorité, fallback products
+      // Colisage depuis products.quantite_par_colis (table catalogue_produits supprimée : inexistante en base → 404)
       var colisage = null; var colisageSrc = ''
-      if (l.code_article) {
-        var catR = await supabase.from('catalogue_produits').select('quantite_par_colis').eq('code_article', l.code_article).maybeSingle()
-        if (catR.data && catR.data.quantite_par_colis) { colisage = catR.data.quantite_par_colis; colisageSrc = 'catalogue' }
-      }
-      if (!colisage && l.product_id) {
+      if (l.product_id) {
         var prodR = await supabase.from('products').select('quantite_par_colis').eq('id', l.product_id).maybeSingle()
         if (prodR.data && prodR.data.quantite_par_colis) { colisage = prodR.data.quantite_par_colis; colisageSrc = 'sap' }
       }

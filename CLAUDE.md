@@ -560,6 +560,19 @@ Mêmes tables. L'équipement doit TOUJOURS être enrichi des params `plan_rooms`
 
 ---
 
+## RÈGLE CRITIQUE N°18 — Schéma DB versionné + origine de la partie Production
+
+### Origine de la partie Production / TRS / Schéma flux
+Ce module provient d'une **application incomplète développée par un tiers**, importée puis intégrée a posteriori. D'où la majorité des bugs : tables créées **directement dans Supabase (hors migrations)**, **sans clés étrangères**, **RLS souvent absent**, **tables fantômes / legacy** (`sessions`, `arrets`, `catalogue_produits` référencées dans le code mais **inexistantes** → 404 silencieux), et **données dupliquées** (cf. règle N°17). → Avant de toucher ce module : **auditer la table** (existence, RLS, FK) avant de coder.
+
+### Règle : tout schéma passe par une migration versionnée
+- **Ne JAMAIS créer/modifier une table directement dans le SQL Editor Supabase** sans migration `NNN_xxx.sql` dans `supabase/migrations/`.
+- Toute nouvelle table = `CREATE TABLE IF NOT EXISTS` + **les 4 policies RLS** (règle N°13) + les **FK** vers ses parents, dans la MÊME migration.
+- Avant d'utiliser une table dans le code, **vérifier qu'elle existe** (un `from('x')` sur une table absente échoue en **404 silencieux**, masqué par les fallbacks).
+- Le schéma doit rester **reproductible** depuis `supabase/migrations/` (audit juin 2026 : ~24 tables hors-migration → RLS oubliés + schéma non reproductible).
+
+---
+
 ## Déploiement
 
 - Push sur `main` → GitHub Actions build + deploy GitHub Pages automatiquement
