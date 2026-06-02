@@ -2064,7 +2064,10 @@ export default {
         observation: trsCloseModal.observation||null, updated_at: new Date().toISOString()
       }).eq('id', s.id)
       if (r.error) { trsCloseModal.error = r.error.message; trsCloseModal.saving = false; return }
-      trsCloseModal.show = false; trsCloseModal.saving = false; selectedTrsPanel.value = null
+      trsCloseModal.show = false; trsCloseModal.saving = false
+      // NE PAS vider selectedTrsPanel : loadTrsFull() le resynchronise (≈ ligne 1654) vers le panel
+      // rechargé en mode « Disponible » (session=null) → bascule directe sur « Démarrer session »,
+      // sans re-clic (sinon empty state « Équipement non trouvé » tant que loadTrsFull n'a pas fini).
       await loadTrsFull()
     }
 
