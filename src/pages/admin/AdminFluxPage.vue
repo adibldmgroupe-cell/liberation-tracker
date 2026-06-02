@@ -244,10 +244,8 @@ var OP_LABELS = {
   240: 'COMPRESSION',
   250: 'PELLICULAGE',
   260: 'GÉLULES',
-  270: 'CRÈME / POMMADE',
-  310: 'COND. PRIMAIRE',
-  320: 'COND. SECONDAIRE',
-  330: 'INJECTABLES'
+  270: 'CRÈME / POMMADE'
+  // op 310-380 = conditionnement (libellé « CONDITIONNEMENT » via fallback dans machineColGroups)
 }
 
 export default {
@@ -357,9 +355,16 @@ export default {
     // ── PIVOT MACHINES ───────────────────────────────────────────
     // Colonnes : plan_rooms triées par op_number puis nom
     var machineColsFlat = computed(function() {
+      // op_number depuis operations_master (liaison op×machine du référentiel) — plan_rooms regroupe à tort les cond sous 310
+      var opByRoom = {}
+      opMaster.value.forEach(function(om) { if (om.room_code) opByRoom[om.room_code] = om.op_number })
       return planRooms.value
-        .filter(function(r) { return r.op_number != null && r.actif !== false })
-        .slice()
+        .filter(function(r) { return r.actif !== false })
+        .map(function(r) {
+          var op = (opByRoom[r.code] != null) ? opByRoom[r.code] : r.op_number
+          return Object.assign({}, r, { op_number: op })
+        })
+        .filter(function(r) { return r.op_number != null })
         .sort(function(a, b) {
           if (a.op_number !== b.op_number) return a.op_number - b.op_number
           return (a.nom || '').localeCompare(b.nom || '')
@@ -372,7 +377,7 @@ export default {
       var cur = null
       machineColsFlat.value.forEach(function(r) {
         if (!cur || cur.op_number !== r.op_number) {
-          cur = { op_number: r.op_number, label: OP_LABELS[r.op_number] || ('OP' + r.op_number), rooms: [] }
+          cur = { op_number: r.op_number, label: OP_LABELS[r.op_number] || (r.op_number >= 300 ? 'CONDITIONNEMENT' : ('OP' + r.op_number)), rooms: [] }
           groups.push(cur)
         }
         cur.rooms.push(r)
@@ -591,7 +596,9 @@ export default {
       var keys = Object.keys(groups)
       for (var i = 0; i < keys.length; i++) {
         var g = groups[keys[i]]
-        await supabase.from('product_flux').delete().eq('product_code', g.product_code).eq('route', g.route)
+        // Import NON-destructif : on ne touche QUE les lignes flexibles (room_code null) ;
+        // les salles cochées à la main (room_code spécifique) sont PRÉSERVÉES.
+        await supabase.from('product_flux').delete().eq('product_code', g.product_code).eq('route', g.route).is('room_code', null)
         await supabase.from('product_flux').insert(g.rows.map(function(r) {
           return { product_code: r.product_code, product_name: r.product_name || r.product_code, op_number: r.op_number, route: r.route, room_code: r.room_code || null }
         }))
