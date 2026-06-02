@@ -310,8 +310,10 @@ export default {
     var planRooms       = ref([])   // plan_rooms avec op_number renseigné
 
     // ── MODALS ──────────────────────────────────────────────────
+    // URL par défaut de la feuille « Flux produits » (Google Sheets publié en CSV) — contient tous les produits
+    var GS_FLUX_URL_DEFAULT = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQqKb5_i0U7YeQYMiNEDy4X2gq6W_78NA2EuC2gRqSVXOKuBcBuXR8ASrE9Eq3admceATv4_gdAUppc/pub?gid=2014351149&single=true&output=csv'
     var gsModal = reactive({
-      open: false, url: '', csvText: '', fetching: false, saving: false, err: '', preview: []
+      open: false, url: GS_FLUX_URL_DEFAULT, csvText: '', fetching: false, saving: false, err: '', preview: []
     })
     var stepModal = reactive({
       open: false, id: null, saving: false, err: '',
@@ -518,6 +520,20 @@ export default {
       gsModal.fetching = false
     }
 
+    // Parse une ligne CSV en gérant les guillemets et les virgules internes (ex. "ATOSTINE® 10mg, COM PELLI")
+    var parseCsvLine = function(line) {
+      var result = [], inQuote = false, cur = ''
+      for (var i = 0; i < line.length; i++) {
+        var c = line[i]
+        if (c === '"' && inQuote && line[i + 1] === '"') { cur += '"'; i++ }
+        else if (c === '"') { inQuote = !inQuote }
+        else if (c === ',' && !inQuote) { result.push(cur); cur = '' }
+        else { cur += c }
+      }
+      result.push(cur)
+      return result
+    }
+
     var parseGsCsv = function() {
       gsModal.err = ''; gsModal.preview = []
       var text = gsModal.csvText.trim()
@@ -527,7 +543,7 @@ export default {
 
       // ── Détection entête flexible ──────────────────────────────
       var norm = function(s) { return (s||'').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'') }
-      var header = lines[0].split(',').map(norm)
+      var header = parseCsvLine(lines[0]).map(norm)
       var hasHeader = header.some(function(h) {
         return ['product_code','code_produit','code_article','product_name','description','op_number','numero','operation'].includes(h)
       })
@@ -550,7 +566,7 @@ export default {
 
       var rows = []
       for (var i = startIdx; i < lines.length; i++) {
-        var cols = lines[i].split(',')
+        var cols = parseCsvLine(lines[i])
         var pcode = (cols[iCode] || '').trim()
         var pname = (cols[iName] || '').trim()
         var route = iRoute >= 0 ? parseInt((cols[iRoute] || '1').trim()) : 1
