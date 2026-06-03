@@ -166,9 +166,12 @@
                 <th>Équipement</th>
                 <th>N° Lot</th>
                 <th>Produit</th>
+                <th class="tc">Taille</th>
                 <th>Début est.</th>
                 <th>Fin est.</th>
-                <th class="tc">Durée (j)</th>
+                <th class="tc">TOTAL (j)</th>
+                <th class="tc">Cumul (j)</th>
+                <th>Libération est.</th>
                 <th>Statut</th>
                 <th></th>
               </tr>
@@ -179,9 +182,12 @@
                 <td class="sm">{{p.nom_equipement||'—'}}</td>
                 <td class="mono">{{p.numero_lot||'—'}}</td>
                 <td class="sm">{{p.code_article||'—'}}</td>
+                <td class="num mono">{{p.taille_lot?p.taille_lot.toLocaleString('fr-FR'):'—'}}</td>
                 <td class="mono sm">{{fmtDate(p.date_debut_estimee)}}</td>
                 <td class="mono sm">{{fmtDate(p.date_fin_estimee)}}</td>
-                <td class="num">{{p.duree_estimee_jours||'—'}}</td>
+                <td class="num">{{p.total_prod_jours!=null?p.total_prod_jours:(p.duree_estimee_jours||'—')}}</td>
+                <td class="num">{{p.total_cml!=null?p.total_cml:'—'}}</td>
+                <td class="mono sm">{{fmtDate(p.date_liberation)}}</td>
                 <td><span class="schip" :class="'sc-'+(p.statut_planification||'').toLowerCase().replace(/\s/g,'-')">{{p.statut_planification}}</span></td>
                 <td class="acts">
                   <button class="ia del" @click="deletePdpCond(p)" title="Supprimer">✕</button>
@@ -370,7 +376,7 @@
     <div class="ov" v-if="bulkModal.show" @click.self="bulkModal.show=false">
       <div class="modal modal-xwide">
         <div class="modal-hd">📋 Saisie PDP en masse</div>
-        <div class="modal-ctx">Colle depuis Excel (colonne par colonne, ou un bloc entier). La désignation remonte automatiquement du code produit. N° lot facultatif — si renseigné, le lot est créé comme « Planifier » (visible dans Lots).</div>
+        <div class="modal-ctx">Colle depuis Excel (colonne par colonne, ou un bloc entier) — la désignation remonte du code produit. N° lot facultatif (renseigné → lot créé façon « Planifier », visible dans Lots). En conditionnement, <b>🧮 Calculer</b> remplit dates de fin estimées + charge (TP/THP/TOTAL/cumul) selon le référentiel machine et le calendrier.</div>
 
         <div class="bulk-ctrl">
           <div class="bulk-fam">
@@ -381,6 +387,12 @@
             <option value="">— {{bulkModal.famille==='fab'?'Atelier / salle':'Équipement / machine'}} —</option>
             <option v-for="l in bulkLieuList" :key="l.id" :value="l.id">{{l.nom}}</option>
           </select>
+          <template v-if="bulkModal.famille==='cond'">
+            <label class="bulk-il">Début planning <input type="date" v-model="bulkModal.plan_start" class="inp bulk-mini" /></label>
+            <label class="bulk-il">Nb shift défaut
+              <select v-model="bulkModal.def_shift" class="inp bulk-mini"><option value="1">1</option><option value="2">2</option><option value="3">3</option></select>
+            </label>
+          </template>
         </div>
 
         <div class="bulk-grid-wrap">
@@ -391,9 +403,23 @@
                 <th>Code produit</th>
                 <th>Désignation</th>
                 <th>N° Lot</th>
-                <th>Début</th>
-                <th>Fin</th>
                 <th>Taille</th>
+                <template v-if="bulkModal.famille==='cond'">
+                  <th title="Cadence boîtes/minute (référentiel cadences)">Cad b/min</th>
+                  <th title="Nombre de shifts">Shift</th>
+                  <th title="Total = début campagne · Partiel = même produit que le lot précédent">Vide ligne</th>
+                  <th title="Arrêt non planifié (jours)">Retard j</th>
+                  <th title="Temps de production utile (jours)">TP</th>
+                  <th title="Temps arrêts planifiés (jours)">THP</th>
+                  <th title="TP + THP (jours)">TOTAL</th>
+                  <th title="Cumul charge machine (jours)">CML</th>
+                </template>
+                <th>Début{{bulkModal.famille==='cond'?' est.':''}}</th>
+                <th>Fin{{bulkModal.famille==='cond'?' est.':''}}</th>
+                <template v-if="bulkModal.famille==='cond'">
+                  <th title="Accepté (réel) > date cible > fin +15j">Libération</th>
+                  <th title="Date de libération cible (manuelle)">Cible</th>
+                </template>
                 <th></th>
               </tr>
             </thead>
@@ -403,9 +429,27 @@
                 <td><input v-model="r.code" @paste="onBulkPaste($event,i,'code')" @blur="bulkResolveDesignations" class="bg-inp mono" placeholder="PFABB10" /></td>
                 <td class="bg-desg" :class="{warn:r._status==='unknown'}">{{r.designation||'—'}}</td>
                 <td><input v-model="r.numero_lot" @paste="onBulkPaste($event,i,'numero_lot')" class="bg-inp mono" placeholder="(option.)" /></td>
+                <td><input v-model="r.taille" @paste="onBulkPaste($event,i,'taille')" class="bg-inp mono bg-num" placeholder="UN" /></td>
+                <template v-if="bulkModal.famille==='cond'">
+                  <td><input v-model="r.cadence" class="bg-inp mono bg-num" placeholder="auto" /></td>
+                  <td><input v-model="r.nb_shift" class="bg-inp mono bg-num bg-w40" :placeholder="bulkModal.def_shift" /></td>
+                  <td>
+                    <select v-model="r.vide_ligne" @change="r.vide_ligne_auto=false" class="bg-inp bg-sel" :class="'vl-'+(r.vide_ligne||'').toLowerCase()">
+                      <option value="">auto</option><option value="Total">Total</option><option value="Partiel">Partiel</option>
+                    </select>
+                  </td>
+                  <td><input v-model="r.retard" class="bg-inp mono bg-num bg-w40" placeholder="0" /></td>
+                  <td class="bg-calc">{{r.tp!=null?r.tp:'—'}}</td>
+                  <td class="bg-calc">{{r.thp!=null?r.thp:'—'}}</td>
+                  <td class="bg-calc bg-strong">{{r.total!=null?r.total:'—'}}</td>
+                  <td class="bg-calc">{{r.cml!=null?r.cml:'—'}}</td>
+                </template>
                 <td><input v-model="r.date_debut" @paste="onBulkPaste($event,i,'date_debut')" class="bg-inp mono" placeholder="jj/mm/aaaa" /></td>
                 <td><input v-model="r.date_fin" @paste="onBulkPaste($event,i,'date_fin')" class="bg-inp mono" placeholder="jj/mm/aaaa" /></td>
-                <td><input v-model="r.taille" @paste="onBulkPaste($event,i,'taille')" class="bg-inp mono" placeholder="UN" /></td>
+                <template v-if="bulkModal.famille==='cond'">
+                  <td class="bg-calc">{{r.liberation?fmtDate(r.liberation):'—'}}<span v-if="r.lib_src" class="lib-src">{{r.lib_src}}</span></td>
+                  <td><input v-model="r.date_cible" class="bg-inp mono" placeholder="jj/mm/aaaa" /></td>
+                </template>
                 <td class="acts"><button class="ia del" @click="bulkRemoveRow(i)" title="Supprimer la ligne">✕</button></td>
               </tr>
             </tbody>
@@ -415,7 +459,9 @@
         <div class="bulk-foot">
           <button class="btn-ref" @click="bulkAddRow">+ Ligne</button>
           <button class="btn-ref" @click="bulkResolveDesignations">↻ Désignations</button>
+          <button v-if="bulkModal.famille==='cond'" class="btn-ref btn-ref-accent" @click="bulkCompute">🧮 Calculer</button>
           <button class="btn-ref" @click="bulkClear">Vider</button>
+          <span v-if="bulkModal.computed" class="bulk-hint">Dates &amp; charge calculées — vérifie puis « Créer le PDP ».</span>
         </div>
 
         <div class="modal-err" v-if="bulkModal.err">{{bulkModal.err}}</div>
@@ -547,6 +593,9 @@ export default {
     var equipements = ref([])
     var planRooms   = ref([])
     var gsRefMap    = ref({})   // equipment_name.toLowerCase() → { id_supabase, type }
+    var calcRef     = ref({})   // equipment_name.toLowerCase() → params calcul (temps_util, to_shift_min, vdlc/vdlp/chgt/reglage/micro)
+    var cadenceList = ref([])   // table cadences (equipment_name × code_article × taille_lot)
+    var calAll      = ref([])   // calendrier_machine (jours non ouvrés)
     var lotSuggestions = ref([])
     var lotTimeout  = null
 
@@ -691,10 +740,10 @@ export default {
     // ── LOAD ──
     var loadAll = async function() {
       loading.value = true
-      var [rOm, rAt, rEq, rPR, rSF, rSC, rAF, rAC, rPC] = await Promise.all([
-        supabase.from('operations_master').select('id,equipment_name,processus'),
+      var [rOm, rAt, rEq, rPR, rSF, rSC, rAF, rAC, rPC, rCad, rCal] = await Promise.all([
+        supabase.from('operations_master').select('id,equipment_name,processus,temps_util,to_shift_min,vdlp_min,vdlc_min,chgt_format_min,reglage_min,micro_arrets_min'),
         supabase.from('ateliers').select('id,nom_atelier').eq('actif', true).order('nom_atelier'),
-        supabase.from('equipements_conditionnement').select('id,nom_equipement').eq('actif', true).order('ordre_affichage'),
+        supabase.from('equipements_conditionnement').select('id,nom_equipement,travaille_weekend,cadence_objectif_boite_min').eq('actif', true).order('ordre_affichage'),
         supabase.from('plan_rooms').select('id,code,nom,atelier_id,equipement_id'),
         supabase.from('suivi_fabrication')
           .select('id,lot_id,atelier_id,statut,date_debut,date_fin,lots(numero_lot,products(description))')
@@ -709,21 +758,31 @@ export default {
           .select('id,suivi_id,equipement_id,lot_id,motif,heure_debut,heure_fin,lots(numero_lot)')
           .is('deleted_at', null).order('heure_debut', {ascending: false}),
         supabase.from('planification_conditionnement')
-          .select('id,lot_id,equipement_id,ordre_plan,statut_planification,date_debut_estimee,date_fin_estimee,duree_estimee_jours,lots(numero_lot,products(code_article)),equipements_conditionnement(nom_equipement)')
+          .select('id,lot_id,product_id,equipement_id,ordre_plan,statut_planification,date_debut_estimee,date_fin_estimee,duree_estimee_jours,taille_lot,nb_shift,tp_jours,thp_jours,total_prod_jours,total_cml,date_liberation,lots(numero_lot,products(code_article)),produit:products!planification_conditionnement_product_id_fkey(code_article,description),equipements_conditionnement(nom_equipement)')
           .neq('statut_planification', 'Annulé').order('ordre_plan'),
+        supabase.from('cadences').select('numero_salle,code_article,equipment_name,taille_lot,cadence_objectif_b_min'),
+        supabase.from('calendrier_machine').select('id,equipement_id,type,date_debut,date_fin'),
       ])
       if (rAt.data)  ateliers.value    = rAt.data
       if (rEq.data)  equipements.value = rEq.data
       if (rPR.data)  planRooms.value   = rPR.data
-      // Construire la map Référentiel : equipment_name → { id_supabase, type }
-      var refMap = {}
+      // Construire la map Référentiel : equipment_name → { id_supabase, type } + params de calcul capacité
+      var refMap = {}, calcMap = {}
       ;(rOm.data || []).forEach(function(om) {
         if (om.equipment_name) {
           var key = om.equipment_name.toLowerCase().trim()
           refMap[key] = { id_supabase: om.id, type: om.processus === 'Conditionnement' ? 'cond' : 'fab' }
+          calcMap[key] = {
+            temps_util: om.temps_util, to_shift_min: om.to_shift_min,
+            vdlp_min: om.vdlp_min, vdlc_min: om.vdlc_min,
+            chgt_format_min: om.chgt_format_min, reglage_min: om.reglage_min, micro_arrets_min: om.micro_arrets_min
+          }
         }
       })
       gsRefMap.value = refMap
+      calcRef.value  = calcMap
+      if (rCad && rCad.data) cadenceList.value = rCad.data
+      if (rCal && rCal.data) calAll.value      = rCal.data
       if (rSF.data)  suiviFab.value    = rSF.data
       if (rSC.data)  suiviCond.value   = rSC.data
       if (rAF.data)  arretsFab.value   = rAF.data
@@ -732,7 +791,8 @@ export default {
         pdpCond.value = rPC.data.map(function(p) {
           return Object.assign({}, p, {
             numero_lot:    p.lots ? p.lots.numero_lot : '—',
-            code_article:  p.lots && p.lots.products ? p.lots.products.code_article : '—',
+            code_article:  (p.produit && p.produit.code_article) || (p.lots && p.lots.products ? p.lots.products.code_article : '') || '—',
+            description:   (p.produit && p.produit.description) || '',
             nom_equipement: p.equipements_conditionnement ? p.equipements_conditionnement.nom_equipement : '—'
           })
         })
@@ -784,12 +844,20 @@ export default {
 
     // ── Saisie PDP en masse (coller colonne par colonne) ──
     // Ordre des colonnes collables (tab/Excel) — la désignation est dérivée du code.
-    var BULK_FIELDS = ['code', 'numero_lot', 'date_debut', 'date_fin', 'taille']
+    var BULK_FIELDS = ['code', 'numero_lot', 'taille', 'date_debut', 'date_fin']
     var bulkBlankRow = function() {
-      return { code: '', designation: '', product_id: null, numero_lot: '', date_debut: '', date_fin: '', taille: '', _status: '' }
+      return {
+        code: '', designation: '', product_id: null, numero_lot: '', taille: '',
+        cadence: '', nb_shift: '', vide_ligne: '', vide_ligne_auto: true, retard: '', date_cible: '',
+        date_debut: '', date_fin: '',
+        tp: null, thp: null, total: null, cml: null, liberation: '', lib_src: '',
+        _status: ''
+      }
     }
-    var bulkModal = reactive({ show: false, famille: 'cond', lieu_id: '', saving: false, progress: '', err: '', result: null })
+    var bulkModal = reactive({ show: false, famille: 'cond', lieu_id: '', plan_start: '', def_shift: '3', saving: false, progress: '', err: '', computed: false, result: null })
     var bulkRows  = ref([])
+    var SHIFTS_REF = 3   // temps_util référentiel = base 3 shifts → Tu/shift = temps_util / 3
+    var LIB_DELAI_JOURS = 15
 
     var openSuiviModal = function(s, famille) {
       var now2 = new Date().toISOString().slice(0, 10)
@@ -1137,8 +1205,9 @@ export default {
     })
     var bulkSetFamille = function(f) { bulkModal.famille = f; bulkModal.lieu_id = '' }
     var openBulkModal = function() {
-      bulkModal.show = true; bulkModal.err = ''; bulkModal.result = null; bulkModal.progress = ''; bulkModal.saving = false
+      bulkModal.show = true; bulkModal.err = ''; bulkModal.result = null; bulkModal.progress = ''; bulkModal.saving = false; bulkModal.computed = false
       bulkModal.lieu_id = ''
+      bulkModal.plan_start = new Date().toISOString().slice(0, 10)
       bulkRows.value = []
       for (var i = 0; i < 6; i++) bulkRows.value.push(bulkBlankRow())
     }
@@ -1157,6 +1226,111 @@ export default {
         if (p[0].length === 4) return p[0] + '-' + p[1].padStart(2, '0') + '-' + p[2].padStart(2, '0')
       }
       return null
+    }
+
+    // ── Moteur de capacité (calcul des dates) ──
+    var fmtIso = function(d) { var m = d.getMonth() + 1, j = d.getDate(); return d.getFullYear() + '-' + (m < 10 ? '0' : '') + m + '-' + (j < 10 ? '0' : '') + j }
+    // jour ouvré pour une machine : ni WE (sauf travaille_weekend), ni dans calendrier_machine
+    var bulkIsWorkingDay = function(d, equipId, travailleWE) {
+      var day = d.getDay()
+      if (!travailleWE && (day === 0 || day === 6)) return false
+      var iso = fmtIso(d)
+      var blocked = calAll.value.some(function(c) {
+        if (c.equipement_id != null && c.equipement_id !== equipId) return false
+        return iso >= (c.date_debut || '') && iso <= (c.date_fin || c.date_debut || '')
+      })
+      return !blocked
+    }
+    // n-ième jour ouvré (le 1er jour ouvré >= base = #1)
+    var bulkNthWorkingDay = function(base, n, equipId, travailleWE) {
+      var d = new Date(base.getFullYear(), base.getMonth(), base.getDate())
+      var count = 0, guard = 0
+      while (guard++ < 4000) {
+        if (bulkIsWorkingDay(d, equipId, travailleWE)) { count++; if (count >= n) return d }
+        d.setDate(d.getDate() + 1)
+      }
+      return d
+    }
+    var bulkAddCalDays = function(iso, days) {
+      if (!iso) return ''
+      var p = iso.split('-'); var d = new Date(+p[0], +p[1] - 1, +p[2]); d.setDate(d.getDate() + days); return fmtIso(d)
+    }
+    // cadence (b/min) : table cadences (machine × article × taille) sinon cadence machine par défaut
+    var bulkCadence = function(equipName, code, taille) {
+      if (!equipName) return null
+      var en = equipName.toLowerCase().trim(), cd = (code || '').toUpperCase().trim(), t = parseInt(taille) || 0
+      var rows = cadenceList.value.filter(function(c) { return (c.equipment_name || '').toLowerCase().trim() === en && (c.code_article || '').toUpperCase().trim() === cd })
+      if (rows.length) {
+        if (t) {
+          var exact = rows.find(function(c) { return c.taille_lot === t })
+          if (exact) return exact.cadence_objectif_b_min
+          rows = rows.slice().sort(function(a, b) { return Math.abs((a.taille_lot || 0) - t) - Math.abs((b.taille_lot || 0) - t) })
+        }
+        return rows[0].cadence_objectif_b_min
+      }
+      var eq = equipements.value.find(function(e) { return (e.nom_equipement || '').toLowerCase().trim() === en })
+      return eq && eq.cadence_objectif_boite_min ? eq.cadence_objectif_boite_min : null
+    }
+
+    // Calcule TP / THP / TOTAL / CML + dates début/fin (calendrier machine) + date libération
+    var bulkCompute = async function() {
+      bulkModal.err = ''
+      if (bulkModal.famille !== 'cond') { bulkModal.err = 'Le calcul de capacité concerne le conditionnement.'; return }
+      if (!bulkModal.lieu_id) { bulkModal.err = 'Choisis une machine.'; return }
+      await bulkResolveDesignations()
+      var eq = equipements.value.find(function(e) { return e.id === bulkModal.lieu_id })
+      if (!eq) { bulkModal.err = 'Machine introuvable.'; return }
+      var ref = calcRef.value[(eq.nom_equipement || '').toLowerCase().trim()]
+      if (!ref || ref.temps_util == null) { bulkModal.err = 'Référentiel incomplet pour ' + (eq.nom_equipement || '?') + ' — re-synchronise le référentiel (Temps util, TO shift…).'; return }
+      var TuShift = ref.temps_util / SHIFTS_REF
+      var toShift = ref.to_shift_min || 480
+      var travWE = !!eq.travaille_weekend
+      var base = new Date()
+      if (bulkModal.plan_start) { var ps = bulkParseDate(bulkModal.plan_start); if (ps) { var pp = ps.split('-'); base = new Date(+pp[0], +pp[1] - 1, +pp[2]) } }
+
+      var filled = bulkRows.value.filter(function(r) { return (r.code || '').trim() })
+      var lotNums = filled.map(function(r) { return (r.numero_lot || '').trim() }).filter(Boolean)
+      var lotStat = {}
+      if (lotNums.length) {
+        var rl = await supabase.from('lots').select('numero_lot,statut_sap,date_liberation').in('numero_lot', lotNums)
+        ;(rl.data || []).forEach(function(l) { lotStat[l.numero_lot] = l })
+      }
+
+      var cml = 0, prevProduct = null
+      for (var i = 0; i < bulkRows.value.length; i++) {
+        var r = bulkRows.value[i]
+        if (!(r.code || '').trim()) continue
+        var taille = parseInt(r.taille) || 0
+        var cadBmin = parseFloat(r.cadence) || bulkCadence(eq.nom_equipement, r.code, taille)
+        if (cadBmin) r.cadence = cadBmin
+        var nb = parseInt(r.nb_shift) || parseInt(bulkModal.def_shift) || 3
+        r.nb_shift = nb
+        if (r.vide_ligne_auto || !r.vide_ligne) { r.vide_ligne = (prevProduct && prevProduct === r.product_id) ? 'Partiel' : 'Total'; r.vide_ligne_auto = true }
+        var cadBh = (cadBmin || 0) * 60
+        if (!taille || !cadBh) { r.tp = r.thp = r.total = r.cml = null; r.date_debut = ''; r.date_fin = ''; r.liberation = ''; r.lib_src = ''; prevProduct = r.product_id; continue }
+        var TP = (taille / cadBh) / (TuShift * nb)
+        var THPmin = (r.vide_ligne === 'Total')
+          ? ((ref.vdlc_min || 0) + (ref.chgt_format_min || 0) + (ref.reglage_min || 0))
+          : ((ref.vdlp_min || 0) + (ref.micro_arrets_min || 0))
+        var THP = THPmin / (toShift * nb)
+        var TOTAL = TP + THP
+        var retard = parseFloat(r.retard) || 0
+        var duree = TOTAL + retard
+        var cmlStart = cml, cmlEnd = cml + duree
+        var dDeb = bulkNthWorkingDay(base, Math.floor(cmlStart) + 1, bulkModal.lieu_id, travWE)
+        var nEnd = Math.max(Math.ceil(cmlEnd), Math.floor(cmlStart) + 1)
+        var dFin = bulkNthWorkingDay(base, nEnd, bulkModal.lieu_id, travWE)
+        cml = cmlEnd
+        r.tp = Math.round(TP * 100) / 100; r.thp = Math.round(THP * 100) / 100
+        r.total = Math.round(TOTAL * 100) / 100; r.cml = Math.round(cml * 100) / 100
+        r.date_debut = fmtIso(dDeb); r.date_fin = fmtIso(dFin)
+        var st = lotStat[(r.numero_lot || '').trim()]
+        if (st && st.statut_sap === 'accepte' && st.date_liberation) { r.liberation = st.date_liberation.slice(0, 10); r.lib_src = 'réel' }
+        else if (r.date_cible) { r.liberation = bulkParseDate(r.date_cible) || ''; r.lib_src = 'cible' }
+        else { r.liberation = bulkAddCalDays(r.date_fin, LIB_DELAI_JOURS); r.lib_src = '+15j' }
+        prevProduct = r.product_id
+      }
+      bulkModal.computed = true
     }
 
     // Résoudre les désignations + product_id depuis les codes saisis (batch)
@@ -1261,8 +1435,17 @@ export default {
           condRows.push({
             lot_id: lotId, product_id: r.product_id, equipement_id: bulkModal.lieu_id,
             taille_lot: r.taille ? (parseInt(r.taille) || null) : null,
+            cadence_bh: r.cadence ? Math.round(parseFloat(r.cadence) * 60) : null,
+            nb_shift: parseInt(r.nb_shift) || null,
+            nbre_vdlt: r.vide_ligne === 'Total' ? 1 : 0,
+            nbre_vdlp: r.vide_ligne === 'Partiel' ? 1 : 0,
+            retard_jours: parseFloat(r.retard) || 0,
+            tp_jours: r.tp, thp_jours: r.thp, total_prod_jours: r.total, total_cml: r.cml,
+            duree_estimee_jours: r.total,
             ordre_plan: (++ordreBase), statut_planification: 'Planifié',
-            date_debut_estimee: dDeb, date_fin_estimee: dFin,
+            date_debut_estimee: dDeb || bulkParseDate(r.date_debut),
+            date_fin_estimee:   dFin || bulkParseDate(r.date_fin),
+            date_liberation:    bulkParseDate(r.liberation),
             created_at: new Date().toISOString()
           })
         } else {
@@ -1302,7 +1485,7 @@ export default {
       suiviModal, openSuiviModal, saveSuiviFab, saveSuiviCond, clotureSuivi, deleteSuivi,
       arretModal, openArretModal, saveArret, closeArret, deleteArret,
       calModal, calEntries, calForm, openCalModal, addCalEntry, deleteCalEntry, CAL_TYPE_LABELS,
-      bulkModal, bulkRows, bulkLieuList, bulkSetFamille, openBulkModal, bulkAddRow, bulkRemoveRow, bulkClear, onBulkPaste, bulkResolveDesignations, bulkSave,
+      bulkModal, bulkRows, bulkLieuList, bulkSetFamille, openBulkModal, bulkAddRow, bulkRemoveRow, bulkClear, onBulkPaste, bulkResolveDesignations, bulkCompute, bulkSave,
       deletePdpCond,
       gsModal, GS_URL, openGsImport, fetchGsData, confirmGsImport,
       fmtDt, fmtDate, arretDuree
@@ -1418,26 +1601,37 @@ export default {
 .btn-cancel:hover { color:#c0c0e8; border-color:#7c7cff; }
 
 /* Saisie PDP en masse */
-.modal-xwide { width:1080px; }
+.modal-xwide { width:min(1480px, 96vw); }
 .btn-ref-accent { border-color:#7c7cff; color:#c7c7ff; background:#1c1c3e; }
 .btn-ref-accent:hover { background:#252550; color:#e0e0ff; }
 .bulk-ctrl { display:flex; gap:12px; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
 .bulk-fam { display:inline-flex; border:1px solid #252545; border-radius:5px; overflow:hidden; }
 .bulk-fam-btn { padding:6px 14px; font-size:12px; background:#12122a; color:#8888b0; border:none; cursor:pointer; font-family:inherit; }
 .bulk-fam-btn.on { background:#3b82f6; color:#fff; font-weight:600; }
-.bulk-lieu { max-width:340px; }
-.bulk-grid-wrap { max-height:48vh; overflow:auto; border:1px solid #252545; border-radius:5px; }
+.bulk-lieu { max-width:300px; }
+.bulk-il { display:inline-flex; align-items:center; gap:6px; font-size:11px; color:#8888b0; }
+.bulk-mini { width:auto; padding:5px 8px; }
+.bulk-grid-wrap { max-height:52vh; overflow:auto; border:1px solid #252545; border-radius:5px; }
 .bulk-grid { width:100%; border-collapse:collapse; font-size:12px; }
-.bulk-grid thead th { position:sticky; top:0; z-index:2; background:#12122a; color:#8888b0; font-weight:600; text-align:left; padding:7px 8px; font-size:10px; text-transform:uppercase; letter-spacing:.4px; border-bottom:1px solid #252545; }
+.bulk-grid thead th { position:sticky; top:0; z-index:2; background:#12122a; color:#8888b0; font-weight:600; text-align:left; padding:7px 8px; font-size:10px; text-transform:uppercase; letter-spacing:.3px; border-bottom:1px solid #252545; white-space:nowrap; }
 .bulk-grid td { padding:0; border-bottom:1px solid #1c1c38; vertical-align:middle; }
 .bulk-grid .bg-idx { width:30px; text-align:center; color:#555; font-size:10px; padding:0 4px; }
 .bg-inp { width:100%; padding:6px 8px; border:none; background:transparent; color:#e0e0f0; font-size:12px; font-family:inherit; outline:none; box-sizing:border-box; }
 .bg-inp:focus { background:#1a1a35; box-shadow:inset 0 0 0 1px #7c7cff; }
-.bg-desg { padding:6px 8px; color:#9999c0; font-size:11px; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.bg-num { text-align:right; }
+.bg-w40 { width:46px; }
+.bg-sel { padding:5px 4px; cursor:pointer; }
+.bg-sel.vl-total { color:#fbbf24; }
+.bg-sel.vl-partiel { color:#6ee7b7; }
+.bg-calc { padding:6px 8px; text-align:right; font-family:'SF Mono',monospace; font-size:11px; color:#9999c0; white-space:nowrap; }
+.bg-calc.bg-strong { color:#c7c7ff; font-weight:600; }
+.lib-src { display:inline-block; margin-left:5px; font-size:9px; color:#666; font-family:inherit; }
+.bg-desg { padding:6px 8px; color:#9999c0; font-size:11px; max-width:230px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .bg-desg.warn { color:#f59e0b; }
 .bg-unknown-row { background:#f59e0b0d; }
 .bulk-grid .acts { width:34px; text-align:center; }
-.bulk-foot { display:flex; gap:8px; align-items:center; margin-top:10px; }
+.bulk-foot { display:flex; gap:8px; align-items:center; margin-top:10px; flex-wrap:wrap; }
+.bulk-hint { font-size:11px; color:#6ee7b7; }
 .bulk-result { font-size:12px; color:#34d399; background:#10b98111; border:1px solid #10b98133; border-radius:4px; padding:8px 12px; margin-top:10px; }
 
 /* GS Import */
@@ -1507,6 +1701,13 @@ export default {
 .pdp-prod[data-theme="day"] .bg-desg { color:#6b7280; }
 .pdp-prod[data-theme="day"] .bg-unknown-row { background:#fffbeb; }
 .pdp-prod[data-theme="day"] .bulk-result { color:#065f46; background:#ecfdf5; border-color:#a7f3d0; }
+.pdp-prod[data-theme="day"] .bulk-il { color:#6b7280; }
+.pdp-prod[data-theme="day"] .bg-calc { color:#4b5563; }
+.pdp-prod[data-theme="day"] .bg-calc.bg-strong { color:#7c3aed; }
+.pdp-prod[data-theme="day"] .bg-sel.vl-total { color:#b45309; }
+.pdp-prod[data-theme="day"] .bg-sel.vl-partiel { color:#047857; }
+.pdp-prod[data-theme="day"] .lib-src { color:#9ca3af; }
+.pdp-prod[data-theme="day"] .bulk-hint { color:#047857; }
 /* Badges statut (règle N°15c) */
 .pdp-prod[data-theme="day"] .sc-planifié,
 .pdp-prod[data-theme="day"] .sc-planifi { background:#ede9fe; color:#7c3aed; }
