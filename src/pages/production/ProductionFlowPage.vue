@@ -2362,15 +2362,8 @@ export default {
             statut: sf.statut, isFab: true
           })
         })
-      sessions.value.filter(function(s) { return s.equipement_id === node.equipement_id })
-        .forEach(function(s) {
-          res.push({
-            id: 's' + s.id, fabId: s.id, lotRawId: s.lot_id,
-            numero_lot: s.lots?.numero_lot || s.lot_id,
-            nom_produit: s.lots?.products?.nom_produit || '',
-            statut: s.statut, isFab: false
-          })
-        })
+      // NB : la vue 1 (planification) n'affiche QUE le suivi planif (suivi_fabrication / suivi_conditionnement).
+      // Les sessions TRS (production_sessions) ne doivent PAS interagir avec la vue 1 → pas injectées ici.
       return res
     }
 
@@ -2653,7 +2646,9 @@ export default {
     // ─── LOAD ────────────────────────────────────────────────────
     var loadLive = async function() {
       loading.value = true
-      var [rRoomsAll, rOm, rCadences, r2, r2b, r3, r4, r5, r6, r7] = await Promise.all([
+      // Vue 1 (planification) : charge UNIQUEMENT les données planif — aucune table TRS
+      // (production_sessions / production_arrets). Le mode TRS charge ses données à part (loadTrsData).
+      var [rRoomsAll, rOm, rCadences, r2, r2b, r4, r6, r7] = await Promise.all([
         supabase.from('plan_rooms').select('code,nom,zone,type,op_number,actif,atelier_id,equipement_id'),
         supabase.from('operations_master').select('op_number,equipment_name,room_code,processus,room_name'),
         supabase.from('cadences').select('numero_salle,code_article,cadence_objectif_b_min'),
@@ -2663,13 +2658,8 @@ export default {
         supabase.from('suivi_conditionnement')
           .select('id,lot_id,equipement_id,statut')
           .in('statut', ['En cours', 'Arrêt']),
-        supabase.from('production_sessions')
-          .select('id,lot_id,equipement_id,statut,lots(numero_lot,products(description))')
-          .in('statut', ['En cours', 'Arrêt']),
         supabase.from('deviations')
           .select('id,lot_id,statut').in('statut', ['ouverte', 'en_cours']),
-        supabase.from('production_arrets')
-          .select('id,session_id,is_running').eq('is_running', true),
         supabase.from('v_product_flux_summary').select('*').order('product_name'),
         supabase.from('product_flux').select('product_code,route,op_number'),
       ])
@@ -2681,9 +2671,7 @@ export default {
       })
       if (!r2.error)  suiviFab.value   = r2.data
       if (!r2b.error) suiviCond.value  = r2b.data
-      if (!r3.error)  sessions.value   = r3.data
       if (!r4.error) deviations.value = r4.data
-      if (!r5.error) arrets.value     = r5.data
       if (!r6.error) {
         // Deduplicate: keep unique (product_code, route), mark has_route_2
         var seen = new Map()
