@@ -1077,7 +1077,7 @@ var T_OTC_Y    = 900
 var COND_X = TRACK_X + TRACKS_W + 110    // ~1150
 var COND_Y = 30
 var COND_W = 210
-var COND_H = 700   // élargi : 7 lignes × 90px (place pour l'étiquette lot/produit sous chaque nœud)
+var COND_H = 850   // 7 lignes × 115px : large place sous chaque machine pour l'étiquette lot/produit (vue non encombrée même si toutes les lignes tournent)
 
 // Track Y positions
 var T1Y = 100    // Gran01→Mél01→Comp01→Pellic01
@@ -1136,13 +1136,13 @@ var NODES_DEF = [
   buildNode('c206', '206', 'MARCH. R,T',         'formes_semi', 'cond', 2, T5Y),
 
   // ── CONDITIONNEMENT PRIMAIRE — 7 lignes
-  buildNode('c149', '149', 'MB421',          'cond_primaire', 'cond', 0, COND_PRIM_Y + 0*90,  COND_X+31),
-  buildNode('c148', '148', 'IMA TR100L',     'cond_primaire', 'cond', 0, COND_PRIM_Y + 1*90,  COND_X+31),
-  buildNode('c147', '147', 'INTEGRA 300',    'cond_primaire', 'cond', 0, COND_PRIM_Y + 2*90,  COND_X+31),
-  buildNode('c146', '146', 'IMA PG SUPER 1', 'cond_primaire', 'cond', 0, COND_PRIM_Y + 3*90,  COND_X+31),
-  buildNode('c220', '220', 'MARCH. R,P',     'cond_primaire', 'cond', 0, COND_PRIM_Y + 4*90,  COND_X+31),
-  buildNode('c222', '222', 'INTEGRA 520',    'cond_primaire', 'cond', 0, COND_PRIM_Y + 5*90,  COND_X+31),
-  buildNode('c223', '223', 'IMA PG SUPER 2', 'cond_primaire', 'cond', 0, COND_PRIM_Y + 6*90,  COND_X+31),
+  buildNode('c149', '149', 'MB421',          'cond_primaire', 'cond', 0, COND_PRIM_Y + 0*115,  COND_X+31),
+  buildNode('c148', '148', 'IMA TR100L',     'cond_primaire', 'cond', 0, COND_PRIM_Y + 1*115,  COND_X+31),
+  buildNode('c147', '147', 'INTEGRA 300',    'cond_primaire', 'cond', 0, COND_PRIM_Y + 2*115,  COND_X+31),
+  buildNode('c146', '146', 'IMA PG SUPER 1', 'cond_primaire', 'cond', 0, COND_PRIM_Y + 3*115,  COND_X+31),
+  buildNode('c220', '220', 'MARCH. R,P',     'cond_primaire', 'cond', 0, COND_PRIM_Y + 4*115,  COND_X+31),
+  buildNode('c222', '222', 'INTEGRA 520',    'cond_primaire', 'cond', 0, COND_PRIM_Y + 5*115,  COND_X+31),
+  buildNode('c223', '223', 'IMA PG SUPER 2', 'cond_primaire', 'cond', 0, COND_PRIM_Y + 6*115,  COND_X+31),
 
   // ── STOCK INTERMÉDIAIRE SF (tampon entre FAB et COND)
   buildNode('n416', '416', 'Stock Inter. SF',    'stockage_sf', 'fab', 0, 400, 940),
