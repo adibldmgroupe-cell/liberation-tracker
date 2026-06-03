@@ -2650,9 +2650,19 @@ export default {
       var node = selectedNode.value
       var res
       if (node.type === 'cond') {
-        // Cond: mise en arrêt dans suivi_conditionnement + motif conservé dans observation
-        // (arret_conditionnement non utilisé ici : equipement_id en uuid au lieu de bigint, cf. migration 024)
+        // Cond: mise en arrêt — statut + motif (observation, affichage rapide)
         res = await supabase.from('suivi_conditionnement').update({ statut: 'Arrêt', observation: modal.value.motif, updated_at: new Date().toISOString() }).eq('id', modal.value.fabId)
+        // + historique d'arrêt horodaté (nécessite migration 031 : equipement_id en bigint)
+        if (!res.error) {
+          var lotRow = getNodeLots(node).find(function(l) { return l.fabId === modal.value.fabId })
+          var arrRes = await supabase.from('arret_conditionnement').insert({
+            suivi_id: modal.value.fabId, equipement_id: node.equipement_id,
+            lot_id: lotRow ? lotRow.lotRawId : null, motif: modal.value.motif,
+            heure_debut: modal.value.dateDebut || new Date().toISOString().slice(0, 10)
+          })
+          // si la migration 031 n'est pas encore passée, l'historique échoue mais l'arrêt reste enregistré (statut + observation)
+          if (arrRes.error) console.warn('[arret_conditionnement] historique non enregistré (migration 031 ?):', arrRes.error.message)
+        }
       } else {
         // Fab: insert atelier_arret
         res = await supabase.from('atelier_arrets').insert({
