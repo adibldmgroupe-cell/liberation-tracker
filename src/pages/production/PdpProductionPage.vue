@@ -954,6 +954,14 @@ export default {
       if (!suiviModal.lot_id) { suiviModal.err = 'Lot requis'; return }
       if (!suiviModal.atelier_id) { suiviModal.err = 'Atelier requis'; return }
       suiviModal.saving = true; suiviModal.err = ''
+      // ── BPF : hors pesée, un seul lot en cours par atelier ──
+      if (!suiviModal.id && (suiviModal.statut === 'En cours' || suiviModal.statut === 'Arrêt')) {
+        var atF = ateliers.value.find(function(a) { return a.id === suiviModal.atelier_id })
+        var isPeseeAt = atF && /pes[ée]/i.test(atF.nom_atelier || '')
+        if (!isPeseeAt && suiviFab.value.some(function(sf) { return sf.atelier_id === suiviModal.atelier_id && (sf.statut === 'En cours' || sf.statut === 'Arrêt') })) {
+          suiviModal.err = 'BPF : un lot est déjà en cours sur cet atelier (un seul à la fois, hors pesée).'; suiviModal.saving = false; return
+        }
+      }
       var payload = {
         lot_id: suiviModal.lot_id, atelier_id: suiviModal.atelier_id,
         statut: suiviModal.statut,
@@ -972,6 +980,11 @@ export default {
       if (!suiviModal.lot_id) { suiviModal.err = 'Lot requis'; return }
       if (!suiviModal.equipement_id) { suiviModal.err = 'Équipement requis'; return }
       suiviModal.saving = true; suiviModal.err = ''
+      // ── BPF : un seul lot en cours par équipement de conditionnement ──
+      if (!suiviModal.id && (suiviModal.statut === 'En cours' || suiviModal.statut === 'Arrêt')
+          && suiviCond.value.some(function(sc) { return sc.equipement_id === suiviModal.equipement_id && (sc.statut === 'En cours' || sc.statut === 'Arrêt') })) {
+        suiviModal.err = 'BPF : un lot est déjà en cours sur cet équipement (un seul à la fois).'; suiviModal.saving = false; return
+      }
       var payload = {
         lot_id: suiviModal.lot_id, equipement_id: suiviModal.equipement_id,
         taille_lot: suiviModal.taille_lot || null,

@@ -2503,6 +2503,27 @@ export default {
       if (!selectedNode.value) return
       modal.value.saving = true; modal.value.err = ''
       var node = selectedNode.value
+      // ── BPF : hors Pesée, un seul lot en cours par machine/atelier (anti-mélange) ──
+      var isPesee = node.zone === 'pesee'
+      if (!isPesee) {
+        if (lotsToStart.length > 1) {
+          modal.value.err = 'BPF : un seul lot à la fois sur cette machine/atelier (hors pesée).'
+          modal.value.saving = false; return
+        }
+        // contrôle en base (backstop, indépendant du chargement de la page)
+        var actCount = getNodeLots(node).filter(function(l) { return l.statut === 'En cours' || l.statut === 'Arrêt' }).length
+        if (node.type === 'cond' && node.equipement_id) {
+          var rChk = await supabase.from('suivi_conditionnement').select('id').eq('equipement_id', node.equipement_id).in('statut', ['En cours', 'Arrêt']).is('deleted_at', null)
+          actCount = Math.max(actCount, (rChk.data || []).length)
+        } else if (node.type !== 'cond' && node.atelier_id) {
+          var rChkF = await supabase.from('suivi_fabrication').select('id').eq('atelier_id', node.atelier_id).in('statut', ['En cours', 'Arrêt']).is('deleted_at', null)
+          actCount = Math.max(actCount, (rChkF.data || []).length)
+        }
+        if (actCount >= 1) {
+          modal.value.err = 'BPF : un lot est déjà en cours sur ' + (node.code || node.nom) + ' — clôturez-le avant d\'en démarrer un autre (un seul lot à la fois, hors pesée).'
+          modal.value.saving = false; return
+        }
+      }
       var res
 
       if (node.type === 'cond') {
