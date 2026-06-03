@@ -2650,8 +2650,9 @@ export default {
       var node = selectedNode.value
       var res
       if (node.type === 'cond') {
-        // Cond: mise en arrêt dans suivi_conditionnement (PDP planificateur)
-        res = await supabase.from('suivi_conditionnement').update({ statut: 'Arrêt', updated_at: new Date().toISOString() }).eq('id', modal.value.fabId)
+        // Cond: mise en arrêt dans suivi_conditionnement + motif conservé dans observation
+        // (arret_conditionnement non utilisé ici : equipement_id en uuid au lieu de bigint, cf. migration 024)
+        res = await supabase.from('suivi_conditionnement').update({ statut: 'Arrêt', observation: modal.value.motif, updated_at: new Date().toISOString() }).eq('id', modal.value.fabId)
       } else {
         // Fab: insert atelier_arret
         res = await supabase.from('atelier_arrets').insert({
