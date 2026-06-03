@@ -1372,25 +1372,42 @@ export default {
       upd.observation = 'Clôture automatique (fin de shift +10 min)'
       await supabase.from('production_sessions').update(upd).eq('id', sessId)
       delete autoClosing[sessId]
-      await loadAll()
+      // NB : pas de loadAll() ici — autoStopCheck recharge une seule fois après la boucle
+      // (sinon panels.value muterait en pleine itération et certaines sessions seraient sautées).
     }
 
+    // Datetime réelle de fin de shift d'une session (gère le franchissement de minuit : shift de nuit)
+    var sessionShiftEnd = function(session, sh) {
+      if (!session || !session.date || !sh || !sh.heure_fin) return null
+      var end = new Date(session.date + 'T' + sh.heure_fin.slice(0, 5))
+      var start = toDateTime(session.date, session.heure_debut)
+      // fin <= début → le shift se termine le lendemain (nuit)
+      if (start && end <= start) end.setDate(end.getDate() + 1)
+      return end
+    }
+
+    // Clôture automatique de TOUTE session dont la fin de shift +10 min est DÉPASSÉE
+    // (rattrape aussi les sessions oubliées des jours précédents dès l'ouverture de la page).
     var autoStopCheck = async function() {
-      var nowMin = timeToMin(nowTime())
-      for (var pi = 0; pi < panels.value.length; pi++) {
-        var p = panels.value[pi]
+      var now = new Date()
+      var snapshot = panels.value.slice()   // figer la liste (doAutoClose ne recharge plus en boucle)
+      var closedAny = false
+      for (var pi = 0; pi < snapshot.length; pi++) {
+        var p = snapshot[pi]
         if (!p.session || p.session.statut === 'Clôturé' || p.session.statut === 'Annulé') continue
         if (autoClosing[p.session.id]) continue
         if (!p.session.shift_id) continue
         var sh = shifts.value.find(function(s) { return s.id === p.session.shift_id })
         if (!sh) continue
-        var finMin     = timeToMin(sh.heure_fin)
-        var triggerMin = (finMin + 10) % 1440
-        var diff       = (nowMin - triggerMin + 1440) % 1440
-        if (diff < 60) {
+        var end = sessionShiftEnd(p.session, sh)
+        if (!end) continue
+        var trigger = new Date(end.getTime() + 10 * 60000)   // fin de shift + 10 min
+        if (now >= trigger) {
           await doAutoClose(p, sh)
+          closedAny = true
         }
       }
+      if (closedAny) await loadAll()
     }
 
     // ══ VUE « MODE LIVE » GÉANTE (affichage production plein écran) ══
@@ -1478,6 +1495,7 @@ export default {
 
     onMounted(async function() {
       await loadAll()
+      await autoStopCheck()   // rattrape immédiatement les sessions en retard (ex. oubliées depuis hier)
       clockInt      = setInterval(tick, 1000)
       refreshInt    = setInterval(loadAll, 60000)
       autoStopInt   = setInterval(autoStopCheck, 60000)
