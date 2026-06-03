@@ -568,6 +568,7 @@ import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { supabase } from '../../supabase'
 import { useTheme } from '../../composables/useTheme'
 import { declareDeviation } from '../../services/actions'
+import { checkProductFluxEquipName } from '../../services/flux'
 
 export default {
   setup() {
@@ -1024,6 +1025,10 @@ export default {
       if (!startModal.lot) { startModal.error = 'Sélectionner un lot.'; return }
       startModal.saving = true
       var eq = startModal.equip
+      // ── Règle flux produit : le produit doit être autorisé sur cet équipement ──
+      var lpFx = await supabase.from('lots').select('products(code_article)').eq('id', startModal.lot.id).maybeSingle()
+      var fxL = await checkProductFluxEquipName(lpFx.data && lpFx.data.products ? lpFx.data.products.code_article : null, eq.nom_equipement)
+      if (!fxL.allowed) { startModal.error = fxL.reason; startModal.saving = false; return }
       var cadObj   = startModal.cadenceObj
       var planOpts = { isPremierCampagne: startModal.isPremierCampagne, hasVdlp: startModal.hasVdlp }
       var netRef   = gsNetRef(eq, planOpts)

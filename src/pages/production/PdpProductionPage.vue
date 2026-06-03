@@ -586,6 +586,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { supabase } from '../../supabase'
 import { useTheme } from '../../composables/useTheme'
+import { checkProductFluxEquipName } from '../../services/flux'
 
 var GS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQqKb5_i0U7YeQYMiNEDy4X2gq6W_78NA2EuC2gRqSVXOKuBcBuXR8ASrE9Eq3admceATv4_gdAUppc/pub?gid=1634438429&single=true&output=csv'
 
@@ -985,6 +986,11 @@ export default {
           && suiviCond.value.some(function(sc) { return sc.equipement_id === suiviModal.equipement_id && (sc.statut === 'En cours' || sc.statut === 'Arrêt') })) {
         suiviModal.err = 'BPF : un lot est déjà en cours sur cet équipement (un seul à la fois).'; suiviModal.saving = false; return
       }
+      // ── Règle flux produit : le produit du lot doit être autorisé sur cet équipement ──
+      var eqFx = equipements.value.find(function(e) { return e.id === suiviModal.equipement_id })
+      var lpFx = await supabase.from('lots').select('products(code_article)').eq('id', suiviModal.lot_id).maybeSingle()
+      var fxC = await checkProductFluxEquipName(lpFx.data && lpFx.data.products ? lpFx.data.products.code_article : null, eqFx ? eqFx.nom_equipement : null)
+      if (!fxC.allowed) { suiviModal.err = fxC.reason; suiviModal.saving = false; return }
       var payload = {
         lot_id: suiviModal.lot_id, equipement_id: suiviModal.equipement_id,
         taille_lot: suiviModal.taille_lot || null,
@@ -1643,6 +1649,21 @@ export default {
       await bulkResolveDesignations()
       var unknown = rows.filter(function(r) { return !r.product_id })
       if (unknown.length) { bulkModal.saving = false; bulkModal.progress = ''; bulkModal.err = unknown.length + ' code(s) produit inconnu(s) — corrige-les avant de créer'; return }
+
+      // ── Règle flux produit : chaque code doit être autorisé sur la machine choisie (cond) ──
+      if (bulkModal.famille === 'cond') {
+        bulkModal.progress = 'Vérification du flux produit…'
+        var eqB = equipements.value.find(function(e) { return e.id === bulkModal.lieu_id })
+        var eqNomB = eqB ? eqB.nom_equipement : null
+        var distinctCodes = []
+        rows.forEach(function(r) { var c = (r.code || '').trim(); if (c && distinctCodes.indexOf(c) < 0) distinctCodes.push(c) })
+        var fluxBad = []
+        for (var fi = 0; fi < distinctCodes.length; fi++) {
+          var fr = await checkProductFluxEquipName(distinctCodes[fi], eqNomB)
+          if (!fr.allowed) fluxBad.push(distinctCodes[fi])
+        }
+        if (fluxBad.length) { bulkModal.saving = false; bulkModal.progress = ''; bulkModal.err = 'Flux produit : ' + fluxBad.join(', ') + ' non autorisé(s) sur ' + (eqNomB || 'cette machine') + ' — cocher le flux (Flux produits) avant.'; return }
+      }
 
       var u = await supabase.auth.getUser()
       var uid = u.data && u.data.user ? u.data.user.id : null

@@ -1023,6 +1023,7 @@ import { useRouter } from 'vue-router'
 import { supabase } from '../../supabase'
 import { useTheme } from '../../composables/useTheme'
 import { declareDeviation } from '../../services/actions'
+import { checkProductFluxRoom, checkProductFluxEquipName } from '../../services/flux'
 
 // ── LAYOUT CONSTANTS ──────────────────────────────────────────────
 var SVG_W  = 1580
@@ -1746,6 +1747,10 @@ export default {
       if (!trsStartModal.lot) { trsStartModal.error = 'Sélectionner un lot.'; return }
       trsStartModal.saving = true
       var eq = trsStartModal.equip
+      // ── Règle flux produit : le produit doit être autorisé sur cet équipement ──
+      var lpF = await supabase.from('lots').select('products(code_article)').eq('id', trsStartModal.lot.id).maybeSingle()
+      var fxT = await checkProductFluxEquipName(lpF.data && lpF.data.products ? lpF.data.products.code_article : null, eq.nom_equipement)
+      if (!fxT.allowed) { trsStartModal.error = fxT.reason; trsStartModal.saving = false; return }
       var cadObj    = trsStartModal.cadenceObj
       var planOpts  = { isPremierCampagne: trsStartModal.isPremierCampagne, hasVdlp: trsStartModal.hasVdlp }
       var netRef    = trsNetRef(eq, planOpts)            // TO_GS - arrêts planifiés conditionnels
@@ -2524,6 +2529,15 @@ export default {
           modal.value.saving = false; return
         }
       }
+      // ── Règle flux produit : chaque lot doit être autorisé (product_flux) sur cette salle ──
+      var roomOp = (opMaster.value.find(function(om) { return om.room_code === node.id }) || {}).op_number
+      var chkR = await supabase.from('lots').select('id,products(code_article)').in('id', lotsToStart.map(function(l) { return l.id }))
+      var codeByLot = {}; (chkR.data || []).forEach(function(l) { codeByLot[l.id] = l.products ? l.products.code_article : null })
+      for (var ck = 0; ck < lotsToStart.length; ck++) {
+        var fx = await checkProductFluxRoom(codeByLot[lotsToStart[ck].id], node.id, roomOp)
+        if (!fx.allowed) { modal.value.err = fx.reason; modal.value.saving = false; return }
+      }
+
       var res
 
       if (node.type === 'cond') {
