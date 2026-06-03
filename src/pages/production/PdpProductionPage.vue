@@ -33,6 +33,7 @@
         </div>
         <button class="btn-ref" @click="loadAll" :class="{spin:loading}" title="Rafraîchir">↻</button>
         <button class="btn-ref" @click="openGsImport" title="Import Google Sheets">↑ GS</button>
+        <button class="btn-ref" @click="openCalModal" title="Calendrier machines (fériés / arrêts / fermetures)">📅 Calendrier</button>
         <button class="btn-ref" @click="cycleTheme" :title="themeTitle">{{themeIcon}}</button>
       </div>
     </div>
@@ -309,6 +310,58 @@
           <button class="btn-save btn-warn" @click="saveArret" :disabled="arretModal.saving">{{arretModal.saving?'…':'Déclarer'}}</button>
           <button class="btn-cancel" @click="arretModal.show=false">Annuler</button>
         </div>
+      </div>
+    </div>
+
+    <!-- ══ MODAL CALENDRIER MACHINES ══ -->
+    <div class="ov" v-if="calModal.show" @click.self="calModal.show=false">
+      <div class="modal modal-wide">
+        <div class="modal-hd">📅 Calendrier machines — fériés / arrêts / fermetures</div>
+        <div class="modal-ctx">Jours non ouvrés pris en compte dans le calcul des dates PDP (en plus des week-ends, gérés par machine).</div>
+        <div class="cal-form">
+          <div class="cal-f-row">
+            <div class="cal-f-col cal-f-2">
+              <label class="lbl">Machine</label>
+              <select v-model="calForm.equipement_id" class="inp">
+                <option value="">Toutes les machines</option>
+                <option v-for="eq in equipements" :key="eq.id" :value="eq.id">{{eq.nom_equipement}}</option>
+              </select>
+            </div>
+            <div class="cal-f-col">
+              <label class="lbl">Type</label>
+              <select v-model="calForm.type" class="inp">
+                <option value="ferie">Jour férié</option>
+                <option value="arret_annuel">Arrêt annuel</option>
+                <option value="fermeture">Fermeture</option>
+                <option value="maintenance">Maintenance</option>
+              </select>
+            </div>
+          </div>
+          <div class="cal-f-row">
+            <div class="cal-f-col"><label class="lbl">Du *</label><input type="date" v-model="calForm.date_debut" class="inp" /></div>
+            <div class="cal-f-col"><label class="lbl">Au</label><input type="date" v-model="calForm.date_fin" class="inp" /></div>
+            <div class="cal-f-col cal-f-2"><label class="lbl">Libellé</label><input type="text" v-model="calForm.libelle" class="inp" placeholder="Ex : Aïd, congés août…" /></div>
+          </div>
+          <div class="modal-err" v-if="calModal.err">{{calModal.err}}</div>
+          <button class="btn-save" @click="addCalEntry" :disabled="calModal.saving||!calForm.date_debut">{{calModal.saving?'…':'+ Ajouter au calendrier'}}</button>
+        </div>
+        <div class="dt-wrap cal-list">
+          <table class="dt" v-if="calEntries.length">
+            <thead><tr><th>Machine</th><th>Type</th><th>Du</th><th>Au</th><th>Libellé</th><th></th></tr></thead>
+            <tbody>
+              <tr v-for="c in calEntries" :key="c.id">
+                <td class="sm">{{c.nom_equipement}}</td>
+                <td><span class="schip" :class="'cal-t-'+c.type">{{CAL_TYPE_LABELS[c.type]||c.type}}</span></td>
+                <td class="mono sm">{{fmtDate(c.date_debut)}}</td>
+                <td class="mono sm">{{fmtDate(c.date_fin)}}</td>
+                <td class="sm">{{c.libelle||'—'}}</td>
+                <td class="acts"><button class="ia del" @click="deleteCalEntry(c)" title="Supprimer">✕</button></td>
+              </tr>
+            </tbody>
+          </table>
+          <div v-else class="empty">Aucune entrée — ajoute les fériés, arrêts annuels et fermetures.</div>
+        </div>
+        <div class="modal-acts"><button class="btn-cancel" @click="calModal.show=false">Fermer</button></div>
       </div>
     </div>
 
@@ -658,6 +711,11 @@ export default {
     var gsModal = reactive({
       show: false, fetching: false, saving: false, err: '', preview: []
     })
+    // ── Calendrier machines (fériés / arrêts / fermetures) — PDP capacité ──
+    var calModal = reactive({ show: false, saving: false, err: '' })
+    var calEntries = ref([])
+    var calForm = reactive({ equipement_id: '', type: 'ferie', date_debut: '', date_fin: '', libelle: '' })
+    var CAL_TYPE_LABELS = { ferie: 'Jour férié', arret_annuel: 'Arrêt annuel', fermeture: 'Fermeture', maintenance: 'Maintenance' }
 
     var openSuiviModal = function(s, famille) {
       var now2 = new Date().toISOString().slice(0, 10)
@@ -955,6 +1013,41 @@ export default {
       await loadAll()
     }
 
+    // ── Calendrier machines ──
+    var loadCalEntries = async function() {
+      var r = await supabase.from('calendrier_machine')
+        .select('id, equipement_id, type, date_debut, date_fin, libelle')
+        .order('date_debut', { ascending: false })
+      var eqMap = {}; equipements.value.forEach(function(e){ eqMap[e.id] = e.nom_equipement })
+      calEntries.value = (r.data || []).map(function(c){
+        return Object.assign({}, c, { nom_equipement: c.equipement_id ? (eqMap[c.equipement_id] || ('#'+c.equipement_id)) : 'Toutes machines' })
+      })
+    }
+    var openCalModal = async function() {
+      calModal.show = true; calModal.err = ''
+      calForm.date_debut = ''; calForm.date_fin = ''; calForm.libelle = ''
+      await loadCalEntries()
+    }
+    var addCalEntry = async function() {
+      if (!calForm.date_debut) { calModal.err = 'Date de début requise.'; return }
+      calModal.saving = true; calModal.err = ''
+      var r = await supabase.from('calendrier_machine').insert({
+        equipement_id: calForm.equipement_id || null,
+        type:          calForm.type,
+        date_debut:    calForm.date_debut,
+        date_fin:      calForm.date_fin || calForm.date_debut,
+        libelle:       calForm.libelle || null
+      })
+      calModal.saving = false
+      if (r.error) { calModal.err = r.error.message; return }
+      calForm.date_debut = ''; calForm.date_fin = ''; calForm.libelle = ''
+      await loadCalEntries()
+    }
+    var deleteCalEntry = async function(c) {
+      await supabase.from('calendrier_machine').delete().eq('id', c.id)
+      await loadCalEntries()
+    }
+
     onMounted(loadAll)
 
     return {
@@ -969,6 +1062,7 @@ export default {
       lotSuggestions, searchLots, selectLot,
       suiviModal, openSuiviModal, saveSuiviFab, saveSuiviCond, clotureSuivi, deleteSuivi,
       arretModal, openArretModal, saveArret, closeArret, deleteArret,
+      calModal, calEntries, calForm, openCalModal, addCalEntry, deleteCalEntry, CAL_TYPE_LABELS,
       deletePdpCond,
       gsModal, GS_URL, openGsImport, fetchGsData, confirmGsImport,
       fmtDt, fmtDate, arretDuree
@@ -1185,4 +1279,14 @@ export default {
 .pdp-prod[data-theme="workshop"] .pt { color:#ff9800; letter-spacing:3px; }
 .pdp-prod[data-theme="workshop"] .vtab.active { background:#ff9800; color:#000; border-color:#ff9800; font-weight:700; }
 .pdp-prod[data-theme="workshop"] .btn-ref { background:#1e1e1e; color:#aaa; border-color:#2a2a2a; }
+/* Calendrier machines (modale) */
+.cal-form { background: rgba(124,60,196,.05); border:1px solid rgba(124,60,196,.15); border-radius:8px; padding:12px; margin-bottom:14px; }
+.cal-f-row { display:flex; gap:10px; margin-bottom:8px; flex-wrap:wrap; }
+.cal-f-col { flex:1; min-width:120px; display:flex; flex-direction:column; gap:3px; }
+.cal-f-2 { flex:2; }
+.cal-list { max-height:42vh; overflow:auto; }
+.cal-t-ferie        { background:#ede9fe; color:#7c3aed; }
+.cal-t-arret_annuel { background:#fef3c7; color:#92400e; }
+.cal-t-fermeture    { background:#f3f4f6; color:#374151; }
+.cal-t-maintenance  { background:#e6f1fb; color:#2563eb; }
 </style>

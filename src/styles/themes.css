@@ -1584,3 +1584,9 @@ html[data-theme="night"] .al, html[data-theme="workshop"] .al { border-bottom-co
 html[data-theme="night"] .al:hover, html[data-theme="workshop"] .al:hover { background: var(--th-bg2); }
 html[data-theme="night"] .aln, html[data-theme="workshop"] .aln { color: var(--th-text2); }
 html[data-theme="night"] .loading, html[data-theme="workshop"] .loading { color: var(--th-text3); }
+
+/* ── Calendrier machines : badges de type (règle N°15c) ── */
+html[data-theme="night"] .cal-t-ferie,        html[data-theme="workshop"] .cal-t-ferie        { background: var(--th-bg3); color: var(--th-accent); }
+html[data-theme="night"] .cal-t-arret_annuel, html[data-theme="workshop"] .cal-t-arret_annuel { background: rgba(251,191,36,.12); color: #fbbf24; }
+html[data-theme="night"] .cal-t-fermeture,    html[data-theme="workshop"] .cal-t-fermeture    { background: var(--th-bg3); color: var(--th-text2); }
+html[data-theme="night"] .cal-t-maintenance,  html[data-theme="workshop"] .cal-t-maintenance  { background: rgba(59,130,246,.14); color: #93c5fd; }
