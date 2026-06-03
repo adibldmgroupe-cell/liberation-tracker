@@ -395,6 +395,36 @@
           </template>
         </div>
 
+        <!-- Insertion campagne -->
+        <div class="camp-panel" v-if="campPanel.show">
+          <div class="camp-row">
+            <div class="camp-f camp-code auto-wrap">
+              <label class="bulk-il">Code produit</label>
+              <input v-model="campPanel.code" @input="campSearchCode" class="inp bulk-mini" placeholder="PFABB10" />
+              <div class="auto-list" v-if="campSuggest.length">
+                <div v-for="s in campSuggest" :key="s.id" class="auto-item" @mousedown.prevent="campSelectProduct(s)">
+                  <span class="auto-code">{{s.code_article}}</span> {{s.description}}
+                </div>
+              </div>
+            </div>
+            <div class="camp-f camp-desg-f"><label class="bulk-il">Désignation</label><div class="camp-desg-v">{{campPanel.designation||'—'}}</div></div>
+            <div class="camp-f">
+              <label class="bulk-il">Taille lot{{campPanel.tailleOpts.length?' (GS)':''}}</label>
+              <select v-if="campPanel.tailleOpts.length" v-model="campPanel.taille" class="inp bulk-mini">
+                <option value="">—</option>
+                <option v-for="t in campPanel.tailleOpts" :key="t" :value="t">{{t.toLocaleString('fr-FR')}}</option>
+              </select>
+              <input v-else v-model="campPanel.taille" class="inp bulk-mini" placeholder="UN" />
+            </div>
+            <div class="camp-f"><label class="bulk-il">Nb lots</label><input v-model="campPanel.nb" class="inp bulk-mini bg-w40" /></div>
+            <div class="camp-f"><label class="bulk-il">N° lot début (opt.)</label><input v-model="campPanel.lot_debut" class="inp bulk-mini" placeholder="ex 251050" /></div>
+            <button class="btn-save" @click="campInsert">Insérer</button>
+            <button class="btn-cancel" @click="campPanel.show=false">Annuler</button>
+          </div>
+          <div class="modal-err" v-if="campPanel.err">{{campPanel.err}}</div>
+          <div class="camp-hint">Génère {{campPanel.nb||0}} ligne(s) du produit dans la grille{{campPanel.lot_debut?' — lots '+campPanel.lot_debut+'→'+((parseInt(campPanel.lot_debut)||0)+((parseInt(campPanel.nb)||1)-1))+' (créés façon « Planifier » à l\'enregistrement)':' — sans n° lot'}}.</div>
+        </div>
+
         <div class="bulk-grid-wrap">
           <table class="bulk-grid">
             <thead>
@@ -458,11 +488,13 @@
 
         <div class="bulk-foot">
           <button class="btn-ref" @click="bulkAddRow">+ Ligne</button>
+          <button class="btn-ref" @click="openCampPanel">➕ Insérer campagne</button>
           <button class="btn-ref" @click="bulkResolveDesignations">↻ Désignations</button>
           <button v-if="bulkModal.famille==='cond'" class="btn-ref btn-ref-accent" @click="bulkCompute">🧮 Calculer</button>
           <button class="btn-ref" @click="bulkClear">Vider</button>
           <span v-if="bulkModal.computed" class="bulk-hint">Dates &amp; charge calculées — vérifie puis « Créer le PDP ».</span>
         </div>
+        <div v-if="bulkModal.cont_info" class="bulk-cont">↪ {{bulkModal.cont_info}}</div>
 
         <div class="modal-err" v-if="bulkModal.err">{{bulkModal.err}}</div>
         <div class="bulk-result" v-if="bulkModal.result">
@@ -854,10 +886,15 @@ export default {
         _status: ''
       }
     }
-    var bulkModal = reactive({ show: false, famille: 'cond', lieu_id: '', plan_start: '', def_shift: '3', saving: false, progress: '', err: '', computed: false, result: null })
+    var bulkModal = reactive({ show: false, famille: 'cond', lieu_id: '', plan_start: '', def_shift: '3', saving: false, progress: '', err: '', computed: false, cont_info: '', result: null })
     var bulkRows  = ref([])
     var SHIFTS_REF = 3   // temps_util référentiel = base 3 shifts → Tu/shift = temps_util / 3
     var LIB_DELAI_JOURS = 15
+
+    // Insertion d'une campagne (N lots du même produit) dans la grille
+    var campPanel  = reactive({ show: false, code: '', designation: '', product_id: null, taille: '', nb: '10', lot_debut: '', tailleOpts: [], err: '' })
+    var campSuggest = ref([])
+    var campTimeout = null
 
     var openSuiviModal = function(s, famille) {
       var now2 = new Date().toISOString().slice(0, 10)
@@ -1205,7 +1242,8 @@ export default {
     })
     var bulkSetFamille = function(f) { bulkModal.famille = f; bulkModal.lieu_id = '' }
     var openBulkModal = function() {
-      bulkModal.show = true; bulkModal.err = ''; bulkModal.result = null; bulkModal.progress = ''; bulkModal.saving = false; bulkModal.computed = false
+      bulkModal.show = true; bulkModal.err = ''; bulkModal.result = null; bulkModal.progress = ''; bulkModal.saving = false; bulkModal.computed = false; bulkModal.cont_info = ''
+      campPanel.show = false
       bulkModal.lieu_id = ''
       bulkModal.plan_start = new Date().toISOString().slice(0, 10)
       bulkRows.value = []
@@ -1214,6 +1252,56 @@ export default {
     var bulkAddRow    = function() { bulkRows.value.push(bulkBlankRow()) }
     var bulkRemoveRow = function(i) { bulkRows.value.splice(i, 1); if (!bulkRows.value.length) bulkRows.value.push(bulkBlankRow()) }
     var bulkClear     = function() { bulkRows.value = []; for (var i = 0; i < 6; i++) bulkRows.value.push(bulkBlankRow()); bulkModal.result = null; bulkModal.err = '' }
+
+    // ── Insertion d'une campagne (N lots d'un même produit) ──
+    var openCampPanel = function() { campPanel.show = true; campPanel.err = ''; if (campPanel.product_id) campLoadTailles() }
+    var campSearchCode = function() {
+      clearTimeout(campTimeout)
+      campPanel.product_id = null; campPanel.designation = ''
+      var q = campPanel.code
+      if (!q || q.length < 2) { campSuggest.value = []; return }
+      campTimeout = setTimeout(async function() {
+        var r = await supabase.from('products').select('id,code_article,description')
+          .or('code_article.ilike.%' + q + '%,description.ilike.%' + q + '%').limit(8)
+        campSuggest.value = r.data || []
+      }, 200)
+    }
+    var campLoadTailles = function() {
+      var eq = equipements.value.find(function(e) { return e.id === bulkModal.lieu_id })
+      var en = eq ? (eq.nom_equipement || '').toLowerCase().trim() : null
+      var cd = (campPanel.code || '').toUpperCase().trim()
+      var opts = cadenceList.value.filter(function(c) {
+        if ((c.code_article || '').toUpperCase().trim() !== cd) return false
+        if (en && (c.equipment_name || '').toLowerCase().trim() !== en) return false
+        return true
+      }).map(function(c) { return c.taille_lot }).filter(function(v, i, a) { return v != null && a.indexOf(v) === i }).sort(function(a, b) { return a - b })
+      campPanel.tailleOpts = opts
+      if (opts.length === 1) campPanel.taille = String(opts[0])
+    }
+    var campSelectProduct = function(p) {
+      campPanel.code = p.code_article; campPanel.designation = p.description || ''; campPanel.product_id = p.id
+      campSuggest.value = []; campPanel.taille = ''
+      campLoadTailles()
+    }
+    var campInsert = function() {
+      campPanel.err = ''
+      if (!campPanel.product_id) { campPanel.err = 'Choisis un produit (la désignation doit apparaître).'; return }
+      var n = parseInt(campPanel.nb) || 0
+      if (n < 1) { campPanel.err = 'Nombre de lots invalide.'; return }
+      var startLot = parseInt(campPanel.lot_debut)
+      var hasLot = !isNaN(startLot)
+      // purger les lignes vides existantes (les 6 lignes blanches d'ouverture) avant d'ajouter la campagne
+      bulkRows.value = bulkRows.value.filter(function(r) { return (r.code || '').trim() })
+      for (var i = 0; i < n; i++) {
+        var row = bulkBlankRow()
+        row.code = campPanel.code; row.designation = campPanel.designation; row.product_id = campPanel.product_id; row._status = 'ok'
+        row.taille = campPanel.taille ? String(campPanel.taille) : ''
+        if (hasLot) row.numero_lot = String(startLot + i)
+        bulkRows.value.push(row)
+      }
+      campPanel.show = false; bulkModal.computed = false
+      campPanel.code = ''; campPanel.designation = ''; campPanel.product_id = null; campPanel.taille = ''; campPanel.nb = '10'; campPanel.lot_debut = ''; campPanel.tailleOpts = []; campSuggest.value = []
+    }
 
     // Date jj/mm/aaaa (ou aaaa-mm-jj) → 'aaaa-mm-jj' pour la BD
     var bulkParseDate = function(s) {
@@ -1288,6 +1376,22 @@ export default {
       var base = new Date()
       if (bulkModal.plan_start) { var ps = bulkParseDate(bulkModal.plan_start); if (ps) { var pp = ps.split('-'); base = new Date(+pp[0], +pp[1] - 1, +pp[2]) } }
 
+      // Poursuivre à partir du dernier PDP déjà enregistré pour cette machine
+      var cmlBase = 0
+      bulkModal.cont_info = ''
+      var rLast = await supabase.from('planification_conditionnement')
+        .select('date_fin_estimee,total_cml,product_id').eq('equipement_id', bulkModal.lieu_id)
+        .neq('statut_planification', 'Annulé').not('date_fin_estimee', 'is', null)
+        .order('date_fin_estimee', { ascending: false }).order('total_cml', { ascending: false, nullsFirst: false }).limit(1).maybeSingle()
+      var lastProduct = (rLast.data && rLast.data.product_id) ? rLast.data.product_id : null
+      if (rLast.data && rLast.data.date_fin_estimee) {
+        var lf = rLast.data.date_fin_estimee.slice(0, 10).split('-')
+        var nextAfter = new Date(+lf[0], +lf[1] - 1, +lf[2]); nextAfter.setDate(nextAfter.getDate() + 1)
+        if (nextAfter > base) { base = nextAfter }
+        cmlBase = rLast.data.total_cml || 0
+        bulkModal.cont_info = 'Poursuite après le dernier PDP machine (fin ' + fmtDate(rLast.data.date_fin_estimee) + (cmlBase ? ', cumul ' + cmlBase + ' j' : '') + ')'
+      }
+
       var filled = bulkRows.value.filter(function(r) { return (r.code || '').trim() })
       var lotNums = filled.map(function(r) { return (r.numero_lot || '').trim() }).filter(Boolean)
       var lotStat = {}
@@ -1296,7 +1400,7 @@ export default {
         ;(rl.data || []).forEach(function(l) { lotStat[l.numero_lot] = l })
       }
 
-      var cml = 0, prevProduct = null
+      var dateOff = 0, cml = cmlBase, prevProduct = lastProduct
       for (var i = 0; i < bulkRows.value.length; i++) {
         var r = bulkRows.value[i]
         if (!(r.code || '').trim()) continue
@@ -1316,11 +1420,12 @@ export default {
         var TOTAL = TP + THP
         var retard = parseFloat(r.retard) || 0
         var duree = TOTAL + retard
-        var cmlStart = cml, cmlEnd = cml + duree
-        var dDeb = bulkNthWorkingDay(base, Math.floor(cmlStart) + 1, bulkModal.lieu_id, travWE)
-        var nEnd = Math.max(Math.ceil(cmlEnd), Math.floor(cmlStart) + 1)
+        var startOff = dateOff, endOff = dateOff + duree   // décalage en jours ouvrés depuis base
+        var dDeb = bulkNthWorkingDay(base, Math.floor(startOff) + 1, bulkModal.lieu_id, travWE)
+        var nEnd = Math.max(Math.ceil(endOff), Math.floor(startOff) + 1)
         var dFin = bulkNthWorkingDay(base, nEnd, bulkModal.lieu_id, travWE)
-        cml = cmlEnd
+        dateOff = endOff
+        cml += duree                                       // cumul global (poursuit l'historique)
         r.tp = Math.round(TP * 100) / 100; r.thp = Math.round(THP * 100) / 100
         r.total = Math.round(TOTAL * 100) / 100; r.cml = Math.round(cml * 100) / 100
         r.date_debut = fmtIso(dDeb); r.date_fin = fmtIso(dFin)
@@ -1486,6 +1591,7 @@ export default {
       arretModal, openArretModal, saveArret, closeArret, deleteArret,
       calModal, calEntries, calForm, openCalModal, addCalEntry, deleteCalEntry, CAL_TYPE_LABELS,
       bulkModal, bulkRows, bulkLieuList, bulkSetFamille, openBulkModal, bulkAddRow, bulkRemoveRow, bulkClear, onBulkPaste, bulkResolveDesignations, bulkCompute, bulkSave,
+      campPanel, campSuggest, openCampPanel, campSearchCode, campSelectProduct, campInsert,
       deletePdpCond,
       gsModal, GS_URL, openGsImport, fetchGsData, confirmGsImport,
       fmtDt, fmtDate, arretDuree
@@ -1632,7 +1738,16 @@ export default {
 .bulk-grid .acts { width:34px; text-align:center; }
 .bulk-foot { display:flex; gap:8px; align-items:center; margin-top:10px; flex-wrap:wrap; }
 .bulk-hint { font-size:11px; color:#6ee7b7; }
+.bulk-cont { font-size:11px; color:#c7c7ff; background:#1c1c3e; border:1px solid #2a2a55; border-radius:4px; padding:6px 10px; margin-top:8px; }
 .bulk-result { font-size:12px; color:#34d399; background:#10b98111; border:1px solid #10b98133; border-radius:4px; padding:8px 12px; margin-top:10px; }
+/* Panneau campagne */
+.camp-panel { background:#14142e; border:1px solid #2a2a55; border-radius:6px; padding:10px 12px; margin-bottom:12px; }
+.camp-row { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
+.camp-f { display:flex; flex-direction:column; gap:3px; }
+.camp-code { min-width:150px; }
+.camp-desg-f { min-width:200px; flex:1; }
+.camp-desg-v { font-size:12px; color:#9999c0; padding:6px 0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.camp-hint { font-size:11px; color:#8888b0; margin-top:6px; }
 
 /* GS Import */
 .gs-url { font-size:10px; color:#7c7cff; word-break:break-all; font-family:'SF Mono',monospace; }
@@ -1708,6 +1823,10 @@ export default {
 .pdp-prod[data-theme="day"] .bg-sel.vl-partiel { color:#047857; }
 .pdp-prod[data-theme="day"] .lib-src { color:#9ca3af; }
 .pdp-prod[data-theme="day"] .bulk-hint { color:#047857; }
+.pdp-prod[data-theme="day"] .bulk-cont { color:#5b21b6; background:#f5f3ff; border-color:#ddd6fe; }
+.pdp-prod[data-theme="day"] .camp-panel { background:#faf9ff; border-color:#ddd6fe; }
+.pdp-prod[data-theme="day"] .camp-desg-v { color:#6b7280; }
+.pdp-prod[data-theme="day"] .camp-hint { color:#6b7280; }
 /* Badges statut (règle N°15c) */
 .pdp-prod[data-theme="day"] .sc-planifié,
 .pdp-prod[data-theme="day"] .sc-planifi { background:#ede9fe; color:#7c3aed; }
