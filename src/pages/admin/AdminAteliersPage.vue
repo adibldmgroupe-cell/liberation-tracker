@@ -168,7 +168,7 @@
                 <tr>
                   <th>N° salle</th><th>id Supabase</th><th>Désignation</th>
                   <th>N° Op.</th><th>Opération</th><th>Équipement</th>
-                  <th class="gs-r">TRS cible</th><th class="gs-r">TO shift</th>
+                  <th class="gs-r">TRS cible</th><th class="gs-r">Tps util</th><th class="gs-r">TO shift</th>
                   <th class="gs-r">Pause</th><th class="gs-r">VDLP</th>
                   <th class="gs-r">VDLC</th><th class="gs-r">Chgt fmt</th>
                   <th class="gs-r">Régl.</th><th class="gs-r">Micro-arr.</th><th class="gs-r">Maint.</th>
@@ -184,6 +184,7 @@
                   <td>{{r.op_code||'—'}}</td>
                   <td>{{r.equipment_name||'—'}}</td>
                   <td class="gs-r">{{r.trs_cible_pct!=null?r.trs_cible_pct+'%':'—'}}</td>
+                  <td class="gs-r">{{r.temps_util!=null?r.temps_util+' h':'—'}}</td>
                   <td class="gs-r">{{r.to_shift_min!=null?r.to_shift_min+' min':'—'}}</td>
                   <td class="gs-r">{{r.pause_min!=null?r.pause_min+' min':'—'}}</td>
                   <td class="gs-r">{{r.vdlp_min!=null?r.vdlp_min+' min':'—'}}</td>
@@ -484,6 +485,7 @@ export default {
           op_code:                  om.op_code,
           equipment_name:           om.equipment_name,
           trs_cible_pct:            om.trs_cible_pct,
+          temps_util:               om.temps_util,
           to_shift_min:             om.to_shift_min,
           pause_min:                om.pause_min,
           vdlp_min:                 om.vdlp_min,
@@ -516,6 +518,7 @@ export default {
         if (!r.room_code) continue
         var payload = {
           trs_cible_pct:    r.trs_cible_pct,
+          temps_util:       r.temps_util,
           to_shift_min:     r.to_shift_min,
           pause_min:        r.pause_min,
           vdlp_min:         r.vdlp_min,
@@ -577,6 +580,7 @@ export default {
             op_code:         r.op_code || '',
             equipment_name:  r.equipment_name || '',
             trs_cible_pct:   r.trs_cible_pct,
+            temps_util:      r.temps_util,
             to_shift_min:    r.to_shift_min,
             pause_min:       r.pause_min,
             vdlp_min:        r.vdlp_min,

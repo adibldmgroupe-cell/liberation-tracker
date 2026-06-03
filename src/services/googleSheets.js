@@ -10,14 +10,15 @@
 //   5  Opération
 //   6  Equipement
 //   7  TRS_cible_%
-//   8  TO_shift_min
-//   9  Pause_min
-//   10 VDLP_min
-//   11 VDLC_min
-//   12 Chgt_format_min
-//   13 Reglage_lancement_min
-//   14 Micro_arrets_shift_min
-//   15 Maint_curative_shift_min
+//   8  Temps_util             → heures utiles/jour (PDP capacité)
+//   9  TO_shift_min
+//   10 Pause_min
+//   11 VDLP_min
+//   12 VDLC_min
+//   13 Chgt_format_min
+//   14 Reglage_lancement_min
+//   15 Micro_arrets_shift_min
+//   16 Maint_curative_shift_min
 //
 // Onglet 2 (gid=5050608) — cadences par (salle × article × taille de lot)
 //   0  N°_atelier
@@ -110,14 +111,15 @@ var _parse = function(text) {
       op_code:                  (cols[5]  || '').trim(),
       equipment_name:           (cols[6]  || '').trim(),
       trs_cible_pct:            _num(cols[7]),
-      to_shift_min:             _int(cols[8]),
-      pause_min:                _int(cols[9]),
-      vdlp_min:                 _int(cols[10]),
-      vdlc_min:                 _int(cols[11]),
-      chgt_format_min:          _int(cols[12]),
-      reglage_lancement_min:    _int(cols[13]),
-      micro_arrets_shift_min:   _int(cols[14]),
-      maint_curative_shift_min: _int(cols[15]),
+      temps_util:               _num(cols[8]),    // heures utiles/jour (PDP capacité) — inséré entre TRS_cible et TO_shift
+      to_shift_min:             _int(cols[9]),
+      pause_min:                _int(cols[10]),
+      vdlp_min:                 _int(cols[11]),
+      vdlc_min:                 _int(cols[12]),
+      chgt_format_min:          _int(cols[13]),
+      reglage_lancement_min:    _int(cols[14]),
+      micro_arrets_shift_min:   _int(cols[15]),
+      maint_curative_shift_min: _int(cols[16]),
     })
   }
 
@@ -174,6 +176,7 @@ var _parse = function(text) {
         room_name:      r.atelier_nom,
         processus:      r.processus_nom,
         trs_cible_pct:            r.trs_cible_pct,
+        temps_util:               r.temps_util,
         to_shift_min:             r.to_shift_min,
         pause_min:                r.pause_min,
         vdlp_min:                 r.vdlp_min,
@@ -199,6 +202,7 @@ var _parse = function(text) {
       atelier_id:    null,
       equipement_id: null,
       trs_cible_pct:            r.trs_cible_pct,
+      temps_util:               r.temps_util,
       to_shift_min:             r.to_shift_min,
       pause_min:                r.pause_min,
       vdlp_min:                 r.vdlp_min,
