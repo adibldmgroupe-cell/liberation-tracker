@@ -128,6 +128,16 @@
           <marker id="arr-flux" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
             <path d="M0,0 L0,6 L8,3 z" fill="#fbbf24"/>
           </marker>
+          <!-- Dégradés étiquette lot en cours (même couleur que le statut du nœud) -->
+          <linearGradient id="tag-encours" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#34d399"/><stop offset="100%" stop-color="#059669"/>
+          </linearGradient>
+          <linearGradient id="tag-arret" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#f87171"/><stop offset="100%" stop-color="#dc2626"/>
+          </linearGradient>
+          <linearGradient id="tag-deviation" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#fbbf24"/><stop offset="100%" stop-color="#d97706"/>
+          </linearGradient>
         </defs>
         <rect width="100%" height="100%" :fill="theme==='day' ? 'url(#grid-day)' : 'url(#grid)'"/>
 
@@ -239,6 +249,17 @@
           <rect v-if="nodeIsFlux(node) && !trsMode"
             :x="node.x" :y="node.y" :width="node.w" :height="node.h"
             rx="8" fill="none" stroke="#fbbf24" stroke-width="2.5"/>
+          <!-- Étiquette externe : lot + produit en cours (vue 1, hors mode TRS) -->
+          <g v-if="!trsMode && nodeLotTag(node)" :opacity="nodeDim(node)">
+            <rect :x="node.x" :y="node.y+node.h+2" :width="node.w" height="22" rx="4"
+              :fill="'url(#'+nodeLotTag(node).grad+')'" stroke="rgba(0,0,0,.12)" stroke-width="0.5"/>
+            <text :x="node.x+7" :y="node.y+node.h+12" fill="#fff" font-size="10" font-weight="800" font-family="monospace">
+              {{nodeLotTag(node).lot}}<tspan v-if="nodeLotTag(node).more" font-size="8" font-weight="600"> +{{nodeLotTag(node).more}}</tspan>
+            </text>
+            <text :x="node.x+7" :y="node.y+node.h+20" fill="rgba(255,255,255,.95)" font-size="7.5">
+              {{nodeLotTag(node).prod}}
+            </text>
+          </g>
           <!-- Dot TRS (mode TRS uniquement) -->
           <circle v-if="trsMode && node.type==='cond'"
             :cx="node.x+node.w-10" :cy="node.y+10" r="6"
@@ -1056,7 +1077,7 @@ var T_OTC_Y    = 900
 var COND_X = TRACK_X + TRACKS_W + 110    // ~1150
 var COND_Y = 30
 var COND_W = 210
-var COND_H = 640
+var COND_H = 700   // élargi : 7 lignes × 90px (place pour l'étiquette lot/produit sous chaque nœud)
 
 // Track Y positions
 var T1Y = 100    // Gran01→Mél01→Comp01→Pellic01
@@ -1115,13 +1136,13 @@ var NODES_DEF = [
   buildNode('c206', '206', 'MARCH. R,T',         'formes_semi', 'cond', 2, T5Y),
 
   // ── CONDITIONNEMENT PRIMAIRE — 7 lignes
-  buildNode('c149', '149', 'MB421',          'cond_primaire', 'cond', 0, COND_PRIM_Y + 0*70,  COND_X+31),
-  buildNode('c148', '148', 'IMA TR100L',     'cond_primaire', 'cond', 0, COND_PRIM_Y + 1*70,  COND_X+31),
-  buildNode('c147', '147', 'INTEGRA 300',    'cond_primaire', 'cond', 0, COND_PRIM_Y + 2*70,  COND_X+31),
-  buildNode('c146', '146', 'IMA PG SUPER 1', 'cond_primaire', 'cond', 0, COND_PRIM_Y + 3*70,  COND_X+31),
-  buildNode('c220', '220', 'MARCH. R,P',     'cond_primaire', 'cond', 0, COND_PRIM_Y + 4*70,  COND_X+31),
-  buildNode('c222', '222', 'INTEGRA 520',    'cond_primaire', 'cond', 0, COND_PRIM_Y + 5*70,  COND_X+31),
-  buildNode('c223', '223', 'IMA PG SUPER 2', 'cond_primaire', 'cond', 0, COND_PRIM_Y + 6*70,  COND_X+31),
+  buildNode('c149', '149', 'MB421',          'cond_primaire', 'cond', 0, COND_PRIM_Y + 0*90,  COND_X+31),
+  buildNode('c148', '148', 'IMA TR100L',     'cond_primaire', 'cond', 0, COND_PRIM_Y + 1*90,  COND_X+31),
+  buildNode('c147', '147', 'INTEGRA 300',    'cond_primaire', 'cond', 0, COND_PRIM_Y + 2*90,  COND_X+31),
+  buildNode('c146', '146', 'IMA PG SUPER 1', 'cond_primaire', 'cond', 0, COND_PRIM_Y + 3*90,  COND_X+31),
+  buildNode('c220', '220', 'MARCH. R,P',     'cond_primaire', 'cond', 0, COND_PRIM_Y + 4*90,  COND_X+31),
+  buildNode('c222', '222', 'INTEGRA 520',    'cond_primaire', 'cond', 0, COND_PRIM_Y + 5*90,  COND_X+31),
+  buildNode('c223', '223', 'IMA PG SUPER 2', 'cond_primaire', 'cond', 0, COND_PRIM_Y + 6*90,  COND_X+31),
 
   // ── STOCK INTERMÉDIAIRE SF (tampon entre FAB et COND)
   buildNode('n416', '416', 'Stock Inter. SF',    'stockage_sf', 'fab', 0, 400, 940),
@@ -2367,6 +2388,18 @@ export default {
       return res
     }
 
+    // Étiquette externe « lot + produit en cours » sous le nœud (vue 1, hors mode TRS)
+    var nodeLotTag = function(node) {
+      if (trsMode.value || !node) return null
+      var lots = getNodeLots(node).filter(function(l) { return l.statut === 'En cours' || l.statut === 'Arrêt' })
+      if (!lots.length) return null
+      var st = nodeStatus(node)
+      var grad = st.label === 'Arrêt' ? 'tag-arret' : (st.label === 'Déviation' ? 'tag-deviation' : 'tag-encours')
+      var prod = (lots[0].nom_produit || '').replace(/®/g, '').trim()
+      if (prod.length > 26) prod = prod.slice(0, 25) + '…'
+      return { lot: lots[0].numero_lot, prod: prod || '—', more: lots.length > 1 ? lots.length - 1 : 0, grad: grad }
+    }
+
     // ─── PRODUCT SEARCH ─────────────────────────────────────────
     var productSuggestions = computed(function() {
       if (!productSearch.value || productSearch.value.length < 2) return []
@@ -2784,7 +2817,7 @@ export default {
       stepLabels: STEP_LABELS,
       zoneColor, zoneLabel,
       nodeStatus, nodeColor, nodeStroke, nodeStrokeWidth, nodeDim, nodeIsFlux,
-      activeLotCount, getNodeLots, selectNode,
+      activeLotCount, getNodeLots, nodeLotTag, selectNode,
       // Product flux
       productSearch, showSuggestions, productSuggestions, selectedProduct, activeRoute,
       onProductSearch, closeSuggestions, pickProduct, clearProduct, clearProductSearch, toggleRoute,
