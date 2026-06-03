@@ -1084,9 +1084,17 @@ export default {
     // Saisie inline de la date de fin réelle (équipe planification)
     var savePdpReelle = async function(p) {
       pdpErr.value = ''
+      var dr = bulkParseDate(p.date_fin_reelle)
       var r = await supabase.from('planification_conditionnement')
-        .update({ date_fin_reelle: bulkParseDate(p.date_fin_reelle), updated_at: new Date().toISOString() }).eq('id', p.id)
-      if (r.error) { pdpErr.value = 'Enregistrement fin réelle impossible : ' + r.error.message + ' (migration 030 exécutée ?)' }
+        .update({ date_fin_reelle: dr, updated_at: new Date().toISOString() }).eq('id', p.id)
+      if (r.error) { pdpErr.value = 'Enregistrement fin réelle impossible : ' + r.error.message + ' (migration 030 exécutée ?)'; return }
+      // ── Interconnexion Schéma (bidirectionnel) : propager la fin réelle à la session du même lot ──
+      // (date uniquement ; on ne force pas le statut pour ne pas clôturer une session TRS active)
+      if (p.lot_id && dr) {
+        await supabase.from('suivi_conditionnement')
+          .update({ date_fin: dr, updated_at: new Date().toISOString() })
+          .eq('lot_id', p.lot_id).eq('equipement_id', p.equipement_id).is('deleted_at', null)
+      }
     }
     // Recaler tout le PDP conditionnement sur les fins réelles + décaler l'aval du retard cumulé
     var recomputeAllPdp = async function() {

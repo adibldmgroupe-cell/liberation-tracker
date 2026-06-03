@@ -2607,12 +2607,20 @@ export default {
       modal.value.saving = true; modal.value.err = ''
       var node = selectedNode.value
       var res
+      var dFinClose = modal.value.dateFin || new Date().toISOString().slice(0,10)
       if (node.type === 'cond') {
         res = await supabase.from('suivi_conditionnement').update({
           statut: 'Clôturé',
-          date_fin: modal.value.dateFin || new Date().toISOString().slice(0,10),
+          date_fin: dFinClose,
           updated_at: new Date().toISOString()
-        }).eq('id', modal.value.fabId)
+        }).eq('id', modal.value.fabId).select('lot_id').single()
+        // ── Interconnexion PDP (bidirectionnel) : propager la fin réelle à la ligne PDP du même lot ──
+        // (recalage de l'aval = manuel via « 📌 Recaler sur réel » dans PDP Production)
+        if (!res.error && res.data && res.data.lot_id) {
+          await supabase.from('planification_conditionnement')
+            .update({ date_fin_reelle: dFinClose, updated_at: new Date().toISOString() })
+            .eq('lot_id', res.data.lot_id).neq('statut_planification', 'Annulé')
+        }
       } else {
         res = await supabase.from('suivi_fabrication').update({
           statut: 'Clôturé',
