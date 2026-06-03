@@ -34,6 +34,7 @@
         <button class="btn-ref" @click="loadAll" :class="{spin:loading}" title="Rafraîchir">↻</button>
         <button class="btn-ref" @click="openGsImport" title="Import Google Sheets">↑ GS</button>
         <button class="btn-ref" @click="openCalModal" title="Calendrier machines (fériés / arrêts / fermetures)">📅 Calendrier</button>
+        <button class="btn-ref btn-ref-accent" @click="openBulkModal" title="Saisie PDP en masse (coller depuis Excel)">📋 Saisie en masse</button>
         <button class="btn-ref" @click="cycleTheme" :title="themeTitle">{{themeIcon}}</button>
       </div>
     </div>
@@ -362,6 +363,70 @@
           <div v-else class="empty">Aucune entrée — ajoute les fériés, arrêts annuels et fermetures.</div>
         </div>
         <div class="modal-acts"><button class="btn-cancel" @click="calModal.show=false">Fermer</button></div>
+      </div>
+    </div>
+
+    <!-- ══ MODAL SAISIE PDP EN MASSE ══ -->
+    <div class="ov" v-if="bulkModal.show" @click.self="bulkModal.show=false">
+      <div class="modal modal-xwide">
+        <div class="modal-hd">📋 Saisie PDP en masse</div>
+        <div class="modal-ctx">Colle depuis Excel (colonne par colonne, ou un bloc entier). La désignation remonte automatiquement du code produit. N° lot facultatif — si renseigné, le lot est créé comme « Planifier » (visible dans Lots).</div>
+
+        <div class="bulk-ctrl">
+          <div class="bulk-fam">
+            <button class="bulk-fam-btn" :class="{on:bulkModal.famille==='cond'}" @click="bulkSetFamille('cond')">Conditionnement</button>
+            <button class="bulk-fam-btn" :class="{on:bulkModal.famille==='fab'}" @click="bulkSetFamille('fab')">Fabrication</button>
+          </div>
+          <select v-model="bulkModal.lieu_id" class="inp bulk-lieu">
+            <option value="">— {{bulkModal.famille==='fab'?'Atelier / salle':'Équipement / machine'}} —</option>
+            <option v-for="l in bulkLieuList" :key="l.id" :value="l.id">{{l.nom}}</option>
+          </select>
+        </div>
+
+        <div class="bulk-grid-wrap">
+          <table class="bulk-grid">
+            <thead>
+              <tr>
+                <th class="bg-idx">#</th>
+                <th>Code produit</th>
+                <th>Désignation</th>
+                <th>N° Lot</th>
+                <th>Début</th>
+                <th>Fin</th>
+                <th>Taille</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(r,i) in bulkRows" :key="i" :class="{'bg-unknown-row':r._status==='unknown'}">
+                <td class="bg-idx">{{i+1}}</td>
+                <td><input v-model="r.code" @paste="onBulkPaste($event,i,'code')" @blur="bulkResolveDesignations" class="bg-inp mono" placeholder="PFABB10" /></td>
+                <td class="bg-desg" :class="{warn:r._status==='unknown'}">{{r.designation||'—'}}</td>
+                <td><input v-model="r.numero_lot" @paste="onBulkPaste($event,i,'numero_lot')" class="bg-inp mono" placeholder="(option.)" /></td>
+                <td><input v-model="r.date_debut" @paste="onBulkPaste($event,i,'date_debut')" class="bg-inp mono" placeholder="jj/mm/aaaa" /></td>
+                <td><input v-model="r.date_fin" @paste="onBulkPaste($event,i,'date_fin')" class="bg-inp mono" placeholder="jj/mm/aaaa" /></td>
+                <td><input v-model="r.taille" @paste="onBulkPaste($event,i,'taille')" class="bg-inp mono" placeholder="UN" /></td>
+                <td class="acts"><button class="ia del" @click="bulkRemoveRow(i)" title="Supprimer la ligne">✕</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="bulk-foot">
+          <button class="btn-ref" @click="bulkAddRow">+ Ligne</button>
+          <button class="btn-ref" @click="bulkResolveDesignations">↻ Désignations</button>
+          <button class="btn-ref" @click="bulkClear">Vider</button>
+        </div>
+
+        <div class="modal-err" v-if="bulkModal.err">{{bulkModal.err}}</div>
+        <div class="bulk-result" v-if="bulkModal.result">
+          ✓ {{bulkModal.result.lignes}} ligne(s) PDP · {{bulkModal.result.lots}} lot(s) créé(s) · {{bulkModal.result.skipped}} lot(s) déjà existant(s) · {{bulkModal.result.errors}} erreur(s)
+        </div>
+
+        <div class="modal-acts">
+          <button class="btn-save" @click="bulkSave" :disabled="bulkModal.saving">{{bulkModal.saving?(bulkModal.progress||'…'):'Créer le PDP'}}</button>
+          <button class="btn-cancel" @click="bulkModal.show=false">Fermer</button>
+        </div>
       </div>
     </div>
 
@@ -717,6 +782,15 @@ export default {
     var calForm = reactive({ equipement_id: '', type: 'ferie', date_debut: '', date_fin: '', libelle: '' })
     var CAL_TYPE_LABELS = { ferie: 'Jour férié', arret_annuel: 'Arrêt annuel', fermeture: 'Fermeture', maintenance: 'Maintenance' }
 
+    // ── Saisie PDP en masse (coller colonne par colonne) ──
+    // Ordre des colonnes collables (tab/Excel) — la désignation est dérivée du code.
+    var BULK_FIELDS = ['code', 'numero_lot', 'date_debut', 'date_fin', 'taille']
+    var bulkBlankRow = function() {
+      return { code: '', designation: '', product_id: null, numero_lot: '', date_debut: '', date_fin: '', taille: '', _status: '' }
+    }
+    var bulkModal = reactive({ show: false, famille: 'cond', lieu_id: '', saving: false, progress: '', err: '', result: null })
+    var bulkRows  = ref([])
+
     var openSuiviModal = function(s, famille) {
       var now2 = new Date().toISOString().slice(0, 10)
       suiviModal.famille = famille
@@ -1007,8 +1081,15 @@ export default {
           })
         }
       }
-      if (fabRows.length)  await supabase.from('suivi_fabrication').insert(fabRows)
-      if (condRows.length) await supabase.from('suivi_conditionnement').insert(condRows)
+      // règle N°17 : toujours vérifier res.error (sinon échec silencieux — ex. statut='Planifié' refusé par le CHECK avant migration 029)
+      if (fabRows.length) {
+        var rGsF = await supabase.from('suivi_fabrication').insert(fabRows)
+        if (rGsF.error) { gsModal.saving = false; gsModal.err = 'Import FAB : ' + rGsF.error.message; return }
+      }
+      if (condRows.length) {
+        var rGsC = await supabase.from('suivi_conditionnement').insert(condRows)
+        if (rGsC.error) { gsModal.saving = false; gsModal.err = 'Import COND : ' + rGsC.error.message; return }
+      }
       gsModal.saving = false; gsModal.show = false
       await loadAll()
     }
@@ -1048,6 +1129,164 @@ export default {
       await loadCalEntries()
     }
 
+    // ── Saisie PDP en masse ──
+    var bulkLieuList = computed(function() {
+      return bulkModal.famille === 'fab'
+        ? ateliers.value.map(function(a) { return { id: a.id, nom: a.nom_atelier } })
+        : equipements.value.map(function(e) { return { id: e.id, nom: e.nom_equipement } })
+    })
+    var bulkSetFamille = function(f) { bulkModal.famille = f; bulkModal.lieu_id = '' }
+    var openBulkModal = function() {
+      bulkModal.show = true; bulkModal.err = ''; bulkModal.result = null; bulkModal.progress = ''; bulkModal.saving = false
+      bulkModal.lieu_id = ''
+      bulkRows.value = []
+      for (var i = 0; i < 6; i++) bulkRows.value.push(bulkBlankRow())
+    }
+    var bulkAddRow    = function() { bulkRows.value.push(bulkBlankRow()) }
+    var bulkRemoveRow = function(i) { bulkRows.value.splice(i, 1); if (!bulkRows.value.length) bulkRows.value.push(bulkBlankRow()) }
+    var bulkClear     = function() { bulkRows.value = []; for (var i = 0; i < 6; i++) bulkRows.value.push(bulkBlankRow()); bulkModal.result = null; bulkModal.err = '' }
+
+    // Date jj/mm/aaaa (ou aaaa-mm-jj) → 'aaaa-mm-jj' pour la BD
+    var bulkParseDate = function(s) {
+      if (!s) return null
+      s = String(s).trim(); if (!s) return null
+      if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10)
+      var p = s.split(/[\/.\-]/)
+      if (p.length === 3) {
+        if (p[2].length === 4) return p[2] + '-' + p[1].padStart(2, '0') + '-' + p[0].padStart(2, '0')
+        if (p[0].length === 4) return p[0] + '-' + p[1].padStart(2, '0') + '-' + p[2].padStart(2, '0')
+      }
+      return null
+    }
+
+    // Résoudre les désignations + product_id depuis les codes saisis (batch)
+    var bulkResolveDesignations = async function() {
+      var codes = []
+      bulkRows.value.forEach(function(r) { var c = (r.code || '').trim(); if (c && codes.indexOf(c) < 0) codes.push(c) })
+      if (!codes.length) return
+      var res = await supabase.from('products').select('id,code_article,description').in('code_article', codes)
+      var map = {}
+      ;(res.data || []).forEach(function(p) { map[(p.code_article || '').trim().toUpperCase()] = p })
+      bulkRows.value.forEach(function(r) {
+        var c = (r.code || '').trim()
+        if (!c) { r.designation = ''; r.product_id = null; r._status = ''; return }
+        var p = map[c.toUpperCase()]
+        if (p) { r.designation = p.description || p.code_article; r.product_id = p.id; r._status = 'ok' }
+        else   { r.designation = '⚠ code inconnu'; r.product_id = null; r._status = 'unknown' }
+      })
+    }
+
+    // Collage Excel : remplit vers le bas (et à droite si plusieurs colonnes tab)
+    var onBulkPaste = function(e, rowIdx, field) {
+      var text = (e.clipboardData || window.clipboardData).getData('text')
+      if (!text || !/[\n\t\r]/.test(text)) return   // valeur simple → collage natif
+      e.preventDefault()
+      var lines = text.replace(/\r/g, '').split('\n')
+      while (lines.length && lines[lines.length - 1] === '') lines.pop()
+      var startCol = BULK_FIELDS.indexOf(field); if (startCol < 0) startCol = 0
+      for (var li = 0; li < lines.length; li++) {
+        var ri = rowIdx + li
+        while (bulkRows.value.length <= ri) bulkRows.value.push(bulkBlankRow())
+        var cells = lines[li].split('\t')
+        for (var ci = 0; ci < cells.length; ci++) {
+          var f = BULK_FIELDS[startCol + ci]; if (!f) break
+          var val = (cells[ci] || '').trim()
+          if (f === 'taille') bulkRows.value[ri][f] = val.replace(/[^\d]/g, '')
+          else bulkRows.value[ri][f] = val
+        }
+      }
+      bulkResolveDesignations()
+    }
+
+    // Création lot « façon Planifier » (LotsPage) — réplique exacte de PlanifierPage
+    var bulkCreateLot = async function(numLot, productId, codeArticle, uid) {
+      var existing = await supabase.from('lots').select('id').eq('numero_lot', numLot).maybeSingle()
+      if (existing.data) return { lotId: existing.data.id, created: false }
+      var lotRes = await supabase.from('lots').insert({
+        numero_lot: numLot, product_id: productId, statut_sap: 'vide',
+        synced_from_excel_at: new Date().toISOString()
+      }).select('id').single()
+      if (lotRes.error) return { error: lotRes.error.message }
+      var lotId = lotRes.data.id
+      await supabase.from('liberation_documents').insert([
+        { lot_id: lotId, type_document: 'if',       is_applicable: true,  is_required: true,  service_emetteur: 'fabrication' },
+        { lot_id: lotId, type_document: 'ic',       is_applicable: true,  is_required: true,  service_emetteur: 'conditionnement' },
+        { lot_id: lotId, type_document: 'da_pc',    is_applicable: true,  is_required: true,  service_emetteur: 'lcq' },
+        { lot_id: lotId, type_document: 'da_micro', is_applicable: false, is_required: false, service_emetteur: 'lcq' },
+        { lot_id: lotId, type_document: 'ccl',      is_applicable: true,  is_required: true,  service_emetteur: 'aq' }
+      ])
+      await supabase.from('liberation_dossiers').insert({ lot_id: lotId, da_micro_applicable: false })
+      await supabase.from('orders_of').insert({ lot_id: lotId, statut: 'planifie', etape_circuit: 'planification' })
+      await supabase.from('orders_oc').insert({ lot_id: lotId, statut: 'planifie', etape_circuit: 'planification' })
+      await supabase.from('lot_events').insert({
+        lot_id: lotId, event_type: 'lot_planifie',
+        description: 'Lot planifié (PDP en masse) — ' + codeArticle,
+        triggered_by: uid, source: 'app', created_at: new Date().toISOString()
+      })
+      return { lotId: lotId, created: true }
+    }
+
+    var bulkSave = async function() {
+      if (!bulkModal.lieu_id) { bulkModal.err = (bulkModal.famille === 'fab' ? 'Atelier' : 'Équipement') + ' requis'; return }
+      var rows = bulkRows.value.filter(function(r) { return (r.code || '').trim() })
+      if (!rows.length) { bulkModal.err = 'Aucune ligne à créer (renseigne au moins un code produit)'; return }
+      bulkModal.saving = true; bulkModal.err = ''; bulkModal.result = null; bulkModal.progress = 'Résolution des produits…'
+      await bulkResolveDesignations()
+      var unknown = rows.filter(function(r) { return !r.product_id })
+      if (unknown.length) { bulkModal.saving = false; bulkModal.progress = ''; bulkModal.err = unknown.length + ' code(s) produit inconnu(s) — corrige-les avant de créer'; return }
+
+      var u = await supabase.auth.getUser()
+      var uid = u.data && u.data.user ? u.data.user.id : null
+      var stats = { lots: 0, lignes: 0, skipped: 0, errors: 0 }
+      var ordreBase = 0
+      if (bulkModal.famille === 'cond') {
+        var om = await supabase.from('planification_conditionnement').select('ordre_plan').order('ordre_plan', { ascending: false }).limit(1).maybeSingle()
+        ordreBase = (om.data && om.data.ordre_plan) ? om.data.ordre_plan : 0
+      }
+      var condRows = [], fabRows = []
+      for (var i = 0; i < rows.length; i++) {
+        var r = rows[i]
+        bulkModal.progress = 'Ligne ' + (i + 1) + '/' + rows.length + '…'
+        var lotId = null
+        var nLot = (r.numero_lot || '').trim()
+        if (nLot) {
+          var lr = await bulkCreateLot(nLot, r.product_id, r.code, uid)
+          if (lr.error) { stats.errors++; r._status = 'err'; continue }
+          lotId = lr.lotId
+          if (lr.created) stats.lots++; else stats.skipped++
+        }
+        var dDeb = bulkParseDate(r.date_debut)
+        var dFin = bulkParseDate(r.date_fin)
+        if (bulkModal.famille === 'cond') {
+          condRows.push({
+            lot_id: lotId, product_id: r.product_id, equipement_id: bulkModal.lieu_id,
+            taille_lot: r.taille ? (parseInt(r.taille) || null) : null,
+            ordre_plan: (++ordreBase), statut_planification: 'Planifié',
+            date_debut_estimee: dDeb, date_fin_estimee: dFin,
+            created_at: new Date().toISOString()
+          })
+        } else {
+          fabRows.push({
+            lot_id: lotId, product_id: r.product_id, atelier_id: bulkModal.lieu_id,
+            date_debut: dDeb, date_fin: dFin, statut: 'Planifié'
+          })
+        }
+        stats.lignes++
+      }
+      bulkModal.progress = 'Enregistrement…'
+      if (condRows.length) {
+        var rc = await supabase.from('planification_conditionnement').insert(condRows)
+        if (rc.error) { bulkModal.saving = false; bulkModal.progress = ''; bulkModal.err = 'PDP cond : ' + rc.error.message; return }
+      }
+      if (fabRows.length) {
+        var rf = await supabase.from('suivi_fabrication').insert(fabRows)
+        if (rf.error) { bulkModal.saving = false; bulkModal.progress = ''; bulkModal.err = 'PDP fab : ' + rf.error.message + ' (migration 029 exécutée ?)'; return }
+      }
+      bulkModal.saving = false; bulkModal.progress = ''
+      bulkModal.result = stats
+      await loadAll()
+    }
+
     onMounted(loadAll)
 
     return {
@@ -1063,6 +1302,7 @@ export default {
       suiviModal, openSuiviModal, saveSuiviFab, saveSuiviCond, clotureSuivi, deleteSuivi,
       arretModal, openArretModal, saveArret, closeArret, deleteArret,
       calModal, calEntries, calForm, openCalModal, addCalEntry, deleteCalEntry, CAL_TYPE_LABELS,
+      bulkModal, bulkRows, bulkLieuList, bulkSetFamille, openBulkModal, bulkAddRow, bulkRemoveRow, bulkClear, onBulkPaste, bulkResolveDesignations, bulkSave,
       deletePdpCond,
       gsModal, GS_URL, openGsImport, fetchGsData, confirmGsImport,
       fmtDt, fmtDate, arretDuree
@@ -1177,6 +1417,29 @@ export default {
 .btn-cancel { padding:7px 16px; font-size:12px; border:1px solid #252545; border-radius:3px; background:transparent; color:#8888b0; cursor:pointer; font-family:inherit; }
 .btn-cancel:hover { color:#c0c0e8; border-color:#7c7cff; }
 
+/* Saisie PDP en masse */
+.modal-xwide { width:1080px; }
+.btn-ref-accent { border-color:#7c7cff; color:#c7c7ff; background:#1c1c3e; }
+.btn-ref-accent:hover { background:#252550; color:#e0e0ff; }
+.bulk-ctrl { display:flex; gap:12px; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
+.bulk-fam { display:inline-flex; border:1px solid #252545; border-radius:5px; overflow:hidden; }
+.bulk-fam-btn { padding:6px 14px; font-size:12px; background:#12122a; color:#8888b0; border:none; cursor:pointer; font-family:inherit; }
+.bulk-fam-btn.on { background:#3b82f6; color:#fff; font-weight:600; }
+.bulk-lieu { max-width:340px; }
+.bulk-grid-wrap { max-height:48vh; overflow:auto; border:1px solid #252545; border-radius:5px; }
+.bulk-grid { width:100%; border-collapse:collapse; font-size:12px; }
+.bulk-grid thead th { position:sticky; top:0; z-index:2; background:#12122a; color:#8888b0; font-weight:600; text-align:left; padding:7px 8px; font-size:10px; text-transform:uppercase; letter-spacing:.4px; border-bottom:1px solid #252545; }
+.bulk-grid td { padding:0; border-bottom:1px solid #1c1c38; vertical-align:middle; }
+.bulk-grid .bg-idx { width:30px; text-align:center; color:#555; font-size:10px; padding:0 4px; }
+.bg-inp { width:100%; padding:6px 8px; border:none; background:transparent; color:#e0e0f0; font-size:12px; font-family:inherit; outline:none; box-sizing:border-box; }
+.bg-inp:focus { background:#1a1a35; box-shadow:inset 0 0 0 1px #7c7cff; }
+.bg-desg { padding:6px 8px; color:#9999c0; font-size:11px; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.bg-desg.warn { color:#f59e0b; }
+.bg-unknown-row { background:#f59e0b0d; }
+.bulk-grid .acts { width:34px; text-align:center; }
+.bulk-foot { display:flex; gap:8px; align-items:center; margin-top:10px; }
+.bulk-result { font-size:12px; color:#34d399; background:#10b98111; border:1px solid #10b98133; border-radius:4px; padding:8px 12px; margin-top:10px; }
+
 /* GS Import */
 .gs-url { font-size:10px; color:#7c7cff; word-break:break-all; font-family:'SF Mono',monospace; }
 .gs-cols { font-size:11px; color:#555; margin:8px 0 12px; }
@@ -1230,6 +1493,20 @@ export default {
 .pdp-prod[data-theme="day"] .btn-cancel:hover { border-color:#7c3aed; color:#7c3aed; }
 .pdp-prod[data-theme="day"] .gs-url { color:#7c3aed; }
 .pdp-prod[data-theme="day"] .modal-err { background:#fef2f2; color:#ef4444; }
+/* Saisie PDP en masse — thème jour */
+.pdp-prod[data-theme="day"] .btn-ref-accent { background:#f5f3ff; border-color:#7c3aed; color:#7c3aed; }
+.pdp-prod[data-theme="day"] .btn-ref-accent:hover { background:#ede9fe; }
+.pdp-prod[data-theme="day"] .bulk-fam { border-color:#e5e7eb; }
+.pdp-prod[data-theme="day"] .bulk-fam-btn { background:#f9fafb; color:#6b7280; }
+.pdp-prod[data-theme="day"] .bulk-fam-btn.on { background:#7c3aed; color:#fff; }
+.pdp-prod[data-theme="day"] .bulk-grid-wrap { border-color:#e5e7eb; }
+.pdp-prod[data-theme="day"] .bulk-grid thead th { background:#f5f3ff; color:#7c3aed; border-bottom-color:#ede9fe; }
+.pdp-prod[data-theme="day"] .bulk-grid td { border-bottom-color:#f3f4f6; }
+.pdp-prod[data-theme="day"] .bg-inp { color:#111827; }
+.pdp-prod[data-theme="day"] .bg-inp:focus { background:#faf9ff; box-shadow:inset 0 0 0 1px #7c3aed; }
+.pdp-prod[data-theme="day"] .bg-desg { color:#6b7280; }
+.pdp-prod[data-theme="day"] .bg-unknown-row { background:#fffbeb; }
+.pdp-prod[data-theme="day"] .bulk-result { color:#065f46; background:#ecfdf5; border-color:#a7f3d0; }
 /* Badges statut (règle N°15c) */
 .pdp-prod[data-theme="day"] .sc-planifié,
 .pdp-prod[data-theme="day"] .sc-planifi { background:#ede9fe; color:#7c3aed; }
