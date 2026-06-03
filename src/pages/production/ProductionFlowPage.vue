@@ -1184,6 +1184,33 @@ var STEP_LABELS = [
   { id: 'sl6', label: 'COND. PRIM.',    x: COND_X + COND_W/2,               y1: 30,  y2: 648, tw: 90 },
 ]
 
+// ── Flux pharmaceutique RÉEL (codé en dur — le n° d'opération ne reflète PAS l'ordre du flux) ──
+// Étape → salles (room_code)
+var FLOW_STAGES = {
+  pesee:          ['p464', 'p471'],
+  granulation:    ['n140', 'n425'],
+  melange:        ['n138', 'n137', 'n448'],
+  compression:    ['n131', 'n128', 'n134', 'n445'],
+  pelliculage:    ['n143', 'n429', 'n136'],
+  remplissage:    ['n436'],
+  melange_pateux: ['n200'],
+  cond:           ['c149', 'c148', 'c147', 'c146', 'c223', 'c220', 'c222'],
+  cond_pateux:    ['c206']
+}
+// Transitions valides entre étapes (dérivées des 9 routes possibles)
+var FLOW_EDGES = [
+  ['pesee', 'granulation'], ['pesee', 'melange'], ['pesee', 'compression'], ['pesee', 'melange_pateux'],
+  ['granulation', 'melange'],
+  ['melange', 'remplissage'], ['melange', 'compression'],
+  ['compression', 'pelliculage'], ['compression', 'cond'],
+  ['pelliculage', 'cond'],
+  ['remplissage', 'cond'],
+  ['melange_pateux', 'cond_pateux']
+]
+// room_code → étape (inverse)
+var ROOM_STAGE = {}
+Object.keys(FLOW_STAGES).forEach(function(s) { FLOW_STAGES[s].forEach(function(rc) { ROOM_STAGE[rc] = s }) })
+
 export default {
   directives: {
     'click-outside': {
@@ -2234,28 +2261,21 @@ export default {
       }
       var fNodes = fluxNodeIds.value
       if (fNodes !== null) {
-        // ── PRODUIT SÉLECTIONNÉ : flèches du parcours RÉEL, salle → salle ──
-        var opByRoom = {}
-        opMaster.value.forEach(function(om) { if (om.room_code) opByRoom[om.room_code] = om.op_number })
-        var sallesByOp = {}
-        fNodes.forEach(function(id) { var op = opByRoom[id]; if (op != null) { (sallesByOp[op] = sallesByOp[op] || []).push(id) } })
-        var ops = Object.keys(sallesByOp).map(Number).sort(function(a, b) { return a - b })
-        var fabOps  = ops.filter(function(o) { return o < 300 })
-        var condOps = ops.filter(function(o) { return o >= 300 && o < 400 })
-        var link = function(aIds, bIds) { aIds.forEach(function(ia) { bIds.forEach(function(ib) { pushArrow(nodeById[ia], nodeById[ib], true) }) }) }
-        // fabrication : enchaînement séquentiel des étapes du produit
-        for (var i = 0; i < fabOps.length - 1; i++) { link(sallesByOp[fabOps[i]], sallesByOp[fabOps[i + 1]]) }
-        // dernière étape de fabrication → chaque machine de conditionnement (alternatives)
-        if (fabOps.length && condOps.length) {
-          var lastFab = sallesByOp[fabOps[fabOps.length - 1]]
-          condOps.forEach(function(co) { link(lastFab, sallesByOp[co]) })
-        }
+        // ── PRODUIT SÉLECTIONNÉ : flèches salle → salle selon les transitions d'étapes valides (9 routes) ──
+        var prodStageRooms = {}
+        fNodes.forEach(function(rc) { var s = ROOM_STAGE[rc]; if (s) { (prodStageRooms[s] = prodStageRooms[s] || []).push(rc) } })
+        FLOW_EDGES.forEach(function(e) {
+          var aR = prodStageRooms[e[0]], bR = prodStageRooms[e[1]]
+          if (!aR || !bR) return
+          aR.forEach(function(ia) { bR.forEach(function(ib) { pushArrow(nodeById[ia], nodeById[ib], true) }) })
+        })
         return out
       }
-      // ── AUCUN produit sélectionné : flèches de fond, processus → processus ──
-      var nbo = nodesByOp.value
-      opTransitions.value.forEach(function(t) {
-        var gA = nbo[t.a], gB = nbo[t.b]
+      // ── AUCUN produit : flèches de fond = transitions VALIDES entre étapes (graphe des 9 routes) ──
+      var stageNodes = {}
+      Object.keys(FLOW_STAGES).forEach(function(st) { stageNodes[st] = FLOW_STAGES[st].map(function(rc) { return nodeById[rc] }).filter(Boolean) })
+      FLOW_EDGES.forEach(function(e) {
+        var gA = stageNodes[e[0]], gB = stageNodes[e[1]]
         if (!gA || !gB || !gA.length || !gB.length) return
         var xRightA = Math.max.apply(null, gA.map(function(n) { return n.x + n.w }))
         var yMidA   = gA.reduce(function(s, n) { return s + n.y + n.h / 2 }, 0) / gA.length
@@ -2267,7 +2287,7 @@ export default {
           x2 = gB[0].x + gB[0].w / 2; y2 = Math.min.apply(null, gB.map(function(n) { return n.y }))
         }
         var mx = (x1 + x2) / 2
-        out.push({ id: 'op' + t.a + '-' + t.b, active: false, fluxHighlight: false,
+        out.push({ id: 'fe_' + e[0] + '_' + e[1], active: false, fluxHighlight: false,
           d: 'M' + x1 + ',' + y1 + ' C' + mx + ',' + y1 + ' ' + mx + ',' + y2 + ' ' + x2 + ',' + y2 })
       })
       return out
