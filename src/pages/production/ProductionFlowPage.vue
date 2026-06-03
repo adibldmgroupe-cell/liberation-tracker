@@ -2346,8 +2346,8 @@ export default {
           .forEach(function(sc) {
             res.push({
               id: 'c' + sc.id, fabId: sc.id, lotRawId: sc.lot_id,
-              numero_lot: sc.lot_id,
-              nom_produit: '',
+              numero_lot: sc.lots?.numero_lot || sc.lot_id,
+              nom_produit: sc.lots?.products?.description || '',
               statut: sc.statut, isCond: true
             })
           })
@@ -2656,7 +2656,7 @@ export default {
           .select('id,lot_id,atelier_id,statut,lots(numero_lot,products(description))')
           .is('deleted_at', null).in('statut', ['En cours', 'Arrêt']),
         supabase.from('suivi_conditionnement')
-          .select('id,lot_id,equipement_id,statut')
+          .select('id,lot_id,equipement_id,statut,lots(numero_lot,products(description))')
           .in('statut', ['En cours', 'Arrêt']),
         supabase.from('deviations')
           .select('id,lot_id,statut').in('statut', ['ouverte', 'en_cours']),
