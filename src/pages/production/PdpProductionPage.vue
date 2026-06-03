@@ -157,7 +157,11 @@
       </div>
       <!-- Condt : planification_conditionnement -->
       <div v-if="!hiddenFam.includes('cond')">
-        <div class="pdp-section-title">Conditionnement — PDP Prévisionnel</div>
+        <div class="pdp-section-row">
+          <div class="pdp-section-title">Conditionnement — PDP Prévisionnel</div>
+          <button class="btn-ref btn-ref-accent" @click="recomputeAllPdp" :disabled="pdpRecomputing" title="Aligner les dates estimées sur les fins réelles et décaler l'aval du retard cumulé">{{pdpRecomputing?'…':'📌 Recaler sur réel'}}</button>
+        </div>
+        <div class="pdp-err" v-if="pdpErr">{{pdpErr}}</div>
         <div class="dt-wrap">
           <table class="dt" v-if="filteredPdpCond.length">
             <thead>
@@ -169,6 +173,8 @@
                 <th class="tc">Taille</th>
                 <th>Début est.</th>
                 <th>Fin est.</th>
+                <th>Fin réelle</th>
+                <th class="tc">Retard j</th>
                 <th class="tc">TOTAL (j)</th>
                 <th class="tc">Cumul (j)</th>
                 <th>Libération est.</th>
@@ -185,6 +191,8 @@
                 <td class="num mono">{{p.taille_lot?p.taille_lot.toLocaleString('fr-FR'):'—'}}</td>
                 <td class="mono sm">{{fmtDate(p.date_debut_estimee)}}</td>
                 <td class="mono sm">{{fmtDate(p.date_fin_estimee)}}</td>
+                <td><input type="date" v-model="p.date_fin_reelle" @change="savePdpReelle(p)" class="pdp-reel-inp" /></td>
+                <td class="num" :class="{'bg-retard':p.retard_jours>0,'bg-avance':p.retard_jours<0}">{{p.retard_jours?(p.retard_jours>0?'+'+p.retard_jours:p.retard_jours):(p.date_fin_reelle?'0':'—')}}</td>
                 <td class="num">{{p.total_prod_jours!=null?p.total_prod_jours:(p.duree_estimee_jours||'—')}}</td>
                 <td class="num">{{p.total_cml!=null?p.total_cml:'—'}}</td>
                 <td class="mono sm">{{fmtDate(p.date_liberation)}}</td>
@@ -438,7 +446,6 @@
                   <th title="Cadence boîtes/minute (référentiel cadences)">Cad b/min</th>
                   <th title="Nombre de shifts">Shift</th>
                   <th title="Total = début campagne · Partiel = même produit que le lot précédent">Vide ligne</th>
-                  <th title="Arrêt non planifié (jours)">Retard j</th>
                   <th title="Temps de production utile (jours)">TP</th>
                   <th title="Temps arrêts planifiés (jours)">THP</th>
                   <th title="TP + THP (jours)">TOTAL</th>
@@ -447,6 +454,8 @@
                 <th>Début{{bulkModal.famille==='cond'?' est.':''}}</th>
                 <th>Fin{{bulkModal.famille==='cond'?' est.':''}}</th>
                 <template v-if="bulkModal.famille==='cond'">
+                  <th title="Date de fin réelle (saisie quotidienne planification)">Fin réelle</th>
+                  <th title="Retard = jours ouvrés (fin réelle − fin estimée)">Retard j</th>
                   <th title="Accepté (réel) > date cible > fin +15j">Libération</th>
                   <th title="Date de libération cible (manuelle)">Cible</th>
                 </template>
@@ -468,7 +477,6 @@
                       <option value="">auto</option><option value="Total">Total</option><option value="Partiel">Partiel</option>
                     </select>
                   </td>
-                  <td><input v-model="r.retard" class="bg-inp mono bg-num bg-w40" placeholder="0" /></td>
                   <td class="bg-calc">{{r.tp!=null?r.tp:'—'}}</td>
                   <td class="bg-calc">{{r.thp!=null?r.thp:'—'}}</td>
                   <td class="bg-calc bg-strong">{{r.total!=null?r.total:'—'}}</td>
@@ -477,6 +485,8 @@
                 <td><input v-model="r.date_debut" @paste="onBulkPaste($event,i,'date_debut')" class="bg-inp mono" placeholder="jj/mm/aaaa" /></td>
                 <td><input v-model="r.date_fin" @paste="onBulkPaste($event,i,'date_fin')" class="bg-inp mono" placeholder="jj/mm/aaaa" /></td>
                 <template v-if="bulkModal.famille==='cond'">
+                  <td><input v-model="r.date_fin_reelle" class="bg-inp mono bg-reel" placeholder="jj/mm/aaaa" /></td>
+                  <td class="bg-calc" :class="{'bg-retard':r.retard>0,'bg-avance':r.retard<0}">{{r.retard!=null?(r.retard>0?'+'+r.retard:r.retard):'—'}}</td>
                   <td class="bg-calc">{{r.liberation?fmtDate(r.liberation):'—'}}<span v-if="r.lib_src" class="lib-src">{{r.lib_src}}</span></td>
                   <td><input v-model="r.date_cible" class="bg-inp mono" placeholder="jj/mm/aaaa" /></td>
                 </template>
@@ -790,7 +800,7 @@ export default {
           .select('id,suivi_id,equipement_id,lot_id,motif,heure_debut,heure_fin,lots(numero_lot)')
           .is('deleted_at', null).order('heure_debut', {ascending: false}),
         supabase.from('planification_conditionnement')
-          .select('id,lot_id,product_id,equipement_id,ordre_plan,statut_planification,date_debut_estimee,date_fin_estimee,duree_estimee_jours,taille_lot,nb_shift,tp_jours,thp_jours,total_prod_jours,total_cml,date_liberation,lots(numero_lot,products(code_article)),produit:products!planification_conditionnement_product_id_fkey(code_article,description),equipements_conditionnement(nom_equipement)')
+          .select('id,lot_id,product_id,equipement_id,ordre_plan,statut_planification,date_debut_estimee,date_fin_estimee,duree_estimee_jours,taille_lot,nb_shift,cadence_bh,nbre_vdlt,nbre_vdlp,retard_jours,tp_jours,thp_jours,total_prod_jours,total_cml,date_liberation,lots(numero_lot,products(code_article)),produit:products!planification_conditionnement_product_id_fkey(code_article,description),equipements_conditionnement(nom_equipement)')
           .neq('statut_planification', 'Annulé').order('ordre_plan'),
         supabase.from('cadences').select('numero_salle,code_article,equipment_name,taille_lot,cadence_objectif_b_min'),
         supabase.from('calendrier_machine').select('id,equipement_id,type,date_debut,date_fin'),
@@ -825,9 +835,16 @@ export default {
             numero_lot:    p.lots ? p.lots.numero_lot : '—',
             code_article:  (p.produit && p.produit.code_article) || (p.lots && p.lots.products ? p.lots.products.code_article : '') || '—',
             description:   (p.produit && p.produit.description) || '',
-            nom_equipement: p.equipements_conditionnement ? p.equipements_conditionnement.nom_equipement : '—'
+            nom_equipement: p.equipements_conditionnement ? p.equipements_conditionnement.nom_equipement : '—',
+            date_fin_reelle: ''
           })
         })
+        // date_fin_reelle : requête séparée tolérante (colonne ajoutée par migration 030 — ne pas casser l'affichage si absente)
+        var rReel = await supabase.from('planification_conditionnement').select('id,date_fin_reelle').neq('statut_planification', 'Annulé')
+        if (!rReel.error && rReel.data) {
+          var reelMap = {}; rReel.data.forEach(function(x) { reelMap[x.id] = x.date_fin_reelle })
+          pdpCond.value.forEach(function(p) { if (reelMap[p.id]) p.date_fin_reelle = reelMap[p.id].slice(0, 10) })
+        }
       }
       loading.value = false
     }
@@ -880,8 +897,8 @@ export default {
     var bulkBlankRow = function() {
       return {
         code: '', designation: '', product_id: null, numero_lot: '', taille: '',
-        cadence: '', nb_shift: '', vide_ligne: '', vide_ligne_auto: true, retard: '', date_cible: '',
-        date_debut: '', date_fin: '',
+        cadence: '', nb_shift: '', vide_ligne: '', vide_ligne_auto: true, retard: null, date_cible: '',
+        date_debut: '', date_fin: '', date_fin_reelle: '',
         tp: null, thp: null, total: null, cml: null, liberation: '', lib_src: '',
         _status: ''
       }
@@ -1058,6 +1075,66 @@ export default {
     var deletePdpCond = async function(p) {
       if (!confirm('Supprimer cette entrée PDP ?')) return
       await supabase.from('planification_conditionnement').update({ statut_planification: 'Annulé' }).eq('id', p.id)
+      await loadAll()
+    }
+
+    // ── Suivi réel quotidien : fin réelle + recalage ──
+    var pdpRecomputing = ref(false)
+    var pdpErr = ref('')
+    // Saisie inline de la date de fin réelle (équipe planification)
+    var savePdpReelle = async function(p) {
+      pdpErr.value = ''
+      var r = await supabase.from('planification_conditionnement')
+        .update({ date_fin_reelle: bulkParseDate(p.date_fin_reelle), updated_at: new Date().toISOString() }).eq('id', p.id)
+      if (r.error) { pdpErr.value = 'Enregistrement fin réelle impossible : ' + r.error.message + ' (migration 030 exécutée ?)' }
+    }
+    // Recaler tout le PDP conditionnement sur les fins réelles + décaler l'aval du retard cumulé
+    var recomputeAllPdp = async function() {
+      pdpErr.value = ''; pdpRecomputing.value = true
+      // statut réel des lots (date de libération « réel » si Accepté)
+      var lotNums = pdpCond.value.map(function(p) { return p.numero_lot }).filter(function(x) { return x && x !== '—' })
+      var lotStat = {}
+      if (lotNums.length) { var rl = await supabase.from('lots').select('numero_lot,statut_sap,date_liberation').in('numero_lot', lotNums); (rl.data || []).forEach(function(l) { lotStat[l.numero_lot] = l }) }
+      // grouper par machine
+      var byEq = {}
+      pdpCond.value.forEach(function(p) { if (p.statut_planification === 'Annulé') return; (byEq[p.equipement_id] = byEq[p.equipement_id] || []).push(p) })
+      var updates = []
+      Object.keys(byEq).forEach(function(eqId) {
+        var eq = equipements.value.find(function(e) { return e.id === Number(eqId) }); if (!eq) return
+        var ref = calcRef.value[(eq.nom_equipement || '').toLowerCase().trim()]; if (!ref || ref.temps_util == null) return
+        var rows = byEq[eqId].slice().sort(function(a, b) { return (a.ordre_plan || 0) - (b.ordre_plan || 0) })
+        var firstStart = rows[0] && rows[0].date_debut_estimee ? rows[0].date_debut_estimee.slice(0, 10) : null
+        var base = new Date(); if (firstStart) { var fp = firstStart.split('-'); base = new Date(+fp[0], +fp[1] - 1, +fp[2]) }
+        var items = rows.map(function(p) {
+          return {
+            _id: p.id, code: p.code_article, product_id: p.product_id,
+            taille: p.taille_lot, cadence: p.cadence_bh ? (p.cadence_bh / 60) : '',
+            nb_shift: p.nb_shift, vide_ligne: p.nbre_vdlt === 1 ? 'Total' : (p.nbre_vdlp === 1 ? 'Partiel' : ''),
+            vide_ligne_auto: !(p.nbre_vdlt === 1 || p.nbre_vdlp === 1),
+            date_fin_reelle: p.date_fin_reelle || '', numero_lot: (p.numero_lot === '—' ? '' : p.numero_lot), date_cible: ''
+          }
+        })
+        computeCapacityChain(items, {
+          ref: ref, travWE: !!eq.travaille_weekend, equipId: Number(eqId), base: base,
+          cmlBase: 0, lastProduct: null, lotStat: lotStat, defShift: 3,
+          cadenceFn: function(code, taille) { return bulkCadence(eq.nom_equipement, code, taille) }
+        })
+        items.forEach(function(it) {
+          updates.push({ id: it._id, payload: {
+            date_debut_estimee: bulkParseDate(it.date_debut), date_fin_estimee: bulkParseDate(it.date_fin),
+            tp_jours: it.tp, thp_jours: it.thp, total_prod_jours: it.total, total_cml: it.cml,
+            duree_estimee_jours: it.total, retard_jours: (it.retard != null ? it.retard : 0),
+            nbre_vdlt: it.vide_ligne === 'Total' ? 1 : 0, nbre_vdlp: it.vide_ligne === 'Partiel' ? 1 : 0,
+            nb_shift: parseInt(it.nb_shift) || null, cadence_bh: it.cadence ? Math.round(parseFloat(it.cadence) * 60) : null,
+            date_liberation: bulkParseDate(it.liberation), updated_at: new Date().toISOString()
+          } })
+        })
+      })
+      for (var i = 0; i < updates.length; i++) {
+        var ru = await supabase.from('planification_conditionnement').update(updates[i].payload).eq('id', updates[i].id)
+        if (ru.error) { pdpErr.value = 'Recalage : ' + ru.error.message; break }
+      }
+      pdpRecomputing.value = false
       await loadAll()
     }
 
@@ -1343,6 +1420,17 @@ export default {
       if (!iso) return ''
       var p = iso.split('-'); var d = new Date(+p[0], +p[1] - 1, +p[2]); d.setDate(d.getDate() + days); return fmtIso(d)
     }
+    // Nombre de jours OUVRÉS (machine) entre deux dates ISO — signé (négatif si fin avant estimée)
+    var bulkWorkingDaysBetween = function(isoFrom, isoTo, equipId, travailleWE) {
+      if (!isoFrom || !isoTo) return 0
+      var pf = isoFrom.split('-'), pt = isoTo.split('-')
+      var a = new Date(+pf[0], +pf[1] - 1, +pf[2]), b = new Date(+pt[0], +pt[1] - 1, +pt[2])
+      var sign = 1
+      if (b < a) { var t = a; a = b; b = t; sign = -1 }
+      var count = 0, guard = 0, d = new Date(a); d.setDate(d.getDate() + 1)
+      while (d <= b && guard++ < 4000) { if (bulkIsWorkingDay(d, equipId, travailleWE)) count++; d.setDate(d.getDate() + 1) }
+      return sign * count
+    }
     // cadence (b/min) : table cadences (machine × article × taille) sinon cadence machine par défaut
     var bulkCadence = function(equipName, code, taille) {
       if (!equipName) return null
@@ -1361,6 +1449,56 @@ export default {
     }
 
     // Calcule TP / THP / TOTAL / CML + dates début/fin (calendrier machine) + date libération
+    // Moteur partagé : calcule TP/THP/TOTAL/cumul + dates + retard (réel) + libération pour une suite de lots d'UNE machine.
+    // items mutés ; ctx = { ref, travWE, equipId, base(Date), cmlBase, lastProduct, lotStat{}, defShift, cadenceFn(code,taille) }
+    var computeCapacityChain = function(items, ctx) {
+      var TuShift = ctx.ref.temps_util / SHIFTS_REF
+      var toShift = ctx.ref.to_shift_min || 480
+      var segBase = ctx.base, segOff = 0
+      var cml = ctx.cmlBase || 0, prevProduct = ctx.lastProduct || null
+      items.forEach(function(r) {
+        var taille = parseInt(r.taille) || 0
+        var cadBmin = parseFloat(r.cadence) || ctx.cadenceFn(r.code, taille)
+        if (cadBmin) r.cadence = cadBmin
+        var nb = parseInt(r.nb_shift) || ctx.defShift || 3
+        r.nb_shift = nb
+        if (r.vide_ligne_auto || !r.vide_ligne) { r.vide_ligne = (prevProduct && prevProduct === r.product_id) ? 'Partiel' : 'Total'; r.vide_ligne_auto = true }
+        var cadBh = (cadBmin || 0) * 60
+        var realIso = bulkParseDate(r.date_fin_reelle)
+        if (!taille || !cadBh) {
+          r.tp = r.thp = r.total = null; r.date_debut = ''; r.retard = null; r.liberation = ''; r.lib_src = ''
+          r.date_fin = realIso || r.date_fin || ''
+          if (realIso) { var rd0 = realIso.split('-'); segBase = new Date(+rd0[0], +rd0[1] - 1, +rd0[2]); segBase.setDate(segBase.getDate() + 1); segOff = 0 }
+          r.cml = Math.round(cml * 100) / 100; prevProduct = r.product_id; return
+        }
+        var TP = (taille / cadBh) / (TuShift * nb)
+        var THPmin = (r.vide_ligne === 'Total')
+          ? ((ctx.ref.vdlc_min || 0) + (ctx.ref.chgt_format_min || 0) + (ctx.ref.reglage_min || 0))
+          : ((ctx.ref.vdlp_min || 0) + (ctx.ref.micro_arrets_min || 0))
+        var THP = THPmin / (toShift * nb)
+        var TOTAL = TP + THP
+        var startOff = segOff, endOff = segOff + TOTAL
+        var dDeb = bulkNthWorkingDay(segBase, Math.floor(startOff) + 1, ctx.equipId, ctx.travWE)
+        var dFinEst = bulkNthWorkingDay(segBase, Math.max(Math.ceil(endOff), Math.floor(startOff) + 1), ctx.equipId, ctx.travWE)
+        r.tp = Math.round(TP * 100) / 100; r.thp = Math.round(THP * 100) / 100; r.total = Math.round(TOTAL * 100) / 100
+        r.date_debut = fmtIso(dDeb)
+        if (realIso) {
+          // retard = jours ouvrés (réelle − estimée) ; aligner l'estimée sur la réelle ; repartir l'aval après la réelle
+          r.retard = bulkWorkingDaysBetween(fmtIso(dFinEst), realIso, ctx.equipId, ctx.travWE)
+          r.date_fin = realIso
+          var rp = realIso.split('-'); segBase = new Date(+rp[0], +rp[1] - 1, +rp[2]); segBase.setDate(segBase.getDate() + 1); segOff = 0
+        } else {
+          r.retard = null; r.date_fin = fmtIso(dFinEst); segOff = endOff
+        }
+        cml += TOTAL; r.cml = Math.round(cml * 100) / 100
+        var st = ctx.lotStat[(r.numero_lot || '').trim()]
+        if (st && st.statut_sap === 'accepte' && st.date_liberation) { r.liberation = st.date_liberation.slice(0, 10); r.lib_src = 'réel' }
+        else if (r.date_cible) { r.liberation = bulkParseDate(r.date_cible) || ''; r.lib_src = 'cible' }
+        else { r.liberation = bulkAddCalDays(r.date_fin, LIB_DELAI_JOURS); r.lib_src = '+15j' }
+        prevProduct = r.product_id
+      })
+    }
+
     var bulkCompute = async function() {
       bulkModal.err = ''
       if (bulkModal.famille !== 'cond') { bulkModal.err = 'Le calcul de capacité concerne le conditionnement.'; return }
@@ -1400,41 +1538,12 @@ export default {
         ;(rl.data || []).forEach(function(l) { lotStat[l.numero_lot] = l })
       }
 
-      var dateOff = 0, cml = cmlBase, prevProduct = lastProduct
-      for (var i = 0; i < bulkRows.value.length; i++) {
-        var r = bulkRows.value[i]
-        if (!(r.code || '').trim()) continue
-        var taille = parseInt(r.taille) || 0
-        var cadBmin = parseFloat(r.cadence) || bulkCadence(eq.nom_equipement, r.code, taille)
-        if (cadBmin) r.cadence = cadBmin
-        var nb = parseInt(r.nb_shift) || parseInt(bulkModal.def_shift) || 3
-        r.nb_shift = nb
-        if (r.vide_ligne_auto || !r.vide_ligne) { r.vide_ligne = (prevProduct && prevProduct === r.product_id) ? 'Partiel' : 'Total'; r.vide_ligne_auto = true }
-        var cadBh = (cadBmin || 0) * 60
-        if (!taille || !cadBh) { r.tp = r.thp = r.total = r.cml = null; r.date_debut = ''; r.date_fin = ''; r.liberation = ''; r.lib_src = ''; prevProduct = r.product_id; continue }
-        var TP = (taille / cadBh) / (TuShift * nb)
-        var THPmin = (r.vide_ligne === 'Total')
-          ? ((ref.vdlc_min || 0) + (ref.chgt_format_min || 0) + (ref.reglage_min || 0))
-          : ((ref.vdlp_min || 0) + (ref.micro_arrets_min || 0))
-        var THP = THPmin / (toShift * nb)
-        var TOTAL = TP + THP
-        var retard = parseFloat(r.retard) || 0
-        var duree = TOTAL + retard
-        var startOff = dateOff, endOff = dateOff + duree   // décalage en jours ouvrés depuis base
-        var dDeb = bulkNthWorkingDay(base, Math.floor(startOff) + 1, bulkModal.lieu_id, travWE)
-        var nEnd = Math.max(Math.ceil(endOff), Math.floor(startOff) + 1)
-        var dFin = bulkNthWorkingDay(base, nEnd, bulkModal.lieu_id, travWE)
-        dateOff = endOff
-        cml += duree                                       // cumul global (poursuit l'historique)
-        r.tp = Math.round(TP * 100) / 100; r.thp = Math.round(THP * 100) / 100
-        r.total = Math.round(TOTAL * 100) / 100; r.cml = Math.round(cml * 100) / 100
-        r.date_debut = fmtIso(dDeb); r.date_fin = fmtIso(dFin)
-        var st = lotStat[(r.numero_lot || '').trim()]
-        if (st && st.statut_sap === 'accepte' && st.date_liberation) { r.liberation = st.date_liberation.slice(0, 10); r.lib_src = 'réel' }
-        else if (r.date_cible) { r.liberation = bulkParseDate(r.date_cible) || ''; r.lib_src = 'cible' }
-        else { r.liberation = bulkAddCalDays(r.date_fin, LIB_DELAI_JOURS); r.lib_src = '+15j' }
-        prevProduct = r.product_id
-      }
+      computeCapacityChain(filled, {
+        ref: ref, travWE: travWE, equipId: bulkModal.lieu_id, base: base,
+        cmlBase: cmlBase, lastProduct: lastProduct, lotStat: lotStat,
+        defShift: parseInt(bulkModal.def_shift) || 3,
+        cadenceFn: function(code, taille) { return bulkCadence(eq.nom_equipement, code, taille) }
+      })
       bulkModal.computed = true
     }
 
@@ -1537,22 +1646,26 @@ export default {
         var dDeb = bulkParseDate(r.date_debut)
         var dFin = bulkParseDate(r.date_fin)
         if (bulkModal.famille === 'cond') {
-          condRows.push({
+          var condRow = {
             lot_id: lotId, product_id: r.product_id, equipement_id: bulkModal.lieu_id,
             taille_lot: r.taille ? (parseInt(r.taille) || null) : null,
             cadence_bh: r.cadence ? Math.round(parseFloat(r.cadence) * 60) : null,
             nb_shift: parseInt(r.nb_shift) || null,
             nbre_vdlt: r.vide_ligne === 'Total' ? 1 : 0,
             nbre_vdlp: r.vide_ligne === 'Partiel' ? 1 : 0,
-            retard_jours: parseFloat(r.retard) || 0,
+            retard_jours: (r.retard != null ? r.retard : 0),
             tp_jours: r.tp, thp_jours: r.thp, total_prod_jours: r.total, total_cml: r.cml,
             duree_estimee_jours: r.total,
             ordre_plan: (++ordreBase), statut_planification: 'Planifié',
             date_debut_estimee: dDeb || bulkParseDate(r.date_debut),
             date_fin_estimee:   dFin || bulkParseDate(r.date_fin),
-            date_liberation:    bulkParseDate(r.liberation),
-            created_at: new Date().toISOString()
-          })
+            date_liberation:    bulkParseDate(r.liberation)
+          }
+          // date_fin_reelle : n'inclure que si renseignée (colonne migration 030 — évite l'échec pré-migration)
+          var dReel = bulkParseDate(r.date_fin_reelle)
+          if (dReel) condRow.date_fin_reelle = dReel
+          condRow.created_at = new Date().toISOString()
+          condRows.push(condRow)
         } else {
           fabRows.push({
             lot_id: lotId, product_id: r.product_id, atelier_id: bulkModal.lieu_id,
@@ -1592,7 +1705,7 @@ export default {
       calModal, calEntries, calForm, openCalModal, addCalEntry, deleteCalEntry, CAL_TYPE_LABELS,
       bulkModal, bulkRows, bulkLieuList, bulkSetFamille, openBulkModal, bulkAddRow, bulkRemoveRow, bulkClear, onBulkPaste, bulkResolveDesignations, bulkCompute, bulkSave,
       campPanel, campSuggest, openCampPanel, campSearchCode, campSelectProduct, campInsert,
-      deletePdpCond,
+      deletePdpCond, savePdpReelle, recomputeAllPdp, pdpRecomputing, pdpErr,
       gsModal, GS_URL, openGsImport, fetchGsData, confirmGsImport,
       fmtDt, fmtDate, arretDuree
     }
@@ -1748,6 +1861,15 @@ export default {
 .camp-desg-f { min-width:200px; flex:1; }
 .camp-desg-v { font-size:12px; color:#9999c0; padding:6px 0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .camp-hint { font-size:11px; color:#8888b0; margin-top:6px; }
+/* Fin réelle + retard */
+.bg-reel { color:#6ee7b7 !important; }
+.bg-reel:focus { box-shadow:inset 0 0 0 1px #34d399; }
+.bg-retard { color:#fca5a5; }
+.bg-avance { color:#6ee7b7; }
+.pdp-section-row { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.pdp-err { font-size:11px; color:#ef4444; background:#ef444411; border-radius:3px; padding:6px 10px; margin:6px 0; }
+.pdp-reel-inp { width:100%; min-width:120px; padding:4px 6px; border:1px solid #252545; border-radius:3px; background:#12122a; color:#6ee7b7; font-size:11px; font-family:'SF Mono',monospace; outline:none; box-sizing:border-box; }
+.pdp-reel-inp:focus { border-color:#34d399; }
 
 /* GS Import */
 .gs-url { font-size:10px; color:#7c7cff; word-break:break-all; font-family:'SF Mono',monospace; }
@@ -1827,6 +1949,11 @@ export default {
 .pdp-prod[data-theme="day"] .camp-panel { background:#faf9ff; border-color:#ddd6fe; }
 .pdp-prod[data-theme="day"] .camp-desg-v { color:#6b7280; }
 .pdp-prod[data-theme="day"] .camp-hint { color:#6b7280; }
+.pdp-prod[data-theme="day"] .pdp-err { background:#fef2f2; color:#dc2626; }
+.pdp-prod[data-theme="day"] .pdp-reel-inp { background:#fff; color:#047857; border-color:#e5e7eb; }
+.pdp-prod[data-theme="day"] .bg-reel { color:#047857 !important; }
+.pdp-prod[data-theme="day"] .bg-retard { color:#dc2626; }
+.pdp-prod[data-theme="day"] .bg-avance { color:#047857; }
 /* Badges statut (règle N°15c) */
 .pdp-prod[data-theme="day"] .sc-planifié,
 .pdp-prod[data-theme="day"] .sc-planifi { background:#ede9fe; color:#7c3aed; }
