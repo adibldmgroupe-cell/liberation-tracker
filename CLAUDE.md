@@ -592,6 +592,85 @@ cascade arrêt asynchrone (~1,1 s entre selects), vues dupliquées (filtrer `off
 
 ---
 
+## RÈGLE CRITIQUE N°20 — Flux production : 9 ROUTES RÉELLES (le n° d'op ≠ l'ordre du flux)
+
+### Source de vérité du flux = les 9 routes pharma (PAS le tri par op_number)
+Le **numéro d'opération ne reflète PAS l'ordre du procédé** : Remplissage gélules (op260) et
+Mélange pâteux (op270) sont des **branches** (pas après Pelliculage). Trier les op de façon
+croissante crée des **flèches/liaisons fausses** (ex. Pelliculage→Mélange pâteux, cond→fab).
+
+**Les 9 routes possibles (forme sèche 1-8, semi-solide 9)** — codées en dur dans
+`ProductionFlowPage.vue` (`FLOW_STAGES` étape→salles + `FLOW_EDGES` transitions) :
+```
+1. Pesée → Granulation → Mélange → Remplissage gélules → Cond
+2. Pesée → Mélange → Remplissage gélules → Cond
+3. Pesée → Granulation → Mélange → Compression → Cond
+4. Pesée → Granulation → Mélange → Compression → Pelliculage → Cond
+5. Pesée → Mélange → Compression → Cond
+6. Pesée → Mélange → Compression → Pelliculage → Cond
+7. Pesée → Compression → Pelliculage → Cond        (premix, comprimé pelliculé)
+8. Pesée → Compression → Cond                       (premix, comprimé nu)
+9. Pesée → Mélange pâteux (n200) → Cond R,T (c206)  (crème, gel, pommade)
+```
+**Salles/étape** : Pesée `p464,p471` · Granulation `n140,n425` · Mélange `n138,n137,n448` ·
+Compression `n131,n128,n134,n445` · Pelliculage `n143,n429,n136` · Remplissage gélules `n436` ·
+Mélange pâteux `n200` · Cond sec `c149,c148,c147,c146,c223,c220,c222` · Cond pâteux `c206`.
+Hors flux : OTC `n101-105`, stockage `n155/n416`.
+
+⚠️ Les flèches du Schéma se dérivent de `FLOW_EDGES`, **jamais** d'une agrégation par op
+(`opTransitions`/`nodesByOp` abandonnés pour les flèches — commit ab29b94). Vérifié 12/12
+flèches vers l'avant. Si on ajoute/retire une route → mettre à jour `FLOW_STAGES`/`FLOW_EDGES`.
+
+---
+
+## RÈGLE CRITIQUE N°21 — Lancement d'un lot : 2 contrôles obligatoires (BPF)
+
+Tout point qui **lance un lot sur un équipement** (Schéma vue 1 `saveStart` + `trsDoStart`,
+TRS Live `doStart`, PDP `saveSuiviCond`/`saveSuiviFab` + saisie en masse `bulkSave`) doit
+appliquer **les 2 règles** avant d'insérer :
+
+1. **Un seul lot en cours par machine/atelier — SAUF Pesée** (anti-mélange GMP).
+   Pesée = `node.zone === 'pesee'` (ou atelier dont le nom ~ `/pes[ée]/i`). Bloquer si un
+   suivi `En cours`/`Arrêt` existe déjà. Contrôle **en base** (pas seulement les données
+   chargées) pour ne pas être contourné par un clic avant `loadLive`.
+
+2. **Produit autorisé sur l'équipement via `product_flux`** (service **`src/services/flux.js`**) :
+   `checkProductFluxRoom(code, roomCode, opNumber)` / `checkProductFluxEquipName(code, equipNom)`.
+   Autorisé si **room_code spécifique coché** OU **flexible (room_code null) sur l'op sans salle
+   spécifique imposée**. Sinon **bloqué**. **Fail-open réseau, fail-closed si pas de flux.**
+   `product_flux.room_code` == `operations_master.room_code` (c149, n445, p464…).
+
+Toujours réutiliser le service `flux.js` — ne jamais réécrire la logique de flux.
+
+---
+
+## RÈGLE CRITIQUE N°22 — Schéma : vue 1 (planif) ≠ TRS, et fin réelle / clôture auto
+
+### a) Ne JAMAIS coupler la partie TRS et la vue 1 (planification)
+- **Vue 1** (statut nœud, lots, Démarrer/Clôturer) lit UNIQUEMENT `suivi_conditionnement` /
+  `suivi_fabrication` (+ `deviations`). `nodeStatus`/`getNodeLots` ne lisent QUE ces tables.
+- **Mode TRS** (📊) lit `production_sessions` (via `loadTrsData`→`nodeTrs`, gardé par `trsMode`).
+- Écritures séparées : TRS → `production_sessions` ; vue 1 → `suivi_*`. Ne jamais injecter
+  `production_sessions` dans `getNodeLots` (bug corrigé : la vue 1 montrait des sessions TRS).
+- `getNodeLots` (cond) doit joindre `lots(numero_lot,…)` pour afficher le **n° de lot**, pas `lot_id`.
+
+### b) Fin réelle bidirectionnelle (par `lot_id`), recalage PDP manuel
+- Saisie quotidienne par la planification. **Schéma Clôturer** (`suivi_conditionnement.date_fin`)
+  ↔ **PDP `date_fin_reelle`** (`planification_conditionnement`) : `saveClose` propage vers le PDP,
+  `savePdpReelle` propage vers le suivi (date seule, **pas** le statut, pour ne pas clôturer une
+  session TRS active). Le décalage de l'aval reste **manuel** (bouton « 📌 Recaler sur réel ») ;
+  retard = jours **ouvrés** (fin réelle − fin estimée, calendrier machine).
+
+### c) Clôture auto fin de shift : détecter le RETARD, pas une fenêtre
+- `autoStopCheck` (TrsLivePage) ferme **toute** session dont `fin de shift + 10 min` est **dépassée**
+  (datetime réelle via `sessionShiftEnd`, gère le **shift de nuit** = fin ≤ début → +1 jour) →
+  rattrape les sessions oubliées des jours précédents. Déclenché au montage + toutes les 60 s.
+  Ne PAS faire `loadAll()` dans la boucle (mute `panels.value`) → figer la liste, recharger 1× après.
+  ⚠️ Reste **client-side** (s'exécute quand la page/Mode Live est ouvert) — clôture 100 %
+  non-attendue = cron serveur (non implémenté).
+
+---
+
 ## Déploiement
 
 - Push sur `main` → GitHub Actions build + deploy GitHub Pages automatiquement
