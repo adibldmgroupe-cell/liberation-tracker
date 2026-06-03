@@ -586,7 +586,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { supabase } from '../../supabase'
 import { useTheme } from '../../composables/useTheme'
-import { checkProductFluxEquipName } from '../../services/flux'
+import { checkProductFluxEquipName, checkUpstreamForEquip, checkUpstreamForAtelier, stageLabels } from '../../services/flux'
 
 var GS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQqKb5_i0U7YeQYMiNEDy4X2gq6W_78NA2EuC2gRqSVXOKuBcBuXR8ASrE9Eq3admceATv4_gdAUppc/pub?gid=1634438429&single=true&output=csv'
 
@@ -963,6 +963,12 @@ export default {
           suiviModal.err = 'BPF : un lot est déjà en cours sur cet atelier (un seul à la fois, hors pesée).'; suiviModal.saving = false; return
         }
       }
+      // ── Séquence (règle N°23) : alerter si une étape amont de la route n'est pas saisie ──
+      if (!suiviModal.id) {
+        var lpFab = await supabase.from('lots').select('products(code_article)').eq('id', suiviModal.lot_id).maybeSingle()
+        var upF = await checkUpstreamForAtelier(suiviModal.lot_id, lpFab.data && lpFab.data.products ? lpFab.data.products.code_article : null, suiviModal.atelier_id)
+        if (upF.missing && upF.missing.length && !window.confirm('⚠ Traçabilité : étape(s) amont non saisie(s) pour ce lot : ' + stageLabels(upF.missing) + '.\n\nÀ saisir (date rétroactive). Continuer quand même ?')) { suiviModal.saving = false; return }
+      }
       var payload = {
         lot_id: suiviModal.lot_id, atelier_id: suiviModal.atelier_id,
         statut: suiviModal.statut,
@@ -989,8 +995,14 @@ export default {
       // ── Règle flux produit : le produit du lot doit être autorisé sur cet équipement ──
       var eqFx = equipements.value.find(function(e) { return e.id === suiviModal.equipement_id })
       var lpFx = await supabase.from('lots').select('products(code_article)').eq('id', suiviModal.lot_id).maybeSingle()
-      var fxC = await checkProductFluxEquipName(lpFx.data && lpFx.data.products ? lpFx.data.products.code_article : null, eqFx ? eqFx.nom_equipement : null)
+      var codeFxC = lpFx.data && lpFx.data.products ? lpFx.data.products.code_article : null
+      var fxC = await checkProductFluxEquipName(codeFxC, eqFx ? eqFx.nom_equipement : null)
       if (!fxC.allowed) { suiviModal.err = fxC.reason; suiviModal.saving = false; return }
+      // ── Séquence (règle N°23) : alerter si une étape amont de la route n'est pas saisie ──
+      if (!suiviModal.id) {
+        var upC = await checkUpstreamForEquip(suiviModal.lot_id, codeFxC, suiviModal.equipement_id)
+        if (upC.missing && upC.missing.length && !window.confirm('⚠ Traçabilité : étape(s) amont non saisie(s) pour ce lot : ' + stageLabels(upC.missing) + '.\n\nÀ saisir (date rétroactive). Continuer quand même ?')) { suiviModal.saving = false; return }
+      }
       var payload = {
         lot_id: suiviModal.lot_id, equipement_id: suiviModal.equipement_id,
         taille_lot: suiviModal.taille_lot || null,

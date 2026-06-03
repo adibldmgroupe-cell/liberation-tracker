@@ -671,6 +671,27 @@ Toujours réutiliser le service `flux.js` — ne jamais réécrire la logique de
 
 ---
 
+## RÈGLE CRITIQUE N°23 — Contrôle de séquence (anti-saut d'étape amont, traçabilité)
+
+Quand le planificateur signale un lot sur une étape, il peut **oublier une étape amont**
+(ex. saisit Granulation, puis saute Mélange et passe à Compression). Contrôle dans `flux.js` :
+- `checkUpstreamStages(lotId, productCode, targetStage)` → `{ missing: [stageKeys] }` = étapes de
+  **la route du produit** (`product_flux` → étapes via `ROOM_STAGE`/`OP_STAGE`), situées **avant**
+  la cible (`STAGE_ORDER`), pour lesquelles le lot n'a **aucun** suivi (`suivi_fabrication`/
+  `suivi_conditionnement`, mappés via `plan_rooms`). Variantes `checkUpstreamForEquip` / `checkUpstreamForAtelier`.
+- Se base sur **la route DU PRODUIT** → un premix (saute Granulation/Mélange) ne déclenche **pas**
+  de fausse alerte (ces étapes ne sont pas dans son `product_flux`).
+- **Comportement = AVERTIR, pas bloquer** (`window.confirm` nommant les étapes manquantes +
+  « Continuer quand même ? ») : l'étape a physiquement eu lieu, seul le **signalement** a été
+  oublié → on laisse continuer (et saisir en rétroactif). Appliqué sur **Vue 1** (`saveStart`)
+  **et PDP** (`saveSuiviCond`/`saveSuiviFab`, à la création), **PAS le TRS** (performance, sans
+  lien avec vue 1/PDP — cf. règle N°22).
+
+⚠️ `FLOW_STAGES`/`FLOW_EDGES`/`ROOM_STAGE`/`OP_STAGE`/`STAGE_ORDER` = **source unique dans
+`services/flux.js`** (importés par ProductionFlowPage pour les flèches). Ne pas redéfinir ailleurs.
+
+---
+
 ## Déploiement
 
 - Push sur `main` → GitHub Actions build + deploy GitHub Pages automatiquement

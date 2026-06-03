@@ -1023,7 +1023,7 @@ import { useRouter } from 'vue-router'
 import { supabase } from '../../supabase'
 import { useTheme } from '../../composables/useTheme'
 import { declareDeviation } from '../../services/actions'
-import { checkProductFluxRoom, checkProductFluxEquipName } from '../../services/flux'
+import { checkProductFluxRoom, checkProductFluxEquipName, checkUpstreamStages, stageLabels, FLOW_STAGES, FLOW_EDGES, ROOM_STAGE } from '../../services/flux'
 
 // ── LAYOUT CONSTANTS ──────────────────────────────────────────────
 var SVG_W  = 1580
@@ -1184,32 +1184,7 @@ var STEP_LABELS = [
   { id: 'sl6', label: 'COND. PRIM.',    x: COND_X + COND_W/2,               y1: 30,  y2: 648, tw: 90 },
 ]
 
-// ── Flux pharmaceutique RÉEL (codé en dur — le n° d'opération ne reflète PAS l'ordre du flux) ──
-// Étape → salles (room_code)
-var FLOW_STAGES = {
-  pesee:          ['p464', 'p471'],
-  granulation:    ['n140', 'n425'],
-  melange:        ['n138', 'n137', 'n448'],
-  compression:    ['n131', 'n128', 'n134', 'n445'],
-  pelliculage:    ['n143', 'n429', 'n136'],
-  remplissage:    ['n436'],
-  melange_pateux: ['n200'],
-  cond:           ['c149', 'c148', 'c147', 'c146', 'c223', 'c220', 'c222'],
-  cond_pateux:    ['c206']
-}
-// Transitions valides entre étapes (dérivées des 9 routes possibles)
-var FLOW_EDGES = [
-  ['pesee', 'granulation'], ['pesee', 'melange'], ['pesee', 'compression'], ['pesee', 'melange_pateux'],
-  ['granulation', 'melange'],
-  ['melange', 'remplissage'], ['melange', 'compression'],
-  ['compression', 'pelliculage'], ['compression', 'cond'],
-  ['pelliculage', 'cond'],
-  ['remplissage', 'cond'],
-  ['melange_pateux', 'cond_pateux']
-]
-// room_code → étape (inverse)
-var ROOM_STAGE = {}
-Object.keys(FLOW_STAGES).forEach(function(s) { FLOW_STAGES[s].forEach(function(rc) { ROOM_STAGE[rc] = s }) })
+// (FLUX RÉEL : FLOW_STAGES / FLOW_EDGES / ROOM_STAGE importés depuis services/flux.js — source unique)
 
 export default {
   directives: {
@@ -2556,6 +2531,17 @@ export default {
       for (var ck = 0; ck < lotsToStart.length; ck++) {
         var fx = await checkProductFluxRoom(codeByLot[lotsToStart[ck].id], node.id, roomOp)
         if (!fx.allowed) { modal.value.err = fx.reason; modal.value.saving = false; return }
+      }
+
+      // ── Contrôle de séquence (règle N°23) : alerter si une étape amont de la route n'est pas saisie ──
+      var tgtStage = ROOM_STAGE[node.id]
+      if (tgtStage) {
+        for (var uk = 0; uk < lotsToStart.length; uk++) {
+          var up = await checkUpstreamStages(lotsToStart[uk].id, codeByLot[lotsToStart[uk].id], tgtStage)
+          if (up.missing && up.missing.length) {
+            if (!window.confirm('⚠ Traçabilité — lot ' + lotsToStart[uk].numero_lot + ' : étape(s) amont non saisie(s) : ' + stageLabels(up.missing) + '.\n\nÀ saisir (date rétroactive). Continuer quand même ?')) { modal.value.saving = false; return }
+          }
+        }
       }
 
       var res
