@@ -70,7 +70,7 @@
                 <span class="tp-sort-col tp-sort-desc" @click.stop="toggleSort(grp,'prodDesc')">
                   Désignation <span class="tp-sort-icon">{{sortIcon(grp,'prodDesc')}}</span>
                 </span>
-                <span class="tp-sort-col tp-sort-since">Depuis</span>
+                <span class="tp-sort-col tp-sort-since">Ancienneté</span>
                 <span class="tp-sort-col tp-sort-dl">Échéance</span>
                 <span class="tp-sort-col tp-sort-acts">Actions</span>
               </div>
@@ -304,6 +304,14 @@ export default {
       var d = Math.floor(h/24); var rh = h%24
       var txt = 'depuis '+d+'j'+(rh>0?' '+rh+'h':'')
       return {text:txt, cls:d>=3?'since-red':d>=2?'since-orange':'since-ok'}
+    }
+    // Ancienneté compacte « +Nj » (jours pleins depuis la date métier)
+    var fmtAge = function(dateStr) {
+      if (!dateStr) return null
+      var ms = Date.now() - new Date(dateStr).getTime()
+      if (ms < 0) return null
+      var d = Math.floor(ms / 86400000)
+      return {text:'+'+d+'j', cls:d>=3?'since-red':d>=2?'since-orange':'since-ok'}
     }
 
     var getLotsMap = async function(lotIds) {
@@ -607,7 +615,7 @@ export default {
         docRaw.forEach(function(d){
           var l=daqMap[d.lot_id]; if(!l||l.statut_sap==='vide') return
           var lbl=d.statut==='verification_aq'?'Vérifier (retour DT)':'Vérifier AQ → DT'
-          var since=fmtSince(bizBase(d,l))
+          var since=fmtAge(bizBase(d,l))
           var typeKey=d.type_document||'autre'; var typeLabel=DOC_TYPE_LABELS[typeKey]||typeKey
           var actCls=d.statut==='verification_aq'?'act-orange':'act-blue'
           var canAct=isAdm||canPerform('verifier_'+typeKey)
@@ -629,7 +637,7 @@ export default {
         var cclAqMap = await getLotsMap((cclAqRes.data||[]).map(function(d){return d.lot_id}))
         ;(cclAqRes.data||[]).forEach(function(d){
           var l=cclAqMap[d.lot_id]; if(!l||l.statut_sap==='vide') return
-          var since=fmtSince(bizBase(d,l))
+          var since=fmtAge(bizBase(d,l))
           var canAct=isAdm||canPerform('emettre_ccl')
           docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',statutSap:l.statut_sap||''})
           if(!grpMap['ccl']) grpMap['ccl']=makeGrp('ccl','CCL','Transmettre au DT')
@@ -649,7 +657,7 @@ export default {
         var grpMapDt = {}
         docRaw.forEach(function(d){
           var l=ddtMap[d.lot_id]; if(!l) return
-          var since=fmtSince(bizBase(d,l))
+          var since=fmtAge(bizBase(d,l))
           var typeKey=d.type_document||'autre'; var typeLabel=DOC_TYPE_LABELS[typeKey]||typeKey
           var canAct=isAdm||canPerform('approuver_'+typeKey)
           var canReturn=isAdm||canPerform('retourner_document')
@@ -670,7 +678,7 @@ export default {
         var cclDtMap = await getLotsMap((cclDtRes.data||[]).map(function(d){return d.lot_id}))
         ;(cclDtRes.data||[]).forEach(function(d){
           var l=cclDtMap[d.lot_id]; if(!l) return
-          var since=fmtSince(bizBase(d,l))
+          var since=fmtAge(bizBase(d,l))
           var canAct=isAdm||canPerform('approuver_ccl')
           var canReturn=isAdm||canPerform('retourner_document')
           docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',statutSap:l.statut_sap||''})
@@ -692,7 +700,7 @@ export default {
         var grpMapEmt = {}
         docRaw.forEach(function(d){
           var l=dEmtMap[d.lot_id]; if(!l) return
-          var since=fmtSince(bizBase(d,l))
+          var since=fmtAge(bizBase(d,l))
           var typeKey=d.type_document||'autre'; var typeLabel=DOC_TYPE_LABELS[typeKey]||typeKey
           var canAct=isAdm||canPerform('emettre_'+typeKey)
           docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',statutSap:l.statut_sap||''})
@@ -713,7 +721,7 @@ export default {
         ;(dNeRes.data||[]).forEach(function(d){
           var l=dNeMap[d.lot_id]
           if(!l || l.statut_sap==='accepte' || l.statut_sap==='vide') return
-          var since=fmtSince(bizBase(d,l))
+          var since=fmtAge(bizBase(d,l))
           var typeKey=d.type_document||'autre'; var typeLabel=DOC_TYPE_LABELS[typeKey]||typeKey
           var canAct=isAdm||canPerform('emettre_'+typeKey)
           docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',statutSap:l.statut_sap||''})
