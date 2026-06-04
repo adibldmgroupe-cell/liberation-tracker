@@ -248,6 +248,11 @@ export async function importHistoriqueDepuisGoogleSheets(url, onProgress) {
       demandeAQL: parseDate(g('demande AQL')), finAQL: parseDate(g('Date fin AQL')),
       deviation: clean(g('DEVIATION')), dateLib: parseDate(g('libération réelle')),
       dateFinFab: parseDate(g('Date fin fab')), dateFinCdt: parseDate(g('Date fin cdt')),
+      // Dates prévisionnelles de libération (estimations GS) → lot_planning (cibles).
+      // "à définir"/vide → parseDate renvoie null (non importé).
+      estCQ: parseDate(g('Estimation CQ (Dossier Analytique)')),    // → date_lcq_cible (LIB. LCQ)
+      estAQ: parseDate(g('Estimation AQ (CCL)')),                   // → date_aq_cible  (LIB. AQ)
+      estDT: parseDate(g('Estimation DT (Libération à la vente)')), // → date_dt_cible  (LIB. DT)
     }
   })
   var parsed = Object.values(map)
@@ -303,8 +308,8 @@ export async function importHistoriqueDepuisGoogleSheets(url, onProgress) {
   parsed.forEach(function(p) { if (existing[p.numLot]) stats.updated++; else stats.created++ })
   P(60)
 
-  // ── 7. Construire docs / dossiers / OF / OC / AQL / déviations ──
-  var docRows = [], dossierRows = [], ofRows = [], ocRows = [], aqlCand = [], devCand = []
+  // ── 7. Construire docs / dossiers / OF / OC / AQL / déviations / planning ──
+  var docRows = [], dossierRows = [], ofRows = [], ocRows = [], aqlCand = [], devCand = [], planCand = []
   var SVC = { if: 'fabrication', ic: 'conditionnement', da_pc: 'lcq', da_micro: 'lcq', ccl: 'aq' }
   parsed.forEach(function(p) {
     var lotId = lotIdMap[p.numLot]; if (!lotId) return
@@ -344,6 +349,7 @@ export async function importHistoriqueDepuisGoogleSheets(url, onProgress) {
 
     if (p.demandeAQL || p.finAQL) aqlCand.push({ lotId: lotId, demandeAQL: p.demandeAQL, finAQL: p.finAQL })
     if (p.deviation && p.deviation !== '0') devCand.push({ lotId: lotId, description: p.deviation })
+    if (p.estCQ || p.estAQ || p.estDT) planCand.push({ lotId: lotId, estCQ: p.estCQ, estAQ: p.estAQ, estDT: p.estDT })
   })
 
   // ── 8. Upsert docs / dossiers / OF / OC (batch) ──
@@ -362,6 +368,32 @@ export async function importHistoriqueDepuisGoogleSheets(url, onProgress) {
   for (var occ of chunk(ocRows, 500)) {
     var rOc = await supabase.from('orders_oc').upsert(occ, { onConflict: 'lot_id' })
     if (rOc.error) stats.errors.push('OC : ' + rOc.error.message)
+  }
+
+  // ── 8b. Planning prévisionnel (estimations CQ/AQ/DT → cibles lot_planning) ──
+  // Fusion : le GS gagne quand la date est valide ; sinon on PRÉSERVE l'existant
+  // (une estimation "à définir" n'écrase pas une date déjà saisie). onConflict lot_id.
+  if (planCand.length) {
+    var existPlan = {}
+    var planLotIds = planCand.map(function(c){ return c.lotId }).filter(Boolean)
+    for (var plf of chunk(planLotIds, 800)) {
+      var ePl = await supabase.from('lot_planning').select('lot_id,date_lcq_cible,date_aq_cible,date_dt_cible').in('lot_id', plf)
+      ;(ePl.data || []).forEach(function(x){ existPlan[x.lot_id] = x })
+    }
+    var planRows = planCand.map(function(c){
+      var ex = existPlan[c.lotId] || {}
+      return {
+        lot_id: c.lotId,
+        date_lcq_cible: c.estCQ || ex.date_lcq_cible || null,
+        date_aq_cible:  c.estAQ || ex.date_aq_cible  || null,
+        date_dt_cible:  c.estDT || ex.date_dt_cible  || null,
+        updated_at: now,
+      }
+    })
+    for (var plc of chunk(planRows, 500)) {
+      var rPl = await supabase.from('lot_planning').upsert(plc, { onConflict: 'lot_id' })
+      if (rPl.error) stats.errors.push('Planning : ' + rPl.error.message)
+    }
   }
   P(80)
 
