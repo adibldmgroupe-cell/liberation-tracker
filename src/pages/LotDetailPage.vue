@@ -57,13 +57,22 @@
         </template>
       </div>
       </div>
-      <div class="circ-act">
-        <span v-if="of.pending_ar_service" class="circ-ar-pending">⏳ {{SVC_LABELS[of.pending_ar_service]||of.pending_ar_service}}</span>
-        <button v-if="of.pending_ar_service && (of.pending_ar_service===userService||isAdmin) && canPerform('accuser_reception_circuit')" class="btn bg" @click="doAcknowledgeOrderAR('of',of.id)">✓ Accuser réception</button>
-        <button v-else-if="of.statut!=='termine' && !of.pending_ar_service && canValidateStep('of',of.etape_circuit)" class="btn bg" @click="doValidate('of',of.id,of.etape_circuit)">
-          Valider — {{circuitSteps.find(function(e){return e.key===of.etape_circuit})?.label}}
-        </button>
-        <span v-else-if="of.statut==='termine'" class="circ-done">✓ Circuit OF terminé</span>
+      <div class="dg dg-1">
+        <div class="di di-act" v-if="of.pending_ar_service && (of.pending_ar_service===userService||isAdmin) && canPerform('accuser_reception_circuit')" @click="doAcknowledgeOrderAR('of',of.id)">
+          <div class="dind ind-prog"></div><div><div class="dn">Accuser réception — {{SVC_LABELS[of.pending_ar_service]||of.pending_ar_service}}</div><div class="ds">✓ Accuser</div></div>
+        </div>
+        <div class="di di-ro" v-else-if="of.pending_ar_service">
+          <div class="dind ind-wait"></div><div><div class="dn">En attente d'accusé réception</div><div class="ds">⏳ {{SVC_LABELS[of.pending_ar_service]||of.pending_ar_service}}</div></div>
+        </div>
+        <div class="di di-act" v-else-if="of.statut!=='termine' && canValidateStep('of',of.etape_circuit)" @click="doValidate('of',of.id,of.etape_circuit)">
+          <div class="dind ind-prog"></div><div><div class="dn">Valider — {{circuitSteps.find(function(e){return e.key===of.etape_circuit})?.label}}</div><div class="ds">＋ Valider l'étape</div></div>
+        </div>
+        <div class="di di-ro" v-else-if="of.statut!=='termine'">
+          <div class="dind ind-wait"></div><div><div class="dn">{{circuitSteps.find(function(e){return e.key===of.etape_circuit})?.label}}</div><div class="ds">Étape en cours</div></div>
+        </div>
+        <div class="di di-ro" v-else>
+          <div class="dind ind-done"></div><div><div class="dn">Circuit OF terminé</div><div class="ds ds-ok">✓ Toutes les étapes validées</div></div>
+        </div>
       </div>
       <div class="circ-hist" v-if="ofVals.length">
         <div class="circ-hist-row" v-for="v in ofVals" :key="v.etape">
@@ -89,13 +98,22 @@
         </template>
       </div>
       </div>
-      <div class="circ-act">
-        <span v-if="oc.pending_ar_service" class="circ-ar-pending">⏳ {{SVC_LABELS[oc.pending_ar_service]||oc.pending_ar_service}}</span>
-        <button v-if="oc.pending_ar_service && (oc.pending_ar_service===userService||isAdmin) && canPerform('accuser_reception_circuit')" class="btn bg" @click="doAcknowledgeOrderAR('oc',oc.id)">✓ Accuser réception</button>
-        <button v-else-if="oc.statut!=='termine' && !oc.pending_ar_service && canValidateStep('oc',oc.etape_circuit)" class="btn bg" @click="doValidate('oc',oc.id,oc.etape_circuit)">
-          Valider — {{circuitSteps.find(function(e){return e.key===oc.etape_circuit})?.label}}
-        </button>
-        <span v-else-if="oc.statut==='termine'" class="circ-done">✓ Circuit OC terminé</span>
+      <div class="dg dg-1">
+        <div class="di di-act" v-if="oc.pending_ar_service && (oc.pending_ar_service===userService||isAdmin) && canPerform('accuser_reception_circuit')" @click="doAcknowledgeOrderAR('oc',oc.id)">
+          <div class="dind ind-prog"></div><div><div class="dn">Accuser réception — {{SVC_LABELS[oc.pending_ar_service]||oc.pending_ar_service}}</div><div class="ds">✓ Accuser</div></div>
+        </div>
+        <div class="di di-ro" v-else-if="oc.pending_ar_service">
+          <div class="dind ind-wait"></div><div><div class="dn">En attente d'accusé réception</div><div class="ds">⏳ {{SVC_LABELS[oc.pending_ar_service]||oc.pending_ar_service}}</div></div>
+        </div>
+        <div class="di di-act" v-else-if="oc.statut!=='termine' && canValidateStep('oc',oc.etape_circuit)" @click="doValidate('oc',oc.id,oc.etape_circuit)">
+          <div class="dind ind-prog"></div><div><div class="dn">Valider — {{circuitSteps.find(function(e){return e.key===oc.etape_circuit})?.label}}</div><div class="ds">＋ Valider l'étape</div></div>
+        </div>
+        <div class="di di-ro" v-else-if="oc.statut!=='termine'">
+          <div class="dind ind-wait"></div><div><div class="dn">{{circuitSteps.find(function(e){return e.key===oc.etape_circuit})?.label}}</div><div class="ds">Étape en cours</div></div>
+        </div>
+        <div class="di di-ro" v-else>
+          <div class="dind ind-done"></div><div><div class="dn">Circuit OC terminé</div><div class="ds ds-ok">✓ Toutes les étapes validées</div></div>
+        </div>
       </div>
       <div class="circ-hist" v-if="ocVals.length">
         <div class="circ-hist-row" v-for="v in ocVals" :key="v.etape">
@@ -653,6 +671,7 @@ export default {
 .dind{width:3px;height:28px;border-radius:1px;flex-shrink:0}.ind-wait{background:#e8e8e8}.ind-prog{background:#7c3aed}.ind-done{background:#1D9E75}.ind-ret{background:#E24B4A}.ind-na{background:#e8e8e8;opacity:.3}
 .ind-orange{background:#BA7517}.ind-violet{background:#5B3CC4}.ind-teal{background:#0D7C66}.ind-slate{background:#475569}
 .di-act .ds{color:#7c3aed;font-weight:500}.di-act:hover{background:#f5f3ff}
+.dg-1{grid-template-columns:1fr !important}.di-ro{cursor:default}.di-ro:hover{background:transparent}
 .dn{font-size:13px;font-weight:500}.ds{font-size:11px;color:#999;margin-top:1px}.ds-ok{color:#1D9E75}.ds-ret{color:#E24B4A}.ds-na{color:#ccc}
 .ds-block{font-size:10px;color:#BA7517;margin-top:2px}
 .btn-app{font-size:10px;padding:3px 8px;border:1px solid #1D9E75;border-radius:3px;background:#EAF3DE;color:#3B6D11;cursor:pointer;margin-top:4px;display:block;font-family:inherit}.btn-app:hover{background:#d4edda}
