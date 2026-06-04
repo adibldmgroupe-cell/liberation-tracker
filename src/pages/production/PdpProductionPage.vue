@@ -482,13 +482,13 @@
                   <td class="bg-calc bg-strong">{{r.total!=null?r.total:'—'}}</td>
                   <td class="bg-calc">{{r.cml!=null?r.cml:'—'}}</td>
                 </template>
-                <td><input v-model="r.date_debut" @paste="onBulkPaste($event,i,'date_debut')" class="bg-inp mono" placeholder="jj/mm/aaaa" /></td>
-                <td><input v-model="r.date_fin" @paste="onBulkPaste($event,i,'date_fin')" class="bg-inp mono" placeholder="jj/mm/aaaa" /></td>
+                <td><input v-model="r.date_debut" @paste="onBulkPaste($event,i,'date_debut')" class="bg-inp mono bg-date" placeholder="jj/mm/aaaa" /></td>
+                <td><input v-model="r.date_fin" @paste="onBulkPaste($event,i,'date_fin')" class="bg-inp mono bg-date" placeholder="jj/mm/aaaa" /></td>
                 <template v-if="bulkModal.famille==='cond'">
-                  <td><input v-model="r.date_fin_reelle" class="bg-inp mono bg-reel" placeholder="jj/mm/aaaa" /></td>
+                  <td><input v-model="r.date_fin_reelle" class="bg-inp mono bg-reel bg-date" placeholder="jj/mm/aaaa" /></td>
                   <td class="bg-calc" :class="{'bg-retard':r.retard>0,'bg-avance':r.retard<0}">{{r.retard!=null?(r.retard>0?'+'+r.retard:r.retard):'—'}}</td>
-                  <td class="bg-calc">{{r.liberation?fmtDate(r.liberation):'—'}}<span v-if="r.lib_src" class="lib-src">{{r.lib_src}}</span></td>
-                  <td><input v-model="r.date_cible" class="bg-inp mono" placeholder="jj/mm/aaaa" /></td>
+                  <td class="bg-calc bg-date">{{r.liberation?fmtDate(r.liberation):'—'}}<span v-if="r.lib_src" class="lib-src">{{r.lib_src}}</span></td>
+                  <td><input v-model="r.date_cible" class="bg-inp mono bg-date" placeholder="jj/mm/aaaa" /></td>
                 </template>
                 <td class="acts"><button class="ia del" @click="bulkRemoveRow(i)" title="Supprimer la ligne">✕</button></td>
               </tr>
@@ -1893,6 +1893,7 @@ export default {
 .bg-inp:focus { background:#1a1a35; box-shadow:inset 0 0 0 1px #7c7cff; }
 .bg-num { text-align:right; }
 .bg-w40 { width:46px; }
+.bg-date { min-width:96px; }  /* dates jj/mm/aaaa affichées entièrement */
 .bg-sel { padding:5px 4px; cursor:pointer; }
 .bg-sel.vl-total { color:#fbbf24; }
 .bg-sel.vl-partiel { color:#6ee7b7; }
