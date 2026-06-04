@@ -455,8 +455,9 @@ export default {
         var toSvcRect = d.typeDocument === 'ccl' ? 'dt' : 'aq'
         res = await supabase.from('liberation_documents').update({statut:'emis',emitted_at:n,emitted_by:uid,pending_ar_service:pendingAfterRect,updated_at:n}).eq('id',d.docId)
         if (res.error) { alert('Erreur : '+res.error.message); d.acting=false; return }
-        await supabase.from('document_movements').insert({document_id:d.docId,action:'rectification',from_service:SVC_MAP[d.typeDocument]||'',to_service:toSvcRect,performed_by:uid,performed_at:n})
-        await createNotification(toSvcRect,d.lotId,d.docId,'Lot '+d.lotNum+' — '+d.typeDocument.toUpperCase().replace('_',' ')+' rectifié et réémis','document_transmis')
+        var firstEmit = d.statut === 'non_emis'
+        await supabase.from('document_movements').insert({document_id:d.docId,action:firstEmit?'emission':'rectification',from_service:SVC_MAP[d.typeDocument]||'',to_service:toSvcRect,performed_by:uid,performed_at:n})
+        await createNotification(toSvcRect,d.lotId,d.docId,'Lot '+d.lotNum+' — '+d.typeDocument.toUpperCase().replace('_',' ')+(firstEmit?' émis et transmis à l\'AQ':' rectifié et réémis'),'document_transmis')
       }
       removeDocItem(d, grp, cat)
     }
@@ -688,6 +689,26 @@ export default {
             lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',statutSap:l.statut_sap||'',
             action:'Rectifier et réémettre',actionClass:'act-red',sinceText:since?since.text:null,sinceClass:since?since.cls:'',
             canAct:canAct,btnLabel:'↑ Réémettre',canReturn:false,
+            showReturnInput:false,returnMotif:'',acting:false})
+        })
+        // Documents NON ÉMIS à transmettre à l'AQ pour libérer le lot (lots en stock : quarantaine / sous investigation)
+        var dNeRes = await supabase.from('liberation_documents')
+          .select('id,type_document,lot_id,updated_at')
+          .eq('statut','non_emis').eq('service_emetteur',svc).eq('is_applicable',true)
+          .in('type_document',['if','ic','da_pc','da_micro']).is('pending_ar_service',null).limit(5000)
+        var dNeMap = await getLotsMap((dNeRes.data||[]).map(function(d){return d.lot_id}))
+        ;(dNeRes.data||[]).forEach(function(d){
+          var l=dNeMap[d.lot_id]
+          if(!l || l.statut_sap==='accepte' || l.statut_sap==='vide') return
+          var since=fmtSince(d.updated_at)
+          var typeKey=d.type_document||'autre'; var typeLabel=DOC_TYPE_LABELS[typeKey]||typeKey
+          var canAct=isAdm||canPerform('emettre_'+typeKey)
+          docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',statutSap:l.statut_sap||''})
+          if(!grpMapEmt[typeKey]) grpMapEmt[typeKey]=makeGrp(typeKey,typeLabel,'Transmettre à AQ')
+          grpMapEmt[typeKey].docs.push({key:'doc_'+d.id,docId:d.id,typeDocument:typeKey,statut:'non_emis',
+            lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',statutSap:l.statut_sap||'',
+            action:'Transmettre à AQ',actionClass:'act-blue',sinceText:since?since.text:null,sinceClass:since?since.cls:'',
+            canAct:canAct,btnLabel:'↑ Transmettre',canReturn:false,
             showReturnInput:false,returnMotif:'',acting:false})
         })
         docCat.groups = Object.values(grpMapEmt)

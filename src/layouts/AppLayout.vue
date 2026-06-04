@@ -160,6 +160,9 @@ export default {
       } else {
         var r7 = await excl(supabase.from('liberation_documents').select('id',{count:'exact',head:true}).eq('statut','retour_emetteur').eq('service_emetteur',svc).eq('is_applicable',true))
         total += r7.count||0
+        // Documents non émis à transmettre à l'AQ (lots en stock : quarantaine / sous investigation)
+        var r7b = await excl(supabase.from('liberation_documents').select('id',{count:'exact',head:true}).eq('statut','non_emis').eq('service_emetteur',svc).eq('is_applicable',true).in('type_document',['if','ic','da_pc','da_micro']).is('pending_ar_service',null))
+        total += r7b.count||0
       }
       // AR
       var r8 = await excl(supabase.from('liberation_documents').select('id',{count:'exact',head:true}).eq('pending_ar_service',svc))
