@@ -934,9 +934,9 @@ export default {
 .tp-sort-sap{width:110px}
 .tp-sort-lot{width:108px}   /* = largeur .tp-lot-mono pour alignement exact en-tête ↔ ligne */
 .tp-sort-desc{flex:1;min-width:0}
-.tp-sort-since{width:88px}
+.tp-sort-since{width:88px;justify-content:center}
 .tp-sort-dl{width:116px;justify-content:center}
-.tp-sort-acts{width:200px;text-align:right}
+.tp-sort-acts{width:200px;text-align:right;justify-content:flex-end}
 .tp-sort-icon{font-size:10px}
 
 /* ── Items dans groupes (niveau 4) ───────────────────────────────── */
