@@ -1206,6 +1206,7 @@ html[data-theme="night"] .phase-fab, html[data-theme="workshop"] .phase-fab { ba
 html[data-theme="night"] .phase-attente-cond, html[data-theme="workshop"] .phase-attente-cond,
 html[data-theme="night"] .phase-attente-pf, html[data-theme="workshop"] .phase-attente-pf { background: rgba(251,191,36,.12); color: #fbbf24; }
 html[data-theme="night"] .phase-cond, html[data-theme="workshop"] .phase-cond { background: rgba(20,184,166,.14); color: #5eead4; }
+html[data-theme="night"] .phase-stock, html[data-theme="workshop"] .phase-stock { background: rgba(96,165,250,.14); color: #93c5fd; }
 html[data-theme="night"] .phase-libere, html[data-theme="workshop"] .phase-libere { background: rgba(52,211,153,.1); color: #6ee7b7; }
 
 /* ── Doc pips (.dc-*, .pip-*-t) ── */

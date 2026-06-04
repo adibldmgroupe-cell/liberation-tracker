@@ -4,7 +4,7 @@
     <div class="lh">
       <div><span class="ln">{{lot.numero_lot}}</span><span class="lp">{{prod.description}}</span></div>
       <div class="lh-right">
-        <span v-if="lot.phase_production_en_cours" class="sp-phase" :class="getPhaseClass(lot.phase_production_en_cours)">{{lot.phase_production_en_cours}}</span>
+        <span v-if="phaseLabel" class="sp-phase" :class="getPhaseClass(phaseLabel)">{{phaseLabel}}</span>
         <span class="sp" :class="'s-'+lot.statut_sap">{{statusLabels[lot.statut_sap]}}</span>
         <button v-if="isAdmin" class="btn-sm" @click="showModify=true">✏️ Modifier</button>
         <button v-if="isAdmin" class="btn-sm btn-del" @click="confirmDelete">🗑️ Supprimer</button>
@@ -576,8 +576,16 @@ export default {
       }
     }
 
+    // Phase par défaut (lots importés sans suivi de production) : réceptionné en stock ≠ "Planifié"
+    var defaultPhase = function(s) {
+      if (s === 'accepte') return 'Libéré'
+      if (s === 'quarantaine' || s === 'sous_investigation' || s === 'refuse') return 'Reçu en stock'
+      return 'Planifié'
+    }
+    var phaseLabel = computed(function(){ return lot.value ? (lot.value.phase_production_en_cours || defaultPhase(lot.value.statut_sap)) : '' })
     var getPhaseClass = function(phase) {
       if (!phase || phase === 'Planifié') return 'phase-planifie'
+      if (phase === 'Reçu en stock') return 'phase-stock'
       if (phase === 'Libéré') return 'phase-libere'
       if (phase === 'Clôturé') return 'phase-cloture'
       if (phase === 'Fabriqué — En attente conditionnement') return 'phase-attente-cond'
@@ -605,7 +613,7 @@ export default {
       planning,planEdit,planSaving,savePlanning,
       doSetDaMicroApplicable,
       devEdits,saveDevField,SVC_LABELS,fmtDevDate,
-      devBloquanteOpen,devNonBloquanteOpen,devClosed,getPhaseClass}
+      devBloquanteOpen,devNonBloquanteOpen,devClosed,getPhaseClass,phaseLabel}
   }
 }
 </script>
@@ -617,7 +625,7 @@ export default {
 .sp{font-size:11px;font-weight:500;padding:3px 10px;border-radius:2px}
 .s-quarantaine{background:#FFA94D;color:#412402}.s-accepte{background:#1D9E75;color:#fff}.s-sous_investigation{background:#E24B4A;color:#fff}.s-vide{background:#e8e8e8;color:#666}.s-refuse{background:#666;color:#fff}
 .sp-phase{font-size:10px;font-weight:500;padding:3px 10px;border-radius:2px;white-space:nowrap}
-.phase-planifie{background:#f0f0f0;color:#999}.phase-fab{background:#EEE8FF;color:#5B3CC4}.phase-attente-cond{background:#FFF3CD;color:#856404}.phase-cond{background:#E0F7F4;color:#00695C}.phase-attente-pf{background:#FFF3CD;color:#856404}.phase-libere{background:#EAF3DE;color:#3B6D11}.phase-cloture{background:#e8e8e8;color:#333}
+.phase-planifie{background:#f0f0f0;color:#999}.phase-fab{background:#EEE8FF;color:#5B3CC4}.phase-attente-cond{background:#FFF3CD;color:#856404}.phase-cond{background:#E0F7F4;color:#00695C}.phase-attente-pf{background:#FFF3CD;color:#856404}.phase-stock{background:#E6F1FB;color:#1E5A9E}.phase-libere{background:#EAF3DE;color:#3B6D11}.phase-cloture{background:#e8e8e8;color:#333}
 .loading{text-align:center;padding:60px;color:#999}
 .detail-reloading{font-size:11px;color:#999;padding:4px 0 6px;letter-spacing:.3px;animation:spin-txt 1s linear infinite}
 @keyframes spin-txt{0%{opacity:1}50%{opacity:.4}100%{opacity:1}}

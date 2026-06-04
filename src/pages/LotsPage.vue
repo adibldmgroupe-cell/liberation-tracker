@@ -808,14 +808,22 @@ export default {
           of_id:of?of.id:null,oc_id:oc?oc.id:null,docs:docs,aqls_raw:aqls,
           of_etape:of?of.etape_circuit:null,oc_etape:oc?oc.etape_circuit:null,
           of_statut:of?of.statut:null,oc_statut:oc?oc.statut:null,
-          phase:l.phase_production_en_cours||'Planifié',
+          phase:l.phase_production_en_cours||defaultPhase(l.statut_sap),
         }
       })
       } catch(e) { console.error('Erreur chargement lots:', e) } finally { lotsLoading.value = false }
     }
 
+    // Phase par défaut quand aucune phase de production n'est suivie (lots importés) :
+    // un lot réceptionné en stock (statut_sap renseigné) a fini sa production → pas "Planifié".
+    var defaultPhase = function(s) {
+      if (s === 'accepte') return 'Libéré'
+      if (s === 'quarantaine' || s === 'sous_investigation' || s === 'refuse') return 'Reçu en stock'
+      return 'Planifié'
+    }
     var getPhaseClass = function(phase) {
       if (!phase || phase === 'Planifié') return 'phase-planifie'
+      if (phase === 'Reçu en stock') return 'phase-stock'
       if (phase === 'Libéré') return 'phase-libere'
       if (phase === 'Clôturé') return 'phase-cloture'
       if (phase === 'Fabriqué — En attente conditionnement') return 'phase-attente-cond'
@@ -2221,7 +2229,7 @@ var loadCharge = async function() {
 .sp{font-size:9px;padding:2px 5px;border-radius:2px;font-weight:500;white-space:nowrap}
 .s-quarantaine{background:#FAEEDA;color:#854F0B}.s-accepte{background:#EAF3DE;color:#3B6D11}.s-sous_investigation{background:#FCEBEB;color:#A32D2D}.s-vide{background:#f5f5f5;color:#999}.s-enprod{background:#ede9fe;color:#6d28d9}.s-enprep{background:#F0EBFE;color:#5B3CC4}.s-refuse{background:#e8e8e8;color:#333}
 .sp-phase{font-size:9px;padding:2px 5px;border-radius:2px;font-weight:500;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;display:inline-block}
-.phase-planifie{background:#f5f5f5;color:#999}.phase-fab{background:#EEE8FF;color:#5B3CC4}.phase-attente-cond{background:#FFF3CD;color:#856404}.phase-cond{background:#E0F7F4;color:#00695C}.phase-attente-pf{background:#FFF3CD;color:#856404}.phase-libere{background:#EAF3DE;color:#3B6D11}.phase-cloture{background:#e8e8e8;color:#333}
+.phase-planifie{background:#f5f5f5;color:#999}.phase-fab{background:#EEE8FF;color:#5B3CC4}.phase-attente-cond{background:#FFF3CD;color:#856404}.phase-cond{background:#E0F7F4;color:#00695C}.phase-attente-pf{background:#FFF3CD;color:#856404}.phase-stock{background:#E6F1FB;color:#1E5A9E}.phase-libere{background:#EAF3DE;color:#3B6D11}.phase-cloture{background:#e8e8e8;color:#333}
 .doc-pip{font-size:9px;padding:2px 4px;border-radius:2px;font-weight:500}
 .dc-ok{background:#EAF3DE;color:#3B6D11}.dc-ret{background:#FCEBEB;color:#A32D2D}.dc-wait{background:#f5f5f5;color:#999}.dc-prog{background:#ede9fe;color:#6d28d9}.dc-na{background:transparent;color:#ccc}.dc-date{background:#fafafa;color:#666;font-family:'SF Mono',monospace}
 .pip-done-t{background:#EAF3DE;color:#3B6D11}.pip-prog-t{background:#FAEEDA;color:#854F0B}
