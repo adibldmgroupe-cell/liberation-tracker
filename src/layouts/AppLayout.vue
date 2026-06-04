@@ -36,6 +36,7 @@
           <router-link to="/admin/users" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">👥</span>Utilisateurs</router-link>
           <router-link to="/admin/permissions" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🔑</span>Permissions</router-link>
           <router-link to="/admin/referentiel" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">📚</span>Référentiel</router-link>
+          <router-link to="/admin/deadlines" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">⏱</span>Délais documentaires</router-link>
         </template>
       </nav>
       <div class="sidebar-user" v-if="profile">
