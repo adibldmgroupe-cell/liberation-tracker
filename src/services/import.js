@@ -286,10 +286,12 @@ export async function importHistoriqueDepuisGoogleSheets(url, onProgress) {
   parsed.forEach(function(p) {
     var pid = prodMap[p.codeArticle]
     if (!pid) { stats.errors.push('Produit introuvable : ' + p.codeArticle); return }
+    // statut_sap, date_liberation, date_enregistrement (= date d'entrée stock) sont
+    // propriété de la Réception SAP → ne pas les écrire ici (sinon l'Historique
+    // écraserait la donnée SAP). On n'apporte que les dates d'émission documentaires.
     lotRows.push({
-      numero_lot: p.numLot, product_id: pid, statut_sap: p.statut,
-      quantite: p.qte, date_enregistrement: p.dateEntree,
-      date_liberation: p.dateLib || null, synced_from_excel_at: now, updated_at: now,
+      numero_lot: p.numLot, product_id: pid,
+      quantite: p.qte, synced_from_excel_at: now, updated_at: now,
     })
   })
   var lotIdMap = {}
@@ -307,15 +309,22 @@ export async function importHistoriqueDepuisGoogleSheets(url, onProgress) {
   parsed.forEach(function(p) {
     var lotId = lotIdMap[p.numLot]; if (!lotId) return
     var libere = !!p.dateLib || p.statut === 'accepte'
-    // Lot "actif" = a une activité documentaire dans l'historique (ou libéré).
-    // À l'import, ses documents sont posés à l'état TERMINAL (approuvé) : la date
-    // reste affichée mais aucune tâche n'est générée (import = photo, zéro action).
-    var lotActif = libere || !!(p.dateIF || p.dateIC || p.dateDAPC || p.dateDAMicro || p.dateFinFab || p.dateFinCdt)
     var microApp = !!(p.dateDAMicro && p.dateDAMicro !== '1970-01-01')
+    // Les dates IF/IC/DA PC/DA Micro de l'Historique sont des dates d'ÉMISSION par le
+    // service émetteur (→ emitted_at), PAS des dates d'approbation DT.
+    //  • Lot libéré        → document à l'état terminal "approuvé DT" (flux complété, aucune tâche).
+    //  • Lot non libéré    → document "émis" à sa date d'émission : il suit le flux normal
+    //                        (vérification AQ si le lot est en quarantaine côté SAP).
+    //  • Pas de date / N/A → "non émis".
+    // Le statut SAP, la date de libération et la date d'entrée stock viennent de la
+    // Réception SAP (importFromGoogleSheets), jamais d'ici.
     function doc(type, emittedDate, applicable) {
       var d = { lot_id: lotId, type_document: type, is_applicable: applicable, is_required: applicable, service_emetteur: SVC[type], statut: 'non_emis', emitted_at: null, approved_at: null, updated_at: now }
       if (emittedDate) d.emitted_at = emittedDate + 'T00:00:00Z'
-      if (lotActif && applicable) { d.statut = 'approuve_dt'; if (p.dateLib) d.approved_at = p.dateLib + 'T00:00:00Z' }
+      if (applicable) {
+        if (libere) { d.statut = 'approuve_dt'; if (p.dateLib) d.approved_at = p.dateLib + 'T00:00:00Z' }
+        else if (emittedDate) { d.statut = 'emis' }
+      }
       return d
     }
     docRows.push(doc('if', p.dateIF, true), doc('ic', p.dateIC, true), doc('da_pc', p.dateDAPC, true), doc('da_micro', microApp ? p.dateDAMicro : null, microApp), doc('ccl', null, true))
