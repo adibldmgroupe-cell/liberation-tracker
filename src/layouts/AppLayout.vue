@@ -87,13 +87,13 @@ export default {
     var router = useRouter()
     var route  = useRoute()
     var { theme } = useTheme()
-    var THEME_ORDER = ['day', 'night', 'workshop', 'vintage']
+    var THEME_ORDER = ['day', 'night', 'workshop']
     var cycleTheme = function() {
       var idx = THEME_ORDER.indexOf(theme.value)
       theme.value = THEME_ORDER[(idx + 1) % THEME_ORDER.length]
     }
     var themeIcon = computed(function() {
-      return theme.value === 'day' ? '☀️' : theme.value === 'workshop' ? '🏭' : theme.value === 'vintage' ? '📜' : '🌙'
+      return theme.value === 'day' ? '☀️' : theme.value === 'workshop' ? '🏭' : '🌙'
     })
     var profile = ref(null), searchQuery = ref(''), suggestions = ref([]), showSug = ref(false)
     var clock = ref(''), unreadCount = ref(0), pendingTasksCount = ref(0), searchInput = ref(null), mobileMenuOpen = ref(false)
