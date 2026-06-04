@@ -610,7 +610,7 @@ export default {
       if (statut==='emis'||statut==='verification_aq') return 'AQ'
       if (statut==='retour_emetteur') return '↩ '+(emitterShort||'—')
       if (statut==='approuve_aq'||statut==='approbation_dt') return 'DT'
-      if (statut==='approuve_dt') return '✓ Lib.'
+      if (statut==='approuve_dt') return '✓ Appr.'
       return emitterShort||'—'
     }
 
