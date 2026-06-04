@@ -150,55 +150,6 @@ html[data-theme="vintage"] .col-item-over { background: var(--th-bg3); border-co
 html[data-theme="vintage"] .plan-date { background: var(--th-bg3); color: var(--th-accent); }
 html[data-theme="vintage"] .inline-motif-confirm { background: var(--th-accent); }
 
-/* ── Vintage — badges sémantiques en tons rétro (fond crème) ── */
-/* Vert → olive */
-html[data-theme="vintage"] .s-accepte,
-html[data-theme="vintage"] .dc-ok,
-html[data-theme="vintage"] .phase-libere,
-html[data-theme="vintage"] .since-ok,
-html[data-theme="vintage"] .sp2-ok { background:#dfe6cf; color:#5f7d2e; }
-/* Ambre → moutarde */
-html[data-theme="vintage"] .s-quarantaine,
-html[data-theme="vintage"] .sap-quarantaine,
-html[data-theme="vintage"] .since-orange,
-html[data-theme="vintage"] .dl-today,
-html[data-theme="vintage"] .phase-attente-cond,
-html[data-theme="vintage"] .phase-attente-pf { background:#f0e2bf; color:#97701b; }
-/* Rouge → brique */
-html[data-theme="vintage"] .s-sous_investigation,
-html[data-theme="vintage"] .sap-sous_investigation,
-html[data-theme="vintage"] .dc-ret,
-html[data-theme="vintage"] .since-red,
-html[data-theme="vintage"] .dl-overdue,
-html[data-theme="vintage"] .sp2-ko { background:#ecd2cb; color:#a8463a; }
-/* Violet « en cours » → terracotta */
-html[data-theme="vintage"] .s-enprod,
-html[data-theme="vintage"] .s-enprep,
-html[data-theme="vintage"] .dc-prog,
-html[data-theme="vintage"] .phase-fab,
-html[data-theme="vintage"] .ind-prog { background:var(--th-bg3); color:var(--th-accent); }
-html[data-theme="vintage"] .ind-prog { background:var(--th-accent); }
-/* Gris / neutre → tan chaud */
-html[data-theme="vintage"] .s-vide,
-html[data-theme="vintage"] .s-refuse,
-html[data-theme="vintage"] .sap-refuse,
-html[data-theme="vintage"] .dc-wait,
-html[data-theme="vintage"] .dl-ok,
-html[data-theme="vintage"] .phase-planifie,
-html[data-theme="vintage"] .phase-cloture { background:#e7ddc8; color:#8a7559; }
-/* Bleu/teal (stock, cond) → teal rétro */
-html[data-theme="vintage"] .phase-stock,
-html[data-theme="vintage"] .phase-cond { background:#d3e2de; color:#2f6b5f; }
-/* Boutons d'action des tâches → terracotta */
-html[data-theme="vintage"] .tp-do-btn { border-color:var(--th-accent); background:var(--th-bg3); color:var(--th-accent); }
-html[data-theme="vintage"] .tp-do-btn:hover:not(:disabled) { background:var(--th-accent); color:#fff; }
-/* Liens / textes d'action violets → terracotta */
-html[data-theme="vintage"] .di-act .ds { color:var(--th-accent); }
-html[data-theme="vintage"] .bc, html[data-theme="vintage"] .bc span { color:var(--th-accent); }
-html[data-theme="vintage"] .tp-grp-action,
-html[data-theme="vintage"] .tp-cat-count,
-html[data-theme="vintage"] .tp-doc-type-tag { color:var(--th-accent); }
-
 /* ── En-têtes de pages (.ph, .pt, .ph-right) ─────────────────── */
 html[data-theme="night"] .ph,
 html[data-theme="workshop"] .ph {
