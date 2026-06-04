@@ -109,9 +109,9 @@
 
     <!-- AQL -->
     <div class="section"><div class="sh"><span>AQL</span></div>
-      <div class="action-btns">
-        <button v-if="canPerform('demander_aql_fab') && canDemanderAql('fabrication')" class="btn-action" @click="doRequestAql('fabrication')">Demander AQL Fabrication</button>
-        <button v-if="canPerform('demander_aql_cond') && canDemanderAql('conditionnement')" class="btn-action" @click="doRequestAql('conditionnement')">Demander AQL Conditionnement</button>
+      <div class="dg" v-if="(canPerform('demander_aql_fab')&&canDemanderAql('fabrication'))||(canPerform('demander_aql_cond')&&canDemanderAql('conditionnement'))">
+        <div class="di di-act" v-if="canPerform('demander_aql_fab')&&canDemanderAql('fabrication')" @click="doRequestAql('fabrication')"><div class="dind ind-prog"></div><div><div class="dn">AQL Fabrication</div><div class="ds">＋ Demander</div></div></div>
+        <div class="di di-act" v-if="canPerform('demander_aql_cond')&&canDemanderAql('conditionnement')" @click="doRequestAql('conditionnement')"><div class="dind ind-prog"></div><div><div class="dn">AQL Conditionnement</div><div class="ds">＋ Demander</div></div></div>
       </div>
       <div v-if="!aqls.length" class="em">Aucune demande AQL</div>
       <div class="aql-list" v-else>
@@ -160,7 +160,9 @@
 
     <!-- Déviations -->
     <div class="section"><div class="sh"><span>Déviations</span></div>
-      <div class="action-btns"><button v-if="canPerform('declarer_nc')" class="btn-action btn-orange" @click="showDevForm=!showDevForm">Déclarer déviation</button></div>
+      <div class="dg" v-if="canPerform('declarer_nc')">
+        <div class="di di-act" @click="showDevForm=!showDevForm"><div class="dind ind-orange"></div><div><div class="dn">Déclarer une déviation</div><div class="ds">{{showDevForm?'✕ Fermer':'＋ Déclarer'}}</div></div></div>
+      </div>
       <div class="dev-form" v-if="showDevForm">
         <div class="dev-form-row">
           <label class="dev-lbl">N° DN</label>
@@ -218,10 +220,10 @@
 
     <!-- RVP -->
     <div class="section"><div class="sh"><span>RVP</span></div>
-      <div class="action-btns">
-        <button v-if="canPerform('emettre_rvp')" class="btn-action btn-violet" @click="doDeclareRvp('rvp_fab')">RVP Fabrication</button>
-        <button v-if="canPerform('emettre_rvp')" class="btn-action btn-violet" @click="doDeclareRvp('rvp_cond')">RVP Conditionnement</button>
-        <button v-if="canPerform('emettre_rvp')" class="btn-action btn-violet" @click="doDeclareRvp('rvp_lcq')">RVP LCQ</button>
+      <div class="dg" v-if="canPerform('emettre_rvp')">
+        <div class="di di-act" @click="doDeclareRvp('rvp_fab')"><div class="dind ind-violet"></div><div><div class="dn">RVP Fabrication</div><div class="ds">＋ Émettre</div></div></div>
+        <div class="di di-act" @click="doDeclareRvp('rvp_cond')"><div class="dind ind-violet"></div><div><div class="dn">RVP Conditionnement</div><div class="ds">＋ Émettre</div></div></div>
+        <div class="di di-act" @click="doDeclareRvp('rvp_lcq')"><div class="dind ind-violet"></div><div><div class="dn">RVP LCQ</div><div class="ds">＋ Émettre</div></div></div>
       </div>
       <div v-if="!rvpDocs.length" class="em">Aucun RVP</div>
       <div class="dg" v-else>
@@ -235,11 +237,11 @@
     <!-- MàJ Documents -->
     <div v-if="docErrMsg" class="doc-err">{{docErrMsg}}</div>
     <div class="section"><div class="sh"><span>Mises à jour documentaires</span></div>
-      <div class="action-btns">
-        <button v-if="canPerform('emettre_maj_if')" class="btn-action btn-teal" @click="doDeclareMajDoc('maj_if')">MàJ IF</button>
-        <button v-if="canPerform('emettre_maj_ic')" class="btn-action btn-teal" @click="doDeclareMajDoc('maj_ic')">MàJ IC</button>
-        <button v-if="canPerform('emettre_maj_nmcl_of')" class="btn-action btn-teal" @click="doDeclareMajDoc('maj_nmcl_of')">MàJ Nmcl OF</button>
-        <button v-if="canPerform('emettre_maj_nmcl_oc')" class="btn-action btn-teal" @click="doDeclareMajDoc('maj_nmcl_oc')">MàJ Nmcl OC</button>
+      <div class="dg" v-if="canPerform('emettre_maj_if')||canPerform('emettre_maj_ic')||canPerform('emettre_maj_nmcl_of')||canPerform('emettre_maj_nmcl_oc')">
+        <div class="di di-act" v-if="canPerform('emettre_maj_if')" @click="doDeclareMajDoc('maj_if')"><div class="dind ind-teal"></div><div><div class="dn">MàJ IF</div><div class="ds">＋ Déclarer</div></div></div>
+        <div class="di di-act" v-if="canPerform('emettre_maj_ic')" @click="doDeclareMajDoc('maj_ic')"><div class="dind ind-teal"></div><div><div class="dn">MàJ IC</div><div class="ds">＋ Déclarer</div></div></div>
+        <div class="di di-act" v-if="canPerform('emettre_maj_nmcl_of')" @click="doDeclareMajDoc('maj_nmcl_of')"><div class="dind ind-teal"></div><div><div class="dn">MàJ Nmcl OF</div><div class="ds">＋ Déclarer</div></div></div>
+        <div class="di di-act" v-if="canPerform('emettre_maj_nmcl_oc')" @click="doDeclareMajDoc('maj_nmcl_oc')"><div class="dind ind-teal"></div><div><div class="dn">MàJ Nmcl OC</div><div class="ds">＋ Déclarer</div></div></div>
       </div>
       <div v-if="!majDocs.length" class="em">Aucune mise à jour documentaire</div>
       <div class="dg" v-else>
@@ -252,9 +254,9 @@
 
     <!-- Clôture SAP -->
     <div class="section"><div class="sh"><span>Clôture SAP</span></div>
-      <div class="action-btns">
-        <button v-if="canPerform('emettre_cloture_sap_of')" class="btn-action btn-slate" @click="doDeclareClotureSap('cloture_sap_of')">Émettre Clôt. SAP OF</button>
-        <button v-if="canPerform('emettre_cloture_sap_oc')" class="btn-action btn-slate" @click="doDeclareClotureSap('cloture_sap_oc')">Émettre Clôt. SAP OC</button>
+      <div class="dg" v-if="canPerform('emettre_cloture_sap_of')||canPerform('emettre_cloture_sap_oc')">
+        <div class="di di-act" v-if="canPerform('emettre_cloture_sap_of')" @click="doDeclareClotureSap('cloture_sap_of')"><div class="dind ind-slate"></div><div><div class="dn">Clôt. SAP OF</div><div class="ds">＋ Émettre</div></div></div>
+        <div class="di di-act" v-if="canPerform('emettre_cloture_sap_oc')" @click="doDeclareClotureSap('cloture_sap_oc')"><div class="dind ind-slate"></div><div><div class="dn">Clôt. SAP OC</div><div class="ds">＋ Émettre</div></div></div>
       </div>
       <div v-if="!clotDocs.length" class="em">Aucune clôture SAP</div>
       <div class="dg" v-else>
@@ -649,6 +651,8 @@ export default {
 .dg{display:grid;grid-template-columns:1fr 1fr;border:1px solid #e8e8e8}
 .di{padding:10px 12px;border-right:1px solid #e8e8e8;border-bottom:1px solid #e8e8e8;display:flex;gap:10px;cursor:pointer}.di:hover{background:#fafafa}.di:nth-child(2n){border-right:none}.dna{opacity:.35}
 .dind{width:3px;height:28px;border-radius:1px;flex-shrink:0}.ind-wait{background:#e8e8e8}.ind-prog{background:#7c3aed}.ind-done{background:#1D9E75}.ind-ret{background:#E24B4A}.ind-na{background:#e8e8e8;opacity:.3}
+.ind-orange{background:#BA7517}.ind-violet{background:#5B3CC4}.ind-teal{background:#0D7C66}.ind-slate{background:#475569}
+.di-act .ds{color:#7c3aed;font-weight:500}.di-act:hover{background:#f5f3ff}
 .dn{font-size:13px;font-weight:500}.ds{font-size:11px;color:#999;margin-top:1px}.ds-ok{color:#1D9E75}.ds-ret{color:#E24B4A}.ds-na{color:#ccc}
 .ds-block{font-size:10px;color:#BA7517;margin-top:2px}
 .btn-app{font-size:10px;padding:3px 8px;border:1px solid #1D9E75;border-radius:3px;background:#EAF3DE;color:#3B6D11;cursor:pointer;margin-top:4px;display:block;font-family:inherit}.btn-app:hover{background:#d4edda}
