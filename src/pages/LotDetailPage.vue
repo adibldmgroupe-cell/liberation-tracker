@@ -633,8 +633,8 @@ export default {
 .cw{color:#BA7517}.cd{color:#E24B4A}
 .section{margin-top:16px}.sh{display:flex;justify-content:space-between;align-items:center;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:#999;padding-bottom:6px;border-bottom:1px solid #e8e8e8}
 .dc{font-family:'SF Mono',monospace;color:#BA7517}
-.action-btns{display:flex;gap:8px;margin:10px 0;flex-wrap:wrap}
-.btn-action{font-size:12px;padding:8px 16px;border-radius:4px;border:none;cursor:pointer;font-weight:500;background:#7c3aed;color:#fff}.btn-action:hover{background:#6d28d9}
+.action-btns{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px;margin:10px 0}
+.btn-action{font-size:12px;padding:7px 12px;border-radius:4px;border:none;cursor:pointer;font-weight:500;background:#7c3aed;color:#fff;min-height:36px;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.2}.btn-action:hover{background:#6d28d9}
 .btn-orange{background:#BA7517}.btn-orange:hover{background:#8B5A12}
 .btn-violet{background:#5B3CC4}.btn-violet:hover{background:#4A2FA3}
 .btn-teal{background:#0D7C66}.btn-teal:hover{background:#0A6050}
@@ -759,7 +759,7 @@ export default {
   .cdt{display:none}
   .cs{width:40%}.cv{width:20%}.cac{width:40%}
   .action-btns{gap:6px}
-  .btn-action{width:100%;padding:10px 16px;min-height:44px;text-align:center}
+  .btn-action{padding:8px 12px;min-height:38px}
   .modal{width:min(90vw,400px)}
   .lb{width:100%;padding:12px;font-size:14px;min-height:44px}
   .dev-form{flex-direction:column}
