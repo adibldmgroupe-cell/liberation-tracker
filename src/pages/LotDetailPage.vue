@@ -368,11 +368,13 @@ export default {
     var circuitSummary = function(type){
       var o=type==='of'?of.value:oc.value
       if(!o) return '—'
-      var n=(type==='of'?ofVals:ocVals).value.length
-      if(o.statut==='termine') return '✓ Terminé — '+n+'/'+circuitSteps.length+' étapes'
-      if(o.pending_ar_service) return '⏳ En attente AR — '+(SVC_LABELS[o.pending_ar_service]||o.pending_ar_service)+' · '+n+'/'+circuitSteps.length
+      var total=circuitSteps.length
+      // terminé = toutes les étapes faites par définition (statut terminal) → compteur plein
+      var n=o.statut==='termine'?total:(type==='of'?ofVals:ocVals).value.length
+      if(o.statut==='termine') return '✓ Terminé — '+total+'/'+total+' étapes'
+      if(o.pending_ar_service) return '⏳ En attente AR — '+(SVC_LABELS[o.pending_ar_service]||o.pending_ar_service)+' · '+n+'/'+total
       var cur=circuitSteps.find(function(e){return e.key===o.etape_circuit})
-      return (cur?cur.label:'En cours')+' · '+n+'/'+circuitSteps.length
+      return (cur?cur.label:'En cours')+' · '+n+'/'+total
     }
 
     var docTypeLabel = function(d){var map={if:'IF',ic:'IC',da_pc:'DA Physico-chimie',da_micro:'DA Microbiologie'};return map[d.type_document]||d.type_document}

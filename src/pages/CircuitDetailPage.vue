@@ -10,7 +10,7 @@
 
     <!-- Étapes du circuit -->
     <div class="section">
-      <div class="sh"><span>Étapes du circuit {{type.toUpperCase()}}</span><span class="dc">{{vals.length}}/{{steps.length}}</span></div>
+      <div class="sh"><span>Étapes du circuit {{type.toUpperCase()}}</span><span class="dc">{{doneCount}}/{{steps.length}}</span></div>
       <div class="dg dg-1">
         <div class="di" v-for="(e,idx) in steps" :key="e.key" :class="{'di-act':stepClickable(e.key)}" @click="stepClick(e.key)">
           <div class="dind" :class="stepIndClass(e.key)"></div>
@@ -65,6 +65,8 @@ export default {
     var stepLabel = function(etape){ var e = steps.find(function(s){return s.key===etape}); return e ? e.label : etape }
 
     var getVal = function(etape){ return vals.value.find(function(v){return v.etape===etape}) }
+    // terminé = toutes les étapes faites par définition → compteur plein (sinon nb de validations enregistrées)
+    var doneCount = computed(function(){ return order.value && order.value.statut === 'termine' ? steps.length : vals.value.length })
     var canValidateStep = function(etape){
       if (isAdmin.value) return true
       var k = getPermissionForEtape(etape, type)
@@ -145,7 +147,7 @@ export default {
       await load()
     })
 
-    return { lot, prod, order, vals, loading, type, steps, userService, isAdmin,
+    return { lot, prod, order, vals, loading, type, steps, userService, isAdmin, doneCount,
       fmtDt, stepLabel, getVal, stepIndClass, stepStatus, stepClickable, stepClick, canValidateStep, canPerform, goBack }
   }
 }
