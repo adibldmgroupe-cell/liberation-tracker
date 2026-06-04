@@ -71,6 +71,7 @@
                   Désignation <span class="tp-sort-icon">{{sortIcon(grp,'prodDesc')}}</span>
                 </span>
                 <span class="tp-sort-col tp-sort-since">Depuis</span>
+                <span class="tp-sort-col tp-sort-dl">Échéance</span>
                 <span class="tp-sort-col tp-sort-acts">Actions</span>
               </div>
               <template v-for="d in getDocsForGroup(grp)" :key="d.key">
@@ -88,12 +89,11 @@
                   <span class="tp-lot-mono" @click="$router.push('/lots/'+d.lotId)">{{d.lotNum}}</span>
                   <span class="tp-prod-desc">{{d.prodDesc}}<span class="tp-prod-code">{{d.prodCode}}</span></span>
                   <span v-if="d.sinceText" class="tp-doc-since" :class="d.sinceClass">{{d.sinceText}}</span>
-                  <span v-if="d.deadline" class="tp-dl" :class="d.deadline.cls" :title="'Échéance : '+d.deadline.dueStr">⏱ {{d.deadline.label}}</span>
+                  <span class="tp-dl-cell"><span v-if="d.deadline" class="tp-dl" :class="d.deadline.cls" :title="'Échéance : '+d.deadline.dueStr">{{d.deadline.label}}</span></span>
                   <div class="tp-doc-btns">
                     <button v-if="d.canAct" class="tp-do-btn" :disabled="d.acting" @click.stop="doDocAction(d,grp,cat)">{{d.acting?'…':d.btnLabel}}</button>
                     <button v-if="d.canReturn" class="tp-do-btn tp-do-ret" :disabled="d.acting" @click.stop="d.showReturnInput=true">{{d.returnBtnLabel}}</button>
                   </div>
-                  <span class="tp-item-arr" @click="$router.push('/lots/'+d.lotId)">→</span>
                 </div>
               </template>
             </div>
@@ -915,26 +915,28 @@ export default {
 .sap-vide,.sap-{visibility:hidden}  /* réserve l'espace, badge invisible si vide */
 
 /* ── En-tête colonnes tri (niveau 3) ─────────────────────────────── */
-.tp-grp-body{background:#faf5ff;border-top:1px solid #eef3fb}
-.tp-grp-sort-hd{display:flex;align-items:center;gap:8px;padding:5px 18px 5px 32px;background:#f5f3ff;border-bottom:1px solid #e2eaf5}
+.tp-grp-body{background:#faf5ff;border-top:1px solid #eef3fb;overflow-x:auto}
+.tp-grp-sort-hd{display:flex;align-items:center;gap:8px;padding:5px 18px 5px 32px;background:#f5f3ff;border-bottom:1px solid #e2eaf5;min-width:940px}
 .tp-sort-col{font-size:9px;font-weight:700;color:#9aabbf;text-transform:uppercase;letter-spacing:.4px;display:flex;align-items:center;gap:3px;user-select:none;padding:2px 0;flex-shrink:0}
 .tp-sort-col.tp-sort-lot,.tp-sort-col.tp-sort-desc{cursor:pointer;transition:.1s}.tp-sort-col.tp-sort-lot:hover,.tp-sort-col.tp-sort-desc:hover{color:#7c3aed}
 .tp-sort-sap{width:110px}
-.tp-sort-lot{width:116px}   /* badge(52) + gap(8) + padding lot = alignement exact */
+.tp-sort-lot{width:108px}   /* = largeur .tp-lot-mono pour alignement exact en-tête ↔ ligne */
 .tp-sort-desc{flex:1;min-width:0}
-.tp-sort-since{width:96px}
+.tp-sort-since{width:88px}
+.tp-sort-dl{width:116px;justify-content:center}
 .tp-sort-acts{width:200px;text-align:right}
 .tp-sort-icon{font-size:10px}
 
 /* ── Items dans groupes (niveau 4) ───────────────────────────────── */
-.tp-doc-item{display:flex;align-items:center;padding:7px 18px 7px 32px;border-bottom:1px solid #f0f4f8;gap:8px;min-width:0}.tp-doc-item:last-child{border-bottom:none}.tp-doc-item:hover{background:#f5f3ff}
+.tp-doc-item{display:flex;align-items:center;padding:7px 18px 7px 32px;border-bottom:1px solid #f0f4f8;gap:8px;min-width:940px}.tp-doc-item:last-child{border-bottom:none}.tp-doc-item:hover{background:#f5f3ff}
 .tp-lot-mono{font-family:'SF Mono','Fira Code',monospace;font-size:10px;font-weight:600;white-space:nowrap;flex-shrink:0;cursor:pointer;color:#6d28d9;width:108px;background:#f5f3ff;padding:2px 5px;border-radius:2px}
 .tp-lot-mono:hover{text-decoration:underline}
 .tp-prod-desc{font-size:11px;color:#444;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
 .tp-prod-code{font-size:9px;color:#aaa;font-family:'SF Mono',monospace;margin-left:4px}
 .tp-doc-since{font-size:10px;font-weight:600;white-space:nowrap;flex-shrink:0;padding:2px 8px;border-radius:8px;width:88px;text-align:center;box-sizing:border-box}
-/* Badge échéance (SLA délais documentaires) */
-.tp-dl{font-size:10px;font-weight:600;white-space:nowrap;flex-shrink:0;padding:2px 8px;border-radius:10px}
+/* Badge échéance (SLA délais documentaires) — colonne réservée alignée sur l'en-tête */
+.tp-dl-cell{width:116px;flex-shrink:0;text-align:center;box-sizing:border-box}
+.tp-dl{display:inline-block;font-size:10px;font-weight:600;white-space:nowrap;padding:2px 8px;border-radius:10px}
 .dl-ok{background:#f3f4f6;color:#6b7280}
 .dl-today{background:#fef3c7;color:#92400e}
 .dl-overdue{background:#FCEBEB;color:#A32D2D}
@@ -981,13 +983,14 @@ export default {
   .tp-grp-sort-hd{display:none}
 
   /* Items groupes : 2 lignes empilées */
-  .tp-doc-item{flex-wrap:wrap;padding:8px 12px 8px 18px;gap:4px 8px;align-items:flex-start}
+  .tp-doc-item{flex-wrap:wrap;padding:8px 12px 8px 18px;gap:4px 8px;align-items:flex-start;min-width:0}
   /* Ligne 1 : badge + N° lot + désignation */
   .tp-sap-badge{width:auto;flex-shrink:0;align-self:center}
   .tp-lot-mono{width:auto;align-self:center}
   .tp-prod-desc{order:1;width:100%;flex:none;margin-top:2px;padding-left:0}
   /* Ligne 2 : depuis + boutons */
   .tp-doc-since{order:2;margin-top:4px;width:auto}
+  .tp-dl-cell{order:2;margin-top:4px;width:auto}
   .tp-doc-btns{order:3;margin-top:4px;width:auto;margin-left:auto}
   .tp-item-arr{order:4;align-self:flex-start;margin-top:4px}
 
