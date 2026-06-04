@@ -1208,6 +1208,10 @@ html[data-theme="night"] .phase-attente-pf, html[data-theme="workshop"] .phase-a
 html[data-theme="night"] .phase-cond, html[data-theme="workshop"] .phase-cond { background: rgba(20,184,166,.14); color: #5eead4; }
 html[data-theme="night"] .phase-stock, html[data-theme="workshop"] .phase-stock { background: rgba(96,165,250,.14); color: #93c5fd; }
 html[data-theme="night"] .phase-libere, html[data-theme="workshop"] .phase-libere { background: rgba(52,211,153,.1); color: #6ee7b7; }
+/* ── Badges échéance (.dl-*) ── */
+html[data-theme="night"] .dl-ok, html[data-theme="workshop"] .dl-ok { background: var(--th-bg3); color: var(--th-text2); }
+html[data-theme="night"] .dl-today, html[data-theme="workshop"] .dl-today { background: rgba(251,191,36,.12); color: #fbbf24; }
+html[data-theme="night"] .dl-overdue, html[data-theme="workshop"] .dl-overdue { background: rgba(239,68,68,.12); color: #fca5a5; }
 
 /* ── Doc pips (.dc-*, .pip-*-t) ── */
 html[data-theme="night"] .dc-ok, html[data-theme="workshop"] .dc-ok,

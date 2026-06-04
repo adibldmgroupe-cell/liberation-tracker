@@ -88,6 +88,7 @@
                   <span class="tp-lot-mono" @click="$router.push('/lots/'+d.lotId)">{{d.lotNum}}</span>
                   <span class="tp-prod-desc">{{d.prodDesc}}<span class="tp-prod-code">{{d.prodCode}}</span></span>
                   <span v-if="d.sinceText" class="tp-doc-since" :class="d.sinceClass">{{d.sinceText}}</span>
+                  <span v-if="d.deadline" class="tp-dl" :class="d.deadline.cls" :title="'Échéance : '+d.deadline.dueStr">⏱ {{d.deadline.label}}</span>
                   <div class="tp-doc-btns">
                     <button v-if="d.canAct" class="tp-do-btn" :disabled="d.acting" @click.stop="doDocAction(d,grp,cat)">{{d.acting?'…':d.btnLabel}}</button>
                     <button v-if="d.canReturn" class="tp-do-btn tp-do-ret" :disabled="d.acting" @click.stop="d.showReturnInput=true">{{d.returnBtnLabel}}</button>
@@ -109,6 +110,7 @@
               <span class="tp-item-prod">{{item.prodDesc}}</span>
             </div>
             <div class="tp-item-right">
+              <span v-if="item.deadline" class="tp-dl" :class="item.deadline.cls" :title="'Échéance : '+item.deadline.dueStr">⏱ {{item.deadline.label}}</span>
               <span class="tp-item-action" :class="item.urgent?'tp-action-red':'tp-action-blue'">{{item.action}}</span>
               <template v-if="item.canAqlSaisir">
                 <button class="tp-do-btn tp-do-ok" :disabled="item.acting" @click.stop="doAqlSaisir(item,cat,'conforme')">{{item.acting?'…':'✓ Conf.'}}</button>
@@ -148,6 +150,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { supabase } from '../supabase'
 import { canPerform, loadPermissions, getPermissionForEtape } from '../services/permissions'
 import { createNotification } from '../services/notifications'
+import { loadDeadlines, getDelai, computeDeadline } from '../services/deadlines'
 
 export default {
   setup() {
@@ -306,7 +309,7 @@ export default {
     var getLotsMap = async function(lotIds) {
       var uniq = lotIds.filter(function(id,i,a){ return id!=null && a.indexOf(id)===i })
       if (!uniq.length) return {}
-      var res = await supabase.from('lots').select('id,numero_lot,product_id,statut_sap').in('id',uniq)
+      var res = await supabase.from('lots').select('id,numero_lot,product_id,statut_sap,date_enregistrement').in('id',uniq)
       var map = {}
       ;(res.data||[]).forEach(function(l){ if(l.statut_sap!=='accepte'&&l.statut_sap!=='refuse') map[l.id]=l })
       var prodIds = (res.data||[]).map(function(l){return l.product_id}).filter(function(id,i,a){return id!=null&&a.indexOf(id)===i})
@@ -542,6 +545,7 @@ export default {
       var svc = selectedSvc.value
       if (!svc) { loading.value = false; return }
       await loadPermissions(userService.value)
+      await loadDeadlines()
       var isAdm = userService.value === 'admin'
 
       // ── 1. CIRCUITS ───────────────────────────────────────────────────
@@ -552,7 +556,7 @@ export default {
         var ofEtape = svc==='fabrication'?'production':circEtape
         var ocEtape = svc==='conditionnement'?'production':(svc==='fabrication'?null:circEtape)
         if (ofEtape) {
-          var ofRes = await supabase.from('orders_of').select('id,lot_id,etape_circuit,pending_ar_service').eq('statut','en_circuit').eq('etape_circuit',ofEtape).limit(200)
+          var ofRes = await supabase.from('orders_of').select('id,lot_id,etape_circuit,pending_ar_service,updated_at').eq('statut','en_circuit').eq('etape_circuit',ofEtape).limit(200)
           var ofMap = await getLotsMap((ofRes.data||[]).map(function(o){return o.lot_id}))
           ;(ofRes.data||[]).forEach(function(o){
             var l=ofMap[o.lot_id]; if(!l) return
@@ -563,11 +567,12 @@ export default {
               action:'Circuit OF — '+(isPendingAr?'AR en attente':'Valider : '+(ETAPE_LABELS_LONG[ofEtape]||ofEtape)),
               canAct:canAct, btnLabel:isPendingAr?'✅ AR':'✓ Valider', acting:false,
               orderId:o.id, orderTable:'orders_of', orderType:'of', etape:o.etape_circuit,
+              deadline: isPendingAr ? null : computeDeadline(o.updated_at, getDelai(svc,'of')),
               arType:isPendingAr?'circuit':null, circuitValidate:!isPendingAr})
           })
         }
         if (ocEtape) {
-          var ocRes = await supabase.from('orders_oc').select('id,lot_id,etape_circuit,pending_ar_service').eq('statut','en_circuit').eq('etape_circuit',ocEtape).limit(200)
+          var ocRes = await supabase.from('orders_oc').select('id,lot_id,etape_circuit,pending_ar_service,updated_at').eq('statut','en_circuit').eq('etape_circuit',ocEtape).limit(200)
           var ocMap = await getLotsMap((ocRes.data||[]).map(function(o){return o.lot_id}))
           ;(ocRes.data||[]).forEach(function(o){
             var l=ocMap[o.lot_id]; if(!l) return
@@ -578,6 +583,7 @@ export default {
               action:'Circuit OC — '+(isPendingAr?'AR en attente':'Valider : '+(ETAPE_LABELS_LONG[ocEtape]||ocEtape)),
               canAct:canAct, btnLabel:isPendingAr?'✅ AR':'✓ Valider', acting:false,
               orderId:o.id, orderTable:'orders_oc', orderType:'oc', etape:o.etape_circuit,
+              deadline: isPendingAr ? null : computeDeadline(o.updated_at, getDelai(svc,'oc')),
               arType:isPendingAr?'circuit':null, circuitValidate:!isPendingAr})
           })
         }
@@ -607,6 +613,7 @@ export default {
           grpMap[typeKey].docs.push({key:'doc_'+d.id,docId:d.id,typeDocument:typeKey,statut:d.statut,
             lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',statutSap:l.statut_sap||'',
             action:lbl,actionClass:actCls,sinceText:since?since.text:null,sinceClass:since?since.cls:'',
+            deadline: computeDeadline(d.updated_at, getDelai('aq', typeKey)),
             canAct:canAct,btnLabel:'✓ Valider',
             canReturn:canReturn,returnBtnLabel:'↩ Retourner',returnLabel:'Retourner à l\'émetteur',
             showReturnInput:false,returnMotif:'',acting:false})
@@ -647,6 +654,7 @@ export default {
           grpMapDt[typeKey].docs.push({key:'doc_'+d.id,docId:d.id,typeDocument:typeKey,statut:d.statut,
             lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',statutSap:l.statut_sap||'',
             action:'Approuver DT',actionClass:'act-purple',sinceText:since?since.text:null,sinceClass:since?since.cls:'',
+            deadline: computeDeadline(d.updated_at, getDelai('dt', typeKey)),
             canAct:canAct,btnLabel:'✓ Approuver',
             canReturn:canReturn,returnBtnLabel:'↩ Retour AQ',returnLabel:'Retourner à l\'AQ',
             showReturnInput:false,returnMotif:'',acting:false})
@@ -688,6 +696,7 @@ export default {
           grpMapEmt[typeKey].docs.push({key:'doc_'+d.id,docId:d.id,typeDocument:typeKey,statut:'retour_emetteur',
             lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',statutSap:l.statut_sap||'',
             action:'Rectifier et réémettre',actionClass:'act-red',sinceText:since?since.text:null,sinceClass:since?since.cls:'',
+            deadline: computeDeadline(d.updated_at, getDelai(svc, typeKey)),
             canAct:canAct,btnLabel:'↑ Réémettre',canReturn:false,
             showReturnInput:false,returnMotif:'',acting:false})
         })
@@ -708,6 +717,7 @@ export default {
           grpMapEmt[typeKey].docs.push({key:'doc_'+d.id,docId:d.id,typeDocument:typeKey,statut:'non_emis',
             lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',statutSap:l.statut_sap||'',
             action:'Transmettre à AQ',actionClass:'act-blue',sinceText:since?since.text:null,sinceClass:since?since.cls:'',
+            deadline: computeDeadline(l.date_enregistrement, getDelai(svc, typeKey)),
             canAct:canAct,btnLabel:'↑ Transmettre',canReturn:false,
             showReturnInput:false,returnMotif:'',acting:false})
         })
@@ -785,12 +795,13 @@ export default {
         var aqlCat = makeCat('aql','🔬','Inspections AQL à réaliser')
         var aqlTypeVal = svc==='fabrication'?'fabrication':'conditionnement'
         var canAqlSaisir = isAdm || canPerform('realiser_aql')
-        var aqlR = await supabase.from('aql_inspections').select('id,type,lot_id').eq('type',aqlTypeVal).eq('resultat','en_attente').order('requested_at',{ascending:true}).limit(200)
+        var aqlR = await supabase.from('aql_inspections').select('id,type,lot_id,requested_at').eq('type',aqlTypeVal).eq('resultat','en_attente').order('requested_at',{ascending:true}).limit(200)
         var aqlMap = await getLotsMap((aqlR.data||[]).map(function(a){return a.lot_id}))
         ;(aqlR.data||[]).forEach(function(a){
           var l=aqlMap[a.lot_id]; if(!l) return
           aqlCat.items.push({key:'aql_'+a.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||l.prod_code,statutSap:l.statut_sap||'',
             action:'AQL '+a.type+' — Résultat à saisir',
+            deadline: computeDeadline(a.requested_at, getDelai(svc, a.type==='fabrication'?'aql_fab':'aql_cond')),
             canAqlSaisir:canAqlSaisir,acting:false,
             aqlId:a.id,aqlType:a.type})
         })
@@ -922,6 +933,11 @@ export default {
 .tp-prod-desc{font-size:11px;color:#444;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
 .tp-prod-code{font-size:9px;color:#aaa;font-family:'SF Mono',monospace;margin-left:4px}
 .tp-doc-since{font-size:10px;font-weight:600;white-space:nowrap;flex-shrink:0;padding:2px 8px;border-radius:8px;width:88px;text-align:center;box-sizing:border-box}
+/* Badge échéance (SLA délais documentaires) */
+.tp-dl{font-size:10px;font-weight:600;white-space:nowrap;flex-shrink:0;padding:2px 8px;border-radius:10px}
+.dl-ok{background:#f3f4f6;color:#6b7280}
+.dl-today{background:#fef3c7;color:#92400e}
+.dl-overdue{background:#FCEBEB;color:#A32D2D}
 .since-ok{background:#EAF3DE;color:#3B6D11}
 .since-orange{background:#FEF5E7;color:#A0620D}
 .since-red{background:#FCEBEB;color:#A32D2D}
