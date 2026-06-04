@@ -1116,9 +1116,13 @@ export default {
     var savePdpReelle = async function(p) {
       pdpErr.value = ''
       var dr = bulkParseDate(p.date_fin_reelle)
+      // Retard de la ligne = jours OUVRÉS (fin réelle − fin estimée), calendrier de la machine
+      var eq = equipements.value.find(function(e) { return e.id === p.equipement_id })
+      var ret = (dr && p.date_fin_estimee) ? bulkWorkingDaysBetween(p.date_fin_estimee, dr, p.equipement_id, eq ? !!eq.travaille_weekend : false) : 0
       var r = await supabase.from('planification_conditionnement')
-        .update({ date_fin_reelle: dr, updated_at: new Date().toISOString() }).eq('id', p.id)
+        .update({ date_fin_reelle: dr, retard_jours: ret, updated_at: new Date().toISOString() }).eq('id', p.id)
       if (r.error) { pdpErr.value = 'Enregistrement fin réelle impossible : ' + r.error.message + ' (migration 030 exécutée ?)'; return }
+      p.retard_jours = ret  // affichage live du retard sur la ligne
       // ── Interconnexion Schéma (bidirectionnel) : propager la fin réelle à la session du même lot ──
       // (date uniquement ; on ne force pas le statut pour ne pas clôturer une session TRS active)
       if (p.lot_id && dr) {
