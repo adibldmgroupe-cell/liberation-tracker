@@ -183,7 +183,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="p in filteredPdpCond" :key="p.id" :class="{'row-annule':p.statut_planification==='Annulé'}">
+              <tr v-for="(p, idx) in filteredPdpCond" :key="p.id" :class="{'row-annule':p.statut_planification==='Annulé'}">
                 <td class="num">{{p.ordre_plan||'—'}}</td>
                 <td class="sm">{{p.nom_equipement||'—'}}</td>
                 <td class="mono">{{p.numero_lot||'—'}}</td>
@@ -191,7 +191,7 @@
                 <td class="num mono">{{p.taille_lot?p.taille_lot.toLocaleString('fr-FR'):'—'}}</td>
                 <td class="mono sm">{{fmtDate(p.date_debut_estimee)}}</td>
                 <td class="mono sm">{{fmtDate(p.date_fin_estimee)}}</td>
-                <td><input type="date" v-model="p.date_fin_reelle" @change="savePdpReelle(p)" class="pdp-reel-inp" /></td>
+                <td><input type="date" v-model="p.date_fin_reelle" @paste="onReelPaste($event, idx)" @change="savePdpReelle(p)" class="pdp-reel-inp" /></td>
                 <td class="num" :class="{'bg-retard':p.retard_jours>0,'bg-avance':p.retard_jours<0}">{{p.retard_jours?(p.retard_jours>0?'+'+p.retard_jours:p.retard_jours):(p.date_fin_reelle?'0':'—')}}</td>
                 <td class="num">{{p.total_prod_jours!=null?p.total_prod_jours:(p.duree_estimee_jours||'—')}}</td>
                 <td class="num">{{p.total_cml!=null?p.total_cml:'—'}}</td>
@@ -485,10 +485,10 @@
                 <td><input v-model="r.date_debut" @paste="onBulkPaste($event,i,'date_debut')" class="bg-inp mono bg-date" placeholder="jj/mm/aaaa" /></td>
                 <td><input v-model="r.date_fin" @paste="onBulkPaste($event,i,'date_fin')" class="bg-inp mono bg-date" placeholder="jj/mm/aaaa" /></td>
                 <template v-if="bulkModal.famille==='cond'">
-                  <td><input v-model="r.date_fin_reelle" class="bg-inp mono bg-reel bg-date" placeholder="jj/mm/aaaa" /></td>
+                  <td><input v-model="r.date_fin_reelle" @paste="onBulkColPaste($event,i,'date_fin_reelle')" class="bg-inp mono bg-reel bg-date" placeholder="jj/mm/aaaa" /></td>
                   <td class="bg-calc" :class="{'bg-retard':r.retard>0,'bg-avance':r.retard<0}">{{r.retard!=null?(r.retard>0?'+'+r.retard:r.retard):'—'}}</td>
                   <td class="bg-calc bg-date">{{r.liberation?fmtDate(r.liberation):'—'}}<span v-if="r.lib_src" class="lib-src">{{r.lib_src}}</span></td>
-                  <td><input v-model="r.date_cible" class="bg-inp mono bg-date" placeholder="jj/mm/aaaa" /></td>
+                  <td><input v-model="r.date_cible" @paste="onBulkColPaste($event,i,'date_cible')" class="bg-inp mono bg-date" placeholder="jj/mm/aaaa" /></td>
                 </template>
                 <td class="acts"><button class="ia del" @click="bulkRemoveRow(i)" title="Supprimer la ligne">✕</button></td>
               </tr>
@@ -1629,6 +1629,42 @@ export default {
       bulkResolveDesignations()
     }
 
+    // Coller depuis Excel dans « Fin réelle » de Gérer PDP : <input type="date"> refuse le texte brut
+    // (« 17/06/2026 ») → on intercepte, on parse (jj/mm/aaaa ou aaaa-mm-jj), on convertit en ISO,
+    // et on répartit une colonne entière sur les lignes suivantes (chaque ligne est sauvegardée).
+    var onReelPaste = function(e, idx) {
+      var text = (e.clipboardData || window.clipboardData).getData('text')
+      if (!text) return
+      e.preventDefault()
+      var lines = text.replace(/\r/g, '').split('\n')
+      while (lines.length && lines[lines.length - 1] === '') lines.pop()
+      var view = filteredPdpCond.value
+      for (var li = 0; li < lines.length; li++) {
+        var p = view[idx + li]; if (!p) break
+        var iso = bulkParseDate((lines[li] || '').split('\t')[0].trim())
+        if (!iso) continue
+        p.date_fin_reelle = iso
+        savePdpReelle(p)
+      }
+    }
+
+    // Collage d'une colonne (depuis Excel) dans un champ texte de la grille en masse qui n'est pas
+    // dans BULK_FIELDS (date_fin_reelle, date_cible) : on répartit verticalement le texte brut
+    // (parsé plus tard par bulkCompute / bulkSave). Une seule valeur → collage natif.
+    var onBulkColPaste = function(e, rowIdx, field) {
+      var text = (e.clipboardData || window.clipboardData).getData('text')
+      if (!text || !/[\n\r]/.test(text)) return
+      e.preventDefault()
+      var lines = text.replace(/\r/g, '').split('\n')
+      while (lines.length && lines[lines.length - 1] === '') lines.pop()
+      for (var li = 0; li < lines.length; li++) {
+        var ri = rowIdx + li
+        while (bulkRows.value.length <= ri) bulkRows.value.push(bulkBlankRow())
+        bulkRows.value[ri][field] = (lines[li] || '').split('\t')[0].trim()
+      }
+      bulkResolveDesignations()
+    }
+
     // Création lot « façon Planifier » (LotsPage) — réplique exacte de PlanifierPage
     var bulkCreateLot = async function(numLot, productId, codeArticle, uid) {
       var existing = await supabase.from('lots').select('id').eq('numero_lot', numLot).maybeSingle()
@@ -1761,7 +1797,7 @@ export default {
       suiviModal, openSuiviModal, saveSuiviFab, saveSuiviCond, clotureSuivi, deleteSuivi,
       arretModal, openArretModal, saveArret, closeArret, deleteArret,
       calModal, calEntries, calForm, openCalModal, addCalEntry, deleteCalEntry, CAL_TYPE_LABELS,
-      bulkModal, bulkRows, bulkLieuList, bulkSetFamille, openBulkModal, bulkAddRow, bulkRemoveRow, bulkClear, onBulkPaste, bulkResolveDesignations, bulkCompute, bulkSave,
+      bulkModal, bulkRows, bulkLieuList, bulkSetFamille, openBulkModal, bulkAddRow, bulkRemoveRow, bulkClear, onBulkPaste, onBulkColPaste, onReelPaste, bulkResolveDesignations, bulkCompute, bulkSave,
       campPanel, campSuggest, openCampPanel, campSearchCode, campSelectProduct, campInsert,
       deletePdpCond, savePdpReelle, recomputeAllPdp, pdpRecomputing, pdpErr,
       gsModal, GS_URL, openGsImport, fetchGsData, confirmGsImport,
