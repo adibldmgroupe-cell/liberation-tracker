@@ -43,84 +43,17 @@
       <div class="k"><div class="kv">{{leadTime||'—'}}<span class="ku" v-if="leadTime">j</span></div><div class="kl">Lead time</div></div>
     </div>
 
-    <!-- Circuit OF -->
-    <div class="section" v-if="of">
-      <div class="sh"><span>Circuit OF</span></div>
-      <div class="flow-wrap">
-      <div class="flow flow-6">
-        <template v-for="(e,idx) in circuitSteps" :key="'of-'+e.key">
-          <div class="flow-step" :class="circuitFlowClass('of',e.key)">
-            <span class="fs-num">{{idx+1}}</span>
-            <span class="fs-label">{{e.label}}</span>
-          </div>
-          <div class="flow-arrow" v-if="idx<circuitSteps.length-1">→</div>
-        </template>
-      </div>
-      </div>
-      <div class="dg dg-1">
-        <div class="di di-act" v-if="of.pending_ar_service && (of.pending_ar_service===userService||isAdmin) && canPerform('accuser_reception_circuit')" @click="doAcknowledgeOrderAR('of',of.id)">
-          <div class="dind ind-prog"></div><div><div class="dn">Accuser réception — {{SVC_LABELS[of.pending_ar_service]||of.pending_ar_service}}</div><div class="ds">✓ Accuser</div></div>
+    <!-- Circuits de lancement (cartes harmonisées — clic → détail) -->
+    <div class="section" v-if="of||oc">
+      <div class="sh"><span>Circuits de lancement</span></div>
+      <div class="dg">
+        <div class="di" v-if="of" @click="$router.push('/lots/'+lot.id+'/circuit/of')">
+          <div class="dind" :class="circuitOverallInd('of')"></div>
+          <div><div class="dn">Circuit OF</div><div class="ds" :class="of.statut==='termine'?'ds-ok':''">{{circuitSummary('of')}}</div></div>
         </div>
-        <div class="di di-ro" v-else-if="of.pending_ar_service">
-          <div class="dind ind-wait"></div><div><div class="dn">En attente d'accusé réception</div><div class="ds">⏳ {{SVC_LABELS[of.pending_ar_service]||of.pending_ar_service}}</div></div>
-        </div>
-        <div class="di di-act" v-else-if="of.statut!=='termine' && canValidateStep('of',of.etape_circuit)" @click="doValidate('of',of.id,of.etape_circuit)">
-          <div class="dind ind-prog"></div><div><div class="dn">Valider — {{circuitSteps.find(function(e){return e.key===of.etape_circuit})?.label}}</div><div class="ds">＋ Valider l'étape</div></div>
-        </div>
-        <div class="di di-ro" v-else-if="of.statut!=='termine'">
-          <div class="dind ind-wait"></div><div><div class="dn">{{circuitSteps.find(function(e){return e.key===of.etape_circuit})?.label}}</div><div class="ds">Étape en cours</div></div>
-        </div>
-        <div class="di di-ro" v-else>
-          <div class="dind ind-done"></div><div><div class="dn">Circuit OF terminé</div><div class="ds ds-ok">✓ Toutes les étapes validées</div></div>
-        </div>
-      </div>
-      <div class="circ-hist" v-if="ofVals.length">
-        <div class="circ-hist-row" v-for="v in ofVals" :key="v.etape">
-          <span class="circ-hist-dot"></span>
-          <span class="circ-hist-step">{{circuitSteps.find(function(e){return e.key===v.etape})?.label||v.etape}}</span>
-          <span class="circ-hist-who">{{v.user}}</span>
-          <span class="circ-hist-at">{{fmtDt(v.validated_at)}}</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Circuit OC -->
-    <div class="section" v-if="oc">
-      <div class="sh"><span>Circuit OC</span></div>
-      <div class="flow-wrap">
-      <div class="flow flow-6">
-        <template v-for="(e,idx) in circuitSteps" :key="'oc-'+e.key">
-          <div class="flow-step" :class="circuitFlowClass('oc',e.key)">
-            <span class="fs-num">{{idx+1}}</span>
-            <span class="fs-label">{{e.label}}</span>
-          </div>
-          <div class="flow-arrow" v-if="idx<circuitSteps.length-1">→</div>
-        </template>
-      </div>
-      </div>
-      <div class="dg dg-1">
-        <div class="di di-act" v-if="oc.pending_ar_service && (oc.pending_ar_service===userService||isAdmin) && canPerform('accuser_reception_circuit')" @click="doAcknowledgeOrderAR('oc',oc.id)">
-          <div class="dind ind-prog"></div><div><div class="dn">Accuser réception — {{SVC_LABELS[oc.pending_ar_service]||oc.pending_ar_service}}</div><div class="ds">✓ Accuser</div></div>
-        </div>
-        <div class="di di-ro" v-else-if="oc.pending_ar_service">
-          <div class="dind ind-wait"></div><div><div class="dn">En attente d'accusé réception</div><div class="ds">⏳ {{SVC_LABELS[oc.pending_ar_service]||oc.pending_ar_service}}</div></div>
-        </div>
-        <div class="di di-act" v-else-if="oc.statut!=='termine' && canValidateStep('oc',oc.etape_circuit)" @click="doValidate('oc',oc.id,oc.etape_circuit)">
-          <div class="dind ind-prog"></div><div><div class="dn">Valider — {{circuitSteps.find(function(e){return e.key===oc.etape_circuit})?.label}}</div><div class="ds">＋ Valider l'étape</div></div>
-        </div>
-        <div class="di di-ro" v-else-if="oc.statut!=='termine'">
-          <div class="dind ind-wait"></div><div><div class="dn">{{circuitSteps.find(function(e){return e.key===oc.etape_circuit})?.label}}</div><div class="ds">Étape en cours</div></div>
-        </div>
-        <div class="di di-ro" v-else>
-          <div class="dind ind-done"></div><div><div class="dn">Circuit OC terminé</div><div class="ds ds-ok">✓ Toutes les étapes validées</div></div>
-        </div>
-      </div>
-      <div class="circ-hist" v-if="ocVals.length">
-        <div class="circ-hist-row" v-for="v in ocVals" :key="v.etape">
-          <span class="circ-hist-dot"></span>
-          <span class="circ-hist-step">{{circuitSteps.find(function(e){return e.key===v.etape})?.label||v.etape}}</span>
-          <span class="circ-hist-who">{{v.user}}</span>
-          <span class="circ-hist-at">{{fmtDt(v.validated_at)}}</span>
+        <div class="di" v-if="oc" @click="$router.push('/lots/'+lot.id+'/circuit/oc')">
+          <div class="dind" :class="circuitOverallInd('oc')"></div>
+          <div><div class="dn">Circuit OC</div><div class="ds" :class="oc.statut==='termine'?'ds-ok':''">{{circuitSummary('oc')}}</div></div>
         </div>
       </div>
     </div>
@@ -379,6 +312,30 @@ export default {
       var o=type==='of'?of.value:oc.value
       return o&&o.etape_circuit===etape?'ind-prog':'ind-wait'
     }
+    // Étapes du circuit en cartes (style dossier) : statut + clic
+    var stepStatus = function(type,etape){
+      var v=getVal(type,etape)
+      if(v) return '✓ Validé — '+(v.user||'')+' · '+fmtDt(v.validated_at)
+      var o=type==='of'?of.value:oc.value
+      if(o&&o.etape_circuit===etape){
+        if(o.pending_ar_service) return '⏳ En attente AR — '+(SVC_LABELS[o.pending_ar_service]||o.pending_ar_service)
+        if(canValidateStep(type,etape)) return '＋ À valider'
+        return 'En cours'
+      }
+      return 'À venir'
+    }
+    var stepClickable = function(type,etape){
+      var o=type==='of'?of.value:oc.value
+      if(!o||o.statut==='termine'||o.etape_circuit!==etape) return false
+      if(o.pending_ar_service) return (o.pending_ar_service===userService.value||isAdmin.value)&&canPerform('accuser_reception_circuit')
+      return canValidateStep(type,etape)
+    }
+    var stepClick = function(type,etape){
+      if(!stepClickable(type,etape)) return
+      var o=type==='of'?of.value:oc.value
+      if(o.pending_ar_service) doAcknowledgeOrderAR(type,o.id)
+      else doValidate(type,o.id,etape)
+    }
     var circuitFlowClass = function(type,etape){
       var order = type==='of'?of.value:oc.value
       if(!order) return 'fs-wait'
@@ -400,6 +357,23 @@ export default {
     var devsOpen = computed(function(){return devs.value.filter(function(d){return d.statut==='ouverte'||d.statut==='en_cours'}).length})
     var leadTime = computed(function(){if(!lot.value||!lot.value.date_enregistrement)return null;var end=lot.value.date_liberation||new Date().toISOString().split('T')[0];return Math.floor((new Date(end)-new Date(lot.value.date_enregistrement))/86400000)})
     var dossierComplete = computed(function(){return dossier.value&&dossier.value.if_approved&&dossier.value.ic_approved&&dossier.value.da_pc_approved&&(!dossier.value.da_micro_applicable||dossier.value.da_micro_approved)&&dossier.value.deviations_closed&&dossier.value.pieces_complementaires_ok})
+
+    // Carte compacte circuit (LotDetailPage) — résumé + clic vers le détail
+    var circuitOverallInd = function(type){
+      var o=type==='of'?of.value:oc.value
+      if(!o) return 'ind-wait'
+      if(o.statut==='termine') return 'ind-done'
+      return 'ind-prog'
+    }
+    var circuitSummary = function(type){
+      var o=type==='of'?of.value:oc.value
+      if(!o) return '—'
+      var n=(type==='of'?ofVals:ocVals).value.length
+      if(o.statut==='termine') return '✓ Terminé — '+n+'/'+circuitSteps.length+' étapes'
+      if(o.pending_ar_service) return '⏳ En attente AR — '+(SVC_LABELS[o.pending_ar_service]||o.pending_ar_service)+' · '+n+'/'+circuitSteps.length
+      var cur=circuitSteps.find(function(e){return e.key===o.etape_circuit})
+      return (cur?cur.label:'En cours')+' · '+n+'/'+circuitSteps.length
+    }
 
     var docTypeLabel = function(d){var map={if:'IF',ic:'IC',da_pc:'DA Physico-chimie',da_micro:'DA Microbiologie'};return map[d.type_document]||d.type_document}
     var docStatLabel = function(d){if(!d.is_applicable)return'Non applicable';var map={non_emis:'Non émis',emis:'Émis',verification_aq:'Vérif AQ',retour_emetteur:'Retourné',approuve_aq:'Appr. AQ',approuve_dt:'Approuvé'};return map[d.statut]||d.statut}
@@ -619,7 +593,7 @@ export default {
 
     return{lot,prod,of,oc,ofVals,ocVals,docs,devs,aqls,dossier,detailLoading,statusLabels,circuitSteps,isAdmin,
       showDevForm,devObs,devBloquante,devNumeroDn,showModify,editNumLot,editCodeProd,prodSuggestions,rvpDocs,mainDocs,
-      getVal,pipClass,stepIndClass,circuitFlowClass,fmtDt,ofV,ocV,docsOk,docsReq,devsOpen,leadTime,dossierComplete,canValidateStep,
+      getVal,pipClass,stepIndClass,circuitFlowClass,stepStatus,stepClickable,stepClick,circuitOverallInd,circuitSummary,fmtDt,ofV,ocV,docsOk,docsReq,devsOpen,leadTime,dossierComplete,canValidateStep,
       docTypeLabel,docStatLabel,indClass,dsClass,rvpServiceLabel,isDocBlocked,goBack,
       userService,
       doValidate,doLiberer,doDeclareDeviation,doCloseDeviation,doMarkBloquante,doDeclareRvp,doDeclareMajDoc,doDeclareClotureSap,doRequestAql,doAqlConforme,doAqlNonConforme,doRelanceAql,isLatestAql,canRelanceAql,canDemanderAql,
