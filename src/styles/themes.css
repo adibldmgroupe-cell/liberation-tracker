@@ -52,6 +52,22 @@ html[data-theme="workshop"] {
   --th-font:      'Inter', sans-serif;
   --th-font-size: 13px;
 }
+/* Vintage — palette infographie rétro : papier crème, terracotta, brun chaud */
+html[data-theme="vintage"] {
+  --th-bg:        #f3ead6;
+  --th-bg2:       #ece0c7;
+  --th-bg3:       #e3d4b5;
+  --th-border:    #d6c5a0;
+  --th-text:      #4a3b2c;
+  --th-text2:     #8a7559;
+  --th-text3:     #b0997a;
+  --th-input-bg:  #fbf7ec;
+  --th-topbar:    #efe3c9;
+  --th-sidebar:   #3b3528;
+  --th-accent:    #c0564b;
+  --th-font:      'Inter', sans-serif;
+  --th-font-size: 13px;
+}
 
 /* ══════════════════════════════════════════════════════════════════
    LAYOUT PARTAGÉ — pattern AdminFluxPage
@@ -102,21 +118,37 @@ html[data-theme="workshop"] body {
 }
 
 html[data-theme="night"] .app-layout,
-html[data-theme="workshop"] .app-layout { background: var(--th-bg); }
+html[data-theme="workshop"] .app-layout,
+html[data-theme="vintage"] .app-layout { background: var(--th-bg); }
 
 html[data-theme="night"] .main-content,
-html[data-theme="workshop"] .main-content { background: var(--th-bg); }
+html[data-theme="workshop"] .main-content,
+html[data-theme="vintage"] .main-content { background: var(--th-bg); }
 
 html[data-theme="night"] .page-content,
-html[data-theme="workshop"] .page-content { background: var(--th-bg); }
+html[data-theme="workshop"] .page-content,
+html[data-theme="vintage"] .page-content { background: var(--th-bg); }
 
 html[data-theme="night"] .top-bar,
-html[data-theme="workshop"] .top-bar {
+html[data-theme="workshop"] .top-bar,
+html[data-theme="vintage"] .top-bar {
   background: var(--th-topbar);
   border-bottom-color: var(--th-border);
 }
 html[data-theme="night"] .sidebar,
-html[data-theme="workshop"] .sidebar { background: var(--th-sidebar); }
+html[data-theme="workshop"] .sidebar,
+html[data-theme="vintage"] .sidebar { background: var(--th-sidebar); }
+
+/* ── Vintage — accents terracotta à la place du violet (éléments LotsPage codés en dur) ── */
+html[data-theme="vintage"] .bulk-btn { background: var(--th-accent); }
+html[data-theme="vintage"] .bulk-btn:hover:not(:disabled) { background: #a8473d; }
+html[data-theme="vintage"] .tb th { background: var(--th-bg3); color: var(--th-accent); border-bottom-color: var(--th-border); }
+html[data-theme="vintage"] .btn-toggle,
+html[data-theme="vintage"] .btn-cols-on,
+html[data-theme="vintage"] .fbtn.active,
+html[data-theme="vintage"] .col-item-over { background: var(--th-bg3); border-color: var(--th-accent); color: var(--th-accent); }
+html[data-theme="vintage"] .plan-date { background: var(--th-bg3); color: var(--th-accent); }
+html[data-theme="vintage"] .inline-motif-confirm { background: var(--th-accent); }
 
 /* ── En-têtes de pages (.ph, .pt, .ph-right) ─────────────────── */
 html[data-theme="night"] .ph,
