@@ -15,12 +15,17 @@ export async function checkPlanningAlerts() {
   var tomorrowStr = tomorrow.toISOString().split('T')[0]
 
   var res = await supabase.from('lot_planning')
-    .select('lot_id, date_lcq_cible, date_lcq_revisee, date_aq_cible, date_aq_revisee, date_dt_cible, date_dt_revisee, lots(numero_lot)')
+    .select('lot_id, date_lcq_cible, date_lcq_revisee, date_aq_cible, date_aq_revisee, date_dt_cible, date_dt_revisee, lots(numero_lot, statut_sap)')
   if (!res.data || !res.data.length) return
 
   for (var i = 0; i < res.data.length; i++) {
     var row = res.data[i]
     var lotNum = row.lots ? row.lots.numero_lot : ('Lot #' + row.lot_id)
+
+    // Pas d'alerte de libération si le lot est déjà accepté (libéré), refusé, ou sous investigation :
+    // dans ces états la date prévisionnelle de libération n'a plus de sens (libération faite/abandonnée/suspendue).
+    var statutSap = row.lots ? row.lots.statut_sap : null
+    if (statutSap === 'accepte' || statutSap === 'refuse' || statutSap === 'sous_investigation') continue
 
     for (var j = 0; j < DATE_DEFS.length; j++) {
       var def = DATE_DEFS[j]
