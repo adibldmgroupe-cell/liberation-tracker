@@ -547,6 +547,10 @@ export default {
       await loadPermissions(userService.value)
       await loadDeadlines()
       var isAdm = userService.value === 'admin'
+      // « Depuis » et échéance se calculent sur la DATE MÉTIER du document — émission
+      // (emitted_at) sinon réception du lot (date_enregistrement) — et JAMAIS sur
+      // updated_at (qui vaut la date d'import pour les lots importés, sans valeur métier).
+      var bizBase = function(doc, lot){ return doc.emitted_at || (lot && lot.date_enregistrement) || doc.updated_at }
 
       // ── 1. CIRCUITS ───────────────────────────────────────────────────
       var circEtapeMap = {planification:'planification',stock:'stock',aq:'aq',dt:'dt',aq_dap:'aq_dap'}
@@ -595,7 +599,7 @@ export default {
       var docRaw = []
       if (svc==='aq') {
         var daqRes = await supabase.from('liberation_documents')
-          .select('id,type_document,statut,lot_id,updated_at')
+          .select('id,type_document,statut,lot_id,updated_at,emitted_at')
           .in('statut',['emis','verification_aq']).eq('is_applicable',true).is('pending_ar_service',null).neq('type_document','ccl').limit(5000)
         docRaw = daqRes.data||[]
         var daqMap = await getLotsMap(docRaw.map(function(d){return d.lot_id}))
@@ -603,7 +607,7 @@ export default {
         docRaw.forEach(function(d){
           var l=daqMap[d.lot_id]; if(!l||l.statut_sap==='vide') return
           var lbl=d.statut==='verification_aq'?'Vérifier (retour DT)':'Vérifier AQ → DT'
-          var since=fmtSince(d.updated_at)
+          var since=fmtSince(bizBase(d,l))
           var typeKey=d.type_document||'autre'; var typeLabel=DOC_TYPE_LABELS[typeKey]||typeKey
           var actCls=d.statut==='verification_aq'?'act-orange':'act-blue'
           var canAct=isAdm||canPerform('verifier_'+typeKey)
@@ -613,19 +617,19 @@ export default {
           grpMap[typeKey].docs.push({key:'doc_'+d.id,docId:d.id,typeDocument:typeKey,statut:d.statut,
             lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',statutSap:l.statut_sap||'',
             action:lbl,actionClass:actCls,sinceText:since?since.text:null,sinceClass:since?since.cls:'',
-            deadline: computeDeadline(d.updated_at, getDelai('aq', typeKey)),
+            deadline: computeDeadline(bizBase(d,l), getDelai('aq', typeKey)),
             canAct:canAct,btnLabel:'✓ Valider',
             canReturn:canReturn,returnBtnLabel:'↩ Retourner',returnLabel:'Retourner à l\'émetteur',
             showReturnInput:false,returnMotif:'',acting:false})
         })
         // CCL non émis (AQ doit transmettre au DT)
         var cclAqRes = await supabase.from('liberation_documents')
-          .select('id,type_document,statut,lot_id,updated_at')
+          .select('id,type_document,statut,lot_id,updated_at,emitted_at')
           .eq('type_document','ccl').eq('statut','non_emis').eq('is_applicable',true).limit(5000)
         var cclAqMap = await getLotsMap((cclAqRes.data||[]).map(function(d){return d.lot_id}))
         ;(cclAqRes.data||[]).forEach(function(d){
           var l=cclAqMap[d.lot_id]; if(!l||l.statut_sap==='vide') return
-          var since=fmtSince(d.updated_at)
+          var since=fmtSince(bizBase(d,l))
           var canAct=isAdm||canPerform('emettre_ccl')
           docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',statutSap:l.statut_sap||''})
           if(!grpMap['ccl']) grpMap['ccl']=makeGrp('ccl','CCL','Transmettre au DT')
@@ -638,14 +642,14 @@ export default {
         docCat.groups = Object.values(grpMap)
       } else if (svc==='dt') {
         var ddtRes = await supabase.from('liberation_documents')
-          .select('id,type_document,statut,lot_id,updated_at')
+          .select('id,type_document,statut,lot_id,updated_at,emitted_at')
           .eq('statut','approuve_aq').eq('is_applicable',true).is('pending_ar_service',null).limit(5000)
         docRaw = ddtRes.data||[]
         var ddtMap = await getLotsMap(docRaw.map(function(d){return d.lot_id}))
         var grpMapDt = {}
         docRaw.forEach(function(d){
           var l=ddtMap[d.lot_id]; if(!l) return
-          var since=fmtSince(d.updated_at)
+          var since=fmtSince(bizBase(d,l))
           var typeKey=d.type_document||'autre'; var typeLabel=DOC_TYPE_LABELS[typeKey]||typeKey
           var canAct=isAdm||canPerform('approuver_'+typeKey)
           var canReturn=isAdm||canPerform('retourner_document')
@@ -654,19 +658,19 @@ export default {
           grpMapDt[typeKey].docs.push({key:'doc_'+d.id,docId:d.id,typeDocument:typeKey,statut:d.statut,
             lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',statutSap:l.statut_sap||'',
             action:'Approuver DT',actionClass:'act-purple',sinceText:since?since.text:null,sinceClass:since?since.cls:'',
-            deadline: computeDeadline(d.updated_at, getDelai('dt', typeKey)),
+            deadline: computeDeadline(bizBase(d,l), getDelai('dt', typeKey)),
             canAct:canAct,btnLabel:'✓ Approuver',
             canReturn:canReturn,returnBtnLabel:'↩ Retour AQ',returnLabel:'Retourner à l\'AQ',
             showReturnInput:false,returnMotif:'',acting:false})
         })
         // CCL émis en attente de libération DT
         var cclDtRes = await supabase.from('liberation_documents')
-          .select('id,type_document,statut,lot_id,updated_at')
+          .select('id,type_document,statut,lot_id,updated_at,emitted_at')
           .eq('type_document','ccl').eq('statut','emis').eq('is_applicable',true).is('pending_ar_service',null).limit(5000)
         var cclDtMap = await getLotsMap((cclDtRes.data||[]).map(function(d){return d.lot_id}))
         ;(cclDtRes.data||[]).forEach(function(d){
           var l=cclDtMap[d.lot_id]; if(!l) return
-          var since=fmtSince(d.updated_at)
+          var since=fmtSince(bizBase(d,l))
           var canAct=isAdm||canPerform('approuver_ccl')
           var canReturn=isAdm||canPerform('retourner_document')
           docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',statutSap:l.statut_sap||''})
@@ -681,14 +685,14 @@ export default {
         docCat.groups = Object.values(grpMapDt)
       } else {
         var dEmtRes = await supabase.from('liberation_documents')
-          .select('id,type_document,lot_id,updated_at')
+          .select('id,type_document,lot_id,updated_at,emitted_at')
           .eq('statut','retour_emetteur').eq('service_emetteur',svc).eq('is_applicable',true).is('pending_ar_service',null).limit(5000)
         docRaw = dEmtRes.data||[]
         var dEmtMap = await getLotsMap(docRaw.map(function(d){return d.lot_id}))
         var grpMapEmt = {}
         docRaw.forEach(function(d){
           var l=dEmtMap[d.lot_id]; if(!l) return
-          var since=fmtSince(d.updated_at)
+          var since=fmtSince(bizBase(d,l))
           var typeKey=d.type_document||'autre'; var typeLabel=DOC_TYPE_LABELS[typeKey]||typeKey
           var canAct=isAdm||canPerform('emettre_'+typeKey)
           docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',statutSap:l.statut_sap||''})
@@ -696,20 +700,20 @@ export default {
           grpMapEmt[typeKey].docs.push({key:'doc_'+d.id,docId:d.id,typeDocument:typeKey,statut:'retour_emetteur',
             lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',statutSap:l.statut_sap||'',
             action:'Rectifier et réémettre',actionClass:'act-red',sinceText:since?since.text:null,sinceClass:since?since.cls:'',
-            deadline: computeDeadline(d.updated_at, getDelai(svc, typeKey)),
+            deadline: computeDeadline(bizBase(d,l), getDelai(svc, typeKey)),
             canAct:canAct,btnLabel:'↑ Réémettre',canReturn:false,
             showReturnInput:false,returnMotif:'',acting:false})
         })
         // Documents NON ÉMIS à transmettre à l'AQ pour libérer le lot (lots en stock : quarantaine / sous investigation)
         var dNeRes = await supabase.from('liberation_documents')
-          .select('id,type_document,lot_id,updated_at')
+          .select('id,type_document,lot_id,updated_at,emitted_at')
           .eq('statut','non_emis').eq('service_emetteur',svc).eq('is_applicable',true)
           .in('type_document',['if','ic','da_pc','da_micro']).is('pending_ar_service',null).limit(5000)
         var dNeMap = await getLotsMap((dNeRes.data||[]).map(function(d){return d.lot_id}))
         ;(dNeRes.data||[]).forEach(function(d){
           var l=dNeMap[d.lot_id]
           if(!l || l.statut_sap==='accepte' || l.statut_sap==='vide') return
-          var since=fmtSince(d.updated_at)
+          var since=fmtSince(bizBase(d,l))
           var typeKey=d.type_document||'autre'; var typeLabel=DOC_TYPE_LABELS[typeKey]||typeKey
           var canAct=isAdm||canPerform('emettre_'+typeKey)
           docCat.items.push({key:'doc_'+d.id,lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',statutSap:l.statut_sap||''})
@@ -717,7 +721,7 @@ export default {
           grpMapEmt[typeKey].docs.push({key:'doc_'+d.id,docId:d.id,typeDocument:typeKey,statut:'non_emis',
             lotId:l.id,lotNum:l.numero_lot,prodDesc:l.prod_desc||'',prodCode:l.prod_code||'',statutSap:l.statut_sap||'',
             action:'Transmettre à AQ',actionClass:'act-blue',sinceText:since?since.text:null,sinceClass:since?since.cls:'',
-            deadline: computeDeadline(l.date_enregistrement, getDelai(svc, typeKey)),
+            deadline: computeDeadline(bizBase(d,l), getDelai(svc, typeKey)),
             canAct:canAct,btnLabel:'↑ Transmettre',canReturn:false,
             showReturnInput:false,returnMotif:'',acting:false})
         })
