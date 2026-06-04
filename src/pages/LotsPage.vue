@@ -158,8 +158,11 @@
                 <span v-else-if="l.dev_count>0" class="dev-badge dev-closed">Clôturée</span>
                 <span v-else class="dim">—</span>
               </td>
-              <!-- Date -->
-              <td v-else class="mono dim">{{showDates?(l.date_lib||l.date_fmt):l.date_fmt}}</td>
+              <!-- Date de réception (entrée stock = date d'enregistrement) -->
+              <td v-else-if="CC[ck].r==='date_recep'" class="mono dim">{{l.date_fmt||'—'}}</td>
+              <!-- Date de libération -->
+              <td v-else-if="CC[ck].r==='date_lib'" class="mono dim">{{l.date_lib||'—'}}</td>
+              <td v-else class="mono dim">{{l.date_fmt||'—'}}</td>
             </template>
           </tr>
         </tbody>
@@ -516,9 +519,10 @@ export default {
       plan_aq:{l:'Lib. AQ',s:'plan_aq_raw',f:'plan_aq',r:'plan',pt:'aq'},
       plan_dt1:{l:'Lib. DT1',s:'plan_dt1_raw',f:'plan_dt1',r:'plan',pt:'dt'},
       plan_dt2:{l:'Lib. DT2',s:'plan_dt2_raw',f:'plan_dt2',r:'plan',pt:'dt',rv:true},
-      date:{l:'Date',l2:'Libération',s:'date_fmt',f:'date_fmt',r:'date'},
+      date:{l:'Réception',s:'date_fmt',f:'date_fmt',r:'date_recep'},
+      date_lib:{l:'Libération',s:'date_lib',f:'date_lib',r:'date_lib'},
     }
-    var ALL_COLS = ['of','oc','aql_fab','aql_cond','if','ic','da_pc','da_micro','ccl','dev','rvp_fab','rvp_cond','rvp_lcq','maj_if','maj_ic','maj_nmcl_of','maj_nmcl_oc','cloture_sap_of','cloture_sap_oc','plan_lcq','plan_aq','plan_dt1','plan_dt2','date']
+    var ALL_COLS = ['of','oc','aql_fab','aql_cond','if','ic','da_pc','da_micro','ccl','dev','rvp_fab','rvp_cond','rvp_lcq','maj_if','maj_ic','maj_nmcl_of','maj_nmcl_oc','cloture_sap_of','cloture_sap_oc','plan_lcq','plan_aq','plan_dt1','plan_dt2','date','date_lib']
     var COL_LABELS = {};ALL_COLS.forEach(function(k){COL_LABELS[k]=CC[k].l})
     // ── Colonnes : ordre (colOrder) + visibilité (hiddenCols) séparés ──
     var savedOrder = null, savedHidden = []
@@ -1716,7 +1720,7 @@ var loadCharge = async function() {
       {key:'maj_if_label',label:'MàJ IF',width:10},{key:'maj_ic_label',label:'MàJ IC',width:10},{key:'maj_nmcl_of_label',label:'MàJ N.OF',width:10},{key:'maj_nmcl_oc_label',label:'MàJ N.OC',width:10},
       {key:'clot_of_label',label:'Clôt.OF',width:10},{key:'clot_oc_label',label:'Clôt.OC',width:10},
       {key:'plan_lcq',label:'Lib. LCQ',width:12},{key:'plan_aq',label:'Lib. AQ',width:12},{key:'plan_dt1',label:'Lib. DT1',width:12},{key:'plan_dt2',label:'Lib. DT2',width:12},
-      {key:'date_fmt',label:'Entrée',width:12}
+      {key:'date_fmt',label:'Réception',width:12},{key:'date_lib',label:'Libération',width:12}
     ]
     var doExportExcel = function(){exportToExcel(filteredLots.value,exportCols,'lots_liberation')}
     var doExportPDF = function(){exportToPDF(filteredLots.value,exportCols,'lots_liberation')}
