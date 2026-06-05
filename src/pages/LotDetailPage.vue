@@ -219,20 +219,11 @@
           </div>
         </div>
         <div class="plan-bloc">
-          <div class="plan-titre">📋 Libération DT — Cible (DT1)</div>
+          <div class="plan-titre">📋 Libération DT</div>
           <div class="plan-row">
-            <label>Date cible initiale</label>
+            <label>Date cible</label>
             <input type="date" v-model="planEdit.date_dt_cible" class="plan-input" @change="savePlanning('date_dt_cible')" />
           </div>
-          <div class="plan-note">Date planifiée en début de circuit</div>
-        </div>
-        <div class="plan-bloc">
-          <div class="plan-titre">🔄 Libération DT — Révisée (DT2)</div>
-          <div class="plan-row">
-            <label>Date révisée</label>
-            <input type="date" v-model="planEdit.date_dt_revisee" class="plan-input" :class="{'plan-revised':planEdit.date_dt_revisee}" @change="savePlanning('date_dt_revisee')" />
-          </div>
-          <div class="plan-note">Mise à jour après aléas</div>
         </div>
       </div>
     </div>
