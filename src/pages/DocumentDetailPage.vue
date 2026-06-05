@@ -145,7 +145,7 @@ export default {
       var m={if:'IF',ic:'IC',da_pc:'DA Physico',da_micro:'DA Micro',ccl:'CCL',maj_if:'MàJ IF',maj_ic:'MàJ IC',maj_nmcl_of:'MàJ N. OF',maj_nmcl_oc:'MàJ N. OC',cloture_sap_of:'Clôt. OF',cloture_sap_oc:'Clôt. OC'}
       return m[t]||'Document'
     })
-    var TYPE_FULL = {if:'Instruction de fabrication',ic:'Instruction de conditionnement',da_pc:'Dossier analytique physico-chimie',da_micro:'Dossier analytique microbiologie',ccl:'Certificat de conformité du lot',maj_if:'Mise à jour IF',maj_ic:'Mise à jour IC',maj_nmcl_of:'MàJ nomenclature OF',maj_nmcl_oc:'MàJ nomenclature OC',cloture_sap_of:'Clôture SAP OF',cloture_sap_oc:'Clôture SAP OC'}
+    var TYPE_FULL = {if:'Instruction de fabrication',ic:'Instruction de conditionnement',da_pc:'Dossier analytique physico-chimie',da_micro:'Dossier analytique microbiologie',ccl:'Certificat de conformité du lot',rvp:'Rapport de validation process',maj_if:'Mise à jour IF',maj_ic:'Mise à jour IC',maj_nmcl_of:'MàJ nomenclature OF',maj_nmcl_oc:'MàJ nomenclature OC',cloture_sap_of:'Clôture SAP OF',cloture_sap_oc:'Clôture SAP OC'}
     var typeFull = computed(function(){ return TYPE_FULL[doc.value?doc.value.type_document:''] || '' })
     var steps = computed(function(){
       if (!doc.value) return []

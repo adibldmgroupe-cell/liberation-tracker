@@ -703,7 +703,7 @@ OF/OC, 6 étapes) et `AqlDetailPage.vue` (AQL Fab/Cond, 4 étapes). Détail comp
 AQL **et** documents IF/IC/DA/CCL) — **JAMAIS « parcours »** côté affichage. « Parcours » est seulement
 le **nom interne** du pattern (ce fichier / la mémoire). Ne pas mélanger les deux mots à l'écran.
 Nom complet d'un type entre **parenthèses** comme « IF (Instruction de fabrication) » :
-DA = « (Dossier analytique) », AQL = « (Acceptable quality level) ».
+DA = « (Dossier analytique) », AQL = « (Acceptable quality level) », RVP = « (Rapport de validation process) ».
 
 ### a) Carte compacte sur LotDetailPage (jamais d'étapes inline)
 Grille `.dg` → carte cliquable qui **navigue** vers la page parcours :
@@ -724,7 +724,7 @@ les services** (`validateOrder`, `requestAql`, `acknowledgeAql*`, `respondAql`�
 `.lt-short` (TYPE court gras) + `.lt-full` (**(nom complet entre parenthèses)**) ; `.lh-lot` = `.ll-num`
 (n° lot) + `.ll-prod` (produit)] · `.lh-right` > `.ttl` = **STATUT** (`statusLabel`, jamais le type ni le
 nom). Noms : OF (Ordre de fabrication), OC (Ordre de conditionnement), IF (Instruction de fabrication),
-DA (Dossier analytique …), AQL (Acceptable quality level).
+DA (Dossier analytique …), AQL (Acceptable quality level), RVP Fab/Cond/LCQ (Rapport de validation process).
 
 ### c) Thème/CSS IDENTIQUE (copier le `<style scoped>`, OK day/night/workshop)
 `.dind` : ind-wait `#e8e8e8` · ind-prog `#7c3aed` (en cours) · ind-done `#1D9E75` (OK) · ind-ret/ko `#E24B4A` (KO).
