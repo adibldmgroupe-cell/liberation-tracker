@@ -3,7 +3,7 @@
     <div class="bc"><span @click="goBack">← Retour au lot</span></div>
     <div class="lh">
       <div><span class="ln">{{lot.numero_lot}}</span><span class="lp">{{prod.description}}</span></div>
-      <div class="lh-right"><span class="ttl">AQL {{typeLabel}}</span></div>
+      <div class="lh-right"><span class="ttl">AQL {{typeLabel}}</span><span class="ttl-full">Acceptable quality level</span></div>
     </div>
 
     <div v-if="loading" class="detail-reloading">⟳ Actualisation…</div>
@@ -185,7 +185,8 @@ export default {
 <style scoped>
 .bc{font-size:12px;color:#7c3aed;cursor:pointer;margin-bottom:8px}
 .lh{display:flex;align-items:center;justify-content:space-between;padding-bottom:8px;border-bottom:1px solid #e5e7eb;flex-wrap:wrap;gap:8px}
-.lh-right{display:flex;align-items:center;gap:6px}
+.lh-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.ttl-full{font-size:10px;color:#999}
 .ln{font-size:22px;font-weight:500;font-family:'SF Mono',monospace}.lp{font-size:13px;color:#666;margin-left:10px}
 .ttl{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#7c3aed;background:#f5f3ff;border:1px solid #ede9fe;padding:4px 12px;border-radius:3px}
 .loading{text-align:center;padding:60px;color:#999}
