@@ -16,6 +16,7 @@ const routes = [
       { path: 'lots/:id', name: 'LotDetail', component: () => import('../pages/LotDetailPage.vue') },
       { path: 'lots/:lotId/documents/:docId', name: 'DocumentDetail', component: () => import('../pages/DocumentDetailPage.vue') },
       { path: 'lots/:lotId/circuit/:type', name: 'CircuitDetail', component: () => import('../pages/CircuitDetailPage.vue') },
+      { path: 'lots/:lotId/aql/:type', name: 'AqlDetail', component: () => import('../pages/AqlDetailPage.vue') },
       { path: 'planifier', name: 'Planifier', component: () => import('../pages/PlanifierPage.vue') },
 { path: 'notifications', name: 'Notifications', component: () => import('../pages/NotificationsPage.vue') },
       { path: 'tasks', name: 'Tasks', component: () => import('../pages/TasksPage.vue') },

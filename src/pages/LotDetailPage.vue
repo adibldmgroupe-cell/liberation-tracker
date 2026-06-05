@@ -58,33 +58,16 @@
       </div>
     </div>
 
-    <!-- AQL -->
+    <!-- AQL — cartes cliquables (parcours façon circuit) -->
     <div class="section"><div class="sh"><span>AQL</span></div>
-      <div class="dg" v-if="(canPerform('demander_aql_fab')&&canDemanderAql('fabrication'))||(canPerform('demander_aql_cond')&&canDemanderAql('conditionnement'))">
-        <div class="di di-act" v-if="canPerform('demander_aql_fab')&&canDemanderAql('fabrication')" @click="doRequestAql('fabrication')"><div class="dind ind-prog"></div><div><div class="dn">AQL Fabrication</div><div class="ds">＋ Demander</div></div></div>
-        <div class="di di-act" v-if="canPerform('demander_aql_cond')&&canDemanderAql('conditionnement')" @click="doRequestAql('conditionnement')"><div class="dind ind-prog"></div><div><div class="dn">AQL Conditionnement</div><div class="ds">＋ Demander</div></div></div>
-      </div>
-      <div v-if="!aqls.length" class="em">Aucune demande AQL</div>
-      <div class="aql-list" v-else>
-        <div class="aql-row" v-for="a in aqls" :key="a.id">
-          <div class="aql-left">
-            <div class="aql-type-lbl">AQL <span class="aql-type-val">{{a.type}}</span></div>
-            <div class="aql-date">{{fmtDt(a.inspected_at||a.requested_at)}}</div>
-          </div>
-          <div class="aql-mid">
-            <span class="sp2" :class="a.resultat==='conforme'?'sp2-ok':a.resultat==='non_conforme'?'sp2-ko':'sp2-wait'">
-              {{a.resultat==='en_attente'?'En attente':a.resultat==='conforme'?'Conforme':'Non conforme'}}
-            </span>
-            <span v-if="a.request_ar_pending" class="aql-ar-badge">⏳ AR demande</span>
-            <span v-if="a.result_ar_pending" class="aql-ar-badge">⏳ AR résultat</span>
-          </div>
-          <div class="aql-acts">
-            <button v-if="a.request_ar_pending && (userService==='aq'||isAdmin) && canPerform('accuser_reception_aql_demande')" class="btn bg" @click="doAcknowledgeAqlRequest(a.id)">✓ AR Demande</button>
-            <button v-if="a.result_ar_pending && (['fabrication','conditionnement'].includes(userService)||isAdmin) && canPerform('accuser_reception_aql_resultat')" class="btn bg" @click="doAcknowledgeAqlResult(a.id)">✓ AR Résultat</button>
-            <button v-if="a.resultat==='en_attente' && !a.request_ar_pending && canPerform('realiser_aql')" class="btn bg" @click="doAqlConforme(a.id)">Conforme</button>
-            <button v-if="a.resultat==='en_attente' && !a.request_ar_pending && canPerform('realiser_aql')" class="btn br" @click="doAqlNonConforme(a.id)">Non conforme</button>
-            <button v-if="a.resultat==='non_conforme' && isLatestAql(a) && canRelanceAql(a)" class="btn" @click="doRelanceAql(a)">Relancer AQL</button>
-          </div>
+      <div class="dg">
+        <div class="di di-act" @click="$router.push('/lots/'+lot.id+'/aql/fabrication')">
+          <div class="dind" :class="aqlInd('fabrication')"></div>
+          <div><div class="dn">AQL Fabrication</div><div class="ds" :class="aqlDsClass('fabrication')">{{aqlSummary('fabrication')}}</div></div>
+        </div>
+        <div class="di di-act" @click="$router.push('/lots/'+lot.id+'/aql/conditionnement')">
+          <div class="dind" :class="aqlInd('conditionnement')"></div>
+          <div><div class="dn">AQL Conditionnement</div><div class="ds" :class="aqlDsClass('conditionnement')">{{aqlSummary('conditionnement')}}</div></div>
         </div>
       </div>
     </div>
@@ -419,6 +402,19 @@ export default {
     var clotStatLabel = function(d){return clotStatLabels[d.statut]||d.statut}
     var clotIndClass = function(d){if(d.statut==='cloture')return'ind-done';if(d.statut==='non_emis')return'ind-wait';return'ind-prog'}
     var clotDsClass = function(d){if(d.statut==='cloture')return'ds-ok';return''}
+    // AQL — résumé pour les cartes cliquables (parcours façon circuit)
+    var aqlLatest = function(type){ var s=aqls.value.filter(function(x){return x.type===type}); return s.length?s[0]:null }
+    var aqlAllDone = function(a){ return a && !a.request_ar_pending && a.resultat!=='en_attente' && !a.result_ar_pending }
+    var aqlSummary = function(type){
+      var a=aqlLatest(type)
+      if(!a) return 'Aucune demande — à demander'
+      if(a.request_ar_pending) return '⏳ AR demande (AQ)'
+      if(a.resultat==='en_attente') return '⏳ Réalisation LCQ'
+      if(a.result_ar_pending) return '⏳ AR résultat'
+      return a.resultat==='conforme'?'✓ Conforme':'✗ Non conforme'
+    }
+    var aqlInd = function(type){ var a=aqlLatest(type); if(!a) return 'ind-wait'; if(aqlAllDone(a)) return a.resultat==='conforme'?'ind-done':'ind-ret'; return 'ind-prog' }
+    var aqlDsClass = function(type){ var a=aqlLatest(type); if(aqlAllDone(a)) return a.resultat==='conforme'?'ds-ok':'ds-ret'; return '' }
     var doRequestAql = async function(type){await requestAql(lot.value.id,type,userId.value);await loadLot()}
     var doAqlConforme = async function(id){await respondAql(id,'conforme','',userId.value,lot.value.id);await loadLot()}
     var doAqlNonConforme = async function(id){var reco=prompt('Recommandations :');await respondAql(id,'non_conforme',reco||'',userId.value,lot.value.id);await loadLot()}
@@ -611,7 +607,7 @@ export default {
       getVal,pipClass,stepIndClass,circuitFlowClass,stepStatus,stepClickable,stepClick,circuitOverallInd,circuitSummary,fmtDt,ofV,ocV,docsOk,docsReq,devsOpen,leadTime,dossierComplete,canValidateStep,
       docTypeLabel,docStatLabel,indClass,dsClass,rvpServiceLabel,isDocBlocked,goBack,
       userService,
-      doValidate,doLiberer,doDeclareDeviation,doCloseDeviation,doMarkBloquante,doDeclareRvp,doDeclareMajDoc,doDeclareClotureSap,doRequestAql,doAqlConforme,doAqlNonConforme,doRelanceAql,isLatestAql,canRelanceAql,canDemanderAql,
+      doValidate,doLiberer,doDeclareDeviation,doCloseDeviation,doMarkBloquante,doDeclareRvp,doDeclareMajDoc,doDeclareClotureSap,doRequestAql,doAqlConforme,doAqlNonConforme,doRelanceAql,isLatestAql,canRelanceAql,canDemanderAql,aqlSummary,aqlInd,aqlDsClass,
       doAcknowledgeOrderAR,doAcknowledgeAqlRequest,doAcknowledgeAqlResult,
       majDocs,clotDocs,majDocLabel,clotDocLabel,clotStatLabel,clotIndClass,clotDsClass,docErrMsg,
       searchProd,selectProd,doModify,confirmDelete,canPerform,
