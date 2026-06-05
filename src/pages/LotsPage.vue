@@ -631,7 +631,7 @@ export default {
       var emitter=DOC_SVC_SHORT[type]||'—'
       var label=docLocation(d.statut,emitter)
       var cls='dc-wait';if(d.statut==='approuve_dt')cls='dc-ok';else if(d.statut==='retour_emetteur')cls='dc-ret';else if(d.statut!=='non_emis')cls='dc-prog'
-      var date=d.approved_at||d.emitted_at;return{label:label,cls:cls,date:date?fmt(date):null,pendingAr:null,docId:d.id}
+      var date=d.emitted_at||d.approved_at;return{label:label,cls:cls,date:date?fmt(date):null,pendingAr:null,docId:d.id}
     }
 
     var getRvpInfo = function(docs,emetteur){
@@ -641,7 +641,7 @@ export default {
       var emitter=SVC_SHORT[emetteur]||emetteur
       var label=docLocation(d.statut,emitter)
       var cls='dc-wait';if(d.statut==='approuve_dt')cls='dc-ok';else if(d.statut==='retour_emetteur')cls='dc-ret';else if(d.statut!=='non_emis')cls='dc-prog'
-      var date=d.approved_at||d.emitted_at;return{label:label,cls:cls,date:date?fmt(date):null,pendingAr:null,docId:d.id}
+      var date=d.emitted_at||d.approved_at;return{label:label,cls:cls,date:date?fmt(date):null,pendingAr:null,docId:d.id}
     }
 
     var getClotureSapInfo = function(docs,type){
