@@ -699,6 +699,12 @@ clôture SAP…) doit suivre **le même modèle de parcours**. Référence : `Ci
 OF/OC, 6 étapes) et `AqlDetailPage.vue` (AQL Fab/Cond, 4 étapes). Détail complet en mémoire locale
 `memory/parcours-ui-pattern.md`.
 
+⚠️ **Terme UI = « circuit » PARTOUT** (titre de section « **Étapes du circuit X** » sur circuits OF/OC,
+AQL **et** documents IF/IC/DA/CCL) — **JAMAIS « parcours »** côté affichage. « Parcours » est seulement
+le **nom interne** du pattern (ce fichier / la mémoire). Ne pas mélanger les deux mots à l'écran.
+Nom complet d'un type entre **parenthèses** comme « IF (Instruction de fabrication) » :
+DA = « (Dossier analytique) », AQL = « (Acceptable quality level) ».
+
 ### a) Carte compacte sur LotDetailPage (jamais d'étapes inline)
 Grille `.dg` → carte cliquable qui **navigue** vers la page parcours :
 ```html
