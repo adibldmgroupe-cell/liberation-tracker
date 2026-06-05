@@ -680,6 +680,8 @@ export default {
     }
 
     var getPlanClass = function(lot, type) {
+      // Lot libéré (accepté) : les dates cibles de planif sont historiques → gris neutre (comme IF/IC/DA), pas d'alerte
+      if (lot.statut_sap === 'accepte') return 'plan-done'
       var today = new Date(); today.setHours(0,0,0,0)
       var tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate()+1)
       var rawDate = type==='lcq'?(lot.plan_lcq_raw):type==='aq'?(lot.plan_aq_raw):type==='dt'?(lot.plan_dt2_raw||lot.plan_dt1_raw):null
@@ -2244,6 +2246,7 @@ var loadCharge = async function() {
 .plan-warn{background:#fff3cd !important;color:#856404 !important}
 .plan-urgent{background:#FAEEDA !important;color:#854F0B !important}
 .plan-crit{background:#FCEBEB !important;color:#A32D2D !important}
+.plan-done{background:#fafafa !important;color:#666 !important}
 .empty{text-align:center;padding:40px;color:#999}
 /* column filter chips */
 .cf-bar{display:flex;align-items:center;gap:6px;padding:5px 0;flex-wrap:wrap;font-size:11px;border-bottom:1px solid #e8e8e8}

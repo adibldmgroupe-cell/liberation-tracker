@@ -1247,6 +1247,7 @@ html[data-theme="night"] .plan-revised, html[data-theme="workshop"] .plan-revise
 html[data-theme="night"] .plan-warn, html[data-theme="workshop"] .plan-warn { background: rgba(251,191,36,.12) !important; color: #fbbf24 !important; }
 html[data-theme="night"] .plan-urgent, html[data-theme="workshop"] .plan-urgent { background: rgba(251,146,60,.14) !important; color: #fdba74 !important; }
 html[data-theme="night"] .plan-crit, html[data-theme="workshop"] .plan-crit { background: rgba(239,68,68,.14) !important; color: #fca5a5 !important; }
+html[data-theme="night"] .plan-done, html[data-theme="workshop"] .plan-done { background: var(--th-bg3) !important; color: var(--th-text2) !important; }
 
 /* ── Popups conteneurs (fond clair → bg2) ── */
 html[data-theme="night"] .statut-panel, html[data-theme="workshop"] .statut-panel,
