@@ -346,8 +346,9 @@ export default {
     }
     var fmtDt = function(d){return d?new Date(d).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):''}
 
-    var ofV = computed(function(){return ofVals.value.length})
-    var ocV = computed(function(){return ocVals.value.length})
+    // Terminé = toutes les étapes faites par définition (statut terminal) → compteur plein (cohérent avec circuitSummary)
+    var ofV = computed(function(){return (of.value && of.value.statut==='termine') ? circuitSteps.length : ofVals.value.length})
+    var ocV = computed(function(){return (oc.value && oc.value.statut==='termine') ? circuitSteps.length : ocVals.value.length})
     var mainDocs = computed(function(){return docs.value.filter(function(d){return d.type_document!=='rvp'&&!d.type_document.startsWith('maj_')&&!d.type_document.startsWith('cloture_sap_')})})
     var rvpDocs = computed(function(){return docs.value.filter(function(d){return d.type_document==='rvp'})})
     var majDocs = computed(function(){return docs.value.filter(function(d){return d.type_document.startsWith('maj_')})})
