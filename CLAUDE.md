@@ -692,6 +692,42 @@ Quand le planificateur signale un lot sur une étape, il peut **oublier une éta
 
 ---
 
+## RÈGLE N°24 — Modèle « Parcours » UI (« je clique, j'entre ») — STANDARD obligatoire
+
+Tout workflow multi-étapes d'un lot (circuits, AQL, et à terme documents IF/IC/DA/CCL, RVP, MàJ,
+clôture SAP…) doit suivre **le même modèle de parcours**. Référence : `CircuitDetailPage.vue` (circuit
+OF/OC, 6 étapes) et `AqlDetailPage.vue` (AQL Fab/Cond, 4 étapes). Détail complet en mémoire locale
+`memory/parcours-ui-pattern.md`.
+
+### a) Carte compacte sur LotDetailPage (jamais d'étapes inline)
+Grille `.dg` → carte cliquable qui **navigue** vers la page parcours :
+```html
+<div class="di di-act" @click="$router.push('/lots/'+lot.id+'/<thing>/'+type)">
+  <div class="dind" :class="xxxInd(type)"></div>
+  <div><div class="dn">{Label}</div><div class="ds" :class="xxxDsClass(type)">{xxxSummary(type)}</div></div>
+</div>
+```
+Helpers : `xxxInd`→`ind-wait|ind-prog|ind-done|ind-ret` · `xxxSummary`→texte court · `xxxDsClass`→`ds-ok|ds-ret|''`.
+
+### b) Page parcours dédiée (route `lots/:lotId/<thing>/:type`)
+Calquer CircuitDetailPage/AqlDetailPage : `steps[{key,label,service}]`, état dérivé d'une entité,
+`stepDone/currentStep/doneCount/stepIndClass/dsClass/stepStatus/stepClickable/stepClick`, **réutiliser
+les services** (`validateOrder`, `requestAql`, `acknowledgeAql*`, `respondAql`…) + `await load()`,
+`watch(()=>route.params… , ()=>location.reload())` (type/lotId figés à la création).
+
+### c) Thème/CSS IDENTIQUE (copier le `<style scoped>`, OK day/night/workshop)
+`.dind` : ind-wait `#e8e8e8` · ind-prog `#7c3aed` (en cours) · ind-done `#1D9E75` (OK) · ind-ret/ko `#E24B4A` (KO).
+`.ds`/`ds-ok #1D9E75`/`ds-ret #E24B4A` · `.ttl` badge violet MAJUSCULE · `.dc` `#BA7517` · `.di-act` hover `#f5f3ff` ·
+étape à 2 issues → boutons inline `.btn-c`(vert)/`.btn-nc`(rouge)/`.btn-relance`(outline violet) · historique `.circ-hist`.
+
+### d) Principes
+- **Alternance action → AR** (`pending_ar_service` / `*_ar_pending` = service suivant qui accuse réception).
+- **Admin bypass** `canPerform` (permissions.js l.18) → un compte admin déroule tout.
+- **doneCount = total si statut terminal** (cohérence carte ↔ tuile KPI ↔ compteur ; cf. `ofV/ocV`).
+- **Carte résumé, jamais le détail des étapes sur LotDetailPage.**
+
+---
+
 ## Déploiement
 
 - Push sur `main` → GitHub Actions build + deploy GitHub Pages automatiquement
