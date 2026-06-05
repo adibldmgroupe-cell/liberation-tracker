@@ -270,7 +270,7 @@
   <div v-else class="loading">Chargement...</div>
 </template>
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../supabase'
 import { loadPermissions, canPerform, getPermissionForEtape } from '../services/permissions'
@@ -601,6 +601,10 @@ export default {
       if(p.data){userService.value=p.data.service;await loadPermissions(p.data.service)}
       await await loadLot()
     })
+
+    // Naviguer directement d'un lot à un autre (changement de :id) sans démonter le composant :
+    // Vue Router réutilise l'instance → recharger explicitement, sinon données du lot précédent.
+    watch(function(){ return route.params.id }, function(nv, ov){ if(nv && nv !== ov) loadLot() })
 
     return{lot,prod,of,oc,ofVals,ocVals,docs,devs,aqls,dossier,detailLoading,statusLabels,circuitSteps,isAdmin,
       showDevForm,devObs,devBloquante,devNumeroDn,showModify,editNumLot,editCodeProd,prodSuggestions,rvpDocs,mainDocs,
