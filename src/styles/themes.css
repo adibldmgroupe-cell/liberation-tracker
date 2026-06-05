@@ -1248,6 +1248,8 @@ html[data-theme="night"] .plan-warn, html[data-theme="workshop"] .plan-warn { ba
 html[data-theme="night"] .plan-urgent, html[data-theme="workshop"] .plan-urgent { background: rgba(251,146,60,.14) !important; color: #fdba74 !important; }
 html[data-theme="night"] .plan-crit, html[data-theme="workshop"] .plan-crit { background: rgba(239,68,68,.14) !important; color: #fca5a5 !important; }
 html[data-theme="night"] .plan-done, html[data-theme="workshop"] .plan-done { background: var(--th-bg3) !important; color: var(--th-text2) !important; }
+html[data-theme="night"] .lib-yes, html[data-theme="workshop"] .lib-yes { background: rgba(52,211,153,.10); color: #6ee7b7; }
+html[data-theme="night"] .lib-no,  html[data-theme="workshop"] .lib-no  { background: rgba(251,191,36,.12); color: #fbbf24; }
 
 /* ── Popups conteneurs (fond clair → bg2) ── */
 html[data-theme="night"] .statut-panel, html[data-theme="workshop"] .statut-panel,

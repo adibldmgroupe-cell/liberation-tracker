@@ -8,10 +8,20 @@
           <button class="btn-cols" :class="{'btn-cols-on': hiddenStatuts.length > 0}" @click="showStatutPanel=!showStatutPanel">⊙ Statuts{{hiddenStatuts.length > 0 ? ' ('+hiddenStatuts.length+')' : ''}}</button>
           <div class="statut-panel" v-if="showStatutPanel">
             <div class="col-panel-title">Visibilité statuts</div>
+            <div class="statut-allnone">
+              <button class="sa-btn" @click.stop="selectAllStatuts">Tout sélectionner</button>
+              <button class="sa-btn" @click.stop="deselectAllStatuts">Tout désélectionner</button>
+            </div>
             <label class="statut-item" v-for="f in filterOptions" :key="f.value" @click.stop>
               <input type="checkbox" :checked="!hiddenStatuts.includes(f.value)" @change="toggleStatutVisibility(f.value)" @click.stop />
               <span class="statut-dot" :style="{background:f.color}"></span>
               <span class="statut-lbl">{{f.label}}</span>
+            </label>
+            <div class="statut-sep"></div>
+            <label class="statut-item" @click.stop>
+              <input type="checkbox" v-model="onlyLiberable" @click.stop />
+              <span class="statut-dot" style="background:#1D9E75"></span>
+              <span class="statut-lbl">Libérables uniquement</span>
             </label>
           </div>
         </div>
@@ -125,6 +135,7 @@
           <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('numero_lot')">N° Lot <span class="sort-arrow">{{sortIcon('numero_lot')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['numero_lot']}" @click="openDropdown('numero_lot',$event)">⌄</button></div></th>
           <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('prod_desc')">Produit <span class="sort-arrow">{{sortIcon('prod_desc')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['prod_desc']}" @click="openDropdown('prod_desc',$event)">⌄</button></div></th>
           <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('statut_label')">Statut <span class="sort-arrow">{{sortIcon('statut_label')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['statut_label']}" @click="openDropdown('statut_label',$event)">⌄</button></div></th>
+          <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('liberable_sort')">Libérable <span class="sort-arrow">{{sortIcon('liberable_sort')}}</span></span></div></th>
           <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('phase')">Phase <span class="sort-arrow">{{sortIcon('phase')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['phase']}" @click="openDropdown('phase',$event)">⌄</button></div></th>
           <!-- Dynamic columns driven by visibleCols order -->
           <template v-for="ck in visibleCols" :key="'h-'+ck">
@@ -140,6 +151,7 @@
             <td class="mono bold">{{l.numero_lot}}</td>
             <td class="td-prod">{{l.prod_desc}}<span class="code">{{l.prod_code}}</span></td>
             <td><span class="sp" :class="l.statut_class">{{l.statut_label}}</span></td>
+            <td class="td-lib"><span v-if="l.liberable_applicable" class="lib-badge" :class="l.liberable?'lib-yes':'lib-no'" :title="l.liberable?'IF/IC/DA transmis — prêt pour le circuit de libération':('En attente émetteur : '+l.liberable_manque_txt)">{{l.liberable?'✓ Libérable':'⏳ Docs'}}</span><span v-else class="dim">—</span></td>
             <td><span class="sp-phase" :class="getPhaseClass(l.phase)">{{l.phase}}</span></td>
             <!-- Dynamic columns -->
             <template v-for="ck in visibleCols" :key="'c-'+ck+'-'+l.id">
@@ -416,6 +428,9 @@ export default {
       else hiddenStatuts.value.push(value)
       localStorage.setItem('lots_hidden_statuts', JSON.stringify(hiddenStatuts.value))
     }
+    var selectAllStatuts = function() { hiddenStatuts.value = []; localStorage.setItem('lots_hidden_statuts', JSON.stringify(hiddenStatuts.value)) }
+    var deselectAllStatuts = function() { hiddenStatuts.value = filterOptions.map(function(f){ return f.value }); localStorage.setItem('lots_hidden_statuts', JSON.stringify(hiddenStatuts.value)) }
+    var onlyLiberable = ref(false)
     var showStatutPanel = ref(false)
     var selected = ref([]), actionType = ref(''), showConfirm = ref(false)
     var showActionPanel = ref(false), actionSearch = ref(''), expandedActionGroups = ref([])
@@ -779,9 +794,24 @@ export default {
         var planDt1Raw = planning ? planning.date_dt_cible   : null
         var planDt2Raw = planning ? planning.date_dt_revisee : null
 
+        // Libérable (lots en quarantaine uniquement) : tous les docs IF/IC/DA applicables sont TRANSMIS
+        // (émis et envoyés vers AQ — pas non émis, pas retournés à l'émetteur, pas en rectification).
+        var TRANSMIS_STATUTS = ['emis','verification_aq','approuve_aq','approbation_dt','approuve_dt']
+        var LIB_CORE = {if:'IF',ic:'IC',da_pc:'DA PC',da_micro:'DA Micro'}
+        var libManque = [], libAppCount = 0
+        for(var di=0; di<docs.length; di++){
+          var dd=docs[di]
+          if(!LIB_CORE[dd.type_document] || !dd.is_applicable) continue
+          libAppCount++
+          if(TRANSMIS_STATUTS.indexOf(dd.statut) < 0) libManque.push(LIB_CORE[dd.type_document])
+        }
+        var libApplicable = (l.statut_sap === 'quarantaine')
+        var libLiberable = libApplicable && libAppCount > 0 && libManque.length === 0
+
         return{
           id:l.id,numero_lot:l.numero_lot,statut_sap:l.statut_sap,
           statut_label:statutInfo.label,statut_class:statutInfo.cls,statut_filter:statutInfo.filter,
+          liberable:libLiberable,liberable_applicable:libApplicable,liberable_manque_txt:libManque.join(', '),liberable_sort:libApplicable?(libLiberable?'1 oui':'2 attente'):'3',
           date_fmt:fmt(l.date_enregistrement),date_lib:l.date_liberation?fmt(l.date_liberation):null,
           prod_desc:l.products?l.products.description:'',prod_code:l.products?l.products.code_article:'',
           of_label:ofInfo.label,of_done:ofInfo.done,of_date:ofInfo.date,of_pending_ar:ofInfo.pendingAr,
@@ -1691,7 +1721,8 @@ var loadCharge = async function() {
 
     var filteredLots = computed(function(){
       var result = lots.value
-      if(hiddenStatuts.value.length>0){result=result.filter(function(l){return !hiddenStatuts.value.includes(l.statut_filter)})}
+      if(onlyLiberable.value){result=result.filter(function(l){return l.liberable})}
+      else if(hiddenStatuts.value.length>0){result=result.filter(function(l){return !hiddenStatuts.value.includes(l.statut_filter)})}
       var cf=columnFilters.value,cfk=Object.keys(cf)
       if(cfk.length>0){result=result.filter(function(l){return cfk.every(function(k){return l[k]===cf[k]})})}
       if(sortCol.value){
@@ -2170,7 +2201,7 @@ var loadCharge = async function() {
     }
 
     return{lots,total,lotsLoading,hiddenStatuts,toggleStatutVisibility,showStatutPanel,showDates,filteredLots,pagedLots,tablePage,totalPages,filterOptions,
-      sortBy,sortIcon,goToLot,doExportExcel,doExportPDF,
+      sortBy,sortIcon,goToLot,doExportExcel,doExportPDF,selectAllStatuts,deselectAllStatuts,onlyLiberable,
       selected,actionType,showConfirm,executing,progress,execResult,bulkDate,
       actionLabel,canExecute,allVisibleChecked,someVisibleChecked,
       isSelected,toggleLot,toggleAll,getLotNum,executeAction,
@@ -2247,6 +2278,14 @@ var loadCharge = async function() {
 .plan-urgent{background:#FAEEDA !important;color:#854F0B !important}
 .plan-crit{background:#FCEBEB !important;color:#A32D2D !important}
 .plan-done{background:#fafafa !important;color:#666 !important}
+.td-lib{text-align:center}
+.lib-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap;display:inline-block}
+.lib-yes{background:#d1fae5;color:#065f46}
+.lib-no{background:#fff3cd;color:#856404}
+.statut-allnone{display:flex;gap:6px;margin-bottom:8px}
+.sa-btn{flex:1;font-size:10px;padding:4px 6px;border:1px solid var(--th-border);background:var(--th-bg2);color:var(--th-text2);border-radius:4px;cursor:pointer;white-space:nowrap}
+.sa-btn:hover{background:var(--th-bg3);color:var(--th-text)}
+.statut-sep{height:1px;background:var(--th-border);margin:7px 0}
 .empty{text-align:center;padding:40px;color:#999}
 /* column filter chips */
 .cf-bar{display:flex;align-items:center;gap:6px;padding:5px 0;flex-wrap:wrap;font-size:11px;border-bottom:1px solid #e8e8e8}
