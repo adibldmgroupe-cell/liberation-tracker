@@ -450,7 +450,7 @@ html[data-theme="workshop"] .mf-row label { color: var(--th-text2); }
 
 /* ── Lot Detail ───────────────────────────────────────────────── */
 html[data-theme="night"] .bc,
-html[data-theme="workshop"] .bc { color: #93c5fd; }
+html[data-theme="workshop"] .bc { color: #c4b5fd; }
 html[data-theme="night"] .section,
 html[data-theme="workshop"] .section { color: var(--th-text); }
 html[data-theme="night"] .syg,

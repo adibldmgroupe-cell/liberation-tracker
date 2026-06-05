@@ -1,21 +1,9 @@
 <template>
   <div v-if="doc">
-    <div class="bc"><span @click="$router.push('/lots/'+$route.params.lotId)">← Retour au lot</span></div>
-    <div class="ph"><span class="pt">{{typeLabels[doc.type_document]}}</span><span class="sp" :class="spClass">{{statusLabel}}</span></div>
-    <div class="info"><div class="ic"><span class="il">Émetteur</span>{{doc.service_emetteur}}</div><div class="ic"><span class="il">Émis le</span><span class="mono">{{fmtDt(doc.emitted_at)}}</span></div><div class="ic"><span class="il">Approuvé le</span><span class="mono">{{fmtDt(doc.approved_at)}}</span></div></div>
-
-    <div class="flow">
-      <div class="flow-step" :class="flowClass(1)"><span class="fs-num">1</span><span class="fs-label">{{isClotSap?'Demande valid.':isCCL?'Transmission AQ':'Émission'}}</span></div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-step" :class="flowClass(2)"><span class="fs-num">2</span><span class="fs-label">{{isClotSap?'Validation Planif.':isCCL?'Libération DT':'Vérif. AQ'}}</span></div>
-      <template v-if="!isCCL">
-        <div class="flow-arrow">→</div>
-        <div class="flow-step" :class="flowClass(3)"><span class="fs-num">3</span><span class="fs-label">{{isClotSap?'Demande clôture':'Approbation DT'}}</span></div>
-        <template v-if="isClotSap">
-          <div class="flow-arrow">→</div>
-          <div class="flow-step" :class="flowClass(4)"><span class="fs-num">4</span><span class="fs-label">Clôture</span></div>
-        </template>
-      </template>
+    <div class="bc"><span @click="goBack">← Retour au lot</span></div>
+    <div class="lh">
+      <div><span class="ln">{{shortType}}</span><span class="lp">{{typeLabels[doc.type_document]}}</span></div>
+      <div class="lh-right"><span class="ttl">{{statusLabel}}</span></div>
     </div>
 
     <!-- DA Micro non applicable : permettre de la déclarer applicable -->
@@ -31,92 +19,77 @@
       <div class="na-msg">Ce document est marqué <strong>Non applicable</strong> pour ce lot.</div>
     </div>
 
-    <div class="actions" v-if="doc.is_applicable">
-      <!-- AR en attente pour le service courant -->
-      <template v-if="doc.pending_ar_service && !isClotSap && !isMajDoc">
-        <span class="ar-pending">⏳ En attente AR — {{doc.pending_ar_service}}</span>
-        <button v-if="canAR" class="btn bg" @click="doAR">✓ Accuser réception</button>
-      </template>
+    <!-- Parcours du document (même affichage que circuits / AQL) -->
+    <div class="section" v-if="doc.is_applicable">
+      <div class="sh"><span>Parcours {{shortType}}</span><span class="dc">{{doneCount}}/{{steps.length}}</span></div>
+      <div class="dg dg-1">
+        <div class="di" v-for="(s,idx) in steps" :key="s.n">
+          <div class="dind" :class="stepIndClass(s.n)"></div>
+          <div class="di-body">
+            <div class="dn">{{idx+1}}. {{s.label}}</div>
+            <div class="ds" :class="stepDsClass(s.n)">{{stepStatus(s.n)}}</div>
+            <div class="di-svc">Service : {{s.service}}</div>
+            <!-- Actions inline sur l'étape active / retournée -->
+            <div v-if="stepActionable(s.n)" class="step-acts">
+              <template v-if="doc.pending_ar_service && !isClotSap && !isMajDoc">
+                <button v-if="canAR" class="btn bg" @click="doAR">✓ Accuser réception</button>
+                <span v-else class="step-wait">⏳ En attente AR — {{doc.pending_ar_service}}</span>
+              </template>
+              <template v-if="!doc.pending_ar_service || isClotSap || isMajDoc">
+                <button v-if="doc.statut==='non_emis' && canEmit && !isClotSap && !isCCL" class="btn" @click="doAct('emettre')">Émettre le document</button>
+                <button v-if="doc.statut==='retour_emetteur' && canRectifier && !isClotSap && !isCCL" class="btn" @click="doAct('rectifier')">Rectifier et renvoyer à l'AQ</button>
+                <button v-if="(doc.statut==='emis' || doc.statut==='verification_aq') && canVerify && !isClotSap && !isCCL" class="btn" @click="doAct('verifier_aq')">Vérifier et transmettre au DT</button>
+                <button v-if="(doc.statut==='emis' || doc.statut==='verification_aq') && canRetourner && !isClotSap && !isCCL" class="btn br" @click="prepareRetour('emetteur')">Retourner à l'émetteur</button>
+                <button v-if="doc.statut==='approuve_aq' && canApprove && !isClotSap && !isCCL" class="btn bg" @click="doAct('approuver_dt')">Approuver (DT)</button>
+                <button v-if="doc.statut==='approuve_aq' && canRetourner && !isClotSap && !isCCL" class="btn br" @click="prepareRetour('aq')">Retourner à l'AQ</button>
+                <button v-if="isCCL && doc.statut==='non_emis' && canEmit" class="btn bg" @click="doAct('emettre')">Transmettre au DT</button>
+                <button v-if="isCCL && doc.statut==='retour_emetteur' && canRectifier" class="btn" @click="doAct('rectifier')">Retransmettre au DT</button>
+                <button v-if="isCCL && doc.statut==='emis' && canApprove" class="btn bg" @click="doAct('approuver_dt')">Libérer le lot (DT)</button>
+                <button v-if="isCCL && doc.statut==='emis' && canRetourner" class="btn br" @click="prepareRetour('aq')">Retourner à l'AQ</button>
+                <button v-if="doc.statut==='emis' && canVerify && isClotSap" class="btn bg" @click="doAct('valider_planif')">Valider (Planification)</button>
+                <button v-if="doc.statut==='valide_planif' && canApprove && isClotSap" class="btn bg" @click="doAct('demander_cloture')">Demander la clôture SAP</button>
+                <button v-if="doc.statut==='cloture_demandee' && canConfirmClot && isClotSap" class="btn bg" @click="doAct('cloturer')">Confirmer la clôture SAP</button>
+              </template>
+            </div>
+          </div>
+        </div>
+      </div>
 
-      <!-- Actions normales — bloquées si AR en attente pour ce service -->
-      <template v-if="!doc.pending_ar_service || isClotSap || isMajDoc">
-        <!-- ÉMETTEUR : émettre (docs standard) -->
-        <button v-if="doc.statut==='non_emis' && canEmit && !isClotSap && !isCCL" class="btn" @click="doAct('emettre')">Émettre le document</button>
-
-        <!-- ÉMETTEUR : rectifier après retour (docs standard seulement) -->
-        <button v-if="doc.statut==='retour_emetteur' && canRectifier && !isClotSap && !isCCL" class="btn" @click="doAct('rectifier')">Rectifier et renvoyer à l'AQ</button>
-
-        <!-- AQ : vérifier et transmettre au DT (docs standard) -->
-        <button v-if="(doc.statut==='emis' || doc.statut==='verification_aq') && canVerify && !isClotSap && !isCCL" class="btn" @click="doAct('verifier_aq')">Vérifier et transmettre au DT</button>
-
-        <!-- AQ : retourner à l'émetteur (docs standard) -->
-        <button v-if="(doc.statut==='emis' || doc.statut==='verification_aq') && canRetourner && !isClotSap && !isCCL" class="btn br" @click="prepareRetour('emetteur')">Retourner à l'émetteur</button>
-
-        <!-- DT : approuver (docs standard) -->
-        <button v-if="doc.statut==='approuve_aq' && canApprove && !isClotSap && !isCCL" class="btn bg" @click="doAct('approuver_dt')">Approuver (DT)</button>
-
-        <!-- DT : retourner à l'AQ (docs standard) -->
-        <button v-if="doc.statut==='approuve_aq' && canRetourner && !isClotSap && !isCCL" class="btn br" @click="prepareRetour('aq')">Retourner à l'AQ</button>
-
-        <!-- CCL : AQ transmet au DT -->
-        <button v-if="isCCL && doc.statut==='non_emis' && canEmit" class="btn bg" @click="doAct('emettre')">Transmettre au DT</button>
-
-        <!-- CCL : AQ retransmet après retour DT -->
-        <button v-if="isCCL && doc.statut==='retour_emetteur' && canRectifier" class="btn" @click="doAct('rectifier')">Retransmettre au DT</button>
-
-        <!-- CCL : DT libère le lot -->
-        <button v-if="isCCL && doc.statut==='emis' && canApprove" class="btn bg" @click="doAct('approuver_dt')">Libérer le lot (DT)</button>
-
-        <!-- CCL : DT retourne à l'AQ -->
-        <button v-if="isCCL && doc.statut==='emis' && canRetourner" class="btn br" @click="prepareRetour('aq')">Retourner à l'AQ</button>
-
-        <!-- CLÔTURE SAP : Planif valide -->
-        <button v-if="doc.statut==='emis' && canVerify && isClotSap" class="btn bg" @click="doAct('valider_planif')">Valider (Planification)</button>
-
-        <!-- CLÔTURE SAP : Fab/Condt demande clôture -->
-        <button v-if="doc.statut==='valide_planif' && canApprove && isClotSap" class="btn bg" @click="doAct('demander_cloture')">Demander la clôture SAP</button>
-
-        <!-- CLÔTURE SAP : Planification confirme la clôture finale -->
-        <button v-if="doc.statut==='cloture_demandee' && canConfirmClot && isClotSap" class="btn bg" @click="doAct('cloturer')">Confirmer la clôture SAP</button>
-      </template>
-    </div>
-
-    <div class="rb" v-if="showRetour">
-      <label>Motif du retour ({{retourDest === 'emetteur' ? 'vers ' + doc.service_emetteur : 'vers AQ'}}) :</label>
-      <textarea v-model="motif" rows="3" placeholder="Préciser le motif..."></textarea>
-      <div class="ra">
-        <button class="btn br" @click="doRetour">Confirmer le retour</button>
-        <button class="btn bc2" @click="showRetour=false">Annuler</button>
+      <div class="rb" v-if="showRetour">
+        <label>Motif du retour ({{retourDest === 'emetteur' ? 'vers ' + doc.service_emetteur : 'vers AQ'}}) :</label>
+        <textarea v-model="motif" rows="3" placeholder="Préciser le motif..."></textarea>
+        <div class="ra">
+          <button class="btn br" @click="doRetour">Confirmer le retour</button>
+          <button class="btn bc2" @click="showRetour=false">Annuler</button>
+        </div>
       </div>
     </div>
 
+    <!-- Historique (même affichage que circuits / AQL) -->
     <div class="section">
       <div class="sh"><span>Historique des mouvements</span></div>
-      <div class="tl" v-if="movements.length">
-        <div class="ti" v-for="(m,i) in movements" :key="i">
-          <div class="td" :class="dotClass(m.action)"></div>
-          <div class="tln" v-if="i<movements.length-1"></div>
-          <div class="tc">
-            <div class="ta">{{actionLabelsMap[m.action]}}</div>
-            <div class="tt" v-if="m.from_service || m.to_service">{{m.from_service || '?'}} → {{m.to_service || '?'}}</div>
-            <div class="tm" v-if="m.motif_retour">Motif : {{m.motif_retour}}</div>
-            <div class="tu"><span>{{m.user}}</span><span class="mono">{{fmtDt(m.performed_at)}}</span></div>
-          </div>
+      <div class="circ-hist" v-if="movements.length">
+        <div class="circ-hist-row" v-for="(m,i) in movements" :key="i">
+          <span class="circ-hist-dot" :class="dotClass(m.action)"></span>
+          <span class="circ-hist-step">{{actionLabelsMap[m.action]}}<span v-if="m.motif_retour" class="hist-motif"> · {{m.motif_retour}}</span></span>
+          <span class="circ-hist-who">{{(m.from_service||'?')}} → {{(m.to_service||'?')}} · {{m.user}}</span>
+          <span class="circ-hist-at">{{fmtDt(m.performed_at)}}</span>
         </div>
       </div>
       <div v-else class="em">Aucun mouvement</div>
     </div>
   </div>
+  <div v-else class="loading">Chargement...</div>
 </template>
 <script>
-import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../supabase'
 import { loadPermissions, canPerform } from '../services/permissions'
 import { createNotification } from '../services/notifications'
 export default {
   setup() {
-    var route = useRoute()
+    var route = useRoute(), router = useRouter()
     var doc = ref(null), movements = ref([]), showRetour = ref(false), motif = ref(''), userId = ref(null), retourDest = ref(''), userService = ref('')
     var typeLabels = { if:'IF (Instruction de fabrication)', ic:'IC (Instruction de conditionnement)', da_pc:'DA Physico-chimie', da_micro:'DA Microbiologie', ccl:'CCL (Certificat de Conformité du Lot)', rvp:'RVP', deviation:'Déviation', analyse_risque:'Analyse de risque', autorisation_partenaire:'Autorisation partenaire', autre:'Autre', maj_if:'MàJ IF', maj_ic:'MàJ IC', maj_nmcl_of:'MàJ Nomenclature OF', maj_nmcl_oc:'MàJ Nomenclature OC', cloture_sap_of:'Clôture SAP OF', cloture_sap_oc:'Clôture SAP OC' }
     var actionLabelsMap = { emission:'Émission', transmission:'Transmission', reception:'Réception', retour:'Retour pour rectification', rectification:'Rectification et renvoi', approbation:'Approbation', validation:'Validation Planification', cloture:'Demande de clôture', cloture_confirmee:'Clôture confirmée' }
@@ -125,14 +98,6 @@ export default {
     var isClotSap = computed(function(){ return doc.value && doc.value.type_document && doc.value.type_document.startsWith('cloture_sap_') })
     var isMajDoc = computed(function(){ return doc.value && doc.value.type_document && doc.value.type_document.startsWith('maj_') })
     var isCCL = computed(function(){ return doc.value && doc.value.type_document === 'ccl' })
-    var spClass = computed(function() {
-      var s = doc.value ? doc.value.statut : ''
-      if (s === 'approuve_dt' || s === 'cloture') return 'sp-ok'
-      if (s === 'retour_emetteur') return 'sp-ret'
-      if (s === 'non_emis') return 'sp-wait'
-      if (s === 'approuve_aq' || s === 'valide_planif' || s === 'cloture_demandee') return 'sp-dt'
-      return 'sp-prog'
-    })
 
     var flowClass = function(step) {
       var s = doc.value ? doc.value.statut : ''
@@ -180,7 +145,37 @@ export default {
     }
 
     var fmtDt = function(d) { return d ? new Date(d).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—' }
-    // Permissions selon type de document courant
+
+    // ── Affichage parcours (dérivé de flowClass — logique INCHANGÉE) ──
+    var FC_IND = { 'fs-done':'ind-done', 'fs-active':'ind-prog', 'fs-ret':'ind-ret', 'fs-wait':'ind-wait' }
+    var stepIndClass = function(n){ return FC_IND[flowClass(n)] || 'ind-wait' }
+    var stepDsClass = function(n){ var f=flowClass(n); return f==='fs-done'?'ds-ok':(f==='fs-ret'?'ds-ret':'') }
+    var stepActionable = function(n){ var f=flowClass(n); return f==='fs-active' || f==='fs-ret' }
+    var shortType = computed(function(){ var m={if:'IF',ic:'IC',da_pc:'DA Physico',da_micro:'DA Micro',ccl:'CCL',maj_if:'MàJ IF',maj_ic:'MàJ IC',maj_nmcl_of:'MàJ N. OF',maj_nmcl_oc:'MàJ N. OC',cloture_sap_of:'Clôt. OF',cloture_sap_oc:'Clôt. OC'}; return m[doc.value?doc.value.type_document:'']||'Document' })
+    var steps = computed(function(){
+      if (!doc.value) return []
+      var em = doc.value.service_emetteur || 'Émetteur'
+      if (isCCL.value) return [{n:1,label:'Transmission AQ',service:'AQ'},{n:2,label:'Libération DT',service:'DT'}]
+      if (isClotSap.value) return [{n:1,label:'Demande validation',service:em},{n:2,label:'Validation Planification',service:'Planification'},{n:3,label:'Demande clôture',service:em},{n:4,label:'Clôture',service:'Planification'}]
+      return [{n:1,label:'Émission',service:em},{n:2,label:'Vérification AQ',service:'AQ'},{n:3,label:'Approbation DT',service:'DT'}]
+    })
+    var doneCount = computed(function(){ var c=0; steps.value.forEach(function(s){ if (flowClass(s.n)==='fs-done') c++ }); return c })
+    var stepStatus = function(n){
+      var d = doc.value, f = flowClass(n)
+      if (f==='fs-done'){
+        if (n===1 && d.emitted_at) return '✓ Émis — ' + fmtDt(d.emitted_at)
+        if (n===steps.value.length && !isClotSap.value && d.approved_at) return '✓ Approuvé — ' + fmtDt(d.approved_at)
+        return '✓ Fait'
+      }
+      if (f==='fs-ret') return '↩ Retourné — à rectifier'
+      if (f==='fs-active'){
+        if (d.pending_ar_service && !isClotSap.value && !isMajDoc.value) return '⏳ En attente AR — ' + d.pending_ar_service
+        return 'En cours'
+      }
+      return 'À venir'
+    }
+    var goBack = function(){ router.push('/lots/'+route.params.lotId) }
+
     var canEmit = computed(function(){
       if (!doc.value) return false
       var t = doc.value.type_document
@@ -219,7 +214,7 @@ export default {
     })
     var canRetourner = computed(function(){ return canPerform('retourner_document') })
     var canRectifier = computed(function(){ return canPerform('rectifier_document') })
-    var dotClass = function(a) { return a === 'retour' ? 'dot-ret' : a === 'approbation' ? 'dot-ok' : 'dot-prog' }
+    var dotClass = function(a) { return a === 'retour' ? 'dot-ko' : a === 'approbation' ? 'dot-ok' : 'dot-wait' }
 
     var prepareRetour = function(dest) {
       retourDest.value = dest
@@ -317,16 +312,13 @@ export default {
 
       var docIsCCL = doc.value && doc.value.type_document === 'ccl'
       if (retourDest.value === 'emetteur') {
-        // AQ retourne à l'émetteur
         await supabase.from('liberation_documents').update({ statut: 'retour_emetteur', pending_ar_service: doc.value.service_emetteur || null, updated_at: now }).eq('id', docId)
         await supabase.from('document_movements').insert({ document_id: docId, action: 'retour', from_service: 'aq', to_service: doc.value.service_emetteur, motif_retour: motif.value, performed_by: userId.value, performed_at: now })
       } else if (retourDest.value === 'aq') {
         if (docIsCCL) {
-          // DT retourne le CCL à l'AQ (émetteur) → retour_emetteur avec AR pour AQ
           await supabase.from('liberation_documents').update({ statut: 'retour_emetteur', pending_ar_service: 'aq', updated_at: now }).eq('id', docId)
           await supabase.from('document_movements').insert({ document_id: docId, action: 'retour', from_service: 'dt', to_service: 'aq', motif_retour: motif.value, performed_by: userId.value, performed_at: now })
         } else {
-          // DT retourne à l'AQ (docs standard)
           await supabase.from('liberation_documents').update({ statut: 'verification_aq', pending_ar_service: 'aq', updated_at: now }).eq('id', docId)
           await supabase.from('document_movements').insert({ document_id: docId, action: 'retour', from_service: 'dt', to_service: 'aq', motif_retour: motif.value, performed_by: userId.value, performed_at: now })
         }
@@ -334,7 +326,6 @@ export default {
 
       await supabase.from('lot_events').insert({ lot_id: lotId, event_type: 'document_retour', description: doc.value.type_document.toUpperCase() + ' — retourné vers ' + retourDest.value, triggered_by: userId.value, created_at: now })
 
-      // Notifications
       var lotRes2 = await supabase.from('lots').select('numero_lot').eq('id', lotId).single()
       var lotNum2 = lotRes2.data ? lotRes2.data.numero_lot : ''
       var typeLabel2 = doc.value.type_document.toUpperCase().replace('_', ' ')
@@ -382,60 +373,44 @@ export default {
       if (profileRes.data) { userService.value = profileRes.data.service; await loadPermissions(profileRes.data.service) }
       await loadDoc()
     })
+    // Naviguer directement vers un autre document sans démonter le composant → recharger
+    watch(function(){ return route.params.docId }, function(nv, ov){ if (nv && nv !== ov) loadDoc() })
 
-    return { doc, movements, showRetour, motif, retourDest, userService, typeLabels, actionLabelsMap, statusLabel, spClass, flowClass, fmtDt, dotClass, prepareRetour, doAct, doRetour, doSetApplicable, doAR, canAR, canEmit, canVerify, canApprove, canConfirmClot, canRetourner, canRectifier, isClotSap, isMajDoc, isCCL }
+    return { doc, movements, showRetour, motif, retourDest, userService, typeLabels, actionLabelsMap, statusLabel, fmtDt, dotClass, prepareRetour, doAct, doRetour, doSetApplicable, doAR, canAR, canEmit, canVerify, canApprove, canConfirmClot, canRetourner, canRectifier, isClotSap, isMajDoc, isCCL,
+      shortType, steps, doneCount, stepIndClass, stepDsClass, stepActionable, stepStatus, goBack }
   }
 }
 </script>
 <style scoped>
-.bc{font-size:12px;color:#185FA5;cursor:pointer;margin-bottom:8px}
-.ph{display:flex;justify-content:space-between;align-items:baseline;padding-bottom:10px;border-bottom:2px solid #0a0a0a;flex-wrap:wrap;gap:6px}.pt{font-size:16px;font-weight:500}
-.sp{font-size:11px;padding:3px 10px;border-radius:2px;font-weight:500}
-.sp-ok{background:#EAF3DE;color:#3B6D11}.sp-ret{background:#FCEBEB;color:#A32D2D}.sp-wait{background:#f5f5f5;color:#999}.sp-prog{background:#E6F1FB;color:#0C447C}.sp-dt{background:#FAEEDA;color:#854F0B}
-.info{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid #e8e8e8;margin:12px 0;font-size:13px}
-.ic{padding:10px;border-right:1px solid #e8e8e8}.ic:last-child{border-right:none}.il{display:block;font-size:10px;color:#999;text-transform:uppercase;margin-bottom:2px}.mono{font-family:'SF Mono',monospace;font-size:12px}
-.flow{display:flex;align-items:center;gap:0;margin:16px 0;border:1px solid #e8e8e8;border-radius:2px;overflow:hidden}
-.flow-step{flex:1;padding:10px 12px;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px}
-.flow-arrow{padding:0 4px;color:#ccc;font-size:14px}
-.fs-num{width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0}
-.fs-label{font-size:12px}
-.fs-done{background:#EAF3DE}.fs-done .fs-num{background:#1D9E75;color:#fff}.fs-done .fs-label{color:#3B6D11}
-.fs-active{background:#E6F1FB}.fs-active .fs-num{background:#185FA5;color:#fff}.fs-active .fs-label{color:#0C447C;font-weight:500}
-.fs-wait{background:#fafafa}.fs-wait .fs-num{background:#e8e8e8;color:#999}.fs-wait .fs-label{color:#999}
-.fs-ret{background:#FCEBEB}.fs-ret .fs-num{background:#E24B4A;color:#fff}.fs-ret .fs-label{color:#A32D2D}
-.na-bloc{display:flex;align-items:flex-start;gap:12px;padding:16px;border:1px solid #ddd;border-radius:4px;margin:12px 0;background:#fafafa}
-.na-info{background:#f5f5f5}.na-icon{font-size:28px;flex-shrink:0}.na-msg{flex:1;font-size:13px;line-height:1.5;color:#555}.na-msg strong{color:#333}
+.bc{font-size:12px;color:#7c3aed;cursor:pointer;margin-bottom:8px}
+.lh{display:flex;align-items:center;justify-content:space-between;padding-bottom:8px;border-bottom:1px solid #e5e7eb;flex-wrap:wrap;gap:8px}
+.lh-right{display:flex;align-items:center;gap:6px}
+.ln{font-size:22px;font-weight:500}.lp{font-size:13px;color:#666;margin-left:10px}
+.ttl{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#7c3aed;background:#f5f3ff;border:1px solid #ede9fe;padding:4px 12px;border-radius:3px}
+.loading{text-align:center;padding:60px;color:#999}
+.section{margin-top:16px}.sh{display:flex;justify-content:space-between;align-items:center;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:#999;padding-bottom:6px;border-bottom:1px solid #e8e8e8}
+.dc{font-family:'SF Mono',monospace;color:#BA7517}
+.dg{display:grid;grid-template-columns:1fr 1fr;border:1px solid #e8e8e8}
+.dg-1{grid-template-columns:1fr}
+.di{padding:10px 12px;border-right:1px solid #e8e8e8;border-bottom:1px solid #e8e8e8;display:flex;gap:10px}.dg-1 .di{border-right:none}.di:last-child{border-bottom:none}
+.dind{width:3px;min-height:36px;border-radius:1px;flex-shrink:0}.ind-wait{background:#e8e8e8}.ind-prog{background:#7c3aed}.ind-done{background:#1D9E75}.ind-ret{background:#E24B4A}
+.di-body{flex:1;min-width:0}
+.dn{font-size:13px;font-weight:500}.ds{font-size:11px;color:#999;margin-top:1px}.ds-ok{color:#1D9E75}.ds-ret{color:#E24B4A}
+.di-svc{font-size:10px;color:#bbb;margin-top:2px}
+.step-acts{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center}
+.step-wait{font-size:11px;color:#BA7517;font-weight:500}
+.btn{font-size:11px;padding:6px 14px;border-radius:3px;border:none;cursor:pointer;font-weight:600;background:#7c3aed;color:#fff}.btn:hover{opacity:.9}
+.br{background:#E24B4A}.bg{background:#1D9E75}.bc2{background:#ece9f7;color:#7c3aed}
+.rb{border:1px solid #E24B4A;padding:14px;margin:12px 0;border-radius:3px}.rb label{font-size:12px;font-weight:500;display:block;margin-bottom:6px}.rb textarea{width:100%;border:1px solid #ddd;padding:8px;font-size:13px;box-sizing:border-box;resize:vertical;font-family:inherit;background:var(--th-input-bg,#fff);color:inherit}.ra{display:flex;gap:8px;margin-top:8px}
+.na-bloc{display:flex;align-items:flex-start;gap:12px;padding:14px;border:1px solid #e8e8e8;border-radius:4px;margin:12px 0}
+.na-info{opacity:.85}.na-icon{font-size:26px;flex-shrink:0}.na-msg{flex:1;font-size:13px;line-height:1.5;color:#999}.na-msg strong{color:inherit}
 .na-bloc .btn{margin-top:10px;white-space:nowrap;flex-shrink:0}
-.ar-pending{font-size:12px;color:#BA7517;font-weight:500;align-self:center}
-.actions{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;align-items:center}.btn{font-size:12px;padding:8px 18px;border-radius:2px;border:none;cursor:pointer;font-weight:500;background:#185FA5;color:#fff;min-height:40px}.btn:hover{opacity:.9}.br{background:#E24B4A}.bg{background:#1D9E75}.bc2{background:#f5f5f5;color:#666}
-.rb{border:1px solid #E24B4A;padding:14px;margin:12px 0;border-radius:2px}.rb label{font-size:12px;font-weight:500;display:block;margin-bottom:6px}.rb textarea{width:100%;border:1px solid #ddd;padding:8px;font-size:13px;box-sizing:border-box;resize:vertical;font-family:inherit}.ra{display:flex;gap:8px;margin-top:8px}
-.section{margin-top:20px}.sh{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:#999;padding-bottom:6px;border-bottom:1px solid #e8e8e8}
-.tl{padding:12px 0 0 20px;position:relative}.ti{position:relative;padding-bottom:20px;padding-left:16px}.ti:last-child{padding-bottom:0}
-.td{width:10px;height:10px;border-radius:50%;position:absolute;left:-5px;top:4px}.dot-ok{background:#1D9E75}.dot-ret{background:#E24B4A}.dot-prog{background:#185FA5}
-.tln{position:absolute;left:0;top:18px;bottom:0;width:1px;background:#e8e8e8}
-.ta{font-size:14px;font-weight:500}.tt{font-size:12px;color:#666}.tm{font-size:12px;color:#E24B4A;margin-top:2px}
-.tu{display:flex;gap:12px;margin-top:4px;font-size:11px;color:#999;flex-wrap:wrap}
+.circ-hist{margin-top:10px;border:1px solid #e8e8e8;padding:8px 12px;display:flex;flex-direction:column;gap:2px}
+.circ-hist-row{display:flex;align-items:center;gap:8px;font-size:11px;padding:4px 0;border-bottom:1px solid #f8f8f8}.circ-hist-row:last-child{border-bottom:none}
+.circ-hist-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;background:#bbb}.dot-ok{background:#1D9E75}.dot-ko{background:#E24B4A}.dot-wait{background:#7c3aed}
+.circ-hist-step{font-weight:500;flex:1}.hist-motif{font-weight:400;color:#E24B4A}
+.circ-hist-who{color:#999}
+.circ-hist-at{font-family:'SF Mono',monospace;font-size:10px;color:#bbb}
 .em{text-align:center;padding:16px;color:#999;font-size:12px}
-@media(max-width:768px){
-  .info{grid-template-columns:1fr 1fr}
-  .ic:nth-child(2){border-right:none}
-  .ic:nth-child(3){border-top:1px solid #e8e8e8;grid-column:span 2}
-  .flow-step{flex-direction:column;gap:4px;padding:8px 6px}
-  .fs-label{font-size:10px}
-  .flow-arrow{font-size:10px;padding:0 2px}
-  .actions{flex-direction:column;gap:6px}
-  .btn{width:100%;padding:12px 18px;min-height:44px;font-size:13px;text-align:center}
-  .ra{flex-direction:column}
-  .ra .btn{width:100%}
-  .pt{font-size:14px}
-}
-@media(max-width:480px){
-  .info{grid-template-columns:1fr}
-  .ic{border-right:1px solid #e8e8e8;border-top:1px solid #e8e8e8}
-  .ic:first-child{border-top:none}
-  .ic:nth-child(2){border-right:1px solid #e8e8e8}
-  .ic:nth-child(3){grid-column:unset}
-  .tl{padding-left:12px}
-  .ta{font-size:13px}
-}
+@media(max-width:768px){.dg{grid-template-columns:1fr}.step-acts{flex-direction:column;align-items:stretch}.btn{width:100%;text-align:center;padding:10px 14px}.ra{flex-direction:column}.ra .btn{width:100%}}
 </style>
