@@ -3,7 +3,7 @@
     <div class="bc"><span @click="goBack">← Retour au lot</span></div>
     <div class="lh">
       <div class="lh-info">
-        <div class="lh-type"><span class="lt-short">{{shortType}}</span> <span class="lt-full">({{typeFull}})</span></div>
+        <div class="lh-type"><span class="lt-short">{{shortType}}</span> <span class="lt-full" v-if="typeFull">({{typeFull}})</span></div>
         <div class="lh-lot"><span class="ll-num">{{lotNum}}</span><span class="ll-prod">{{prodDesc}}</span></div>
       </div>
       <div class="lh-right"><span class="ttl">{{statusLabel}}</span></div>
@@ -137,9 +137,16 @@ export default {
     var stepIndClass = function(n){ return FC_IND[flowClass(n)] || 'ind-wait' }
     var stepDsClass = function(n){ var f=flowClass(n); return f==='fs-done'?'ds-ok':(f==='fs-ret'?'ds-ret':'') }
     var stepActionable = function(n){ var f=flowClass(n); return f==='fs-active' || f==='fs-ret' }
-    var shortType = computed(function(){ var m={if:'IF',ic:'IC',da_pc:'DA Physico',da_micro:'DA Micro',ccl:'CCL',maj_if:'MàJ IF',maj_ic:'MàJ IC',maj_nmcl_of:'MàJ N. OF',maj_nmcl_oc:'MàJ N. OC',cloture_sap_of:'Clôt. OF',cloture_sap_oc:'Clôt. OC'}; return m[doc.value?doc.value.type_document:'']||'Document' })
+    var RVP_SVC = {fabrication:'Fab',conditionnement:'Cond',lcq:'LCQ'}
+    var shortType = computed(function(){
+      if(!doc.value) return 'Document'
+      var t = doc.value.type_document
+      if(t==='rvp') return 'RVP '+(RVP_SVC[doc.value.service_emetteur]||doc.value.service_emetteur||'')
+      var m={if:'IF',ic:'IC',da_pc:'DA Physico',da_micro:'DA Micro',ccl:'CCL',maj_if:'MàJ IF',maj_ic:'MàJ IC',maj_nmcl_of:'MàJ N. OF',maj_nmcl_oc:'MàJ N. OC',cloture_sap_of:'Clôt. OF',cloture_sap_oc:'Clôt. OC'}
+      return m[t]||'Document'
+    })
     var TYPE_FULL = {if:'Instruction de fabrication',ic:'Instruction de conditionnement',da_pc:'Dossier analytique physico-chimie',da_micro:'Dossier analytique microbiologie',ccl:'Certificat de conformité du lot',maj_if:'Mise à jour IF',maj_ic:'Mise à jour IC',maj_nmcl_of:'MàJ nomenclature OF',maj_nmcl_oc:'MàJ nomenclature OC',cloture_sap_of:'Clôture SAP OF',cloture_sap_oc:'Clôture SAP OC'}
-    var typeFull = computed(function(){ return TYPE_FULL[doc.value?doc.value.type_document:''] || 'Document' })
+    var typeFull = computed(function(){ return TYPE_FULL[doc.value?doc.value.type_document:''] || '' })
     var steps = computed(function(){
       if (!doc.value) return []
       var em = doc.value.service_emetteur || 'Émetteur'
