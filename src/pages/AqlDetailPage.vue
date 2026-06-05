@@ -2,8 +2,11 @@
   <div v-if="lot">
     <div class="bc"><span @click="goBack">← Retour au lot</span></div>
     <div class="lh">
-      <div><span class="ln">{{lot.numero_lot}}</span><span class="lp">{{prod.description}}</span></div>
-      <div class="lh-right"><span class="ttl">AQL {{typeLabel}}</span><span class="ttl-full">(Acceptable quality level)</span></div>
+      <div class="lh-info">
+        <div class="lh-type"><span class="lt-short">AQL {{typeLabel}}</span> <span class="lt-full">(Acceptable quality level)</span></div>
+        <div class="lh-lot"><span class="ll-num">{{lot.numero_lot}}</span><span class="ll-prod">{{prod.description}}</span></div>
+      </div>
+      <div class="lh-right"><span class="ttl">{{statusLabel}}</span></div>
     </div>
 
     <div v-if="loading" class="detail-reloading">⟳ Actualisation…</div>
@@ -69,6 +72,13 @@ export default {
     ]
     // Inspection courante = la plus récente (les relances créent une nouvelle ligne)
     var cur = computed(function(){ return aqls.value.length ? aqls.value[0] : null })
+    var statusLabel = computed(function(){
+      var a = cur.value; if(!a) return 'À demander'
+      if(a.request_ar_pending) return 'En attente AR demande'
+      if(a.resultat==='en_attente') return 'À réaliser'
+      if(a.result_ar_pending) return 'En attente AR résultat'
+      return a.resultat==='conforme' ? 'Conforme' : 'Non conforme'
+    })
 
     var fmtDt = function(d){ return d ? new Date(d).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '' }
 
@@ -176,7 +186,7 @@ export default {
     // Naviguer directement vers un autre AQL/lot (type ou lotId figés à la création) → recharger
     watch(function(){ return route.params.lotId + '|' + route.params.type }, function(nv, ov){ if (nv !== ov) location.reload() })
 
-    return { lot, prod, aqls, loading, type, typeLabel, steps, userService, isAdmin, cur, doneCount, allDone,
+    return { lot, prod, aqls, loading, type, typeLabel, steps, userService, isAdmin, cur, doneCount, allDone, statusLabel,
       stepIndClass, dsClass, stepStatus, stepClickable, stepClick, realisationActionable, relanceActionable,
       doConforme, doNonConforme, doRelance, fmtDt, goBack, canPerform }
   }
@@ -184,11 +194,12 @@ export default {
 </script>
 <style scoped>
 .bc{font-size:12px;color:#7c3aed;cursor:pointer;margin-bottom:8px}
-.lh{display:flex;align-items:center;justify-content:space-between;padding-bottom:8px;border-bottom:1px solid #e5e7eb;flex-wrap:wrap;gap:8px}
-.lh-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
-.ttl-full{font-size:10px;color:#999}
-.ln{font-size:22px;font-weight:500;font-family:'SF Mono',monospace}.lp{font-size:13px;color:#666;margin-left:10px}
-.ttl{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#7c3aed;background:#f5f3ff;border:1px solid #ede9fe;padding:4px 12px;border-radius:3px}
+.lh{display:flex;align-items:flex-start;justify-content:space-between;padding-bottom:10px;border-bottom:1px solid #e5e7eb;flex-wrap:wrap;gap:10px}
+.lh-info{display:flex;flex-direction:column;gap:4px;min-width:0}
+.lh-type{font-size:17px;line-height:1.25}.lt-short{font-weight:700}.lt-full{font-size:13px;color:#999;font-weight:400}
+.lh-lot{font-size:13px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}.ll-num{font-family:'SF Mono',monospace;font-weight:600;font-size:15px}.ll-prod{color:#999}
+.lh-right{flex-shrink:0}
+.ttl{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#7c3aed;background:#f5f3ff;border:1px solid #ede9fe;padding:4px 12px;border-radius:3px;white-space:nowrap}
 .loading{text-align:center;padding:60px;color:#999}
 .detail-reloading{font-size:11px;color:#999;padding:4px 0 6px;letter-spacing:.3px;animation:spin-txt 1s linear infinite}
 @keyframes spin-txt{0%{opacity:1}50%{opacity:.4}100%{opacity:1}}

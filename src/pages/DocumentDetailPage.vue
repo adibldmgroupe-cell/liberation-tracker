@@ -2,7 +2,10 @@
   <div v-if="doc">
     <div class="bc"><span @click="goBack">← Retour au lot</span></div>
     <div class="lh">
-      <div><span class="ln">{{shortType}}</span><span class="lp">{{typeLabels[doc.type_document]}}</span></div>
+      <div class="lh-info">
+        <div class="lh-type"><span class="lt-short">{{shortType}}</span> <span class="lt-full">({{typeFull}})</span></div>
+        <div class="lh-lot"><span class="ll-num">{{lotNum}}</span><span class="ll-prod">{{prodDesc}}</span></div>
+      </div>
       <div class="lh-right"><span class="ttl">{{statusLabel}}</span></div>
     </div>
 
@@ -73,6 +76,7 @@ export default {
   setup() {
     var route = useRoute(), router = useRouter()
     var doc = ref(null), movements = ref([]), showRetour = ref(false), motif = ref(''), userId = ref(null), retourDest = ref(''), userService = ref('')
+    var lotNum = ref(''), prodDesc = ref('')
     var typeLabels = { if:'IF (Instruction de fabrication)', ic:'IC (Instruction de conditionnement)', da_pc:'DA Physico-chimie (Dossier analytique)', da_micro:'DA Microbiologie (Dossier analytique)', ccl:'CCL (Certificat de Conformité du Lot)', rvp:'RVP', deviation:'Déviation', analyse_risque:'Analyse de risque', autorisation_partenaire:'Autorisation partenaire', autre:'Autre', maj_if:'MàJ IF', maj_ic:'MàJ IC', maj_nmcl_of:'MàJ Nomenclature OF', maj_nmcl_oc:'MàJ Nomenclature OC', cloture_sap_of:'Clôture SAP OF', cloture_sap_oc:'Clôture SAP OC' }
     var actionLabelsMap = { emission:'Émission', transmission:'Transmission', reception:'Réception', retour:'Retour pour rectification', rectification:'Rectification et renvoi', approbation:'Approbation', validation:'Validation Planification', cloture:'Demande de clôture', cloture_confirmee:'Clôture confirmée' }
     var statusMap = { non_emis:'Non émis', emis:'Émis — en attente', verification_aq:'En cours de vérification AQ', retour_emetteur:'Retourné à l\'émetteur', rectification:'En cours de rectification', approuve_aq:'Vérifié AQ — en attente DT', approbation_dt:'En cours d\'approbation DT', approuve_dt:'Approuvé DT', valide_planif:'Validé Planif. — en attente demande clôture', cloture_demandee:'Clôture demandée — en attente confirmation', cloture:'Clôturé' }
@@ -134,6 +138,8 @@ export default {
     var stepDsClass = function(n){ var f=flowClass(n); return f==='fs-done'?'ds-ok':(f==='fs-ret'?'ds-ret':'') }
     var stepActionable = function(n){ var f=flowClass(n); return f==='fs-active' || f==='fs-ret' }
     var shortType = computed(function(){ var m={if:'IF',ic:'IC',da_pc:'DA Physico',da_micro:'DA Micro',ccl:'CCL',maj_if:'MàJ IF',maj_ic:'MàJ IC',maj_nmcl_of:'MàJ N. OF',maj_nmcl_oc:'MàJ N. OC',cloture_sap_of:'Clôt. OF',cloture_sap_oc:'Clôt. OC'}; return m[doc.value?doc.value.type_document:'']||'Document' })
+    var TYPE_FULL = {if:'Instruction de fabrication',ic:'Instruction de conditionnement',da_pc:'Dossier analytique physico-chimie',da_micro:'Dossier analytique microbiologie',ccl:'Certificat de conformité du lot',maj_if:'Mise à jour IF',maj_ic:'Mise à jour IC',maj_nmcl_of:'MàJ nomenclature OF',maj_nmcl_oc:'MàJ nomenclature OC',cloture_sap_of:'Clôture SAP OF',cloture_sap_oc:'Clôture SAP OC'}
+    var typeFull = computed(function(){ return TYPE_FULL[doc.value?doc.value.type_document:''] || 'Document' })
     var steps = computed(function(){
       if (!doc.value) return []
       var em = doc.value.service_emetteur || 'Émetteur'
@@ -386,6 +392,13 @@ export default {
     var loadDoc = async function() {
       var res = await supabase.from('liberation_documents').select('*').eq('id', route.params.docId).single()
       doc.value = res.data
+      if (!lotNum.value) {
+        var lotR = await supabase.from('lots').select('numero_lot, product_id').eq('id', route.params.lotId).single()
+        if (lotR.data) {
+          lotNum.value = lotR.data.numero_lot
+          if (lotR.data.product_id) { var pR = await supabase.from('products').select('description').eq('id', lotR.data.product_id).single(); prodDesc.value = pR.data ? pR.data.description : '' }
+        }
+      }
       var mvtRes = await supabase.from('document_movements').select('*, profiles(prenom,nom)').eq('document_id', route.params.docId).order('performed_at')
       movements.value = (mvtRes.data||[]).map(function(m) { return { action: m.action, from_service: m.from_service, to_service: m.to_service, motif_retour: m.motif_retour, user: m.profiles ? m.profiles.prenom + ' ' + m.profiles.nom : '', performed_at: m.performed_at } })
     }
@@ -401,16 +414,18 @@ export default {
     watch(function(){ return route.params.docId }, function(nv, ov){ if (nv && nv !== ov) loadDoc() })
 
     return { doc, movements, showRetour, motif, retourDest, userService, typeLabels, actionLabelsMap, statusLabel, fmtDt, dotClass, prepareRetour, doAct, doRetour, doSetApplicable, doAR, canAR, canEmit, canVerify, canApprove, canConfirmClot, canRetourner, canRectifier, isClotSap, isMajDoc, isCCL,
-      shortType, steps, doneCount, stepIndClass, stepDsClass, stepActionable, stepStatus, stepClickable, stepClick, retourAct, goBack }
+      shortType, typeFull, lotNum, prodDesc, steps, doneCount, stepIndClass, stepDsClass, stepActionable, stepStatus, stepClickable, stepClick, retourAct, goBack }
   }
 }
 </script>
 <style scoped>
 .bc{font-size:12px;color:#7c3aed;cursor:pointer;margin-bottom:8px}
-.lh{display:flex;align-items:center;justify-content:space-between;padding-bottom:8px;border-bottom:1px solid #e5e7eb;flex-wrap:wrap;gap:8px}
-.lh-right{display:flex;align-items:center;gap:6px}
-.ln{font-size:22px;font-weight:500}.lp{font-size:13px;color:#666;margin-left:10px}
-.ttl{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#7c3aed;background:#f5f3ff;border:1px solid #ede9fe;padding:4px 12px;border-radius:3px}
+.lh{display:flex;align-items:flex-start;justify-content:space-between;padding-bottom:10px;border-bottom:1px solid #e5e7eb;flex-wrap:wrap;gap:10px}
+.lh-info{display:flex;flex-direction:column;gap:4px;min-width:0}
+.lh-type{font-size:17px;line-height:1.25}.lt-short{font-weight:700}.lt-full{font-size:13px;color:#999;font-weight:400}
+.lh-lot{font-size:13px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}.ll-num{font-family:'SF Mono',monospace;font-weight:600;font-size:15px}.ll-prod{color:#999}
+.lh-right{flex-shrink:0}
+.ttl{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#7c3aed;background:#f5f3ff;border:1px solid #ede9fe;padding:4px 12px;border-radius:3px;white-space:nowrap}
 .loading{text-align:center;padding:60px;color:#999}
 .section{margin-top:16px}.sh{display:flex;justify-content:space-between;align-items:center;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:#999;padding-bottom:6px;border-bottom:1px solid #e8e8e8}
 .dc{font-family:'SF Mono',monospace;color:#BA7517}
