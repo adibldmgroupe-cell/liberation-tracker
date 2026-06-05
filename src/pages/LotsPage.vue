@@ -140,7 +140,7 @@
           <!-- Dynamic columns driven by visibleCols order -->
           <template v-for="ck in visibleCols" :key="'h-'+ck">
             <th><div class="th-i">
-              <span class="th-txt" :class="{'sortable':CC[ck].s}" @click="CC[ck].s?sortBy(CC[ck].s):null">{{CC[ck].l2&&showDates?CC[ck].l2:CC[ck].l}} <span v-if="CC[ck].s" class="sort-arrow">{{sortIcon(CC[ck].s)}}</span></span>
+              <span class="th-txt" :class="{'sortable':sortKeyFor(ck)}" @click="sortKeyFor(ck)?sortBy(sortKeyFor(ck)):null">{{CC[ck].l2&&showDates?CC[ck].l2:CC[ck].l}} <span v-if="sortKeyFor(ck)" class="sort-arrow">{{sortIcon(sortKeyFor(ck))}}</span></span>
               <button class="th-f" :class="{'th-f-on':columnFilters[CC[ck].f]}" @click="openDropdown(CC[ck].f,$event)">⌄</button>
             </div></th>
           </template>
@@ -1729,19 +1729,22 @@ var loadCharge = async function() {
         var col=sortCol.value,dir=sortDir.value
         // Convertit dd/mm/yyyy → timestamp pour tri chronologique
         var parseFrDate=function(s){if(!s||s==='—')return 0;var p=s.split('/');return p.length===3?new Date(p[2],p[1]-1,p[0]).getTime():0}
+        var FR_DATE=/^\d{2}\/\d{2}\/\d{4}$/
         result=result.slice().sort(function(a,b){
-          var va=a[col]||'',vb=b[col]||''
+          var va=a[col],vb=b[col]
           // Tri numérique pour le numéro de lot
           if(col==='numero_lot'){var na=parseInt(va)||0,nb=parseInt(vb)||0;return dir==='asc'?na-nb:nb-na}
-          // Tri chronologique pour les colonnes de dates (format dd/mm/yyyy)
-          if(col==='date_fmt'||col==='date_lib'||col==='plan_dt1'||col==='plan_dt2'||col==='plan_aq'||col==='plan_lcq'){
-            var da=parseFrDate(String(va)),db=parseFrDate(String(vb))
+          var sa=va==null?'':String(va), sb=vb==null?'':String(vb)
+          // Tri chronologique dès qu'une valeur est une date jj/mm/aaaa
+          // (Réception, Libération, et dates des colonnes docs en mode « Voir dates »).
+          if(FR_DATE.test(sa)||FR_DATE.test(sb)){
+            var da=FR_DATE.test(sa)?parseFrDate(sa):0, db=FR_DATE.test(sb)?parseFrDate(sb):0
             if(da!==db)return dir==='asc'?da-db:db-da
             return 0
           }
-          if(typeof va==='string')va=va.toLowerCase()
-          if(typeof vb==='string')vb=vb.toLowerCase()
-          if(va<vb)return dir==='asc'?-1:1;if(va>vb)return dir==='asc'?1:-1;return 0
+          // Sinon : tri chaîne (statuts, ISO plan_*_raw qui se trie chronologiquement…)
+          sa=sa.toLowerCase(); sb=sb.toLowerCase()
+          if(sa<sb)return dir==='asc'?-1:1;if(sa>sb)return dir==='asc'?1:-1;return 0
         })
       }
       return result
@@ -1753,6 +1756,13 @@ var loadCharge = async function() {
 
     var sortBy = function(col){if(sortCol.value===col){sortDir.value=sortDir.value==='asc'?'desc':'asc'}else{sortCol.value=col;sortDir.value='asc'}}
     var sortIcon = function(col){if(sortCol.value!==col)return'↕';return sortDir.value==='asc'?'↑':'↓'}
+    // Clé de tri d'une colonne dynamique : colonnes documentaires (doc/ofoc) → tri par DATE quand
+    // « Voir dates » est actif, sinon par STATUT (label). Les autres colonnes gardent leur clé.
+    var sortKeyFor = function(ck){
+      var c = CC[ck]; if(!c) return null
+      if((c.r==='doc'||c.r==='ofoc') && c.dp) return showDates.value ? c.dp : (c.lp||c.s||null)
+      return c.s||null
+    }
     var goToLot = function(id){var query={};if(route.query.q)query.q=route.query.q;router.push({path:'/lots/'+id,query:query})}
 
     var exportCols=[
@@ -2201,7 +2211,7 @@ var loadCharge = async function() {
     }
 
     return{lots,total,lotsLoading,hiddenStatuts,toggleStatutVisibility,showStatutPanel,showDates,filteredLots,pagedLots,tablePage,totalPages,filterOptions,
-      sortBy,sortIcon,goToLot,doExportExcel,doExportPDF,selectAllStatuts,deselectAllStatuts,onlyLiberable,
+      sortBy,sortIcon,sortKeyFor,goToLot,doExportExcel,doExportPDF,selectAllStatuts,deselectAllStatuts,onlyLiberable,
       selected,actionType,showConfirm,executing,progress,execResult,bulkDate,
       actionLabel,canExecute,allVisibleChecked,someVisibleChecked,
       isSelected,toggleLot,toggleAll,getLotNum,executeAction,
