@@ -19,9 +19,9 @@
       <div class="na-msg">Ce document est marqué <strong>Non applicable</strong> pour ce lot.</div>
     </div>
 
-    <!-- Parcours du document (même affichage que circuits / AQL) -->
+    <!-- Circuit du document (même affichage que circuits OF/OC / AQL) -->
     <div class="section" v-if="doc.is_applicable">
-      <div class="sh"><span>Parcours {{shortType}}</span><span class="dc">{{doneCount}}/{{steps.length}}</span></div>
+      <div class="sh"><span>Étapes du circuit {{shortType}}</span><span class="dc">{{doneCount}}/{{steps.length}}</span></div>
       <div class="dg dg-1">
         <div class="di" v-for="(s,idx) in steps" :key="s.n" :class="{'di-act': stepClickable(s.n)}" @click="stepClick(s.n)">
           <div class="dind" :class="stepIndClass(s.n)"></div>

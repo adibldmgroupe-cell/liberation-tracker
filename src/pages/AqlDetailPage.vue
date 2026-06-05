@@ -3,14 +3,14 @@
     <div class="bc"><span @click="goBack">← Retour au lot</span></div>
     <div class="lh">
       <div><span class="ln">{{lot.numero_lot}}</span><span class="lp">{{prod.description}}</span></div>
-      <div class="lh-right"><span class="ttl">AQL {{typeLabel}}</span><span class="ttl-full">Acceptable quality level</span></div>
+      <div class="lh-right"><span class="ttl">AQL {{typeLabel}}</span><span class="ttl-full">(Acceptable quality level)</span></div>
     </div>
 
     <div v-if="loading" class="detail-reloading">⟳ Actualisation…</div>
 
     <!-- Étapes du parcours AQL -->
     <div class="section">
-      <div class="sh"><span>Parcours AQL {{typeLabel}}</span><span class="dc" :class="cur && cur.resultat==='non_conforme' && allDone?'dc-ko':''">{{doneCount}}/{{steps.length}}</span></div>
+      <div class="sh"><span>Étapes du circuit AQL {{typeLabel}}</span><span class="dc" :class="cur && cur.resultat==='non_conforme' && allDone?'dc-ko':''">{{doneCount}}/{{steps.length}}</span></div>
       <div class="dg dg-1">
         <div class="di" v-for="(e,idx) in steps" :key="e.key" :class="{'di-act':stepClickable(e.key)}" @click="stepClick(e.key)">
           <div class="dind" :class="stepIndClass(e.key)"></div>
