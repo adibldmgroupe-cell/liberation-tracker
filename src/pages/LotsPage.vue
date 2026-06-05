@@ -733,7 +733,7 @@ export default {
 
       // Relations récupérées par lots de 100 IDs (évite URL trop longue sur .in())
       var chunk=function(arr,size){var out=[];for(var ci=0;ci<arr.length;ci+=size){out.push(arr.slice(ci,ci+size))}return out}
-      var idChunks=chunk(lotIds,100)
+      var idChunks=chunk(lotIds,500)
       var fetchRel=function(table,cols){
         return Promise.all(idChunks.map(function(ids){return supabase.from(table).select(cols).in('lot_id',ids)}))
           .then(function(res){var all=[];res.forEach(function(r){if(r.data)all=all.concat(r.data)});return all})
