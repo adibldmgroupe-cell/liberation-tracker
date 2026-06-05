@@ -22,9 +22,19 @@
             <div class="ds" :class="dsClass(e.key)">{{stepStatus(e.key)}}</div>
             <div class="di-svc">Service : {{e.service}}</div>
             <div v-if="e.key==='realisation' && realisationActionable" class="aql-choice" @click.stop>
-              <button class="btn-c" @click="doConforme">✓ Conforme</button>
-              <button class="btn-nc" @click="doNonConforme">✗ Non conforme</button>
+              <template v-if="!showNc">
+                <button class="btn-c" @click="doConforme">✓ Conforme</button>
+                <button class="btn-nc" @click="showNc=true">✗ Non conforme</button>
+              </template>
+              <div v-else class="aql-nc">
+                <textarea v-model="ncMotif" rows="2" placeholder="Observation / motif de la non-conformité…"></textarea>
+                <div class="aql-nc-acts">
+                  <button class="btn-nc" @click="doNonConforme">✗ Confirmer la non-conformité</button>
+                  <button class="btn-cancel" @click="showNc=false;ncMotif=''">Annuler</button>
+                </div>
+              </div>
             </div>
+            <div v-if="e.key==='realisation' && cur && cur.avis_aq" class="aql-obs">📝 Observation : {{cur.avis_aq}}</div>
             <div v-if="e.key==='ar_resultat' && relanceActionable" class="aql-choice" @click.stop>
               <button class="btn-relance" @click="doRelance">↻ Relancer un nouvel AQL</button>
             </div>
@@ -39,7 +49,7 @@
       <div class="circ-hist">
         <div class="circ-hist-row" v-for="a in aqls" :key="a.id">
           <span class="circ-hist-dot" :class="a.resultat==='conforme'?'dot-ok':a.resultat==='non_conforme'?'dot-ko':'dot-wait'"></span>
-          <span class="circ-hist-step">{{a.resultat==='en_attente'?'En attente':a.resultat==='conforme'?'Conforme':'Non conforme'}}</span>
+          <span class="circ-hist-step">{{a.resultat==='en_attente'?'En attente':a.resultat==='conforme'?'Conforme':'Non conforme'}}<span v-if="a.avis_aq" class="hist-obs"> — {{a.avis_aq}}</span></span>
           <span class="circ-hist-who">Demandé {{fmtDt(a.requested_at)}}</span>
           <span class="circ-hist-at">{{a.inspected_at?'Réalisé '+fmtDt(a.inspected_at):''}}</span>
         </div>
@@ -63,6 +73,7 @@ export default {
     var typeLabel = computed(function(){ return svcEm })
     var lot = ref(null), prod = ref({}), aqls = ref([])
     var loading = ref(false), userId = ref(null), userService = ref('')
+    var showNc = ref(false), ncMotif = ref('')
     var isAdmin = computed(function(){ return userService.value === 'admin' })
     var steps = [
       {key:'demande',     label:'Demande AQL',                 service: svcEm},
@@ -154,7 +165,7 @@ export default {
     var doDemande = async function(){ await requestAql(lot.value.id, type, userId.value); await load() }
     var doArDemande = async function(){ var e = await acknowledgeAqlRequest(cur.value.id, userId.value, lot.value.id); if(e){alert('Erreur : '+(e.message||e));return} await load() }
     var doConforme = async function(){ await respondAql(cur.value.id, 'conforme', '', userId.value, lot.value.id); await load() }
-    var doNonConforme = async function(){ await respondAql(cur.value.id, 'non_conforme', '', userId.value, lot.value.id); await load() }
+    var doNonConforme = async function(){ await respondAql(cur.value.id, 'non_conforme', ncMotif.value||'', userId.value, lot.value.id); showNc.value=false; ncMotif.value=''; await load() }
     var doArResultat = async function(){ var e = await acknowledgeAqlResult(cur.value.id, userId.value, lot.value.id); if(e){alert('Erreur : '+(e.message||e));return} await load() }
     var doRelance = async function(){ await requestAql(lot.value.id, type, userId.value); await load() }
 
@@ -186,7 +197,7 @@ export default {
     // Naviguer directement vers un autre AQL/lot (type ou lotId figés à la création) → recharger
     watch(function(){ return route.params.lotId + '|' + route.params.type }, function(nv, ov){ if (nv !== ov) location.reload() })
 
-    return { lot, prod, aqls, loading, type, typeLabel, steps, userService, isAdmin, cur, doneCount, allDone, statusLabel,
+    return { lot, prod, aqls, loading, type, typeLabel, steps, userService, isAdmin, cur, doneCount, allDone, statusLabel, showNc, ncMotif,
       stepIndClass, dsClass, stepStatus, stepClickable, stepClick, realisationActionable, relanceActionable,
       doConforme, doNonConforme, doRelance, fmtDt, goBack, canPerform }
   }
@@ -218,6 +229,12 @@ export default {
 .btn-c{background:#1D9E75;color:#fff}.btn-c:hover{background:#178a65}
 .btn-nc{background:#E24B4A;color:#fff}.btn-nc:hover{background:#c93f3e}
 .btn-relance{background:transparent;border:1px solid #7c3aed;color:#7c3aed}.btn-relance:hover{background:#f5f3ff}
+.aql-nc{width:100%;margin-top:2px}
+.aql-nc textarea{width:100%;border:1px solid #E24B4A;border-radius:3px;padding:6px;font-size:12px;font-family:inherit;box-sizing:border-box;resize:vertical;background:var(--th-input-bg,#fff);color:inherit}
+.aql-nc-acts{display:flex;gap:8px;margin-top:6px}
+.btn-cancel{font-size:11px;font-weight:600;padding:5px 12px;border-radius:3px;border:1px solid #bbb;background:transparent;color:#999;cursor:pointer}
+.aql-obs{font-size:11px;color:#E24B4A;margin-top:6px;font-style:italic}
+.hist-obs{font-weight:400;color:#E24B4A;font-style:italic}
 .circ-hist{margin-top:10px;border:1px solid #e8e8e8;padding:8px 12px;display:flex;flex-direction:column;gap:2px}
 .circ-hist-row{display:flex;align-items:center;gap:8px;font-size:11px;padding:4px 0;border-bottom:1px solid #f8f8f8}.circ-hist-row:last-child{border-bottom:none}
 .circ-hist-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;background:#bbb}.dot-ok{background:#1D9E75}.dot-ko{background:#E24B4A}.dot-wait{background:#BA7517}
