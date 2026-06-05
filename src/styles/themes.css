@@ -204,6 +204,9 @@ html[data-theme="workshop"] input[type="date"] {
   color: var(--th-text);
   border-color: var(--th-border);
 }
+/* Icône calendrier native : noire par défaut → invisible en sombre. On l'inverse (claire). */
+html[data-theme="night"] input[type="date"]::-webkit-calendar-picker-indicator,
+html[data-theme="workshop"] input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); opacity: .7; cursor: pointer; }
 html[data-theme="night"] input::placeholder,
 html[data-theme="workshop"] input::placeholder { color: var(--th-text3); }
 

@@ -724,7 +724,7 @@ export default {
 .ok{color:#1D9E75;font-weight:500}.ko{color:#E24B4A;font-weight:500}.na{color:#ccc}
 /* Planning libération */
 .plan-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#e8e8e8;border:1px solid #e8e8e8;margin-top:10px}
-.plan-bloc{background:#fff;padding:12px 14px}
+.plan-bloc{background:#fff;padding:12px 14px;border-left:3px solid #7c3aed}
 .plan-titre{font-size:11px;font-weight:600;color:#333;margin-bottom:10px}
 .plan-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:8px}
 .plan-row label{font-size:11px;color:#999;white-space:nowrap;flex-shrink:0}
