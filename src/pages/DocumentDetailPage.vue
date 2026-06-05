@@ -23,33 +23,15 @@
     <div class="section" v-if="doc.is_applicable">
       <div class="sh"><span>Parcours {{shortType}}</span><span class="dc">{{doneCount}}/{{steps.length}}</span></div>
       <div class="dg dg-1">
-        <div class="di" v-for="(s,idx) in steps" :key="s.n">
+        <div class="di" v-for="(s,idx) in steps" :key="s.n" :class="{'di-act': stepClickable(s.n)}" @click="stepClick(s.n)">
           <div class="dind" :class="stepIndClass(s.n)"></div>
           <div class="di-body">
             <div class="dn">{{idx+1}}. {{s.label}}</div>
             <div class="ds" :class="stepDsClass(s.n)">{{stepStatus(s.n)}}</div>
             <div class="di-svc">Service : {{s.service}}</div>
-            <!-- Actions inline sur l'étape active / retournée -->
-            <div v-if="stepActionable(s.n)" class="step-acts">
-              <template v-if="doc.pending_ar_service && !isClotSap && !isMajDoc">
-                <button v-if="canAR" class="btn bg" @click="doAR">✓ Accuser réception</button>
-                <span v-else class="step-wait">⏳ En attente AR — {{doc.pending_ar_service}}</span>
-              </template>
-              <template v-if="!doc.pending_ar_service || isClotSap || isMajDoc">
-                <button v-if="doc.statut==='non_emis' && canEmit && !isClotSap && !isCCL" class="btn" @click="doAct('emettre')">Émettre le document</button>
-                <button v-if="doc.statut==='retour_emetteur' && canRectifier && !isClotSap && !isCCL" class="btn" @click="doAct('rectifier')">Rectifier et renvoyer à l'AQ</button>
-                <button v-if="(doc.statut==='emis' || doc.statut==='verification_aq') && canVerify && !isClotSap && !isCCL" class="btn" @click="doAct('verifier_aq')">Vérifier et transmettre au DT</button>
-                <button v-if="(doc.statut==='emis' || doc.statut==='verification_aq') && canRetourner && !isClotSap && !isCCL" class="btn br" @click="prepareRetour('emetteur')">Retourner à l'émetteur</button>
-                <button v-if="doc.statut==='approuve_aq' && canApprove && !isClotSap && !isCCL" class="btn bg" @click="doAct('approuver_dt')">Approuver (DT)</button>
-                <button v-if="doc.statut==='approuve_aq' && canRetourner && !isClotSap && !isCCL" class="btn br" @click="prepareRetour('aq')">Retourner à l'AQ</button>
-                <button v-if="isCCL && doc.statut==='non_emis' && canEmit" class="btn bg" @click="doAct('emettre')">Transmettre au DT</button>
-                <button v-if="isCCL && doc.statut==='retour_emetteur' && canRectifier" class="btn" @click="doAct('rectifier')">Retransmettre au DT</button>
-                <button v-if="isCCL && doc.statut==='emis' && canApprove" class="btn bg" @click="doAct('approuver_dt')">Libérer le lot (DT)</button>
-                <button v-if="isCCL && doc.statut==='emis' && canRetourner" class="btn br" @click="prepareRetour('aq')">Retourner à l'AQ</button>
-                <button v-if="doc.statut==='emis' && canVerify && isClotSap" class="btn bg" @click="doAct('valider_planif')">Valider (Planification)</button>
-                <button v-if="doc.statut==='valide_planif' && canApprove && isClotSap" class="btn bg" @click="doAct('demander_cloture')">Demander la clôture SAP</button>
-                <button v-if="doc.statut==='cloture_demandee' && canConfirmClot && isClotSap" class="btn bg" @click="doAct('cloturer')">Confirmer la clôture SAP</button>
-              </template>
+            <!-- Action secondaire (retour) : petit bouton, comme la relance AQL -->
+            <div v-if="stepActionable(s.n) && retourAct" class="step-acts" @click.stop>
+              <button class="btn-ret" @click="prepareRetour(retourAct.dest)">↩ {{retourAct.label}}</button>
             </div>
           </div>
         </div>
@@ -167,10 +149,10 @@ export default {
         if (n===steps.value.length && !isClotSap.value && d.approved_at) return '✓ Approuvé — ' + fmtDt(d.approved_at)
         return '✓ Fait'
       }
-      if (f==='fs-ret') return '↩ Retourné — à rectifier'
-      if (f==='fs-active'){
-        if (d.pending_ar_service && !isClotSap.value && !isMajDoc.value) return '⏳ En attente AR — ' + d.pending_ar_service
-        return 'En cours'
+      if (f==='fs-active' || f==='fs-ret'){
+        if (d.pending_ar_service && !isClotSap.value && !isMajDoc.value) return canAR.value ? '＋ Accuser réception' : '⏳ En attente AR — ' + d.pending_ar_service
+        if (stepCanPrimary()) return '＋ ' + primaryLabel()
+        return f==='fs-ret' ? '↩ Retourné — à rectifier' : 'En cours'
       }
       return 'À venir'
     }
@@ -359,6 +341,48 @@ export default {
       return (doc.value.pending_ar_service === userService.value || userService.value === 'admin') && canPerform('accuser_reception_document')
     })
 
+    // ── Action principale = clic sur l'étape active (façon OF/OC/AQL), retour = petit bouton ──
+    var primaryLabel = function(){
+      var d = doc.value, s = d.statut
+      if (isCCL.value){ if(s==='non_emis') return 'Transmettre au DT'; if(s==='retour_emetteur') return 'Retransmettre au DT'; if(s==='emis') return 'Libérer le lot (DT)' }
+      else if (isClotSap.value){ if(s==='emis') return 'Valider (Planification)'; if(s==='valide_planif') return 'Demander la clôture SAP'; if(s==='cloture_demandee') return 'Confirmer la clôture SAP' }
+      else { if(s==='non_emis') return 'Émettre le document'; if(s==='retour_emetteur') return 'Rectifier et renvoyer'; if(s==='emis'||s==='verification_aq') return 'Vérifier et transmettre'; if(s==='approuve_aq') return 'Approuver (DT)' }
+      return 'Action'
+    }
+    var stepCanPrimary = function(){
+      var d = doc.value; if(!d) return false; var s = d.statut
+      if (d.pending_ar_service && !isClotSap.value && !isMajDoc.value) return canAR.value
+      if (isCCL.value){ if(s==='non_emis') return canEmit.value; if(s==='retour_emetteur') return canRectifier.value; if(s==='emis') return canApprove.value; return false }
+      if (isClotSap.value){ if(s==='emis') return canVerify.value; if(s==='valide_planif') return canApprove.value; if(s==='cloture_demandee') return canConfirmClot.value; return false }
+      if (s==='non_emis') return canEmit.value
+      if (s==='retour_emetteur') return canRectifier.value
+      if (s==='emis'||s==='verification_aq') return canVerify.value
+      if (s==='approuve_aq') return canApprove.value
+      return false
+    }
+    var stepClickable = function(n){ return stepActionable(n) && stepCanPrimary() }
+    var stepClick = function(n){
+      if (!stepClickable(n)) return
+      var d = doc.value, s = d.statut
+      if (d.pending_ar_service && !isClotSap.value && !isMajDoc.value) { doAR(); return }
+      if (isCCL.value){ if(s==='non_emis') doAct('emettre'); else if(s==='retour_emetteur') doAct('rectifier'); else if(s==='emis') doAct('approuver_dt'); return }
+      if (isClotSap.value){ if(s==='emis') doAct('valider_planif'); else if(s==='valide_planif') doAct('demander_cloture'); else if(s==='cloture_demandee') doAct('cloturer'); return }
+      if (s==='non_emis') doAct('emettre')
+      else if (s==='retour_emetteur') doAct('rectifier')
+      else if (s==='emis'||s==='verification_aq') doAct('verifier_aq')
+      else if (s==='approuve_aq') doAct('approuver_dt')
+    }
+    var retourAct = computed(function(){
+      var d = doc.value; if (!d) return null
+      if (d.pending_ar_service && !isClotSap.value && !isMajDoc.value) return null
+      var s = d.statut
+      if (isCCL.value) return (s==='emis' && canRetourner.value) ? {dest:'aq', label:'Retourner à l\'AQ'} : null
+      if (isClotSap.value || isMajDoc.value) return null
+      if ((s==='emis'||s==='verification_aq') && canRetourner.value) return {dest:'emetteur', label:'Retourner à l\'émetteur'}
+      if (s==='approuve_aq' && canRetourner.value) return {dest:'aq', label:'Retourner à l\'AQ'}
+      return null
+    })
+
     var loadDoc = async function() {
       var res = await supabase.from('liberation_documents').select('*').eq('id', route.params.docId).single()
       doc.value = res.data
@@ -377,7 +401,7 @@ export default {
     watch(function(){ return route.params.docId }, function(nv, ov){ if (nv && nv !== ov) loadDoc() })
 
     return { doc, movements, showRetour, motif, retourDest, userService, typeLabels, actionLabelsMap, statusLabel, fmtDt, dotClass, prepareRetour, doAct, doRetour, doSetApplicable, doAR, canAR, canEmit, canVerify, canApprove, canConfirmClot, canRetourner, canRectifier, isClotSap, isMajDoc, isCCL,
-      shortType, steps, doneCount, stepIndClass, stepDsClass, stepActionable, stepStatus, goBack }
+      shortType, steps, doneCount, stepIndClass, stepDsClass, stepActionable, stepStatus, stepClickable, stepClick, retourAct, goBack }
   }
 }
 </script>
@@ -393,12 +417,13 @@ export default {
 .dg{display:grid;grid-template-columns:1fr 1fr;border:1px solid #e8e8e8}
 .dg-1{grid-template-columns:1fr}
 .di{padding:10px 12px;border-right:1px solid #e8e8e8;border-bottom:1px solid #e8e8e8;display:flex;gap:10px}.dg-1 .di{border-right:none}.di:last-child{border-bottom:none}
+.di-act{cursor:pointer}.di-act:hover{background:#f5f3ff}.di-act .ds{color:#7c3aed;font-weight:500}
 .dind{width:3px;min-height:36px;border-radius:1px;flex-shrink:0}.ind-wait{background:#e8e8e8}.ind-prog{background:#7c3aed}.ind-done{background:#1D9E75}.ind-ret{background:#E24B4A}
 .di-body{flex:1;min-width:0}
 .dn{font-size:13px;font-weight:500}.ds{font-size:11px;color:#999;margin-top:1px}.ds-ok{color:#1D9E75}.ds-ret{color:#E24B4A}
 .di-svc{font-size:10px;color:#bbb;margin-top:2px}
 .step-acts{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center}
-.step-wait{font-size:11px;color:#BA7517;font-weight:500}
+.btn-ret{font-size:11px;font-weight:600;padding:5px 12px;border-radius:3px;border:1px solid #E24B4A;background:transparent;color:#E24B4A;cursor:pointer}.btn-ret:hover{background:rgba(226,75,74,.08)}
 .btn{font-size:11px;padding:6px 14px;border-radius:3px;border:none;cursor:pointer;font-weight:600;background:#7c3aed;color:#fff}.btn:hover{opacity:.9}
 .br{background:#E24B4A}.bg{background:#1D9E75}.bc2{background:#ece9f7;color:#7c3aed}
 .rb{border:1px solid #E24B4A;padding:14px;margin:12px 0;border-radius:3px}.rb label{font-size:12px;font-weight:500;display:block;margin-bottom:6px}.rb textarea{width:100%;border:1px solid #ddd;padding:8px;font-size:13px;box-sizing:border-box;resize:vertical;font-family:inherit;background:var(--th-input-bg,#fff);color:inherit}.ra{display:flex;gap:8px;margin-top:8px}
@@ -412,5 +437,5 @@ export default {
 .circ-hist-who{color:#999}
 .circ-hist-at{font-family:'SF Mono',monospace;font-size:10px;color:#bbb}
 .em{text-align:center;padding:16px;color:#999;font-size:12px}
-@media(max-width:768px){.dg{grid-template-columns:1fr}.step-acts{flex-direction:column;align-items:stretch}.btn{width:100%;text-align:center;padding:10px 14px}.ra{flex-direction:column}.ra .btn{width:100%}}
+@media(max-width:768px){.dg{grid-template-columns:1fr}.na-bloc{flex-direction:column}.ra{flex-direction:column}.ra .btn{width:100%}}
 </style>
