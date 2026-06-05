@@ -78,7 +78,7 @@ export default {
     var steps = [
       {key:'demande',     label:'Demande AQL',                 service: svcEm},
       {key:'ar_demande',  label:'Accusé réception demande',    service:'AQ'},
-      {key:'realisation', label:'Réalisation (inspection)',    service:'LCQ'},
+      {key:'realisation', label:'Réalisation (inspection)',    service:'AQ'},
       {key:'ar_resultat', label:'Accusé réception résultat',   service: svcEm},
     ]
     // Inspection courante = la plus récente (les relances créent une nouvelle ligne)
