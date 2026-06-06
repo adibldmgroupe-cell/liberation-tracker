@@ -776,6 +776,63 @@ boutons, historique, hover, responsive PC + smartphone, 3 thèmes). Tout écart 
 
 ---
 
+## RÈGLE CRITIQUE N°26 — Garde anti-double-clic sur TOUTE action métier (audit trail GMP)
+
+### Bug trouvé (06/06/2026 — Test 1 circuit OF/OC)
+`CircuitDetailPage.stepClick` n'avait **aucune garde anti-double-clic**. Le flag `loading` n'est
+mis à `true` qu'**à l'intérieur de `load()`**, donc **pendant `validateOrder`** (insert + update,
+avant `load()`) la fenêtre de double-soumission reste ouverte ~1 s. Un double-clic rapide insérait
+une **2ᵉ ligne `order_validations`** (doublon dans l'historique = écart d'audit trail GMP). Le flux
+restait correct (avancement idempotent sur `etape_circuit`), mais le **journal était faux**.
+
+### Root cause générique
+Toute action métier asynchrone (`async function doX(){ await write(); await load() }`) déclenchée par
+un clic est **ré-entrante** tant qu'aucun flag n'est posé **AVANT le premier `await`**. `loading`
+posé dans `load()` est **trop tard** : les writes (`insert`/`update`/`createNotification`/`lot_events`)
+ont déjà eu lieu. Conséquence : doublons d'audit (`order_validations`, `document_movements`,
+`lot_events`, `aql_inspections`…), double-AR, double-notification.
+
+### Pattern OBLIGATOIRE — flag `submitting` posé dès l'entrée du handler
+
+```js
+var submitting = ref(false)
+
+// le rendu reflète le verrou (perte du hover/curseur pendant l'action)
+var stepClickable = function(etape){
+  if (submitting.value) return false
+  /* …conditions métier… */
+}
+
+// flag posé AVANT tout await, libéré dans finally
+var stepClick = async function(etape){
+  if (submitting.value || !stepClickable(etape)) return
+  submitting.value = true
+  try {
+    if (order.value.pending_ar_service) await doAcknowledgeOrderAR()
+    else await doValidate(etape)
+  } finally {
+    submitting.value = false
+  }
+}
+```
+
+- `submitting` exposé dans le `return` du `setup()` ; indicateur visuel `v-if="loading || submitting"`.
+- ⚠️ Ne **jamais** se reposer sur `loading` (posé trop tard) ni sur le `disabled` CSS seul.
+- Vérifié en preview : 3 clics synchrones → **1 seule** validation **et** **1 seul** `lot_event` AR.
+
+### ✅ À VÉRIFIER À CHAQUE PROCHAIN TEST (parcours N°24)
+Le modèle « Parcours » partage ce risque sur **toutes** les pages d'action. À chaque test d'une page,
+**confirmer la présence de la garde `submitting`** (sinon l'ajouter) sur :
+- `CircuitDetailPage` ✅ (fait — Test 1)
+- `AqlDetailPage` (demande / AR / réalisation conforme-NC / relance) — **à vérifier**
+- `DocumentDetailPage` (émettre / vérifier AQ / approuver DT / AR / retour / rectifier / MàJ / Clôt. SAP) — **à vérifier**
+- `TasksPage` (actions inline circuit + documents + AR) — **à vérifier**
+- Toute future page d'action (Vérification Tâches, RVP, etc.)
+
+Test rapide : `el.click(); el.click(); el.click()` synchrones → compter les lignes d'audit créées (doit = 1).
+
+---
+
 ## Déploiement
 
 - Push sur `main` → GitHub Actions build + deploy GitHub Pages automatiquement

@@ -9,7 +9,7 @@
       <div class="lh-right"><span class="ttl">{{statusLabel}}</span></div>
     </div>
 
-    <div v-if="loading" class="detail-reloading">⟳ Actualisation…</div>
+    <div v-if="loading || submitting" class="detail-reloading">⟳ Actualisation…</div>
 
     <!-- Étapes du circuit -->
     <div class="section">
@@ -53,7 +53,7 @@ export default {
     var type = route.params.type === 'oc' ? 'oc' : 'of'
     var lotId = route.params.lotId
     var lot = ref(null), prod = ref({}), order = ref(null), vals = ref([])
-    var loading = ref(false), userId = ref(null), userService = ref('')
+    var loading = ref(false), submitting = ref(false), userId = ref(null), userService = ref('')
     var isAdmin = computed(function(){ return userService.value === 'admin' })
     var steps = [
       {key:'planification',label:'Mise en circuit',service:'Planification'},
@@ -100,15 +100,23 @@ export default {
       return 'À venir'
     }
     var stepClickable = function(etape){
+      if (submitting.value) return false
       var o = order.value
       if (!o || o.statut === 'termine' || o.etape_circuit !== etape) return false
       if (o.pending_ar_service) return (o.pending_ar_service === userService.value || isAdmin.value) && canPerform('accuser_reception_circuit')
       return canValidateStep(etape)
     }
-    var stepClick = function(etape){
-      if (!stepClickable(etape)) return
-      if (order.value.pending_ar_service) doAcknowledgeOrderAR()
-      else doValidate(etape)
+    // Garde anti-double-clic (RÈGLE N°26) : submitting posé DÈS l'entrée, avant tout await
+    // (validateOrder écrit avant que load() ne mette loading=true → fenêtre de double-soumission sinon)
+    var stepClick = async function(etape){
+      if (submitting.value || !stepClickable(etape)) return
+      submitting.value = true
+      try {
+        if (order.value.pending_ar_service) await doAcknowledgeOrderAR()
+        else await doValidate(etape)
+      } finally {
+        submitting.value = false
+      }
     }
 
     var doValidate = async function(etape){
@@ -158,7 +166,7 @@ export default {
       await load()
     })
 
-    return { lot, prod, order, vals, loading, type, steps, userService, isAdmin, doneCount, typeFull, statusLabel,
+    return { lot, prod, order, vals, loading, submitting, type, steps, userService, isAdmin, doneCount, typeFull, statusLabel,
       fmtDt, stepLabel, getVal, stepIndClass, stepStatus, stepClickable, stepClick, canValidateStep, canPerform, goBack }
   }
 }
