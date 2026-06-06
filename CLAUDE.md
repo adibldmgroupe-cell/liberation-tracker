@@ -824,8 +824,8 @@ var stepClick = async function(etape){
 Le modèle « Parcours » partage ce risque sur **toutes** les pages d'action. À chaque test d'une page,
 **confirmer la présence de la garde `submitting`** (sinon l'ajouter) sur :
 - `CircuitDetailPage` ✅ (fait — Test 1)
+- `DocumentDetailPage` ✅ (fait — Test 2 : garde sur `stepClick` + `doRetour` + `doSetApplicable`)
 - `AqlDetailPage` (demande / AR / réalisation conforme-NC / relance) — **à vérifier**
-- `DocumentDetailPage` (émettre / vérifier AQ / approuver DT / AR / retour / rectifier / MàJ / Clôt. SAP) — **à vérifier**
 - `TasksPage` (actions inline circuit + documents + AR) — **à vérifier**
 - Toute future page d'action (Vérification Tâches, RVP, etc.)
 

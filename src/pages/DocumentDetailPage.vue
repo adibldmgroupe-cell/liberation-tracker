@@ -9,6 +9,8 @@
       <div class="lh-right"><span class="ttl">{{statusLabel}}</span></div>
     </div>
 
+    <div v-if="submitting" class="detail-reloading">⟳ Actualisation…</div>
+
     <!-- DA Micro non applicable : permettre de la déclarer applicable -->
     <div class="na-bloc" v-if="!doc.is_applicable && doc.type_document==='da_micro'">
       <div class="na-icon">🧫</div>
@@ -76,7 +78,7 @@ export default {
   setup() {
     var route = useRoute(), router = useRouter()
     var doc = ref(null), movements = ref([]), showRetour = ref(false), motif = ref(''), userId = ref(null), retourDest = ref(''), userService = ref('')
-    var lotNum = ref(''), prodDesc = ref('')
+    var lotNum = ref(''), prodDesc = ref(''), submitting = ref(false)
     var typeLabels = { if:'IF (Instruction de fabrication)', ic:'IC (Instruction de conditionnement)', da_pc:'DA Physico-chimie (Dossier analytique)', da_micro:'DA Microbiologie (Dossier analytique)', ccl:'CCL (Certificat de Conformité du Lot)', rvp:'RVP', deviation:'Déviation', analyse_risque:'Analyse de risque', autorisation_partenaire:'Autorisation partenaire', autre:'Autre', maj_if:'MàJ IF', maj_ic:'MàJ IC', maj_nmcl_of:'MàJ Nomenclature OF', maj_nmcl_oc:'MàJ Nomenclature OC', cloture_sap_of:'Clôture SAP OF', cloture_sap_oc:'Clôture SAP OC' }
     var actionLabelsMap = { emission:'Émission', transmission:'Transmission', reception:'Réception', retour:'Retour pour rectification', rectification:'Rectification et renvoi', approbation:'Approbation', validation:'Validation Planification', cloture:'Demande de clôture', cloture_confirmee:'Clôture confirmée' }
     var statusMap = { non_emis:'Non émis', emis:'Émis — en attente', verification_aq:'En cours de vérification AQ', retour_emetteur:'Retourné à l\'émetteur', rectification:'En cours de rectification', approuve_aq:'Vérifié AQ — en attente DT', approbation_dt:'En cours d\'approbation DT', approuve_dt:'Approuvé DT', valide_planif:'Validé Planif. — en attente demande clôture', cloture_demandee:'Clôture demandée — en attente confirmation', cloture:'Clôturé' }
@@ -217,12 +219,16 @@ export default {
     }
 
     var doSetApplicable = async function() {
-      var now = new Date().toISOString()
-      var lotId = parseInt(route.params.lotId)
-      await supabase.from('liberation_documents').update({is_applicable:true,is_required:true,updated_at:now}).eq('id',doc.value.id)
-      await supabase.from('liberation_dossiers').update({da_micro_applicable:true,updated_at:now}).eq('lot_id',lotId)
-      await supabase.from('lot_events').insert({lot_id:lotId,event_type:'da_micro_applicable',description:'DA Microbiologie déclarée applicable',triggered_by:userId.value,created_at:now})
-      await loadDoc()
+      if (submitting.value) return
+      submitting.value = true
+      try {
+        var now = new Date().toISOString()
+        var lotId = parseInt(route.params.lotId)
+        await supabase.from('liberation_documents').update({is_applicable:true,is_required:true,updated_at:now}).eq('id',doc.value.id)
+        await supabase.from('liberation_dossiers').update({da_micro_applicable:true,updated_at:now}).eq('lot_id',lotId)
+        await supabase.from('lot_events').insert({lot_id:lotId,event_type:'da_micro_applicable',description:'DA Microbiologie déclarée applicable',triggered_by:userId.value,created_at:now})
+        await loadDoc()
+      } finally { submitting.value = false }
     }
 
     var doAct = async function(action) {
@@ -301,6 +307,9 @@ export default {
     }
 
     var doRetour = async function() {
+      if (submitting.value) return
+      submitting.value = true
+      try {
       var now = new Date().toISOString()
       var docId = doc.value.id
       var lotId = parseInt(route.params.lotId)
@@ -336,6 +345,7 @@ export default {
       showRetour.value = false
       motif.value = ''
       await loadDoc()
+      } finally { submitting.value = false }
     }
 
     var doAR = async function() {
@@ -373,17 +383,22 @@ export default {
       if (s==='approuve_aq') return canApprove.value
       return false
     }
-    var stepClickable = function(n){ return stepActionable(n) && stepCanPrimary() }
-    var stepClick = function(n){
-      if (!stepClickable(n)) return
+    var stepClickable = function(n){ if (submitting.value) return false; return stepActionable(n) && stepCanPrimary() }
+    // Garde anti-double-clic (RÈGLE N°26) : submitting posé DÈS l'entrée, avant tout await
+    // (doAct/doAR écrivent avant loadDoc → fenêtre de double-soumission = doublon document_movements/lot_events)
+    var stepClick = async function(n){
+      if (submitting.value || !stepClickable(n)) return
       var d = doc.value, s = d.statut
-      if (d.pending_ar_service && !isClotSap.value && !isMajDoc.value) { doAR(); return }
-      if (isCCL.value){ if(s==='non_emis') doAct('emettre'); else if(s==='retour_emetteur') doAct('rectifier'); else if(s==='emis') doAct('approuver_dt'); return }
-      if (isClotSap.value){ if(s==='emis') doAct('valider_planif'); else if(s==='valide_planif') doAct('demander_cloture'); else if(s==='cloture_demandee') doAct('cloturer'); return }
-      if (s==='non_emis') doAct('emettre')
-      else if (s==='retour_emetteur') doAct('rectifier')
-      else if (s==='emis'||s==='verification_aq') doAct('verifier_aq')
-      else if (s==='approuve_aq') doAct('approuver_dt')
+      submitting.value = true
+      try {
+        if (d.pending_ar_service && !isClotSap.value && !isMajDoc.value) { await doAR(); return }
+        if (isCCL.value){ if(s==='non_emis') await doAct('emettre'); else if(s==='retour_emetteur') await doAct('rectifier'); else if(s==='emis') await doAct('approuver_dt'); return }
+        if (isClotSap.value){ if(s==='emis') await doAct('valider_planif'); else if(s==='valide_planif') await doAct('demander_cloture'); else if(s==='cloture_demandee') await doAct('cloturer'); return }
+        if (s==='non_emis') await doAct('emettre')
+        else if (s==='retour_emetteur') await doAct('rectifier')
+        else if (s==='emis'||s==='verification_aq') await doAct('verifier_aq')
+        else if (s==='approuve_aq') await doAct('approuver_dt')
+      } finally { submitting.value = false }
     }
     var retourAct = computed(function(){
       var d = doc.value; if (!d) return null
@@ -421,7 +436,7 @@ export default {
     watch(function(){ return route.params.docId }, function(nv, ov){ if (nv && nv !== ov) loadDoc() })
 
     return { doc, movements, showRetour, motif, retourDest, userService, typeLabels, actionLabelsMap, statusLabel, fmtDt, dotClass, prepareRetour, doAct, doRetour, doSetApplicable, doAR, canAR, canEmit, canVerify, canApprove, canConfirmClot, canRetourner, canRectifier, isClotSap, isMajDoc, isCCL,
-      shortType, typeFull, lotNum, prodDesc, steps, doneCount, stepIndClass, stepDsClass, stepActionable, stepStatus, stepClickable, stepClick, retourAct, goBack }
+      shortType, typeFull, lotNum, prodDesc, submitting, steps, doneCount, stepIndClass, stepDsClass, stepActionable, stepStatus, stepClickable, stepClick, retourAct, goBack }
   }
 }
 </script>
@@ -434,6 +449,8 @@ export default {
 .lh-right{flex-shrink:0}
 .ttl{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#7c3aed;background:#f5f3ff;border:1px solid #ede9fe;padding:4px 12px;border-radius:3px;white-space:nowrap}
 .loading{text-align:center;padding:60px;color:#999}
+.detail-reloading{font-size:11px;color:#999;padding:4px 0 6px;letter-spacing:.3px;animation:spin-txt 1s linear infinite}
+@keyframes spin-txt{0%{opacity:1}50%{opacity:.4}100%{opacity:1}}
 .section{margin-top:16px}.sh{display:flex;justify-content:space-between;align-items:center;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:#999;padding-bottom:6px;border-bottom:1px solid #e8e8e8}
 .dc{font-family:'SF Mono',monospace;color:#BA7517}
 .dg{display:grid;grid-template-columns:1fr 1fr;border:1px solid #e8e8e8}
