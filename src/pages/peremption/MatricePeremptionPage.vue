@@ -81,6 +81,9 @@
     <div v-else class="table-wrap">
       <table class="pt-table">
         <thead>
+          <tr class="th-group">
+            <th v-for="(g, i) in headerGroups" :key="i" :colspan="g.span" :class="{'thg-on': g.label}">{{ g.label ? 'Axe ' + g.label : '' }}</th>
+          </tr>
           <tr>
             <th class="th-chk"><input type="checkbox" :checked="allPageChecked" @change="toggleSelectAllPage" /></th>
             <th class="th-fix"><span class="th-txt sortable" @click="sortBy('code_article')">Code {{ sortIcon('code_article') }}</span></th>
@@ -186,7 +189,7 @@ import { useRouter } from 'vue-router'
 import { supabase } from '../../supabase'
 import { loadPermissions, canPerform } from '../../services/permissions'
 import { NIVEAU_LABELS, NIVEAU_CLASS, NIVEAU_ORDER, DEFAULT_CONFIG, decisionsFor, productType, TYPE_LABELS, TYPE_CLASS,
-  modelForProduct, getModel, allowedValues, computeScores, MODELS } from '../../services/peremptionRisk'
+  modelForProduct, getModel, allowedValues, computeScores, MODELS, CRIT_LABELS, CRIT_AXIS_LABEL } from '../../services/peremptionRisk'
 import { exportToExcel, exportToPDF } from '../../services/export'
 
 // Colonnes sélectionnables (Code + Désignation sont fixes, hors panneau)
@@ -197,17 +200,17 @@ var COLS = [
   { key: 'fabricant', label: 'Fabricant', kind: 'text' },
   { key: 'duree_vie', label: 'Durée de vie', kind: 'duree' },
   { key: 'type', label: 'Type', kind: 'type' },
-  { key: 'sc_shelf_life', label: 'Shelf Life', kind: 'crit' },
-  { key: 'sc_prix', label: 'Montant forecast', kind: 'crit' },
-  { key: 'sc_historique', label: 'Historique', kind: 'crit' },
-  { key: 'sc_profitabilite', label: 'Profitabilité', kind: 'crit' },
-  { key: 'sc_forecast', label: 'Forecast', kind: 'crit' },
-  { key: 'sc_solvabilite', label: 'Solvabilité', kind: 'crit' },
-  { key: 'sc_engagements', label: 'Resp. engag.', kind: 'crit' },
-  { key: 'sc_promotion', label: 'Promotion', kind: 'crit' },
-  { key: 'sc_croissance', label: 'Croissance', kind: 'crit' },
-  { key: 'sc_concurrence', label: 'Concurrence', kind: 'crit' },
-  { key: 'sc_maturite', label: 'Maturité', kind: 'crit' },
+  { key: 'sc_shelf_life', label: CRIT_LABELS.sc_shelf_life, kind: 'crit' },
+  { key: 'sc_prix', label: CRIT_LABELS.sc_prix, kind: 'crit' },
+  { key: 'sc_historique', label: CRIT_LABELS.sc_historique, kind: 'crit' },
+  { key: 'sc_profitabilite', label: CRIT_LABELS.sc_profitabilite, kind: 'crit' },
+  { key: 'sc_forecast', label: CRIT_LABELS.sc_forecast, kind: 'crit' },
+  { key: 'sc_solvabilite', label: CRIT_LABELS.sc_solvabilite, kind: 'crit' },
+  { key: 'sc_engagements', label: CRIT_LABELS.sc_engagements, kind: 'crit' },
+  { key: 'sc_promotion', label: CRIT_LABELS.sc_promotion, kind: 'crit' },
+  { key: 'sc_croissance', label: CRIT_LABELS.sc_croissance, kind: 'crit' },
+  { key: 'sc_concurrence', label: CRIT_LABELS.sc_concurrence, kind: 'crit' },
+  { key: 'sc_maturite', label: CRIT_LABELS.sc_maturite, kind: 'crit' },
   { key: 'score_produit', label: 'Score Produit', kind: 'score' },
   { key: 'score_partenaire', label: 'Score Part./Comm.', kind: 'score' },
   { key: 'score_marche', label: 'Score Marché', kind: 'score' },
@@ -249,6 +252,17 @@ export default {
     var showConfig = ref(false), cfgForm = ref(Object.assign({}, DEFAULT_CONFIG)), cfgSaving = ref(false), cfgErr = ref('')
 
     var visibleCols = computed(function () { return colOrder.value.filter(function (k) { return hiddenCols.value.indexOf(k) < 0 }) })
+    // headerGroups exposé plus bas dans le return
+    // Ligne d'en-tête de GROUPE (axes) : fusionne les colonnes critères consécutives du même axe.
+    // Colonnes effectives = [chk, code, désignation, ...visibleCols, actions]. Les non-critères -> groupe vide.
+    var headerGroups = computed(function () {
+      var seq = ['', '', ''] // chk, code, désignation
+      visibleCols.value.forEach(function (col) { seq.push(COL_KIND[col] === 'crit' ? (CRIT_AXIS_LABEL[col] || '') : '') })
+      seq.push('') // colonne actions
+      var groups = [], cur = null
+      seq.forEach(function (g) { if (cur && cur.label === g) cur.span++; else { cur = { label: g, span: 1 }; groups.push(cur) } })
+      return groups
+    })
     var colKind = function (col) { return COL_KIND[col] }
     var colClass = function (col) { var k = COL_KIND[col]; return (k === 'crit' || k === 'score' || k === 'niveau' || k === 'valid' || k === 'type') ? 'tc' : '' }
     var cellClass = function (col) { var k = COL_KIND[col]; return (k === 'crit' || k === 'score' || k === 'niveau' || k === 'valid' || k === 'type') ? 'tc clk' : 'clk' }
@@ -514,7 +528,7 @@ export default {
       evaluatedCount, counts, typeOptions, fabricantOptions, groupeOptions, filtered, paged, page, totalPages,
       fmtDate, toggleNiveau, goEval, critCls,
       NIVEAU_LABELS, NIVEAU_CLASS, TYPE_CLASS, COL_LABELS,
-      visibleCols, colOrder, showColPanel, isColVisible, toggleCol, moveCol, resetCols, colKind, colClass, cellClass,
+      visibleCols, headerGroups, colOrder, showColPanel, isColVisible, toggleCol, moveCol, resetCols, colKind, colClass, cellClass,
       sortBy, sortIcon,
       columnFilters, activeFilterCol, filterPos, cfSearch, distinctVals, distinctValsShown, openFilter, cfChecked, cfToggle, cfAll, cfNone, closeMenus,
       selected, isSelected, toggleSelect, allPageChecked, toggleSelectAllPage,
@@ -578,6 +592,12 @@ export default {
 .table-wrap { overflow: auto; max-height: calc(100vh - 340px); border: 1px solid var(--th-border, #e5e7eb); border-radius: 8px; }
 .pt-table { width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap; }
 .pt-table th { text-align: left; font-size: 11px; font-weight: 700; color: #7c3aed; padding: 8px 10px; border-bottom: 1px solid #ede9fe; background: #f5f3ff; position: sticky; top: 0; z-index: 2; }
+/* Ligne d'en-tête de groupe (axes) */
+.th-group th { position: sticky; top: 0; z-index: 3; background: var(--th-bg2, #fff); color: var(--th-text2, #6b7280); border-bottom: 1px solid var(--th-border, #ede9fe); padding: 4px 8px; font-weight: 700; }
+.th-group .thg-on { background: #ede9fe; color: #6d28d9; font-size: 10px; text-transform: uppercase; letter-spacing: .5px; text-align: center; }
+.pt-table thead tr:not(.th-group) th { top: 26px; }
+html[data-theme="night"] .th-group th, html[data-theme="workshop"] .th-group th { background: var(--th-bg2); border-bottom-color: var(--th-border); }
+html[data-theme="night"] .th-group .thg-on, html[data-theme="workshop"] .th-group .thg-on { background: var(--th-bg3); color: var(--th-accent); }
 .pt-table th.tc { text-align: center; }
 .th-i { display: flex; align-items: center; gap: 4px; justify-content: space-between; }
 .th-txt { text-transform: uppercase; letter-spacing: .3px; } .sortable { cursor: pointer; } .sortable:hover { text-decoration: underline; }

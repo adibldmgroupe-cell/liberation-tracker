@@ -80,6 +80,16 @@ export var TYPE_CLASS = { generique: 'ty-gen', otc: 'ty-otc', sous_licence: 'ty-
 // produit en revente en l'état (REV) — visible uniquement dans la matrice péremption
 export function isRevente(p) { return !!(p && p.groupe_article && /REV/i.test(p.groupe_article)) }
 
+// Libellé COMPLET de chaque sous-critère (union des 2 modèles) — source unique pour les colonnes
+export var CRIT_LABELS = {}
+;[].concat(C_IMPORT, C_PROD).forEach(function (c) { if (!CRIT_LABELS[c.key]) CRIT_LABELS[c.key] = c.label })
+// Axe d'appartenance (pour l'en-tête de groupe dans la matrice ; l'axe milieu = Partenaire en import / Commercial en production)
+export var CRIT_AXIS_LABEL = {
+  sc_shelf_life: 'Produit', sc_prix: 'Produit', sc_historique: 'Produit', sc_profitabilite: 'Produit',
+  sc_forecast: 'Partenaire / Commercial', sc_solvabilite: 'Partenaire / Commercial', sc_engagements: 'Partenaire / Commercial', sc_promotion: 'Partenaire / Commercial',
+  sc_croissance: 'Marché', sc_concurrence: 'Marché', sc_maturite: 'Marché',
+}
+
 export var MODE_APPRO = [
   { key: 'sous_licence', label: 'Production sous licence' },
   { key: 'import',       label: "Importation (revente en l'état)" },
