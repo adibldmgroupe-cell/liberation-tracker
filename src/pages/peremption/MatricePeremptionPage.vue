@@ -172,6 +172,8 @@ import { exportToExcel, exportToPDF } from '../../services/export'
 
 // Colonnes sélectionnables (Code + Désignation sont fixes, hors panneau)
 var COLS = [
+  { key: 'niveau', label: 'Niveau', kind: 'niveau' },
+  { key: 'validation', label: 'Validation', kind: 'valid' },
   { key: 'groupe_article', label: "Groupe d'article", kind: 'text' },
   { key: 'fabricant', label: 'Fabricant', kind: 'text' },
   { key: 'type', label: 'Type', kind: 'type' },
@@ -190,15 +192,13 @@ var COLS = [
   { key: 'score_partenaire', label: 'Score Part./Comm.', kind: 'score' },
   { key: 'score_marche', label: 'Score Marché', kind: 'score' },
   { key: 'score_global', label: 'Global', kind: 'score' },
-  { key: 'niveau', label: 'Niveau', kind: 'niveau' },
-  { key: 'validation', label: 'Validation', kind: 'valid' },
   { key: 'evaluated_at', label: 'Dernière éval.', kind: 'date' },
 ]
 var COL_LABELS = COLS.reduce(function (m, c) { m[c.key] = c.label; return m }, {})
 var COL_KIND = COLS.reduce(function (m, c) { m[c.key] = c.kind; return m }, {})
 var ALL_KEYS = COLS.map(function (c) { return c.key })
 var ALL_SC_KEYS = ['sc_shelf_life', 'sc_prix', 'sc_historique', 'sc_profitabilite', 'sc_forecast', 'sc_solvabilite', 'sc_engagements', 'sc_promotion', 'sc_croissance', 'sc_concurrence', 'sc_maturite']
-var LS_ORDER = 'peremption_col_order', LS_HIDDEN = 'peremption_hidden_cols'
+var LS_ORDER = 'peremption_col_order_v2', LS_HIDDEN = 'peremption_hidden_cols'
 
 export default {
   setup() {
