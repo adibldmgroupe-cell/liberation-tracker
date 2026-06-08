@@ -44,8 +44,7 @@
       <div class="mp-search-wrap"><span class="ts-icon">🔍</span><input v-model="searchQ" class="mp-search" placeholder="Rechercher code, désignation, fabricant…" /></div>
       <select v-model="typeSel" class="mp-sel">
         <option value="">Tous les types</option>
-        <option value="generique">Générique</option><option value="otc">OTC</option>
-        <option value="sous_licence">Sous-licence</option><option value="import">Import / Revente</option>
+        <option v-for="t in typeOptions" :key="t.key" :value="t.key">{{ t.label }}</option>
       </select>
       <select v-model="fabSel" class="mp-sel">
         <option value="">Tous les fabricants</option>
@@ -198,6 +197,7 @@ var COL_LABELS = COLS.reduce(function (m, c) { m[c.key] = c.label; return m }, {
 var COL_KIND = COLS.reduce(function (m, c) { m[c.key] = c.kind; return m }, {})
 var ALL_KEYS = COLS.map(function (c) { return c.key })
 var ALL_SC_KEYS = ['sc_shelf_life', 'sc_prix', 'sc_historique', 'sc_profitabilite', 'sc_forecast', 'sc_solvabilite', 'sc_engagements', 'sc_promotion', 'sc_croissance', 'sc_concurrence', 'sc_maturite']
+var TYPE_OPTS = [{ key: 'generique', label: 'Générique' }, { key: 'otc', label: 'OTC' }, { key: 'sous_licence', label: 'Sous-licence' }, { key: 'import', label: 'Import / Revente' }]
 var LS_ORDER = 'peremption_col_order_v2', LS_HIDDEN = 'peremption_hidden_cols'
 
 export default {
@@ -259,8 +259,23 @@ export default {
     })
     var evaluatedCount = computed(function () { return rows.value.filter(function (r) { return r.ev }).length })
     var counts = computed(function () { var c = { faible: 0, moyen: 0, eleve: 0, na: 0 }; rows.value.forEach(function (r) { if (r.niveau) c[r.niveau]++; else c.na++ }); return c })
-    var fabricantOptions = computed(function () { var s = {}; products.value.forEach(function (p) { if (p.fabricant) s[p.fabricant] = 1 }); return Object.keys(s).sort() })
-    var groupeOptions = computed(function () { var s = {}; products.value.forEach(function (p) { if (p.groupe_article) s[p.groupe_article] = 1 }); return Object.keys(s).sort() })
+    // Filtres en cascade : les options d'un filtre = valeurs présentes parmi les produits
+    // qui passent les DEUX autres filtres (on ignore le filtre courant).
+    var matchSel = function (p, useType, useFab, useGroupe) {
+      if (useType && typeSel.value && productType(p) !== typeSel.value) return false
+      if (useFab && fabSel.value && p.fabricant !== fabSel.value) return false
+      if (useGroupe && groupeSel.value && p.groupe_article !== groupeSel.value) return false
+      return true
+    }
+    var typeOptions = computed(function () { var s = {}; products.value.forEach(function (p) { if (matchSel(p, false, true, true)) s[productType(p)] = 1 }); return TYPE_OPTS.filter(function (t) { return s[t.key] }) })
+    var fabricantOptions = computed(function () { var s = {}; products.value.forEach(function (p) { if (p.fabricant && matchSel(p, true, false, true)) s[p.fabricant] = 1 }); return Object.keys(s).sort() })
+    var groupeOptions = computed(function () { var s = {}; products.value.forEach(function (p) { if (p.groupe_article && matchSel(p, true, true, false)) s[p.groupe_article] = 1 }); return Object.keys(s).sort() })
+    // reset d'une sélection devenue incompatible avec les autres filtres
+    watch([typeSel, fabSel, groupeSel], function () {
+      if (typeSel.value && !typeOptions.value.some(function (t) { return t.key === typeSel.value })) typeSel.value = ''
+      if (fabSel.value && fabricantOptions.value.indexOf(fabSel.value) < 0) fabSel.value = ''
+      if (groupeSel.value && groupeOptions.value.indexOf(groupeSel.value) < 0) groupeSel.value = ''
+    })
 
     // valeur d'affichage d'une cellule (sert filtre + tri)
     var cellVal = function (r, col) {
@@ -423,7 +438,7 @@ export default {
 
     return {
       products, loading, needsMigration, searchQ, niveauFilter, typeSel, fabSel, groupeSel, canConfig,
-      evaluatedCount, counts, fabricantOptions, groupeOptions, filtered, paged, page, totalPages,
+      evaluatedCount, counts, typeOptions, fabricantOptions, groupeOptions, filtered, paged, page, totalPages,
       fmtDate, toggleNiveau, goEval, critCls,
       NIVEAU_LABELS, NIVEAU_CLASS, TYPE_CLASS, COL_LABELS,
       visibleCols, colOrder, showColPanel, isColVisible, toggleCol, moveCol, resetCols, colKind, colClass, cellClass,
