@@ -72,7 +72,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="r in filtered" :key="r.id" @click="goEval(r.id)" class="clk">
+          <tr v-for="r in paged" :key="r.id" @click="goEval(r.id)" class="clk">
             <td class="mono">{{ r.code_article }}</td>
             <td class="td-desc">{{ r.description }}</td>
             <td>{{ r.fabricant || '—' }}</td>
@@ -95,6 +95,13 @@
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- Pagination 50/page -->
+    <div class="mp-pag" v-if="!loading && filtered.length">
+      <button class="pag-btn" :disabled="page===0" @click="page--">‹ Préc.</button>
+      <span class="pag-info">Page {{ page + 1 }} / {{ totalPages }} &nbsp;·&nbsp; {{ filtered.length }} produit{{ filtered.length !== 1 ? 's' : '' }}</span>
+      <button class="pag-btn" :disabled="page >= totalPages - 1" @click="page++">Suiv. ›</button>
     </div>
 
     <!-- Modal config pondérations & seuils -->
@@ -127,7 +134,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '../../supabase'
 import { loadPermissions, canPerform } from '../../services/permissions'
@@ -144,6 +151,8 @@ export default {
     var searchQ = ref('')
     var niveauFilter = ref('')
     var typeFilter = ref('')
+    var page = ref(0)
+    var PAGE_SIZE = 50
     var userService = ref('')
     var canConfig = ref(false)
 
@@ -188,6 +197,11 @@ export default {
         return (a.code_article || '').localeCompare(b.code_article || '')
       })
     })
+    var totalPages = computed(function () { return Math.max(1, Math.ceil(filtered.value.length / PAGE_SIZE)) })
+    var paged = computed(function () { var s = page.value * PAGE_SIZE; return filtered.value.slice(s, s + PAGE_SIZE) })
+    // retour page 1 quand un filtre/recherche change
+    watch([searchQ, niveauFilter, typeFilter], function () { page.value = 0 })
+
     var poidsTotal = computed(function () {
       return (Number(cfgForm.value.poids_produit) || 0) + (Number(cfgForm.value.poids_partenaire) || 0) + (Number(cfgForm.value.poids_marche) || 0)
     })
@@ -255,7 +269,7 @@ export default {
 
     return {
       products, loading, needsMigration, searchQ, niveauFilter, typeFilter, canConfig,
-      evaluatedCount, counts, filtered, fmtDate, valNiveau, toggleNiveau, goEval,
+      evaluatedCount, counts, filtered, paged, page, totalPages, fmtDate, valNiveau, toggleNiveau, goEval,
       NIVEAU_LABELS, NIVEAU_CLASS, MODE_APPRO_LABELS, TYPE_LABELS, TYPE_CLASS,
       showConfig, cfgForm, cfgSaving, cfgErr, poidsTotal, openConfig, saveConfig
     }
@@ -309,6 +323,13 @@ export default {
 .dt { font-family: 'SF Mono', monospace; font-size: 11px; color: var(--th-text2, #9ca3af); white-space: nowrap; }
 .btn-eval { font-size: 11px; font-weight: 600; padding: 4px 12px; border-radius: 5px; border: 1px solid #7c3aed; background: transparent; color: #7c3aed; cursor: pointer; white-space: nowrap; }
 .btn-eval:hover { background: #7c3aed; color: #fff; }
+
+/* Pagination */
+.mp-pag { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 12px 0 4px; }
+.pag-btn { font-size: 12px; font-weight: 600; padding: 6px 14px; border: 1px solid var(--th-border, #e5e7eb); border-radius: 6px; background: var(--th-bg2, #fff); color: var(--th-text, #333); cursor: pointer; }
+.pag-btn:hover:not(:disabled) { border-color: #7c3aed; color: #7c3aed; }
+.pag-btn:disabled { opacity: .4; cursor: not-allowed; }
+.pag-info { font-size: 12px; color: var(--th-text2, #6b7280); font-family: 'SF Mono', monospace; }
 
 /* Badges niveau — jour */
 .niv { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 10px; border-radius: 10px; white-space: nowrap; }

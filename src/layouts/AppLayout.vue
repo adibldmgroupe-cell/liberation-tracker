@@ -50,17 +50,20 @@
     <main class="main-content">
       <header class="top-bar">
         <button class="hamburger" @click="mobileMenuOpen=!mobileMenuOpen">☰</button>
-        <div class="search-container">
-          <span class="search-icon">⌕</span>
-          <input ref="searchInput" v-model="searchQuery" @input="onSearch" @keydown.enter="submitSearch" @focus="showSug=true" @blur="hideSug" type="text" class="search-input" placeholder="Rechercher..." />
-          <div class="suggestions" v-if="showSug && suggestions.length">
-            <div v-for="(s,i) in suggestions" :key="i" class="sug-item" @mousedown.prevent="selectSug(s)">
-              <span class="sug-type" :class="'t-'+s.type">{{s.type==='lot'?'LOT':'PRD'}}</span>
-              <span class="sug-label">{{s.label}}</span><span class="sug-sub">{{s.sub}}</span>
+        <template v-if="!$route.meta.hideHeaderSearch">
+          <div class="search-container">
+            <span class="search-icon">⌕</span>
+            <input ref="searchInput" v-model="searchQuery" @input="onSearch" @keydown.enter="submitSearch" @focus="showSug=true" @blur="hideSug" type="text" class="search-input" placeholder="Rechercher..." />
+            <div class="suggestions" v-if="showSug && suggestions.length">
+              <div v-for="(s,i) in suggestions" :key="i" class="sug-item" @mousedown.prevent="selectSug(s)">
+                <span class="sug-type" :class="'t-'+s.type">{{s.type==='lot'?'LOT':'PRD'}}</span>
+                <span class="sug-label">{{s.label}}</span><span class="sug-sub">{{s.sub}}</span>
+              </div>
             </div>
           </div>
-        </div>
-        <span class="notif-bell" @click="$router.push('/notifications')">🔔<span class="bell-badge" v-if="unreadCount>0">{{unreadCount}}</span></span>
+          <span class="notif-bell" @click="$router.push('/notifications')">🔔<span class="bell-badge" v-if="unreadCount>0">{{unreadCount}}</span></span>
+        </template>
+        <div v-else class="top-spacer"></div>
         <button class="theme-btn" @click="cycleTheme" :title="'Thème : '+theme">{{themeIcon}}</button>
         <span class="clock">{{clock}}</span>
       </header>
@@ -270,7 +273,7 @@ export default {
 .main-content{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 .top-bar{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid #e8e8e8;flex-shrink:0}
 .hamburger{display:none;background:none;border:none;font-size:20px;cursor:pointer;padding:10px 14px;min-height:44px;min-width:44px;line-height:1;color:var(--th-text)}
-.search-container{position:relative;flex:1;max-width:400px}.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:15px;color:#999}
+.search-container{position:relative;flex:1;max-width:400px}.top-spacer{flex:1}.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:15px;color:#999}
 .search-input{width:100%;padding:7px 14px 7px 32px;font-size:13px;border:1px solid #ddd;border-radius:4px;background:#fafafa;outline:none;font-family:inherit;box-sizing:border-box}.search-input:focus{border-color:#185FA5;background:#fff}
 .suggestions{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ddd;border-radius:4px;margin-top:4px;box-shadow:0 6px 16px rgba(0,0,0,.08);z-index:100;max-height:320px;overflow-y:auto}
 .sug-item{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;font-size:13px}.sug-item:hover{background:#f5f5f5}
