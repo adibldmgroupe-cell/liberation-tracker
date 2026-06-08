@@ -153,10 +153,6 @@ export default {
     var hintFor = function (key) {
       var p = product.value; if (!p) return ''
       if (key === 'sc_shelf_life' && p.duree_vie) return 'Catalogue — durée de vie : ' + p.duree_vie + ' mois'
-      if (key === 'sc_prix') {
-        var px = p.prix_vente || p.ppa || p.shp
-        if (px) return 'Catalogue — prix unitaire : ' + px + ' DA'
-      }
       return ''
     }
 

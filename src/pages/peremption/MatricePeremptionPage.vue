@@ -176,7 +176,7 @@ var COLS = [
   { key: 'fabricant', label: 'Fabricant', kind: 'text' },
   { key: 'type', label: 'Type', kind: 'type' },
   { key: 'sc_shelf_life', label: 'Shelf Life', kind: 'crit' },
-  { key: 'sc_prix', label: 'Prix', kind: 'crit' },
+  { key: 'sc_prix', label: 'Montant forecast', kind: 'crit' },
   { key: 'sc_historique', label: 'Historique', kind: 'crit' },
   { key: 'sc_profitabilite', label: 'Profitabilité', kind: 'crit' },
   { key: 'sc_forecast', label: 'Forecast', kind: 'crit' },

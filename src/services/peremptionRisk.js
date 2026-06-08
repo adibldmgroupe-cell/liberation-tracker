@@ -11,7 +11,7 @@
 // ── Sous-critères du modèle IMPORT (revente / sous-licence) ──
 var C_IMPORT = [
   { key: 'sc_shelf_life', axe: 'produit', label: 'Shelf Life', s1: '≥ 4 ans', s3: '2–3 ans', s5: '< 2 ans', logique: 'Plus la shelf life est courte, plus le risque de péremption est élevé', binaire: false },
-  { key: 'sc_prix', axe: 'produit', label: 'Prix unitaire', s1: '< 50 M DA', s3: '50–500 M DA', s5: '≥ 500 M DA', logique: "Plus la valeur est élevée, plus l'impact financier de la perte est important", binaire: false },
+  { key: 'sc_prix', axe: 'produit', label: 'Montant forecast', s1: '< 50 M DA', s3: '50–500 M DA', s5: '≥ 500 M DA', logique: "Plus la valeur est élevée, plus l'impact financier de la perte est important", binaire: false },
   { key: 'sc_historique', axe: 'produit', label: 'Historique péremption', s1: 'Aucun précédent', s3: 'Déjà arrivé (ponctuel)', s5: 'Récurrent (répétitif)', logique: 'La répétitivité indique un problème structurel, pas conjoncturel', binaire: false },
   { key: 'sc_forecast', axe: 'partenaire', label: 'Forecast accuracy', s1: 'Fiable (écart < 10%)', s3: null, s5: 'Non fiable (écart > 30%)', logique: "Binaire (1 ou 5) : le forecast est fiable ou ne l'est pas", binaire: true },
   { key: 'sc_solvabilite', axe: 'partenaire', label: 'Solvabilité', s1: 'Solvable (paiement régulier)', s3: 'Retards ponctuels', s5: "Risque d'impayé", logique: 'Capacité du client/partenaire à honorer ses engagements', binaire: false },
@@ -24,7 +24,7 @@ var C_IMPORT = [
 // ── Sous-critères du modèle PRODUCTION (générique + OTC LDM) ──
 var C_PROD = [
   { key: 'sc_shelf_life', axe: 'produit', label: 'Shelf Life', s1: '≥ 3 ans', s3: null, s5: '< 3 ans', logique: 'Plus la shelf life est courte, plus le risque de péremption est élevé', binaire: true },
-  { key: 'sc_prix', axe: 'produit', label: 'Prix unitaire', s1: '< 10 M DA', s3: '10–50 M DA', s5: '≥ 50 M DA', logique: "Plus la valeur est élevée, plus l'impact financier de la perte est important", binaire: false },
+  { key: 'sc_prix', axe: 'produit', label: 'Montant forecast', s1: '< 10 M DA', s3: '10–50 M DA', s5: '≥ 50 M DA', logique: "Plus la valeur est élevée, plus l'impact financier de la perte est important", binaire: false },
   { key: 'sc_historique', axe: 'produit', label: 'Historique péremption', s1: 'Aucun précédent', s3: 'Déjà arrivé (ponctuel)', s5: 'Récurrent (répétitif)', logique: 'La répétitivité indique un problème structurel, pas conjoncturel', binaire: false },
   { key: 'sc_profitabilite', axe: 'produit', label: 'Profitabilité', s1: 'Niveau 1', s3: 'Niveau 2', s5: 'Niveau 3', logique: 'Plus la profitabilité est faible, plus la perte pèse', binaire: false },
   { key: 'sc_forecast', axe: 'commercial', label: 'Forecast accuracy', s1: 'Fiable (écart < 10%)', s3: 'Moyennement fiable (écart < 30%)', s5: 'Non fiable (écart > 30%)', logique: 'Précision des prévisions commerciales', binaire: false },
