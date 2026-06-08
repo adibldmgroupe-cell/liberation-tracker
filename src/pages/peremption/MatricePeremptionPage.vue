@@ -8,8 +8,6 @@
       </div>
       <div class="fa-actions">
         <button class="mp-btn" :class="{'mp-btn-on': showColPanel}" @click.stop="showColPanel = !showColPanel">⚙ Colonnes</button>
-        <button class="mp-btn" @click.stop="doExport('excel')">📥 Excel</button>
-        <button class="mp-btn" @click.stop="doExport('pdf')">📄 PDF</button>
         <button v-if="canConfig" class="mp-btn-cfg" @click.stop="openConfig">⚙ Pondérations &amp; seuils</button>
       </div>
     </div>
@@ -55,6 +53,18 @@
         <option v-for="g in groupeOptions" :key="g" :value="g">{{ g }}</option>
       </select>
       <span v-if="selected.length" class="sel-count">{{ selected.length }} sélectionné(s) <button class="sel-clear" @click="selected = []">✕</button></span>
+    </div>
+
+    <!-- Action de masse -->
+    <div class="mp-actionbar">
+      <select v-model="actionType" class="action-sel">
+        <option value="">— Choisir une action —</option>
+        <option value="excel">📥 Exporter en Excel</option>
+        <option value="pdf">📄 Exporter en PDF</option>
+      </select>
+      <button class="action-exec" :disabled="!actionType" @click="runAction">
+        Exécuter <span class="exec-scope">{{ selected.length ? '(' + selected.length + ' sélectionné' + (selected.length > 1 ? 's' : '') + ')' : '(tout le tableau filtré)' }}</span>
+      </button>
     </div>
 
     <div v-if="loading" class="em">Chargement…</div>
@@ -209,6 +219,7 @@ export default {
     var page = ref(0), PAGE_SIZE = 50
     var sortCol = ref(''), sortDir = ref('asc')
     var selected = ref([])
+    var actionType = ref('')
     var userService = ref(''), canConfig = ref(false), canEval = ref(false), userId = ref(null)
     // édition inline des cellules critères
     var editCell = ref(null), editPos = ref({ top: 0, left: 0 }), cellSaving = ref(false)
@@ -394,6 +405,7 @@ export default {
       var name = 'risques_peremption'
       if (fmt === 'pdf') exportToPDF(data, cols, name); else exportToExcel(data, cols, name)
     }
+    var runAction = function () { if (!actionType.value) return; if (actionType.value === 'excel' || actionType.value === 'pdf') doExport(actionType.value) }
 
     // ── Config ──
     var totalImport = computed(function () { return (Number(cfgForm.value.poids_produit) || 0) + (Number(cfgForm.value.poids_partenaire) || 0) + (Number(cfgForm.value.poids_marche) || 0) })
@@ -446,7 +458,7 @@ export default {
       columnFilters, activeFilterCol, filterPos, cfSearch, distinctVals, distinctValsShown, openFilter, cfChecked, cfToggle, cfAll, cfNone, closeMenus,
       selected, isSelected, toggleSelect, allPageChecked, toggleSelectAllPage,
       canEval, critEditable, cellClick, editCell, editPos, editCrit, editVals, setCellScore,
-      doExport,
+      doExport, actionType, runAction,
       showConfig, cfgForm, cfgSaving, cfgErr, totalImport, totalProd, openConfig, saveConfig,
     }
   }
@@ -492,6 +504,14 @@ export default {
 .sel-count { font-size: 12px; font-weight: 600; color: #7c3aed; }
 .sel-clear { border: none; background: none; color: #7c3aed; cursor: pointer; font-size: 13px; }
 
+.mp-actionbar { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; padding: 10px 12px; background: var(--th-bg2, #f9fafb); border: 1px solid var(--th-border, #e5e7eb); border-radius: 8px; flex-wrap: wrap; }
+.action-sel { flex: 1; min-width: 200px; max-width: 320px; font-size: 13px; padding: 8px 10px; border: 1px solid var(--th-border, #e5e7eb); border-radius: 6px; background: var(--th-input-bg, #fff); color: var(--th-text, #222); cursor: pointer; }
+.action-sel:focus { border-color: #7c3aed; outline: none; }
+.action-sel option { background: var(--th-input-bg, #fff); color: var(--th-text, #222); }
+.action-exec { font-size: 13px; font-weight: 700; padding: 9px 20px; border-radius: 6px; border: none; background: #7c3aed; color: #fff; cursor: pointer; }
+.action-exec:hover:not(:disabled) { opacity: .9; }
+.action-exec:disabled { opacity: .45; cursor: not-allowed; }
+.exec-scope { font-weight: 400; font-size: 11px; opacity: .85; }
 .em { text-align: center; padding: 40px; color: var(--th-text2, #9ca3af); font-size: 13px; }
 .table-wrap { overflow: auto; max-height: calc(100vh - 340px); border: 1px solid var(--th-border, #e5e7eb); border-radius: 8px; }
 .pt-table { width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap; }
