@@ -41,6 +41,13 @@
         <span class="ts-icon">🔍</span>
         <input v-model="searchQ" class="mp-search" placeholder="Rechercher code, désignation, fabricant…" />
       </div>
+      <select v-model="typeFilter" class="mp-type-filter">
+        <option value="">Tous les types</option>
+        <option value="generique">Générique (production)</option>
+        <option value="otc">OTC (production)</option>
+        <option value="sous_licence">Sous-licence</option>
+        <option value="import">Import / Revente</option>
+      </select>
     </div>
 
     <div v-if="loading" class="em">Chargement…</div>
@@ -52,6 +59,7 @@
             <th>Code</th>
             <th>Désignation</th>
             <th>Partenaire (fabricant)</th>
+            <th class="tc">Type</th>
             <th>Appro.</th>
             <th class="tc">Produit</th>
             <th class="tc">Partenaire</th>
@@ -68,6 +76,7 @@
             <td class="mono">{{ r.code_article }}</td>
             <td class="td-desc">{{ r.description }}</td>
             <td>{{ r.fabricant || '—' }}</td>
+            <td class="tc"><span class="ty" :class="TYPE_CLASS[r.type]">{{ TYPE_LABELS[r.type] }}</span></td>
             <td class="mode">{{ r.ev ? (MODE_APPRO_LABELS[r.ev.mode_appro] || '—') : '—' }}</td>
             <td class="tc mono">{{ r.ev && r.ev.score_produit != null ? r.ev.score_produit : '—' }}</td>
             <td class="tc mono">{{ r.ev && r.ev.score_partenaire != null ? r.ev.score_partenaire : '—' }}</td>
@@ -122,7 +131,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '../../supabase'
 import { loadPermissions, canPerform } from '../../services/permissions'
-import { NIVEAU_LABELS, NIVEAU_CLASS, NIVEAU_ORDER, MODE_APPRO_LABELS, DEFAULT_CONFIG, decisionsFor } from '../../services/peremptionRisk'
+import { NIVEAU_LABELS, NIVEAU_CLASS, NIVEAU_ORDER, MODE_APPRO_LABELS, DEFAULT_CONFIG, decisionsFor, productType, TYPE_LABELS, TYPE_CLASS } from '../../services/peremptionRisk'
 
 export default {
   setup() {
@@ -134,6 +143,7 @@ export default {
     var needsMigration = ref(false)
     var searchQ = ref('')
     var niveauFilter = ref('')
+    var typeFilter = ref('')
     var userService = ref('')
     var canConfig = ref(false)
 
@@ -145,7 +155,7 @@ export default {
 
     var rows = computed(function () {
       return products.value.map(function (p) {
-        return { id: p.id, code_article: p.code_article, description: p.description, fabricant: p.fabricant, ev: evMap.value[p.id] || null }
+        return { id: p.id, code_article: p.code_article, description: p.description, fabricant: p.fabricant, type: productType(p), ev: evMap.value[p.id] || null }
       })
     })
     var evaluatedCount = computed(function () { return rows.value.filter(function (r) { return r.ev }).length })
@@ -160,7 +170,9 @@ export default {
     var filtered = computed(function () {
       var q = searchQ.value.trim().toLowerCase()
       var nf = niveauFilter.value
+      var tf = typeFilter.value
       var arr = rows.value.filter(function (r) {
+        if (tf && r.type !== tf) return false
         if (nf === 'na') { if (r.ev && r.ev.niveau) return false }
         else if (nf) { if (!r.ev || r.ev.niveau !== nf) return false }
         if (!q) return true
@@ -210,12 +222,12 @@ export default {
     var load = async function () {
       loading.value = true; needsMigration.value = false
       // 1. Produits actifs EN PREMIER (table toujours présente, indépendante du module)
-      var pRes = await supabase.from('products').select('id, code_article, description, fabricant, actif').order('code_article')
+      var pRes = await supabase.from('products').select('id, code_article, description, fabricant, groupe_article, actif').order('code_article')
       products.value = (pRes.data || []).filter(function (p) { return p.actif !== false })
       // 2. Config (la migration 034 seed la ligne id=1 → son absence = migration non exécutée)
       try {
         var cfgRes = await supabase.from('peremption_config').select('*').eq('id', 1).maybeSingle()
-        if (cfgRes.data) config.value = cfgRes.data
+        if (cfgRes.data) config.value = Object.assign({}, DEFAULT_CONFIG, cfgRes.data)
         else needsMigration.value = true
       } catch (e) { needsMigration.value = true }
       // 3. Évaluations (dernière par produit) — idem
@@ -242,9 +254,9 @@ export default {
     })
 
     return {
-      products, loading, needsMigration, searchQ, niveauFilter, canConfig,
+      products, loading, needsMigration, searchQ, niveauFilter, typeFilter, canConfig,
       evaluatedCount, counts, filtered, fmtDate, valNiveau, toggleNiveau, goEval,
-      NIVEAU_LABELS, NIVEAU_CLASS, MODE_APPRO_LABELS,
+      NIVEAU_LABELS, NIVEAU_CLASS, MODE_APPRO_LABELS, TYPE_LABELS, TYPE_CLASS,
       showConfig, cfgForm, cfgSaving, cfgErr, poidsTotal, openConfig, saveConfig
     }
   }
@@ -271,8 +283,10 @@ export default {
 .k-n { font-size: 18px; font-weight: 800; color: var(--th-text, #1a1a2e); font-family: 'SF Mono', monospace; }
 .k-l { font-size: 10px; font-weight: 600; color: var(--th-text2, #6b7280); text-transform: uppercase; letter-spacing: .3px; }
 
-.mp-toolbar { margin-bottom: 10px; }
-.mp-search-wrap { position: relative; max-width: 380px; }
+.mp-toolbar { margin-bottom: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.mp-search-wrap { position: relative; max-width: 380px; flex: 1; min-width: 220px; }
+.mp-type-filter { font-size: 12px; padding: 8px 10px; border: 1px solid var(--th-border, #e5e7eb); border-radius: 6px; background: var(--th-input-bg, #fff); color: inherit; cursor: pointer; }
+.mp-type-filter:focus { border-color: #7c3aed; outline: none; }
 .ts-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 13px; opacity: .6; }
 .mp-search { width: 100%; box-sizing: border-box; font-size: 13px; padding: 8px 10px 8px 30px; border: 1px solid var(--th-border, #e5e7eb); border-radius: 6px; outline: none; background: var(--th-input-bg, #fff); color: inherit; }
 .mp-search:focus { border-color: #7c3aed; }
@@ -304,6 +318,11 @@ export default {
 .niv-na { background: #f3f4f6; color: #9ca3af; }
 .valid-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 10px; background: #f5f3ff; color: #7c3aed; border: 1px solid #ede9fe; white-space: nowrap; }
 .val-none { color: var(--th-text3, #bbb); }
+.ty { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 9px; white-space: nowrap; }
+.ty-gen { background: #ede9fe; color: #6d28d9; }
+.ty-otc { background: #e0f2fe; color: #0369a1; }
+.ty-sl  { background: #fef3c7; color: #92400e; }
+.ty-imp { background: #f3f4f6; color: #6b7280; }
 
 /* KPI cartes — teinte de fond légère */
 .kpi-faible.on { background: #ecfdf5; } .kpi-moyen.on { background: #fffbeb; } .kpi-eleve.on { background: #fef2f2; }
@@ -325,6 +344,10 @@ html[data-theme="night"] .niv-na,
 html[data-theme="workshop"] .niv-na { background: var(--th-bg3); color: var(--th-text3, #9ca3af); }
 html[data-theme="night"] .valid-tag,
 html[data-theme="workshop"] .valid-tag { background: var(--th-bg3); color: var(--th-accent); border-color: var(--th-border); }
+html[data-theme="night"] .ty-gen, html[data-theme="workshop"] .ty-gen { background: var(--th-bg3); color: var(--th-accent); }
+html[data-theme="night"] .ty-otc, html[data-theme="workshop"] .ty-otc { background: rgba(56,189,248,.14); color: #7dd3fc; }
+html[data-theme="night"] .ty-sl,  html[data-theme="workshop"] .ty-sl  { background: rgba(251,191,36,.12); color: #fbbf24; }
+html[data-theme="night"] .ty-imp, html[data-theme="workshop"] .ty-imp { background: var(--th-bg3); color: var(--th-text3, #9ca3af); }
 html[data-theme="night"] .mp-warn,
 html[data-theme="workshop"] .mp-warn { background: rgba(251,191,36,.12); color: #fbbf24; border-color: rgba(251,191,36,.3); }
 
@@ -349,12 +372,12 @@ html[data-theme="workshop"] .mp-warn { background: rgba(251,191,36,.12); color: 
 
 @media (max-width: 768px) {
   .pt-table th:nth-child(3), .pt-table td:nth-child(3),
-  .pt-table th:nth-child(4), .pt-table td:nth-child(4),
   .pt-table th:nth-child(5), .pt-table td:nth-child(5),
   .pt-table th:nth-child(6), .pt-table td:nth-child(6),
   .pt-table th:nth-child(7), .pt-table td:nth-child(7),
-  .pt-table th:nth-child(10), .pt-table td:nth-child(10),
-  .pt-table th:nth-child(11), .pt-table td:nth-child(11) { display: none; }
+  .pt-table th:nth-child(8), .pt-table td:nth-child(8),
+  .pt-table th:nth-child(11), .pt-table td:nth-child(11),
+  .pt-table th:nth-child(12), .pt-table td:nth-child(12) { display: none; }
   .fg3 { grid-template-columns: 1fr; }
 }
 </style>

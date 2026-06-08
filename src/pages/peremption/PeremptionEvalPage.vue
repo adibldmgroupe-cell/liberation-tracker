@@ -5,7 +5,7 @@
     <!-- En-tête produit -->
     <div class="lh">
       <div class="lh-info">
-        <div class="lh-type"><span class="lt-short">{{ product.code_article }}</span> <span class="lt-full">(Risque de péremption)</span></div>
+        <div class="lh-type"><span class="lt-short">{{ product.code_article }}</span> <span class="lt-full" v-if="typeKey">({{ TYPE_LABELS[typeKey] }})</span></div>
         <div class="lh-lot"><span class="ll-prod">{{ product.description }}</span></div>
         <div class="lh-part">Partenaire : <strong>{{ product.fabricant || '—' }}</strong></div>
       </div>
@@ -26,8 +26,8 @@
       </div>
     </div>
 
-    <!-- Axes de scoring -->
-    <div class="section" v-for="ax in AXES" :key="ax.key">
+    <!-- Axes de scoring (dépend du modèle du produit) -->
+    <div class="section" v-for="ax in model.axes" :key="ax.key">
       <div class="sh">
         <span>Axe {{ ax.label }}</span>
         <span class="ax-score" v-if="axisVal(ax.key) != null">moyenne {{ axisVal(ax.key) }} · {{ axWeight(ax) }}%</span>
@@ -52,12 +52,10 @@
 
     <!-- Synthèse -->
     <div class="section">
-      <div class="sh"><span>Synthèse</span><span class="dc">{{ filledCount }}/9</span></div>
+      <div class="sh"><span>Synthèse</span><span class="dc">{{ filledCount }}/{{ critCount }}</span></div>
       <div class="synth">
         <div class="synth-axes">
-          <div class="sa"><span class="sa-l">Produit</span><span class="sa-v">{{ disp(preview.score_produit) }}</span></div>
-          <div class="sa"><span class="sa-l">Partenaire</span><span class="sa-v">{{ disp(preview.score_partenaire) }}</span></div>
-          <div class="sa"><span class="sa-l">Marché</span><span class="sa-v">{{ disp(preview.score_marche) }}</span></div>
+          <div class="sa" v-for="ax in model.axes" :key="ax.key"><span class="sa-l">{{ ax.short }}</span><span class="sa-v">{{ disp(preview.axisScores[ax.key]) }}</span></div>
         </div>
         <div class="synth-global">
           <div class="sg-l">Score global pondéré</div>
@@ -118,8 +116,8 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../../supabase'
 import { loadPermissions, canPerform } from '../../services/permissions'
-import { AXES, CRITERIA, MODE_APPRO, DEFAULT_CONFIG, NIVEAU_LABELS, NIVEAU_CLASS,
-  criteriaForAxe, allowedValues, axisScore, computeScores, isComplete,
+import { getModel, modelForProduct, productType, TYPE_LABELS, MODE_APPRO, DEFAULT_CONFIG, NIVEAU_LABELS, NIVEAU_CLASS,
+  criteriaForModelAxe, allowedValues, axisScore, computeScores, isComplete,
   decisionsFor, FORECAST_LABELS, SPLIT_LABELS, MONITORING_LABELS } from '../../services/peremptionRisk'
 
 export default {
@@ -135,19 +133,25 @@ export default {
     var canEval = ref(false)
     var submitting = ref(false)
     var saveOk = ref(false)
+    var modelKey = ref('import')
+    var model = computed(function () { return getModel(modelKey.value) })
+    var typeKey = computed(function () { return product.value ? productType(product.value) : null })
 
-    CRITERIA.forEach(function (c) { scores[c.key] = null })
+    // init de l'union des sous-scores des 2 modèles
+    var ALL_KEYS = ['sc_shelf_life', 'sc_prix', 'sc_historique', 'sc_profitabilite', 'sc_forecast', 'sc_solvabilite', 'sc_engagements', 'sc_promotion', 'sc_croissance', 'sc_concurrence', 'sc_maturite']
+    ALL_KEYS.forEach(function (k) { scores[k] = null })
 
-    var preview = computed(function () { return computeScores(scores, config.value) })
+    var preview = computed(function () { return computeScores(scores, config.value, modelKey.value) })
     var decisions = computed(function () { return decisionsFor(preview.value.niveau) })
+    var critCount = computed(function () { return model.value.criteria.length })
     var filledCount = computed(function () {
-      return CRITERIA.filter(function (c) { var v = scores[c.key]; return v === 1 || v === 3 || v === 5 }).length
+      return model.value.criteria.filter(function (c) { var v = scores[c.key]; return v === 1 || v === 3 || v === 5 }).length
     })
-    var isReady = computed(function () { return isComplete(scores) })
+    var isReady = computed(function () { return isComplete(scores, modelKey.value) })
 
-    var critFor = function (axeKey) { return criteriaForAxe(axeKey) }
+    var critFor = function (axeKey) { return criteriaForModelAxe(modelKey.value, axeKey) }
     var vals = function (c) { return allowedValues(c) }
-    var axisVal = function (axeKey) { var v = axisScore(scores, axeKey); return v == null ? null : Math.round(v * 100) / 100 }
+    var axisVal = function (axeKey) { var v = axisScore(scores, modelKey.value, axeKey); return v == null ? null : Math.round(v * 100) / 100 }
     var axWeight = function (ax) { return Number(config.value[ax.poidsKey]) || 0 }
     var disp = function (v) { return v == null ? '—' : v }
     var labelFor = function (c, v) { return v === 1 ? c.s1 : (v === 3 ? c.s3 : c.s5) }
@@ -171,12 +175,12 @@ export default {
       if (submitting.value || !canEval.value || !isReady.value) return
       submitting.value = true; saveOk.value = false
       try {
-        var sc = computeScores(scores, config.value)
+        var sc = computeScores(scores, config.value, modelKey.value)
         var payload = {
-          product_id: product.value.id,
+          product_id: product.value.id, modele: modelKey.value,
           mode_appro: modeAppro.value || null,
-          sc_shelf_life: scores.sc_shelf_life, sc_prix: scores.sc_prix, sc_historique: scores.sc_historique,
-          sc_forecast: scores.sc_forecast, sc_solvabilite: scores.sc_solvabilite, sc_engagements: scores.sc_engagements,
+          sc_shelf_life: scores.sc_shelf_life, sc_prix: scores.sc_prix, sc_historique: scores.sc_historique, sc_profitabilite: scores.sc_profitabilite,
+          sc_forecast: scores.sc_forecast, sc_solvabilite: scores.sc_solvabilite, sc_engagements: scores.sc_engagements, sc_promotion: scores.sc_promotion,
           sc_croissance: scores.sc_croissance, sc_concurrence: scores.sc_concurrence, sc_maturite: scores.sc_maturite,
           score_produit: sc.score_produit, score_partenaire: sc.score_partenaire, score_marche: sc.score_marche,
           score_global: sc.score_global, niveau: sc.niveau,
@@ -209,17 +213,18 @@ export default {
 
     var load = async function () {
       notFound.value = false
-      var pRes = await supabase.from('products').select('id, code_article, description, fabricant, duree_vie, prix_vente, ppa, shp').eq('id', route.params.productId).single()
+      var pRes = await supabase.from('products').select('id, code_article, description, fabricant, groupe_article, duree_vie, prix_vente, ppa, shp').eq('id', route.params.productId).single()
       if (!pRes.data) { notFound.value = true; product.value = null; return }
       product.value = pRes.data
+      modelKey.value = modelForProduct(pRes.data)   // LDM → production · reste → import
       try {
         var cfgRes = await supabase.from('peremption_config').select('*').eq('id', 1).maybeSingle()
-        if (cfgRes.data) config.value = cfgRes.data
+        if (cfgRes.data) config.value = Object.assign({}, DEFAULT_CONFIG, cfgRes.data)
       } catch (e) { /* table absente : on garde DEFAULT_CONFIG */ }
       await loadHistory()
       // préremplir avec la dernière évaluation
       var last = history.value[0]
-      CRITERIA.forEach(function (c) { scores[c.key] = last && (last[c.key] === 1 || last[c.key] === 3 || last[c.key] === 5) ? last[c.key] : null })
+      ALL_KEYS.forEach(function (k) { scores[k] = last && (last[k] === 1 || last[k] === 3 || last[k] === 5) ? last[k] : null })
       modeAppro.value = last && last.mode_appro ? last.mode_appro : ''
       note.value = ''
     }
@@ -237,8 +242,8 @@ export default {
     watch(function () { return route.params.productId }, function (nv, ov) { if (nv && nv !== ov) location.reload() })
 
     return {
-      product, notFound, scores, modeAppro, note, history, submitting, saveOk, canEval, isReady, filledCount,
-      preview, decisions, AXES, MODE_APPRO, NIVEAU_LABELS, NIVEAU_CLASS,
+      product, notFound, scores, modeAppro, note, history, submitting, saveOk, canEval, isReady, filledCount, critCount,
+      preview, decisions, model, typeKey, TYPE_LABELS, MODE_APPRO, NIVEAU_LABELS, NIVEAU_CLASS,
       FORECAST_LABELS, SPLIT_LABELS, MONITORING_LABELS,
       critFor, vals, axisVal, axWeight, disp, labelFor, setScore, hintFor, fmtDt, goBack, save
     }
