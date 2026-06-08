@@ -471,8 +471,9 @@ export default {
 .ts-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 13px; opacity: .6; }
 .mp-search { width: 100%; box-sizing: border-box; font-size: 13px; padding: 8px 10px 8px 30px; border: 1px solid var(--th-border, #e5e7eb); border-radius: 6px; outline: none; background: var(--th-input-bg, #fff); color: inherit; }
 .mp-search:focus { border-color: #7c3aed; }
-.mp-sel { font-size: 12px; padding: 8px 10px; border: 1px solid var(--th-border, #e5e7eb); border-radius: 6px; background: var(--th-input-bg, #fff); color: inherit; cursor: pointer; max-width: 200px; }
+.mp-sel { font-size: 12px; padding: 8px 10px; border: 1px solid var(--th-border, #e5e7eb); border-radius: 6px; background: var(--th-input-bg, #fff); color: var(--th-text, #222); cursor: pointer; max-width: 200px; }
 .mp-sel:focus { border-color: #7c3aed; outline: none; }
+.mp-sel option { background: var(--th-input-bg, #fff); color: var(--th-text, #222); }
 .sel-count { font-size: 12px; font-weight: 600; color: #7c3aed; }
 .sel-clear { border: none; background: none; color: #7c3aed; cursor: pointer; font-size: 13px; }
 
