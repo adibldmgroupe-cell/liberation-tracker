@@ -81,7 +81,7 @@
             <td class="th-chk" @click.stop><input type="checkbox" :checked="isSelected(r.id)" @change="toggleSelect(r.id)" /></td>
             <td class="mono clk" @click="goEval(r.id)">{{ r.code_article }}</td>
             <td class="td-desc clk" @click="goEval(r.id)">{{ r.description }}</td>
-            <td v-for="col in visibleCols" :key="col" :class="cellClass(col)" @click="goEval(r.id)">
+            <td v-for="col in visibleCols" :key="col" :class="[cellClass(col), {'td-edit': critEditable(r, col)}]" @click="cellClick(r, col, $event)">
               <span v-if="colKind(col) === 'type'" class="ty" :class="TYPE_CLASS[r.type]">{{ r.typeLabel }}</span>
               <span v-else-if="colKind(col) === 'niveau'">
                 <span v-if="r.niveau" class="niv" :class="NIVEAU_CLASS[r.niveau]">{{ NIVEAU_LABELS[r.niveau] }}</span>
@@ -90,7 +90,7 @@
               <span v-else-if="colKind(col) === 'valid'">
                 <span v-if="r.validation" class="valid-tag">Niveau {{ r.validation }}</span><span v-else class="val-none">—</span>
               </span>
-              <span v-else-if="colKind(col) === 'crit'" class="sc-cell" :class="critCls(r[col])">{{ r[col] != null ? r[col] : '—' }}</span>
+              <span v-else-if="colKind(col) === 'crit'" class="sc-cell" :class="[critCls(r[col]), {'sc-add': critEditable(r, col) && r[col] == null}]">{{ r[col] != null ? r[col] : (critEditable(r, col) ? '＋' : '—') }}</span>
               <span v-else-if="colKind(col) === 'score'" class="mono" :class="{strong: col === 'score_global'}">{{ r[col] != null ? r[col] : '—' }}</span>
               <span v-else-if="colKind(col) === 'date'" class="dt">{{ r.evaluated_at ? fmtDate(r.evaluated_at) : '—' }}</span>
               <span v-else>{{ r[col] || '—' }}</span>
@@ -111,6 +111,15 @@
           <input type="checkbox" :checked="cfChecked(v.key)" @change="cfToggle(v.key)" /> {{ v.label }}
         </label>
       </div>
+    </div>
+
+    <!-- Éditeur inline de score critère -->
+    <div v-if="editCell && editCrit" class="ce-menu" :style="{top: editPos.top + 'px', left: editPos.left + 'px'}" @click.stop>
+      <div class="ce-hd">{{ editCrit.label }}</div>
+      <button v-for="v in editVals" :key="v" class="ce-opt" :class="'ceo-' + v" @click="setCellScore(v)">
+        <span class="ce-n">{{ v }}</span><span class="ce-t">{{ v === 1 ? editCrit.s1 : (v === 3 ? editCrit.s3 : editCrit.s5) }}</span>
+      </button>
+      <button class="ce-clear" @click="setCellScore(null)">✕ Effacer</button>
     </div>
 
     <!-- Pagination -->
@@ -157,7 +166,8 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '../../supabase'
 import { loadPermissions, canPerform } from '../../services/permissions'
-import { NIVEAU_LABELS, NIVEAU_CLASS, NIVEAU_ORDER, DEFAULT_CONFIG, decisionsFor, productType, TYPE_LABELS, TYPE_CLASS } from '../../services/peremptionRisk'
+import { NIVEAU_LABELS, NIVEAU_CLASS, NIVEAU_ORDER, DEFAULT_CONFIG, decisionsFor, productType, TYPE_LABELS, TYPE_CLASS,
+  modelForProduct, getModel, allowedValues, computeScores } from '../../services/peremptionRisk'
 import { exportToExcel, exportToPDF } from '../../services/export'
 
 // Colonnes sélectionnables (Code + Désignation sont fixes, hors panneau)
@@ -187,6 +197,7 @@ var COLS = [
 var COL_LABELS = COLS.reduce(function (m, c) { m[c.key] = c.label; return m }, {})
 var COL_KIND = COLS.reduce(function (m, c) { m[c.key] = c.kind; return m }, {})
 var ALL_KEYS = COLS.map(function (c) { return c.key })
+var ALL_SC_KEYS = ['sc_shelf_life', 'sc_prix', 'sc_historique', 'sc_profitabilite', 'sc_forecast', 'sc_solvabilite', 'sc_engagements', 'sc_promotion', 'sc_croissance', 'sc_concurrence', 'sc_maturite']
 var LS_ORDER = 'peremption_col_order', LS_HIDDEN = 'peremption_hidden_cols'
 
 export default {
@@ -198,7 +209,9 @@ export default {
     var page = ref(0), PAGE_SIZE = 50
     var sortCol = ref(''), sortDir = ref('asc')
     var selected = ref([])
-    var userService = ref(''), canConfig = ref(false)
+    var userService = ref(''), canConfig = ref(false), canEval = ref(false), userId = ref(null)
+    // édition inline des cellules critères
+    var editCell = ref(null), editPos = ref({ top: 0, left: 0 }), cellSaving = ref(false)
     // colonnes
     var showColPanel = ref(false)
     var savedOrder = null, savedHidden = []
@@ -314,13 +327,48 @@ export default {
     var cfAll = function () { var col = activeFilterCol.value; columnFilters.value = Object.assign({}, columnFilters.value, defObj(col, distinctVals.value.map(function (v) { return v.key }))) }
     var cfNone = function () { var col = activeFilterCol.value; columnFilters.value = Object.assign({}, columnFilters.value, defObj(col, undefined)) }
     function defObj(k, v) { var o = {}; o[k] = v; return o }
-    var closeMenus = function () { activeFilterCol.value = null; showColPanel.value = false }
+    var closeMenus = function () { activeFilterCol.value = null; showColPanel.value = false; editCell.value = null }
 
     // ── Sélection ──
     var isSelected = function (id) { return selected.value.indexOf(id) >= 0 }
     var toggleSelect = function (id) { var i = selected.value.indexOf(id); if (i >= 0) selected.value.splice(i, 1); else selected.value.push(id) }
     var allPageChecked = computed(function () { return paged.value.length > 0 && paged.value.every(function (r) { return isSelected(r.id) }) })
     var toggleSelectAllPage = function () { if (allPageChecked.value) { paged.value.forEach(function (r) { var i = selected.value.indexOf(r.id); if (i >= 0) selected.value.splice(i, 1) }) } else { paged.value.forEach(function (r) { if (!isSelected(r.id)) selected.value.push(r.id) }) } }
+
+    // ── Édition inline des scores critères (saisie depuis le tableau) ──
+    var productById = computed(function () { var m = {}; products.value.forEach(function (p) { m[p.id] = p }); return m })
+    var critEditable = function (r, col) { if (!canEval.value || COL_KIND[col] !== 'crit') return false; var p = productById.value[r.id]; if (!p) return false; return getModel(modelForProduct(p)).criteria.some(function (c) { return c.key === col }) }
+    var editCrit = computed(function () { if (!editCell.value) return null; var p = productById.value[editCell.value.productId]; if (!p) return null; return getModel(modelForProduct(p)).criteria.find(function (c) { return c.key === editCell.value.col }) || null })
+    var editVals = computed(function () { return editCrit.value ? allowedValues(editCrit.value) : [] })
+    var cellClick = function (r, col, ev) {
+      if (COL_KIND[col] === 'crit') { if (critEditable(r, col)) { ev.stopPropagation(); openCellEditor(r, col, ev) } return } // critère non applicable → rien
+      goEval(r.id)
+    }
+    var openCellEditor = function (r, col, ev) {
+      if (editCell.value && editCell.value.productId === r.id && editCell.value.col === col) { editCell.value = null; return }
+      activeFilterCol.value = null; showColPanel.value = false
+      editCell.value = { productId: r.id, col: col }
+      var rect = ev.currentTarget.getBoundingClientRect()
+      editPos.value = { top: rect.bottom + 4, left: Math.min(rect.left, window.innerWidth - 230) }
+    }
+    var setCellScore = function (value) { if (!editCell.value) return; var c = editCell.value; editCell.value = null; saveCell(c.productId, c.col, value) }
+    var saveCell = async function (productId, col, value) {
+      if (cellSaving.value) return
+      cellSaving.value = true
+      try {
+        var p = productById.value[productId]; var mk = modelForProduct(p)
+        var ev = evMap.value[productId]
+        var sc = {}; ALL_SC_KEYS.forEach(function (k) { sc[k] = ev ? ev[k] : null }); sc[col] = value
+        var comp = computeScores(sc, config.value, mk)
+        var payload = { modele: mk, score_produit: comp.score_produit, score_partenaire: comp.score_partenaire, score_marche: comp.score_marche, score_global: comp.score_global, niveau: comp.niveau, evaluated_by: userId.value, evaluated_at: new Date().toISOString() }
+        ALL_SC_KEYS.forEach(function (k) { payload[k] = sc[k] })
+        var res
+        if (ev && ev.id) res = await supabase.from('peremption_evaluations').update(payload).eq('id', ev.id).select().single()
+        else { payload.product_id = productId; res = await supabase.from('peremption_evaluations').insert(payload).select().single() }
+        if (res.error) { alert('Erreur enregistrement : ' + res.error.message); return }
+        if (res.data) evMap.value = Object.assign({}, evMap.value, defObj(productId, res.data))
+      } finally { cellSaving.value = false }
+    }
 
     // ── Export ──
     var doExport = function (fmt) {
@@ -367,8 +415,9 @@ export default {
 
     onMounted(async function () {
       var u = await supabase.auth.getUser()
-      if (u.data.user) { var p = await supabase.from('profiles').select('service').eq('id', u.data.user.id).single(); if (p.data) { userService.value = p.data.service; await loadPermissions(p.data.service) } }
+      if (u.data.user) { userId.value = u.data.user.id; var p = await supabase.from('profiles').select('service').eq('id', u.data.user.id).single(); if (p.data) { userService.value = p.data.service; await loadPermissions(p.data.service) } }
       canConfig.value = canPerform('configurer_risque_peremption')
+      canEval.value = canPerform('evaluer_risque_peremption')
       await load()
     })
 
@@ -381,6 +430,7 @@ export default {
       sortBy, sortIcon,
       columnFilters, activeFilterCol, filterPos, cfSearch, distinctVals, distinctValsShown, openFilter, cfChecked, cfToggle, cfAll, cfNone, closeMenus,
       selected, isSelected, toggleSelect, allPageChecked, toggleSelectAllPage,
+      canEval, critEditable, cellClick, editCell, editPos, editCrit, editVals, setCellScore,
       doExport,
       showConfig, cfgForm, cfgSaving, cfgErr, totalImport, totalProd, openConfig, saveConfig,
     }
@@ -455,6 +505,21 @@ export default {
 .cf-search { width: 100%; box-sizing: border-box; font-size: 12px; padding: 5px 8px; border: 1px solid var(--th-border, #e5e7eb); border-radius: 5px; margin-bottom: 6px; background: var(--th-input-bg, #fff); color: inherit; }
 .cf-acts { display: flex; gap: 6px; margin-bottom: 6px; } .cf-acts button { flex: 1; font-size: 11px; padding: 4px; border: 1px solid var(--th-border, #e5e7eb); background: var(--th-bg2, #fff); border-radius: 4px; cursor: pointer; }
 .cf-list { max-height: 200px; overflow-y: auto; } .cf-item { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 3px 0; cursor: pointer; }
+
+/* Édition inline */
+.td-edit { cursor: pointer; }
+.td-edit:hover .sc-cell { outline: 2px solid #c4b5fd; outline-offset: 1px; }
+.sc-add { background: transparent !important; color: #7c3aed !important; font-weight: 800; opacity: .55; }
+.ce-menu { position: fixed; z-index: 60; background: var(--th-bg2, #fff); border: 1px solid var(--th-border, #e5e7eb); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,.2); width: 230px; padding: 8px; }
+.ce-hd { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #7c3aed; margin-bottom: 6px; }
+.ce-opt { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 7px 10px; margin-bottom: 4px; border: 1px solid var(--th-border, #e5e7eb); border-radius: 6px; background: var(--th-bg2, #fff); color: inherit; cursor: pointer; }
+.ce-opt:hover { border-color: #7c3aed; background: #f5f3ff; }
+.ce-n { font-size: 14px; font-weight: 800; font-family: 'SF Mono', monospace; width: 16px; flex-shrink: 0; }
+.ce-t { font-size: 11px; color: var(--th-text2, #555); line-height: 1.2; }
+.ceo-1 .ce-n { color: #1D9E75; } .ceo-3 .ce-n { color: #d99e2b; } .ceo-5 .ce-n { color: #E24B4A; }
+.ce-clear { width: 100%; font-size: 11px; padding: 5px; border: none; background: none; color: var(--th-text2, #9ca3af); cursor: pointer; }
+.ce-clear:hover { color: #E24B4A; }
+html[data-theme="night"] .ce-opt:hover, html[data-theme="workshop"] .ce-opt:hover { background: var(--th-bg3); }
 
 .mp-pag { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 12px 0 4px; }
 .pag-btn { font-size: 12px; font-weight: 600; padding: 6px 14px; border: 1px solid var(--th-border, #e5e7eb); border-radius: 6px; background: var(--th-bg2, #fff); color: var(--th-text, #333); cursor: pointer; }
