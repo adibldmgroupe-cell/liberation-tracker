@@ -59,11 +59,20 @@
     <div class="mp-actionbar">
       <select v-model="actionType" class="action-sel">
         <option value="">— Choisir une action —</option>
-        <option value="excel">📥 Exporter en Excel</option>
-        <option value="pdf">📄 Exporter en PDF</option>
+        <optgroup v-if="canEval" label="Attribuer un critère (en masse, aux produits cochés)">
+          <option v-for="c in critCols" :key="c.key" :value="'crit:' + c.key">Définir : {{ c.label }}</option>
+        </optgroup>
+        <optgroup label="Export">
+          <option value="excel">📥 Exporter en Excel</option>
+          <option value="pdf">📄 Exporter en PDF</option>
+        </optgroup>
       </select>
-      <button class="action-exec" :disabled="!actionType" @click="runAction">
-        Exécuter <span class="exec-scope">{{ selected.length ? '(' + selected.length + ' sélectionné' + (selected.length > 1 ? 's' : '') + ')' : '(tout le tableau filtré)' }}</span>
+      <select v-if="isCritAction" v-model="bulkValue" class="action-sel action-val">
+        <option value="">Valeur…</option>
+        <option v-for="o in bulkValueOpts" :key="o.v" :value="o.v">{{ o.l }}</option>
+      </select>
+      <button class="action-exec" :disabled="execDisabled" @click="runAction">
+        {{ bulkRunning ? 'En cours…' : 'Exécuter' }} <span class="exec-scope">{{ execScope }}</span>
       </button>
     </div>
 
@@ -177,7 +186,7 @@ import { useRouter } from 'vue-router'
 import { supabase } from '../../supabase'
 import { loadPermissions, canPerform } from '../../services/permissions'
 import { NIVEAU_LABELS, NIVEAU_CLASS, NIVEAU_ORDER, DEFAULT_CONFIG, decisionsFor, productType, TYPE_LABELS, TYPE_CLASS,
-  modelForProduct, getModel, allowedValues, computeScores } from '../../services/peremptionRisk'
+  modelForProduct, getModel, allowedValues, computeScores, MODELS } from '../../services/peremptionRisk'
 import { exportToExcel, exportToPDF } from '../../services/export'
 
 // Colonnes sélectionnables (Code + Désignation sont fixes, hors panneau)
@@ -221,7 +230,8 @@ export default {
     var page = ref(0), PAGE_SIZE = 50
     var sortCol = ref(''), sortDir = ref('asc')
     var selected = ref([])
-    var actionType = ref('')
+    var actionType = ref(''), bulkValue = ref(''), bulkRunning = ref(false)
+    var CRIT_COLS = COLS.filter(function (c) { return c.kind === 'crit' })
     var userService = ref(''), canConfig = ref(false), canEval = ref(false), userId = ref(null)
     // édition inline des cellules critères
     var editCell = ref(null), editPos = ref({ top: 0, left: 0 }), cellSaving = ref(false)
@@ -382,22 +392,49 @@ export default {
       editPos.value = { top: rect.bottom + 4, left: Math.min(rect.left, window.innerWidth - 230) }
     }
     var setCellScore = function (value) { if (!editCell.value) return; var c = editCell.value; editCell.value = null; saveCell(c.productId, c.col, value) }
+    // upsert d'un critère pour un produit (UPDATE de l'éval courante, sinon INSERT) → renvoie la ligne
+    var upsertCriterion = async function (productId, col, value) {
+      var p = productById.value[productId]; var mk = modelForProduct(p)
+      var ev = evMap.value[productId]
+      var sc = {}; ALL_SC_KEYS.forEach(function (k) { sc[k] = ev ? ev[k] : null }); sc[col] = value
+      var comp = computeScores(sc, config.value, mk)
+      var payload = { modele: mk, score_produit: comp.score_produit, score_partenaire: comp.score_partenaire, score_marche: comp.score_marche, score_global: comp.score_global, niveau: comp.niveau, evaluated_by: userId.value, evaluated_at: new Date().toISOString() }
+      ALL_SC_KEYS.forEach(function (k) { payload[k] = sc[k] })
+      var res
+      if (ev && ev.id) res = await supabase.from('peremption_evaluations').update(payload).eq('id', ev.id).select().single()
+      else { payload.product_id = productId; res = await supabase.from('peremption_evaluations').insert(payload).select().single() }
+      if (res.error) throw new Error(res.error.message)
+      return res.data
+    }
     var saveCell = async function (productId, col, value) {
       if (cellSaving.value) return
       cellSaving.value = true
+      try { var row = await upsertCriterion(productId, col, value); if (row) evMap.value = Object.assign({}, evMap.value, defObj(productId, row)) }
+      catch (e) { alert('Erreur enregistrement : ' + e.message) }
+      finally { cellSaving.value = false }
+    }
+    // Attribution d'un critère en masse aux produits sélectionnés (compatibles)
+    var bulkApplyCriterion = async function (critKey, value) {
+      if (!canEval.value) { alert('Permission requise.'); return }
+      if (!selected.value.length) { alert('Sélectionne d\'abord des produits (cases à cocher).'); return }
+      if (!(value === 1 || value === 3 || value === 5)) { alert('Choisis une valeur (1 / 3 / 5).'); return }
+      var crit = CRIT_COLS.find(function (c) { return c.key === critKey })
+      var todo = selected.value.filter(function (id) {
+        var p = productById.value[id]; if (!p) return false
+        var c = getModel(modelForProduct(p)).criteria.find(function (x) { return x.key === critKey })
+        return c && allowedValues(c).indexOf(value) >= 0
+      })
+      var skipped = selected.value.length - todo.length
+      if (!todo.length) { alert('Aucun produit sélectionné n\'est compatible avec « ' + crit.label + ' = ' + value +' » (critère hors modèle ou valeur invalide pour ce modèle).'); return }
+      if (!window.confirm('Attribuer « ' + crit.label + ' = ' + value + ' » à ' + todo.length + ' produit(s)' + (skipped ? ' (' + skipped + ' ignoré' + (skipped > 1 ? 's' : '') + ')' : '') + ' ?')) return
+      bulkRunning.value = true
       try {
-        var p = productById.value[productId]; var mk = modelForProduct(p)
-        var ev = evMap.value[productId]
-        var sc = {}; ALL_SC_KEYS.forEach(function (k) { sc[k] = ev ? ev[k] : null }); sc[col] = value
-        var comp = computeScores(sc, config.value, mk)
-        var payload = { modele: mk, score_produit: comp.score_produit, score_partenaire: comp.score_partenaire, score_marche: comp.score_marche, score_global: comp.score_global, niveau: comp.niveau, evaluated_by: userId.value, evaluated_at: new Date().toISOString() }
-        ALL_SC_KEYS.forEach(function (k) { payload[k] = sc[k] })
-        var res
-        if (ev && ev.id) res = await supabase.from('peremption_evaluations').update(payload).eq('id', ev.id).select().single()
-        else { payload.product_id = productId; res = await supabase.from('peremption_evaluations').insert(payload).select().single() }
-        if (res.error) { alert('Erreur enregistrement : ' + res.error.message); return }
-        if (res.data) evMap.value = Object.assign({}, evMap.value, defObj(productId, res.data))
-      } finally { cellSaving.value = false }
+        var results = await Promise.all(todo.map(function (id) { return upsertCriterion(id, critKey, value).then(function (row) { return { id: id, row: row } }).catch(function () { return null }) }))
+        var nm = Object.assign({}, evMap.value); var ok = 0
+        results.forEach(function (r) { if (r && r.row) { nm[r.id] = r.row; ok++ } })
+        evMap.value = nm
+        window.alert(ok + ' produit(s) mis à jour' + (skipped ? ', ' + skipped + ' ignoré(s)' : '') + '.')
+      } finally { bulkRunning.value = false }
     }
 
     // ── Export ──
@@ -409,7 +446,25 @@ export default {
       var name = 'risques_peremption'
       if (fmt === 'pdf') exportToPDF(data, cols, name); else exportToExcel(data, cols, name)
     }
-    var runAction = function () { if (!actionType.value) return; if (actionType.value === 'excel' || actionType.value === 'pdf') doExport(actionType.value) }
+    var runAction = function () {
+      if (!actionType.value) return
+      if (actionType.value === 'excel' || actionType.value === 'pdf') { doExport(actionType.value); return }
+      if (actionType.value.indexOf('crit:') === 0) bulkApplyCriterion(actionType.value.slice(5), Number(bulkValue.value) || null)
+    }
+    var isCritAction = computed(function () { return actionType.value.indexOf('crit:') === 0 })
+    var execDisabled = computed(function () { return !actionType.value || bulkRunning.value || (isCritAction.value && !bulkValue.value) })
+    var execScope = computed(function () {
+      if (isCritAction.value || selected.value.length) return '(' + selected.value.length + ' sélectionné' + (selected.value.length > 1 ? 's' : '') + ')'
+      return '(tout le tableau filtré)'
+    })
+    // valeurs proposées : 1/5 si le critère est binaire dans tous les modèles, sinon 1/3/5
+    var bulkValueOpts = computed(function () {
+      if (!isCritAction.value) return []
+      var key = actionType.value.slice(5), binaireAll = true
+      Object.keys(MODELS).forEach(function (mk) { var c = MODELS[mk].criteria.find(function (x) { return x.key === key }); if (c && !c.binaire) binaireAll = false })
+      return binaireAll ? [{ v: '1', l: '1 — Faible' }, { v: '5', l: '5 — Élevé' }] : [{ v: '1', l: '1 — Faible' }, { v: '3', l: '3 — Moyen' }, { v: '5', l: '5 — Élevé' }]
+    })
+    watch(actionType, function () { bulkValue.value = '' })
 
     // ── Config ──
     var totalImport = computed(function () { return (Number(cfgForm.value.poids_produit) || 0) + (Number(cfgForm.value.poids_partenaire) || 0) + (Number(cfgForm.value.poids_marche) || 0) })
@@ -462,7 +517,7 @@ export default {
       columnFilters, activeFilterCol, filterPos, cfSearch, distinctVals, distinctValsShown, openFilter, cfChecked, cfToggle, cfAll, cfNone, closeMenus,
       selected, isSelected, toggleSelect, allPageChecked, toggleSelectAllPage,
       canEval, critEditable, cellClick, editCell, editPos, editCrit, editVals, setCellScore,
-      doExport, actionType, runAction,
+      doExport, actionType, runAction, bulkValue, bulkValueOpts, bulkRunning, critCols: CRIT_COLS, isCritAction, execDisabled, execScope,
       showConfig, cfgForm, cfgSaving, cfgErr, totalImport, totalProd, openConfig, saveConfig,
     }
   }
@@ -512,6 +567,7 @@ export default {
 .action-sel { flex: 1; min-width: 200px; max-width: 320px; font-size: 13px; padding: 8px 10px; border: 1px solid var(--th-border, #e5e7eb); border-radius: 6px; background: var(--th-input-bg, #fff); color: var(--th-text, #222); cursor: pointer; }
 .action-sel:focus { border-color: #7c3aed; outline: none; }
 .action-sel option { background: var(--th-input-bg, #fff); color: var(--th-text, #222); }
+.action-val { flex: 0 0 auto; min-width: 130px; max-width: 150px; }
 .action-exec { font-size: 13px; font-weight: 700; padding: 9px 20px; border-radius: 6px; border: none; background: #7c3aed; color: #fff; cursor: pointer; }
 .action-exec:hover:not(:disabled) { opacity: .9; }
 .action-exec:disabled { opacity: .45; cursor: not-allowed; }
