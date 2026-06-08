@@ -18,14 +18,6 @@
 
     <div v-if="submitting" class="detail-reloading">⟳ Enregistrement…</div>
 
-    <!-- Mode d'approvisionnement -->
-    <div class="section">
-      <div class="sh"><span>Mode d'approvisionnement</span></div>
-      <div class="appro-row">
-        <button v-for="m in MODE_APPRO" :key="m.key" class="appro-btn" :class="{on: modeAppro===m.key}" @click="modeAppro = m.key">{{ m.label }}</button>
-      </div>
-    </div>
-
     <!-- Axes de scoring (dépend du modèle du produit) -->
     <div class="section" v-for="ax in model.axes" :key="ax.key">
       <div class="sh">
@@ -116,7 +108,7 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../../supabase'
 import { loadPermissions, canPerform } from '../../services/permissions'
-import { getModel, modelForProduct, productType, TYPE_LABELS, MODE_APPRO, DEFAULT_CONFIG, NIVEAU_LABELS, NIVEAU_CLASS,
+import { getModel, modelForProduct, productType, TYPE_LABELS, DEFAULT_CONFIG, NIVEAU_LABELS, NIVEAU_CLASS,
   criteriaForModelAxe, allowedValues, axisScore, computeScores, isComplete,
   decisionsFor, FORECAST_LABELS, SPLIT_LABELS, MONITORING_LABELS } from '../../services/peremptionRisk'
 
@@ -126,7 +118,6 @@ export default {
     var product = ref(null), notFound = ref(false)
     var config = ref(Object.assign({}, DEFAULT_CONFIG))
     var scores = reactive({})
-    var modeAppro = ref('')
     var note = ref('')
     var history = ref([])
     var userId = ref(null), userService = ref('')
@@ -178,7 +169,6 @@ export default {
         var sc = computeScores(scores, config.value, modelKey.value)
         var payload = {
           product_id: product.value.id, modele: modelKey.value,
-          mode_appro: modeAppro.value || null,
           sc_shelf_life: scores.sc_shelf_life, sc_prix: scores.sc_prix, sc_historique: scores.sc_historique, sc_profitabilite: scores.sc_profitabilite,
           sc_forecast: scores.sc_forecast, sc_solvabilite: scores.sc_solvabilite, sc_engagements: scores.sc_engagements, sc_promotion: scores.sc_promotion,
           sc_croissance: scores.sc_croissance, sc_concurrence: scores.sc_concurrence, sc_maturite: scores.sc_maturite,
@@ -225,7 +215,6 @@ export default {
       // préremplir avec la dernière évaluation
       var last = history.value[0]
       ALL_KEYS.forEach(function (k) { scores[k] = last && (last[k] === 1 || last[k] === 3 || last[k] === 5) ? last[k] : null })
-      modeAppro.value = last && last.mode_appro ? last.mode_appro : ''
       note.value = ''
     }
 
@@ -242,8 +231,8 @@ export default {
     watch(function () { return route.params.productId }, function (nv, ov) { if (nv && nv !== ov) location.reload() })
 
     return {
-      product, notFound, scores, modeAppro, note, history, submitting, saveOk, canEval, isReady, filledCount, critCount,
-      preview, decisions, model, typeKey, TYPE_LABELS, MODE_APPRO, NIVEAU_LABELS, NIVEAU_CLASS,
+      product, notFound, scores, note, history, submitting, saveOk, canEval, isReady, filledCount, critCount,
+      preview, decisions, model, typeKey, TYPE_LABELS, NIVEAU_LABELS, NIVEAU_CLASS,
       FORECAST_LABELS, SPLIT_LABELS, MONITORING_LABELS,
       critFor, vals, axisVal, axWeight, disp, labelFor, setScore, hintFor, fmtDt, goBack, save
     }
