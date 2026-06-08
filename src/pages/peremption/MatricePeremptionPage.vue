@@ -102,6 +102,7 @@
               <span v-else-if="colKind(col) === 'crit'" class="sc-cell" :class="[critCls(r[col]), {'sc-add': critEditable(r, col) && r[col] == null}]">{{ r[col] != null ? r[col] : (critEditable(r, col) ? '＋' : '—') }}</span>
               <span v-else-if="colKind(col) === 'score'" class="mono" :class="{strong: col === 'score_global'}">{{ r[col] != null ? r[col] : '—' }}</span>
               <span v-else-if="colKind(col) === 'date'" class="dt">{{ r.evaluated_at ? fmtDate(r.evaluated_at) : '—' }}</span>
+              <span v-else-if="colKind(col) === 'duree'">{{ r.duree_vie ? r.duree_vie + ' mois' : '—' }}</span>
               <span v-else>{{ r[col] || '—' }}</span>
             </td>
             <td class="th-act" @click.stop><button class="btn-eval" @click="goEval(r.id)">{{ r.ev ? 'Réévaluer' : 'Évaluer' }}</button></td>
@@ -185,6 +186,7 @@ var COLS = [
   { key: 'validation', label: 'Validation', kind: 'valid' },
   { key: 'groupe_article', label: "Groupe d'article", kind: 'text' },
   { key: 'fabricant', label: 'Fabricant', kind: 'text' },
+  { key: 'duree_vie', label: 'Durée de vie', kind: 'duree' },
   { key: 'type', label: 'Type', kind: 'type' },
   { key: 'sc_shelf_life', label: 'Shelf Life', kind: 'crit' },
   { key: 'sc_prix', label: 'Montant forecast', kind: 'crit' },
@@ -208,7 +210,7 @@ var COL_KIND = COLS.reduce(function (m, c) { m[c.key] = c.kind; return m }, {})
 var ALL_KEYS = COLS.map(function (c) { return c.key })
 var ALL_SC_KEYS = ['sc_shelf_life', 'sc_prix', 'sc_historique', 'sc_profitabilite', 'sc_forecast', 'sc_solvabilite', 'sc_engagements', 'sc_promotion', 'sc_croissance', 'sc_concurrence', 'sc_maturite']
 var TYPE_OPTS = [{ key: 'generique', label: 'Générique' }, { key: 'otc', label: 'OTC' }, { key: 'sous_licence', label: 'Sous-licence' }, { key: 'import', label: 'Import / Revente' }]
-var LS_ORDER = 'peremption_col_order_v2', LS_HIDDEN = 'peremption_hidden_cols'
+var LS_ORDER = 'peremption_col_order_v3', LS_HIDDEN = 'peremption_hidden_cols'
 
 export default {
   setup() {
@@ -258,7 +260,7 @@ export default {
         var ty = productType(p)
         var row = {
           id: p.id, code_article: p.code_article || '', description: p.description || '',
-          groupe_article: p.groupe_article || '', fabricant: p.fabricant || '', type: ty, typeLabel: TYPE_LABELS[ty],
+          groupe_article: p.groupe_article || '', fabricant: p.fabricant || '', duree_vie: p.duree_vie || '', type: ty, typeLabel: TYPE_LABELS[ty],
           niveau: ev ? ev.niveau : null,
           validation: ev && ev.niveau ? ((decisionsFor(ev.niveau) || {}).validation || null) : null,
           evaluated_at: ev ? ev.evaluated_at : null, ev: ev,
@@ -295,6 +297,7 @@ export default {
       if (k === 'niveau') return r.niveau ? NIVEAU_LABELS[r.niveau] : 'Non évalué'
       if (k === 'valid') return r.validation ? 'Niveau ' + r.validation : '—'
       if (k === 'date') return r.evaluated_at ? fmtDate(r.evaluated_at) : '—'
+      if (k === 'duree') return r.duree_vie ? r.duree_vie + ' mois' : '—'
       if (k === 'crit' || k === 'score') return r[col] != null ? String(r[col]) : '—'
       return r[col] || ''
     }
@@ -304,6 +307,7 @@ export default {
       if (k === 'niveau') return r.niveau ? NIVEAU_ORDER[r.niveau] : 0
       if (k === 'valid') return r.validation || 0
       if (k === 'date') return r.evaluated_at ? new Date(r.evaluated_at).getTime() : 0
+      if (k === 'duree') return parseInt(r.duree_vie) || -1
       if (k === 'type') return (r.typeLabel || '').toLowerCase()
       return String(r[col] || '').toLowerCase()
     }
@@ -426,7 +430,7 @@ export default {
 
     var load = async function () {
       loading.value = true; needsMigration.value = false
-      var pRes = await supabase.from('products').select('id, code_article, description, fabricant, groupe_article, actif').order('code_article')
+      var pRes = await supabase.from('products').select('id, code_article, description, fabricant, groupe_article, duree_vie, actif').order('code_article')
       products.value = (pRes.data || []).filter(function (p) { return p.actif !== false })
       try {
         var cfgRes = await supabase.from('peremption_config').select('*').eq('id', 1).maybeSingle()
