@@ -20,6 +20,8 @@ const routes = [
       { path: 'planifier', name: 'Planifier', component: () => import('../pages/PlanifierPage.vue') },
 { path: 'notifications', name: 'Notifications', component: () => import('../pages/NotificationsPage.vue') },
       { path: 'tasks', name: 'Tasks', component: () => import('../pages/TasksPage.vue') },
+      { path: 'peremption', name: 'Peremption', component: () => import('../pages/peremption/MatricePeremptionPage.vue') },
+      { path: 'peremption/:productId', name: 'PeremptionEval', component: () => import('../pages/peremption/PeremptionEvalPage.vue') },
       // Routes administration — réservées au service 'admin'
       { path: 'admin/referentiel', name: 'AdminReferentiel', component: () => import('../pages/admin/AdminRefPage.vue'), meta: { requiresAdmin: true } },
       { path: 'admin/users', name: 'AdminUsers', component: () => import('../pages/AdminUsersPage.vue'), meta: { requiresAdmin: true } },

@@ -260,6 +260,13 @@ export default {
           { key: 'voir_kpi', label: 'Voir les KPI' },
         ]
       },
+      {
+        label: 'Risques péremption',
+        actions: [
+          { key: 'evaluer_risque_peremption', label: 'Évaluer le risque de péremption d\'un produit' },
+          { key: 'configurer_risque_peremption', label: 'Configurer pondérations & seuils' },
+        ]
+      },
     ]
 
     var allPerms = computed(function() {

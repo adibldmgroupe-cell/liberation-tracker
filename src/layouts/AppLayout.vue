@@ -15,6 +15,8 @@
           <span class="nav-icon">📋</span>Tâches
           <span class="notif-badge tasks-badge" v-if="pendingTasksCount>0">{{pendingTasksCount}}</span>
         </router-link>
+        <div class="nav-sep">Risques péremption</div>
+        <router-link to="/peremption" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">⚠️</span>Matrice des risques</router-link>
         <div class="nav-sep">Module production</div>
         <!-- Groupe TRS -->
         <div class="nav-grp">
