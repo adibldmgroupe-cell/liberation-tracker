@@ -340,7 +340,9 @@ export default {
         var dir = sortDir.value === 'asc' ? 1 : -1
         arr = arr.slice().sort(function (a, b) { var va = sortVal(a, sc), vb = sortVal(b, sc); if (va < vb) return -dir; if (va > vb) return dir; return 0 })
       } else {
-        arr = arr.slice().sort(function (a, b) { var na = a.niveau ? NIVEAU_ORDER[a.niveau] : 0, nb = b.niveau ? NIVEAU_ORDER[b.niveau] : 0; if (na !== nb) return nb - na; return a.code_article.localeCompare(b.code_article) })
+        // ordre par défaut STABLE (par code) : éditer un score ne déplace pas la ligne.
+        // (tri par niveau dispo via l'en-tête Niveau)
+        arr = arr.slice().sort(function (a, b) { return a.code_article.localeCompare(b.code_article) })
       }
       return arr
     })
