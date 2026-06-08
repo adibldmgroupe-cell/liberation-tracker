@@ -103,3 +103,24 @@ export function computeScores(scores, config) {
 export function isComplete(scores) {
   return CRITERIA.every(function (c) { var v = scores[c.key]; return v === 1 || v === 3 || v === 5 })
 }
+
+// ════════════════════════════════════════════════════════════════════════
+// COUCHE DÉCISIONNELLE — le niveau de risque déclenche des décisions
+// (auto-recommandées, puis confirmées/ajustées dans le circuit Phase 2).
+// Bascule : Faible → aucun circuit · Moyen → validation Niveau 2 ·
+// Élevé → validation Niveau 3 (Niveau 1 réservé). Chaque Niveau de validation
+// = un circuit Phase 2 (étapes/services à définir).
+// ════════════════════════════════════════════════════════════════════════
+export var DECISION_MATRIX = {
+  faible: { forecast: 'best',   split: 'multiple_moq', validation: null, monitoring: 'trimestriel' },
+  moyen:  { forecast: 'middle', split: 'multiple_moq', validation: 2,    monitoring: 'mensuel' },
+  eleve:  { forecast: 'worst',  split: 'moq',          validation: 3,    monitoring: '15j' },
+}
+export var FORECAST_LABELS = { best: 'Best case', middle: 'Middle', worst: 'Worst case' }
+export var SPLIT_LABELS = { moq: 'MOQ (lot minimum)', multiple_moq: 'Multiple MOQ' }
+export var MONITORING_LABELS = { '15j': 'Tous les 15 jours', mensuel: 'Mensuel', trimestriel: 'Trimestriel' }
+
+// décisions recommandées pour un niveau (null si niveau inconnu)
+export function decisionsFor(niveau) { return DECISION_MATRIX[niveau] || null }
+// le produit doit-il passer par un circuit de validation Phase 2 ?
+export function needsValidation(niveau) { return niveau === 'moyen' || niveau === 'eleve' }

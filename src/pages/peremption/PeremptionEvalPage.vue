@@ -75,6 +75,27 @@
       </div>
     </div>
 
+    <!-- Décisions (déclenchées par le niveau de risque) -->
+    <div class="section" v-if="preview.niveau">
+      <div class="sh"><span>Décisions</span></div>
+      <div v-if="decisions && decisions.validation" class="dec-box">
+        <div class="dec-grid">
+          <div class="dec-i"><span class="dec-l">Forecast</span><span class="dec-v">{{ FORECAST_LABELS[decisions.forecast] }}</span></div>
+          <div class="dec-i"><span class="dec-l">Split commande</span><span class="dec-v">{{ SPLIT_LABELS[decisions.split] }}</span></div>
+          <div class="dec-i"><span class="dec-l">Monitoring stock/vente</span><span class="dec-v">{{ MONITORING_LABELS[decisions.monitoring] }}</span></div>
+        </div>
+        <div class="dec-valid">
+          <div class="dv-info">
+            <span class="dv-l">Validation requise</span>
+            <span class="dv-niv">Niveau {{ decisions.validation }}</span>
+          </div>
+          <button class="dv-btn" disabled title="Circuit de validation défini en Phase 2">Lancer le circuit · Niveau {{ decisions.validation }} <span class="dv-soon">(Phase 2 — à venir)</span></button>
+        </div>
+        <div class="dec-note">Décisions recommandées d'après le niveau de risque — à confirmer / ajuster dans le circuit de validation.</div>
+      </div>
+      <div v-else class="dec-none">🟢 Produit en routine — aucune décision particulière requise. Monitoring : {{ MONITORING_LABELS[decisions ? decisions.monitoring : 'trimestriel'] }}.</div>
+    </div>
+
     <!-- Historique -->
     <div class="section" v-if="history.length">
       <div class="sh"><span>Historique des évaluations</span></div>
@@ -98,7 +119,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../../supabase'
 import { loadPermissions, canPerform } from '../../services/permissions'
 import { AXES, CRITERIA, MODE_APPRO, DEFAULT_CONFIG, NIVEAU_LABELS, NIVEAU_CLASS,
-  criteriaForAxe, allowedValues, axisScore, computeScores, isComplete } from '../../services/peremptionRisk'
+  criteriaForAxe, allowedValues, axisScore, computeScores, isComplete,
+  decisionsFor, FORECAST_LABELS, SPLIT_LABELS, MONITORING_LABELS } from '../../services/peremptionRisk'
 
 export default {
   setup() {
@@ -117,6 +139,7 @@ export default {
     CRITERIA.forEach(function (c) { scores[c.key] = null })
 
     var preview = computed(function () { return computeScores(scores, config.value) })
+    var decisions = computed(function () { return decisionsFor(preview.value.niveau) })
     var filledCount = computed(function () {
       return CRITERIA.filter(function (c) { var v = scores[c.key]; return v === 1 || v === 3 || v === 5 }).length
     })
@@ -215,7 +238,8 @@ export default {
 
     return {
       product, notFound, scores, modeAppro, note, history, submitting, saveOk, canEval, isReady, filledCount,
-      preview, AXES, MODE_APPRO, NIVEAU_LABELS, NIVEAU_CLASS,
+      preview, decisions, AXES, MODE_APPRO, NIVEAU_LABELS, NIVEAU_CLASS,
+      FORECAST_LABELS, SPLIT_LABELS, MONITORING_LABELS,
       critFor, vals, axisVal, axWeight, disp, labelFor, setScore, hintFor, fmtDt, goBack, save
     }
   }
@@ -278,6 +302,21 @@ export default {
 .save-hint { font-size: 12px; color: var(--th-text2, #9ca3af); }
 .save-ok { font-size: 12px; color: #1D9E75; font-weight: 600; }
 
+/* Décisions */
+.dec-box { margin-top: 12px; }
+.dec-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.dec-i { border: 1px solid var(--th-border, #e8e8e8); border-radius: 8px; padding: 10px; background: var(--th-bg2, #fff); }
+.dec-l { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: var(--th-text2, #6b7280); }
+.dec-v { display: block; font-size: 14px; font-weight: 700; color: var(--th-text, #1a1a2e); margin-top: 3px; }
+.dec-valid { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; padding: 12px 16px; border: 1px solid #ede9fe; background: #f5f3ff; border-radius: 8px; flex-wrap: wrap; }
+.dv-info { display: flex; flex-direction: column; }
+.dv-l { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: #7c3aed; }
+.dv-niv { font-size: 18px; font-weight: 800; color: #7c3aed; }
+.dv-btn { font-size: 12px; font-weight: 600; padding: 8px 16px; border-radius: 6px; border: 1px solid #7c3aed; background: #7c3aed; color: #fff; cursor: not-allowed; opacity: .6; }
+.dv-soon { font-weight: 400; font-size: 11px; opacity: .85; }
+.dec-note { font-size: 11px; color: var(--th-text2, #9ca3af); margin-top: 8px; }
+.dec-none { margin-top: 12px; padding: 12px 16px; border: 1px solid #d1fae5; background: #ecfdf5; border-radius: 8px; font-size: 13px; color: #065f46; }
+
 .niv { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 12px; border-radius: 10px; white-space: nowrap; }
 .niv-sm { font-size: 11px; padding: 2px 9px; }
 .niv-big { font-size: 13px; padding: 4px 14px; margin-top: 6px; }
@@ -296,6 +335,8 @@ export default {
 
 /* Overrides sombre (RÈGLE N°15c) */
 html[data-theme="night"] .synth-global, html[data-theme="workshop"] .synth-global { background: var(--th-bg3); border-color: var(--th-border); }
+html[data-theme="night"] .dec-valid, html[data-theme="workshop"] .dec-valid { background: var(--th-bg3); border-color: var(--th-border); }
+html[data-theme="night"] .dec-none, html[data-theme="workshop"] .dec-none { background: rgba(52,211,153,.1); color: #6ee7b7; border-color: rgba(52,211,153,.25); }
 html[data-theme="night"] .appro-btn.on, html[data-theme="workshop"] .appro-btn.on { background: var(--th-bg3); }
 html[data-theme="night"] .crit-hint, html[data-theme="workshop"] .crit-hint { color: var(--th-accent); }
 html[data-theme="night"] .sc-1.on, html[data-theme="workshop"] .sc-1.on { background: rgba(52,211,153,.14); } html[data-theme="night"] .sc-1.on .sc-n, html[data-theme="night"] .sc-1.on .sc-t, html[data-theme="workshop"] .sc-1.on .sc-n, html[data-theme="workshop"] .sc-1.on .sc-t { color: #6ee7b7; }

@@ -58,6 +58,7 @@
             <th class="tc">Marché</th>
             <th class="tc">Global</th>
             <th class="tc">Niveau</th>
+            <th class="tc">Validation</th>
             <th>Dernière éval.</th>
             <th></th>
           </tr>
@@ -75,6 +76,10 @@
             <td class="tc">
               <span v-if="r.ev && r.ev.niveau" class="niv" :class="NIVEAU_CLASS[r.ev.niveau]">{{ NIVEAU_LABELS[r.ev.niveau] }}</span>
               <span v-else class="niv niv-na">Non évalué</span>
+            </td>
+            <td class="tc">
+              <span v-if="valNiveau(r.ev)" class="valid-tag">Niveau {{ valNiveau(r.ev) }}</span>
+              <span v-else class="val-none">—</span>
             </td>
             <td class="dt">{{ r.ev ? fmtDate(r.ev.evaluated_at) : '—' }}</td>
             <td class="tar"><button class="btn-eval" @click.stop="goEval(r.id)">{{ r.ev ? 'Réévaluer' : 'Évaluer' }}</button></td>
@@ -117,7 +122,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '../../supabase'
 import { loadPermissions, canPerform } from '../../services/permissions'
-import { NIVEAU_LABELS, NIVEAU_CLASS, NIVEAU_ORDER, MODE_APPRO_LABELS, DEFAULT_CONFIG } from '../../services/peremptionRisk'
+import { NIVEAU_LABELS, NIVEAU_CLASS, NIVEAU_ORDER, MODE_APPRO_LABELS, DEFAULT_CONFIG, decisionsFor } from '../../services/peremptionRisk'
 
 export default {
   setup() {
@@ -176,6 +181,7 @@ export default {
     })
 
     var fmtDate = function (d) { return d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—' }
+    var valNiveau = function (ev) { if (!ev || !ev.niveau) return null; var d = decisionsFor(ev.niveau); return d ? d.validation : null }
     var toggleNiveau = function (n) { niveauFilter.value = niveauFilter.value === n ? '' : n }
     var goEval = function (id) { router.push('/peremption/' + id) }
 
@@ -237,7 +243,7 @@ export default {
 
     return {
       products, loading, needsMigration, searchQ, niveauFilter, canConfig,
-      evaluatedCount, counts, filtered, fmtDate, toggleNiveau, goEval,
+      evaluatedCount, counts, filtered, fmtDate, valNiveau, toggleNiveau, goEval,
       NIVEAU_LABELS, NIVEAU_CLASS, MODE_APPRO_LABELS,
       showConfig, cfgForm, cfgSaving, cfgErr, poidsTotal, openConfig, saveConfig
     }
@@ -296,6 +302,8 @@ export default {
 .niv-moyen { background: #fef3c7; color: #92400e; }
 .niv-eleve { background: #FCEBEB; color: #b91c1c; }
 .niv-na { background: #f3f4f6; color: #9ca3af; }
+.valid-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 10px; background: #f5f3ff; color: #7c3aed; border: 1px solid #ede9fe; white-space: nowrap; }
+.val-none { color: var(--th-text3, #bbb); }
 
 /* KPI cartes — teinte de fond légère */
 .kpi-faible.on { background: #ecfdf5; } .kpi-moyen.on { background: #fffbeb; } .kpi-eleve.on { background: #fef2f2; }
@@ -315,6 +323,8 @@ html[data-theme="night"] .niv-eleve,
 html[data-theme="workshop"] .niv-eleve { background: rgba(239,68,68,.12); color: #fca5a5; }
 html[data-theme="night"] .niv-na,
 html[data-theme="workshop"] .niv-na { background: var(--th-bg3); color: var(--th-text3, #9ca3af); }
+html[data-theme="night"] .valid-tag,
+html[data-theme="workshop"] .valid-tag { background: var(--th-bg3); color: var(--th-accent); border-color: var(--th-border); }
 html[data-theme="night"] .mp-warn,
 html[data-theme="workshop"] .mp-warn { background: rgba(251,191,36,.12); color: #fbbf24; border-color: rgba(251,191,36,.3); }
 
@@ -343,7 +353,8 @@ html[data-theme="workshop"] .mp-warn { background: rgba(251,191,36,.12); color: 
   .pt-table th:nth-child(5), .pt-table td:nth-child(5),
   .pt-table th:nth-child(6), .pt-table td:nth-child(6),
   .pt-table th:nth-child(7), .pt-table td:nth-child(7),
-  .pt-table th:nth-child(10), .pt-table td:nth-child(10) { display: none; }
+  .pt-table th:nth-child(10), .pt-table td:nth-child(10),
+  .pt-table th:nth-child(11), .pt-table td:nth-child(11) { display: none; }
   .fg3 { grid-template-columns: 1fr; }
 }
 </style>
