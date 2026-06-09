@@ -62,7 +62,8 @@ export default {
 .ce{background:#FCEBEB;color:#A32D2D;font-size:12px;padding:8px 12px;margin-bottom:16px}
 .f{margin-bottom:14px}
 .f label{display:block;font-size:11px;color:#666;text-transform:uppercase;margin-bottom:4px}
-.f input{width:100%;padding:8px 10px;border:1px solid #ddd;font-size:13px;outline:none;box-sizing:border-box}
+.f input{width:100%;padding:8px 10px;border:1px solid #ddd;font-size:13px;outline:none;box-sizing:border-box;background:#fff;color:#1a1a2e}
+.f input::placeholder{color:#aaa}
 .f input:focus{border-color:#185FA5}
 .cb{width:100%;padding:10px;background:#0a0a0a;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer}
 .cb:hover:not(:disabled){background:#222}.cb:disabled{opacity:.5;cursor:not-allowed}
