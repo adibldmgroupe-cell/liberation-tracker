@@ -165,9 +165,7 @@ export default {
           { key: 'approuver_da_pc', label: 'Approuver DA Physico-chimie (DT)' },
           { key: 'approuver_da_micro', label: 'Approuver DA Microbiologie (DT)' },
           { key: 'approuver_rvp', label: 'Approuver RVP (DT)' },
-          { key: 'transferer_dossier_dt', label: 'Transférer le dossier au DT' },
           { key: 'liberer_lot', label: 'Libérer le lot' },
-          { key: 'doc_delete', label: 'Supprimer un document' },
         ]
       },
       {
@@ -365,7 +363,6 @@ export default {
       dt: [
         'autoriser_lancement',
         'approuver_if','approuver_ic','approuver_da_pc','approuver_da_micro','approuver_rvp',
-        'transferer_dossier_dt',
         'approuver_maj_doc',
         'voir_lots','voir_dashboard','voir_timeline','voir_kpi'
       ],

@@ -587,6 +587,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { supabase } from '../../supabase'
 import { useTheme } from '../../composables/useTheme'
 import { checkProductFluxEquipName, checkUpstreamForEquip, checkUpstreamForAtelier, stageLabels } from '../../services/flux'
+import { loadPermissions, canPerform } from '../../services/permissions'
 
 var GS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQqKb5_i0U7YeQYMiNEDy4X2gq6W_78NA2EuC2gRqSVXOKuBcBuXR8ASrE9Eq3admceATv4_gdAUppc/pub?gid=1634438429&single=true&output=csv'
 
@@ -1667,6 +1668,7 @@ export default {
 
     // Création lot « façon Planifier » (LotsPage) — réplique exacte de PlanifierPage
     var bulkCreateLot = async function(numLot, productId, codeArticle, uid) {
+      if (!canPerform('creer_lot')) return { error: 'Permission « créer un lot » requise' }
       var existing = await supabase.from('lots').select('id').eq('numero_lot', numLot).maybeSingle()
       if (existing.data) return { lotId: existing.data.id, created: false }
       var lotRes = await supabase.from('lots').insert({
@@ -1719,6 +1721,9 @@ export default {
 
       var u = await supabase.auth.getUser()
       var uid = u.data && u.data.user ? u.data.user.id : null
+      // Garde : créer des lots depuis le PDP nécessite la permission creer_lot
+      var willCreateLots = rows.some(function (r) { return (r.numero_lot || '').trim() })
+      if (willCreateLots && !canPerform('creer_lot')) { bulkModal.saving = false; bulkModal.progress = ''; bulkModal.err = 'Permission « créer un lot » requise pour créer des lots depuis le PDP.'; return }
       var stats = { lots: 0, lignes: 0, skipped: 0, errors: 0 }
       var ordreBase = 0
       if (bulkModal.famille === 'cond') {
@@ -1782,6 +1787,7 @@ export default {
       await loadAll()
     }
 
+    onMounted(async function () { var u = await supabase.auth.getUser(); if (u.data.user) { var p = await supabase.from('profiles').select('service').eq('id', u.data.user.id).single(); if (p.data) await loadPermissions(p.data.service) } })
     onMounted(loadAll)
 
     return {
