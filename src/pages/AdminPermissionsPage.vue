@@ -174,7 +174,6 @@ export default {
           { key: 'demander_aql_fab', label: 'Demander AQL Fabrication' },
           { key: 'demander_aql_cond', label: 'Demander AQL Conditionnement' },
           { key: 'realiser_aql', label: 'Réaliser AQL' },
-          { key: 'aql_delete', label: 'Supprimer un AQL' },
         ]
       },
       {
@@ -218,7 +217,6 @@ export default {
           { key: 'declarer_nc', label: 'Déclarer une non-conformité' },
           { key: 'cloturer_deviation', label: 'Clôturer une déviation' },
           { key: 'dev_bloquer', label: 'Bloquer un lot (déviation bloquante)' },
-          { key: 'dev_delete', label: 'Supprimer une déviation' },
         ]
       },
       {
