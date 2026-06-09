@@ -126,9 +126,11 @@
       <button class="cf-clear" @click="clearColumnFilters">Tout effacer</button>
     </div>
 
-    <div v-if="lotsLoading" class="lots-loading">⟳ Chargement des lots…</div>
+    <!-- Écran de chargement uniquement au 1er chargement (aucun lot encore en mémoire).
+         Lors d'un rafraîchissement après action, on garde le tableau affiché (règle N°8) → pas de page vide / saut. -->
+    <div v-if="lotsLoading && !lots.length" class="lots-loading">⟳ Chargement des lots…</div>
     <div v-else-if="!filteredLots.length" class="empty">Aucun lot trouvé</div>
-    <div v-else-if="!lotsLoading" class="table-wrap">
+    <div v-else class="table-wrap">
       <table class="tb">
         <thead><tr>
           <th class="th-chk"><input type="checkbox" :checked="allVisibleChecked" @change="toggleAll" /></th>
