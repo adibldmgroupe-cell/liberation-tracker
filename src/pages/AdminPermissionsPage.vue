@@ -259,8 +259,82 @@ export default {
       {
         label: 'Risques péremption',
         actions: [
-          { key: 'evaluer_risque_peremption', label: 'Évaluer le risque de péremption d\'un produit' },
+          { key: 'evaluer_risque_peremption', label: 'Évaluer / enregistrer une évaluation de péremption' },
           { key: 'configurer_risque_peremption', label: 'Configurer pondérations & seuils' },
+          { key: 'lancer_circuit_peremption', label: 'Lancer un circuit de validation péremption' },
+        ]
+      },
+      {
+        label: 'Risque péremption — critères (édition)',
+        actions: [
+          { key: 'crit_shelf_life', label: 'Critère — Shelf Life' },
+          { key: 'crit_prix', label: 'Critère — Montant forecast' },
+          { key: 'crit_historique', label: 'Critère — Historique péremption' },
+          { key: 'crit_forecast', label: 'Critère — Forecast accuracy' },
+          { key: 'crit_solvabilite', label: 'Critère — Solvabilité' },
+          { key: 'crit_engagements', label: 'Critère — Respect engagements' },
+          { key: 'crit_profitabilite', label: 'Critère — Profitabilité' },
+          { key: 'crit_promotion', label: 'Critère — Promotion & Marketing' },
+          { key: 'crit_croissance', label: 'Critère — Croissance marché' },
+          { key: 'crit_concurrence', label: 'Critère — Concurrence' },
+          { key: 'crit_maturite', label: 'Critère — Maturité produit' },
+        ]
+      },
+      {
+        label: 'Accès aux pages (voir)',
+        actions: [
+          { key: 'voir_planification', label: 'Voir — Planifier' },
+          { key: 'voir_taches', label: 'Voir — Tâches' },
+          { key: 'voir_notifications', label: 'Voir — Notifications' },
+          { key: 'voir_produits', label: 'Voir — Produits' },
+          { key: 'voir_peremption', label: 'Voir — Risque péremption' },
+          { key: 'voir_production_schema', label: 'Voir — Schéma flux production' },
+          { key: 'voir_pdp', label: 'Voir — PDP production' },
+          { key: 'voir_trs_live', label: 'Voir — TRS Live' },
+          { key: 'voir_trs_analytics', label: 'Voir — TRS Analytics' },
+          { key: 'voir_suivi_fab', label: 'Voir — Suivi PDP Fabrication' },
+          { key: 'voir_suivi_cond', label: 'Voir — Suivi TRS Conditionnement' },
+        ]
+      },
+      {
+        label: 'Accès aux pages — Administration (voir)',
+        actions: [
+          { key: 'voir_referentiel', label: 'Voir — Référentiel produits/SAP' },
+          { key: 'voir_admin_produits', label: 'Voir — Catalogue produits' },
+          { key: 'voir_admin_flux', label: 'Voir — Flux produits' },
+          { key: 'voir_admin_ateliers', label: 'Voir — Ateliers / machines' },
+          { key: 'voir_admin_equipements', label: 'Voir — Équipements conditionnement' },
+          { key: 'voir_admin_arrets', label: 'Voir — Types d\'arrêt' },
+          { key: 'voir_admin_shifts', label: 'Voir — Shifts & équipes' },
+          { key: 'voir_admin_delais', label: 'Voir — Délais documentaires' },
+          { key: 'voir_admin_comptes', label: 'Voir — Comptes utilisateurs' },
+          { key: 'voir_admin_permissions', label: 'Voir — Permissions' },
+        ]
+      },
+      {
+        label: 'Référentiels & administration',
+        actions: [
+          { key: 'gerer_flux_produits', label: 'Gérer les flux produits (cocher, importer, vider)' },
+          { key: 'gerer_ateliers', label: 'Gérer ateliers / machines, cadences, opérations' },
+          { key: 'gerer_equipements', label: 'Gérer les équipements de conditionnement' },
+          { key: 'gerer_types_arret', label: 'Gérer les types d\'arrêt' },
+          { key: 'gerer_shifts', label: 'Gérer shifts & équipes (+ affectation)' },
+          { key: 'gerer_delais', label: 'Gérer les délais documentaires' },
+          { key: 'gerer_produits', label: 'Gérer le catalogue produits' },
+          { key: 'gerer_referentiel', label: 'Gérer le référentiel produits / SAP' },
+          { key: 'gerer_comptes', label: 'Gérer les comptes utilisateurs' },
+          { key: 'gerer_permissions', label: 'Gérer les permissions' },
+          { key: 'gerer_pdp', label: 'Gérer le PDP (saisie en masse, recaler, annuler)' },
+        ]
+      },
+      {
+        label: 'Données (import / vidage / export)',
+        actions: [
+          { key: 'vider_donnees_lots', label: 'Vider / réimporter — Gestion lots' },
+          { key: 'vider_donnees_production', label: 'Vider — Module production' },
+          { key: 'vider_donnees_peremption', label: 'Vider — Risque péremption (évaluations)' },
+          { key: 'importer_donnees_gs', label: 'Synchroniser depuis Google Sheets' },
+          { key: 'exporter_lots', label: 'Exporter (Excel / PDF)' },
         ]
       },
     ]
