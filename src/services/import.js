@@ -343,8 +343,10 @@ export async function importHistoriqueDepuisGoogleSheets(url, onProgress) {
     dossierRows.push(dossier)
 
     var ofT = !!(p.dateIF || p.dateDAPC || p.dateFinFab)
-    ofRows.push({ lot_id: lotId, statut: ofT ? 'termine' : 'planifie', etape_circuit: ofT ? 'production' : 'planification', updated_at: now })
     var ocT = !!(p.dateIC || p.dateFinCdt)
+    // Cohérence : on ne peut pas conditionner sans avoir fabriqué → OC terminé ⟹ OF terminé.
+    if (ocT) ofT = true
+    ofRows.push({ lot_id: lotId, statut: ofT ? 'termine' : 'planifie', etape_circuit: ofT ? 'production' : 'planification', updated_at: now })
     ocRows.push({ lot_id: lotId, statut: ocT ? 'termine' : 'planifie', etape_circuit: ocT ? 'production' : 'planification', updated_at: now })
 
     if (p.demandeAQL || p.finAQL) aqlCand.push({ lotId: lotId, demandeAQL: p.demandeAQL, finAQL: p.finAQL })
