@@ -6,8 +6,8 @@
       <div class="lh-right">
         <span v-if="phaseLabel" class="sp-phase" :class="getPhaseClass(phaseLabel)">{{phaseLabel}}</span>
         <span class="sp" :class="'s-'+lot.statut_sap">{{statusLabels[lot.statut_sap]}}</span>
-        <button v-if="isAdmin" class="btn-sm" @click="showModify=true">✏️ Modifier</button>
-        <button v-if="isAdmin" class="btn-sm btn-del" @click="confirmDelete">🗑️ Supprimer</button>
+        <button v-if="canPerform('modifier_lot')" class="btn-sm" @click="showModify=true">✏️ Modifier</button>
+        <button v-if="canPerform('supprimer_lot')" class="btn-sm btn-del" @click="confirmDelete">🗑️ Supprimer</button>
       </div>
     </div>
 
@@ -500,11 +500,13 @@ export default {
     }
     var selectProd = function(p){editCodeProd.value=p.code_article;editProductId.value=p.id;prodSuggestions.value=[]}
     var doModify = async function(){
+      if(!canPerform('modifier_lot'))return
       if(!editNumLot.value)return
       await modifyLot(lot.value.id, editNumLot.value, editProductId.value || lot.value.product_id)
       showModify.value=false;await loadLot()
     }
     var confirmDelete = async function(){
+      if(!canPerform('supprimer_lot'))return
       if(!confirm('Supprimer le lot '+lot.value.numero_lot+' ? Cette action est irréversible.'))return
       await deleteLot(lot.value.id);router.push('/lots')
     }

@@ -48,6 +48,7 @@
       <button class="btn-plan" :disabled="!canSubmit" @click="showConfirm = true">
         Planifier {{lotCount}} lot{{lotCount > 1 ? 's' : ''}}
       </button>
+      <div v-if="!canCreate" class="perm-hint">🔒 Permission « Créer un lot » requise pour planifier.</div>
     </div>
 
     <div class="modal-overlay" v-if="showConfirm" @click="showConfirm = false">
@@ -79,6 +80,7 @@
 <script>
 import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../supabase'
+import { loadPermissions, canPerform } from '../services/permissions'
 export default {
   setup() {
     var codeInput = ref('')
@@ -92,10 +94,18 @@ export default {
     var creating = ref(false)
     var result = ref(null)
     var lastLot = ref('')
+    var userService = ref('')
+    var canCreate = computed(function() { return canPerform('creer_lot') })
 
     var searchTimeout = null
 
     onMounted(async function() {
+      // permissions de l'utilisateur (pour gater « créer un lot »)
+      var u = await supabase.auth.getUser()
+      if (u.data.user) {
+        var pr = await supabase.from('profiles').select('service').eq('id', u.data.user.id).single()
+        if (pr.data) { userService.value = pr.data.service; await loadPermissions(pr.data.service) }
+      }
       // Récupère les 500 lots les plus récemment créés (tri par id DESC)
       // puis trouve le max numérique parmi eux — évite le problème de la limite PostgREST
       var res = await supabase.from('lots').select('numero_lot').order('id',{ascending:false}).limit(500)
@@ -145,10 +155,11 @@ export default {
     }
 
     var canSubmit = computed(function() {
-      return selectedProduct.value && lotCount.value > 0 && !creating.value
+      return canCreate.value && selectedProduct.value && lotCount.value > 0 && !creating.value
     })
 
     var doCreate = async function() {
+      if (!canPerform('creer_lot')) { showConfirm.value = false; return }
       creating.value = true
       var stats = { created: 0, skipped: 0, errors: 0 }
 
@@ -207,7 +218,7 @@ export default {
 
     return {
       codeInput, suggestions, showAuto, selectedProduct, lotDebut, lotFin, lotCount,
-      showConfirm, creating, result, canSubmit, lastLot,
+      showConfirm, creating, result, canSubmit, lastLot, canCreate,
       onCodeInput, selectProduct, hideAutoDelay, calcCount, doCreate
     }
   }
@@ -216,6 +227,7 @@ export default {
 <style scoped>
 .ph{padding-bottom:10px;border-bottom:2px solid #0a0a0a;margin-bottom:16px}.pt{font-size:11px;font-weight:500;letter-spacing:1.5px}
 .last-lot{padding:10px 12px;border:1px solid #e8e8e8;background:#fafafa;font-size:13px;color:#666;margin-bottom:16px;border-radius:2px}
+.perm-hint{font-size:12px;color:#E24B4A;margin-top:10px;text-align:center}
 .ll-num{font-family:'SF Mono',monospace;font-weight:500;font-size:16px;color:#7c3aed;margin-left:4px}
 .form{margin-top:8px}
 .field{margin-bottom:14px}.field label{display:block;font-size:11px;color:#666;text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px}
