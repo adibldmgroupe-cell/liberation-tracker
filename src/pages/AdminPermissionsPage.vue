@@ -243,8 +243,6 @@ export default {
         actions: [
           { key: 'modifier_lot', label: 'Modifier un lot' },
           { key: 'supprimer_lot', label: 'Supprimer un lot' },
-          { key: 'lot_edit_statut_sap', label: 'Modifier le statut SAP' },
-          { key: 'lot_edit_quarantaine', label: 'Mettre en quarantaine' },
         ]
       },
       {
@@ -351,7 +349,7 @@ export default {
         'verifier_maj_doc',
         'declarer_nc','cloturer_deviation','dev_bloquer',
         'accuser_reception_circuit','accuser_reception_document','accuser_reception_aql_demande',
-        'modifier_lot','lot_edit_statut_sap','lot_edit_quarantaine',
+        'modifier_lot',
         'voir_lots','voir_dashboard','voir_timeline','voir_kpi'
       ],
       aq_dap: [

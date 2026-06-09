@@ -1691,6 +1691,7 @@ var loadCharge = async function() {
 
     var savePlanning = async function() {
       if (!datePicker.value) return
+      if (!canPerform('modifier_planning')) { alert('Permission « modifier les dates prévisionnelles » requise'); datePicker.value = null; return }
       var u = await supabase.auth.getUser()
       var uid = u.data.user.id
       var userEmail = u.data.user.email || uid

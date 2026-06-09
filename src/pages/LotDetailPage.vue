@@ -472,6 +472,7 @@ export default {
     }
 
     var savePlanning = async function(field) {
+      if (!canPerform('modifier_planning')) { alert('Permission « modifier les dates prévisionnelles » requise'); return }
       planSaving.value = true
       var val = planEdit.value[field] || null
       await supabase.from('lot_planning').upsert(
