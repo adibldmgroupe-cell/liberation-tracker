@@ -3,7 +3,7 @@
     <div class="ph"><span class="pt">PLANIFIER DES LOTS</span></div>
 
     <div class="last-lot" v-if="lastLot">
-      Dernier lot attribué : <span class="ll-num">{{lastLot}}</span>
+      Dernier lot {{anneeCourante}} attribué : <span class="ll-num">{{lastLot}}</span>
     </div>
 
     <div class="form">
@@ -94,6 +94,7 @@ export default {
     var creating = ref(false)
     var result = ref(null)
     var lastLot = ref('')
+    var anneeCourante = new Date().getFullYear()
     var userService = ref('')
     var canCreate = computed(function() { return canPerform('creer_lot') })
 
@@ -106,17 +107,24 @@ export default {
         var pr = await supabase.from('profiles').select('service').eq('id', u.data.user.id).single()
         if (pr.data) { userService.value = pr.data.service; await loadPermissions(pr.data.service) }
       }
-      // Récupère les 500 lots les plus récemment créés (tri par id DESC)
-      // puis trouve le max numérique parmi eux — évite le problème de la limite PostgREST
-      var res = await supabase.from('lots').select('numero_lot').order('id',{ascending:false}).limit(500)
+      // Dernier lot PHARMA de l'ANNÉE EN COURS. Numérotation pharma = AA (annee) + n° sequentiel
+      // de LONGUEUR VARIABLE (ex. 26537 = lot 537 de 2026 ; 251048 = lot 1048 de 2025).
+      // ⚠ Interdit de prendre le max numerique global : 251048 > 26537 alors que 26537 est plus recent.
+      // → filtrer sur le prefixe de l'annee courante, puis max sur la SEQUENCE (chiffres apres l'annee).
+      var yy = String(anneeCourante).slice(-2)
+      var res = await supabase.from('lots').select('numero_lot').like('numero_lot', yy + '%').limit(20000)
       if (res.data && res.data.length) {
-        var maxNum = 0
+        var maxSeq = -1
         var maxLot = ''
         for (var i = 0; i < res.data.length; i++) {
-          var n = parseInt(res.data[i].numero_lot)
-          if (!isNaN(n) && n > maxNum) { maxNum = n; maxLot = res.data[i].numero_lot }
+          var nl = (res.data[i].numero_lot || '') + ''
+          // pharma uniquement : que des chiffres, > 2 caracteres, bon prefixe annee
+          // (exclut OTC 15xxx, lots ...V / ...E, et les n° malformes type "25021 01")
+          if (!/^\d+$/.test(nl) || nl.length <= 2 || nl.slice(0, 2) !== yy) continue
+          var seq = parseInt(nl.slice(2), 10)
+          if (!isNaN(seq) && seq > maxSeq) { maxSeq = seq; maxLot = nl }
         }
-        lastLot.value = maxLot || ''
+        lastLot.value = maxLot
       }
     })
 
@@ -218,7 +226,7 @@ export default {
 
     return {
       codeInput, suggestions, showAuto, selectedProduct, lotDebut, lotFin, lotCount,
-      showConfirm, creating, result, canSubmit, lastLot, canCreate,
+      showConfirm, creating, result, canSubmit, lastLot, canCreate, anneeCourante,
       onCodeInput, selectProduct, hideAutoDelay, calcCount, doCreate
     }
   }
