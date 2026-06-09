@@ -1045,6 +1045,7 @@ import { supabase } from '../../supabase'
 import { useTheme } from '../../composables/useTheme'
 import { declareDeviation } from '../../services/actions'
 import { checkProductFluxRoom, checkProductFluxEquipName, checkUpstreamStages, stageLabels, FLOW_STAGES, FLOW_EDGES, ROOM_STAGE } from '../../services/flux'
+import { loadPermissions, canPerform } from '../../services/permissions'
 
 // ── LAYOUT CONSTANTS ──────────────────────────────────────────────
 var SVG_W  = 1580
@@ -1767,6 +1768,7 @@ export default {
     }
 
     var trsDoStart = async function() {
+      if (!canPerform('trs_demarrer')) { trsStartModal.error = 'Permission « démarrer une session » requise.'; return }
       if (!trsStartModal.lot) { trsStartModal.error = 'Sélectionner un lot.'; return }
       trsStartModal.saving = true
       var eq = trsStartModal.equip
@@ -2529,6 +2531,7 @@ export default {
     }
 
     var saveStart = async function() {
+      if (!canPerform('trs_demarrer')) { modal.value.err = 'Permission « démarrer un suivi » requise.'; return }
       var lotsToStart = (modal.value.lots && modal.value.lots.length)
         ? modal.value.lots
         : (modal.value.selectedLot ? [modal.value.selectedLot] : [])
@@ -2681,6 +2684,7 @@ export default {
     }
 
     var saveClose = async function() {
+      if (!canPerform('trs_cloturer')) { modal.value.err = 'Permission « clôturer » requise.'; return }
       if (!modal.value.fabId) { modal.value.err = 'Sélectionner une session.'; return }
       modal.value.saving = true; modal.value.err = ''
       var node = selectedNode.value
@@ -2806,6 +2810,8 @@ export default {
     // ─── LIFECYCLE ───────────────────────────────────────────────
     var refreshInt = null
     onMounted(async function() {
+      var ud = await supabase.auth.getUser()
+      if (ud.data.user) { var pp = await supabase.from('profiles').select('service').eq('id', ud.data.user.id).single(); if (pp.data) await loadPermissions(pp.data.service) }
       await loadLive()
       refreshInt = setInterval(loadLive, 60000)
     })

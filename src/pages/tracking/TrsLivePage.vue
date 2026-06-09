@@ -569,6 +569,7 @@ import { supabase } from '../../supabase'
 import { useTheme } from '../../composables/useTheme'
 import { declareDeviation } from '../../services/actions'
 import { checkProductFluxEquipName } from '../../services/flux'
+import { loadPermissions, canPerform } from '../../services/permissions'
 
 export default {
   setup() {
@@ -1022,6 +1023,7 @@ export default {
     }
 
     var doStart = async function() {
+      if (!canPerform('trs_demarrer')) { startModal.error = 'Permission « démarrer une session » requise.'; return }
       if (!startModal.lot) { startModal.error = 'Sélectionner un lot.'; return }
       startModal.saving = true
       var eq = startModal.equip
@@ -1097,6 +1099,7 @@ export default {
     }
 
     var doArret = async function() {
+      if (!canPerform('trs_arret')) { arretModal.error = 'Permission « déclarer un arrêt » requise.'; return }
       if (!arretModal.type_id) { arretModal.error = 'Sélectionner un code arrêt.'; return }
       arretModal.saving = true
       var t  = arretModal.selectedType
@@ -1209,6 +1212,7 @@ export default {
     }
 
     var doComptage = async function() {
+      if (!canPerform('trs_comptage')) { alert('Permission « saisir un comptage » requise.'); return }
       if (!comptageModal.boites) return
       comptageModal.saving = true
       var s        = comptageModal.panel.session
@@ -1293,6 +1297,7 @@ export default {
     }
 
     var doClose = async function() {
+      if (!canPerform('trs_cloturer')) { closeModal.error = 'Permission « clôturer une session » requise.'; return }
       if (!closeModal.heure_fin) { closeModal.error = 'Heure de fin requise.'; return }
       closeModal.saving = true
       var s    = closeModal.panel.session
@@ -1499,6 +1504,8 @@ export default {
     var onKeyLive = function(e) { if (e.key === 'Escape' && liveView.value) closeLiveView() }
 
     onMounted(async function() {
+      var ud = await supabase.auth.getUser()
+      if (ud.data.user) { var pp = await supabase.from('profiles').select('service').eq('id', ud.data.user.id).single(); if (pp.data) await loadPermissions(pp.data.service) }
       await loadAll()
       await autoStopCheck()   // rattrape immédiatement les sessions en retard (ex. oubliées depuis hier)
       clockInt      = setInterval(tick, 1000)

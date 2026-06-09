@@ -953,6 +953,7 @@ export default {
     }
 
     var saveSuiviFab = async function() {
+      if (!canPerform('trs_demarrer')) { suiviModal.err = 'Permission « démarrer un suivi de production » requise'; return }
       if (!suiviModal.lot_id) { suiviModal.err = 'Lot requis'; return }
       if (!suiviModal.atelier_id) { suiviModal.err = 'Atelier requis'; return }
       suiviModal.saving = true; suiviModal.err = ''
@@ -985,6 +986,7 @@ export default {
     }
 
     var saveSuiviCond = async function() {
+      if (!canPerform('trs_demarrer')) { suiviModal.err = 'Permission « démarrer un suivi de production » requise'; return }
       if (!suiviModal.lot_id) { suiviModal.err = 'Lot requis'; return }
       if (!suiviModal.equipement_id) { suiviModal.err = 'Équipement requis'; return }
       suiviModal.saving = true; suiviModal.err = ''
@@ -1022,6 +1024,7 @@ export default {
     }
 
     var clotureSuivi = async function(s) {
+      if (!canPerform('trs_cloturer')) { alert('Permission « clôturer un suivi » requise'); return }
       var now = new Date().toISOString()
       if (s.famille === 'fab') {
         await supabase.from('suivi_fabrication').update({ statut: 'Clôturé', date_fin: now }).eq('id', s.rawId)
@@ -1032,6 +1035,7 @@ export default {
     }
 
     var deleteSuivi = async function(s) {
+      if (!canPerform('trs_supprimer_suivi')) { alert('Permission « supprimer un suivi » requise'); return }
       if (!confirm('Supprimer ce suivi ?')) return
       var now = new Date().toISOString()
       if (s.famille === 'fab') {
@@ -1057,6 +1061,7 @@ export default {
     }
 
     var saveArret = async function() {
+      if (!canPerform('trs_arret')) { arretModal.err = 'Permission « déclarer un arrêt » requise'; return }
       if (!arretModal.motif.trim()) { arretModal.err = 'Motif requis'; return }
       arretModal.saving = true; arretModal.err = ''
       var res

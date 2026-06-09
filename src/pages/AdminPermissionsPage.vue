@@ -220,13 +220,13 @@ export default {
         ]
       },
       {
-        label: 'Fabrication / LCQ',
+        label: 'Module Production / TRS',
         actions: [
-          { key: 'declarer_etape_fab', label: 'Déclarer une étape de fabrication' },
-          { key: 'declarer_fin_sf', label: 'Déclarer fin semi-fini' },
-          { key: 'declarer_fin_pf', label: 'Déclarer fin produit fini' },
-          { key: 'realiser_analyse_pc', label: 'Réaliser analyse physico-chimie' },
-          { key: 'realiser_analyse_micro', label: 'Réaliser analyse microbiologie' },
+          { key: 'trs_demarrer', label: 'Démarrer une session / un suivi de production' },
+          { key: 'trs_comptage', label: 'Saisir un comptage (boîtes produites)' },
+          { key: 'trs_arret', label: 'Déclarer un arrêt' },
+          { key: 'trs_cloturer', label: 'Clôturer une session / un suivi' },
+          { key: 'trs_supprimer_suivi', label: 'Supprimer un suivi de production' },
         ]
       },
       {
@@ -335,6 +335,7 @@ export default {
         'valider_cloture_sap_oc','confirmer_cloture_sap_oc',
         'emettre_maj_nmcl_of','emettre_maj_nmcl_oc',
         'modifier_planning',
+        'trs_demarrer','trs_arret','trs_cloturer','trs_supprimer_suivi',
         'voir_lots','voir_dashboard','voir_timeline','voir_kpi'
       ],
       stock: [
@@ -368,7 +369,7 @@ export default {
         'mettre_en_circuit_of',
         'emettre_if','emettre_maj_if',
         'emettre_cloture_sap_of','demander_cloture_sap_of',
-        'declarer_etape_fab','declarer_fin_sf','declarer_fin_pf',
+        'trs_demarrer','trs_comptage','trs_arret','trs_cloturer',
         'accuser_reception_circuit','accuser_reception_aql_resultat',
         'dev_bloquer',
         'voir_lots','voir_dashboard'
@@ -377,12 +378,12 @@ export default {
         'mettre_en_circuit_oc',
         'emettre_ic','emettre_maj_ic',
         'emettre_cloture_sap_oc','demander_cloture_sap_oc',
+        'trs_demarrer','trs_comptage','trs_arret','trs_cloturer',
         'accuser_reception_circuit','accuser_reception_aql_resultat',
         'voir_lots','voir_dashboard'
       ],
       lcq: [
         'realiser_aql',
-        'realiser_analyse_pc','realiser_analyse_micro',
         'modifier_planning',
         'accuser_reception_aql_demande',
         'voir_lots','voir_dashboard','voir_timeline','voir_kpi'

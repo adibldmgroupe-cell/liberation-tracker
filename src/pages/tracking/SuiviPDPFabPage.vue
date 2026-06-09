@@ -341,6 +341,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { supabase } from '../../supabase'
 import { useTheme } from '../../composables/useTheme'
+import { loadPermissions, canPerform } from '../../services/permissions'
 
 export default {
   setup() {
@@ -684,6 +685,7 @@ export default {
       if (at) fabModal.value.processusId = at.processus_id
     }
     var saveFab = async function() {
+      if (!canPerform('trs_demarrer')) { fabModal.value.err='Permission « démarrer un suivi » requise'; return }
       if (!fabModal.value.lotId) { fabModal.value.err='Lot requis'; return }
       if (!fabModal.value.atelierId) { fabModal.value.err='Atelier requis'; return }
       if (!fabModal.value.processusId) { fabModal.value.err='Processus requis'; return }
@@ -701,10 +703,12 @@ export default {
       await loadAll()
     }
     var clotureAtelier = async function(sf) {
+      if (!canPerform('trs_cloturer')) { alert('Permission « clôturer un suivi » requise'); return }
       var res = await supabase.from('suivi_fabrication').update({ statut:'Clôturé', date_fin:new Date().toISOString() }).eq('id',sf.id)
       if (!res.error) await loadAll()
     }
     var deleteFab = async function(sf) {
+      if (!canPerform('trs_supprimer_suivi')) { alert('Permission « supprimer un suivi » requise'); return }
       if (!confirm('Supprimer ce suivi ?')) return
       var res = await supabase.from('suivi_fabrication').update({ deleted_at:new Date().toISOString() }).eq('id',sf.id)
       if (!res.error) await loadAll()
@@ -716,6 +720,7 @@ export default {
       arretModal.value = { open:true, fabId:sf.id, lot_id:sf.lot_id, lotNum:sf.lots&&sf.lots.numero_lot||sf.lot_id, lotProd:sf.lots&&sf.lots.products&&sf.lots.products.description||'', atelierId:sf.atelier_id, motif:'', heureDebut:now2, err:'', saving:false }
     }
     var saveArret = async function() {
+      if (!canPerform('trs_arret')) { arretModal.value.err='Permission « déclarer un arrêt » requise'; return }
       if (!arretModal.value.motif.trim()) { arretModal.value.err='Motif requis'; return }
       arretModal.value.saving = true; arretModal.value.err = ''
       var payload = { atelier_id:arretModal.value.atelierId, lot_id:arretModal.value.lot_id, motif:arretModal.value.motif, heure_debut:arretModal.value.heureDebut||new Date().toISOString() }
@@ -726,6 +731,7 @@ export default {
       await loadAll()
     }
     var closeArretAtelier = async function(arr) {
+      if (!canPerform('trs_arret')) { alert('Permission « gérer les arrêts » requise'); return }
       var res = await supabase.from('atelier_arrets').update({ heure_fin:new Date().toISOString() }).eq('id',arr.id)
       if (!res.error) {
         var remaining = arretAtelier.value.filter(function(a){ return a.lot_id===arr.lot_id && !a.heure_fin && a.id!==arr.id })
@@ -737,13 +743,16 @@ export default {
       }
     }
     var deleteArret = async function(arr) {
+      if (!canPerform('trs_arret')) { alert('Permission « gérer les arrêts » requise'); return }
       if (!confirm('Supprimer cet arrêt ?')) return
       var res = await supabase.from('atelier_arrets').update({deleted_at:new Date().toISOString()}).eq('id',arr.id)
       if (!res.error) await loadAll()
     }
 
     // ─── LIFECYCLE ─────────────────────────────────────────────
-    onMounted(function() {
+    onMounted(async function() {
+      var ud = await supabase.auth.getUser()
+      if (ud.data.user) { var pp = await supabase.from('profiles').select('service').eq('id', ud.data.user.id).single(); if (pp.data) await loadPermissions(pp.data.service) }
       loadAll()
       tickInt = setInterval(function(){ now.value = Date.now() }, 1000)
     })
