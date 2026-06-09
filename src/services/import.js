@@ -440,20 +440,56 @@ export async function importHistoriqueDepuisGoogleSheets(url, onProgress) {
 // Conserve le référentiel : produits, profils, permissions, config, ateliers.
 // notifications + order_validations n'ont pas de FK cascade → suppression explicite
 // (nécessite policies DELETE — voir migration).
+// ── Volet « Gestion lots » : vide les lots + tout leur dossier (cascade) ──
 export async function viderDonneesOperationnelles(onProgress) {
   var stats = { errors: [] }
   var P = function(n) { if (onProgress) onProgress(n) }
   P(10)
   var n1 = await supabase.from('notifications').delete().gt('id', 0)
   if (n1.error) stats.errors.push('notifications : ' + n1.error.message + ' — policy DELETE requise')
-  P(35)
+  P(25)
   var n2 = await supabase.from('order_validations').delete().gt('id', 0)
   if (n2.error) stats.errors.push('order_validations : ' + n2.error.message + ' — policy DELETE requise')
+  P(40)
+  // arrêts rattachés au lot : arret_conditionnement (FK NO ACTION → bloquerait le DELETE lots) + atelier_arrets (FK SET NULL → orphelins) → supprimer avant lots
+  var a1 = await supabase.from('arret_conditionnement').delete().not('id', 'is', null)
+  if (a1.error) stats.errors.push('arret_conditionnement : ' + a1.error.message)
+  var a2 = await supabase.from('atelier_arrets').delete().not('id', 'is', null)
+  if (a2.error) stats.errors.push('atelier_arrets : ' + a2.error.message)
   P(60)
-  // lots en dernier → cascade OF/OC, documents, mouvements, AQL, déviations, dossiers, events, étapes fab
+  // lots en dernier → cascade OF/OC, documents, mouvements, AQL, déviations, dossiers, events, planning, planif_cond, production_sessions, suivi_fab, suivi_cond
   var n3 = await supabase.from('lots').delete().gt('id', 0)
   if (n3.error) stats.errors.push('lots : ' + n3.error.message)
   P(100)
+  return stats
+}
+
+// ── Volet « Module production » : vide l'OPÉRATIONNEL (référentiel + lots conservés) ──
+export async function viderDonneesProduction(onProgress) {
+  var stats = { errors: [] }
+  var P = function(n) { if (onProgress) onProgress(n) }
+  var DEL = function(t) { return supabase.from(t).delete().not('id', 'is', null) }
+  // enfants → parents pour éviter tout blocage FK ; référentiel (cadences, ateliers, équipements, plan_rooms, operations_master, product_flux) NON touché
+  var steps = [
+    ['production_arrets', 12], ['production_comptages', 24], ['session_cadences', 36],
+    ['production_sessions', 50], ['arret_conditionnement', 63], ['atelier_arrets', 76],
+    ['suivi_conditionnement', 88], ['suivi_fabrication', 100]
+  ]
+  for (var i = 0; i < steps.length; i++) {
+    var r = await DEL(steps[i][0])
+    if (r.error) stats.errors.push(steps[i][0] + ' : ' + r.error.message + ' — policy DELETE requise ?')
+    P(steps[i][1])
+  }
+  return stats
+}
+
+// ── Volet « Risque péremption » : vide les évaluations (config pondérations/seuils conservée) ──
+export async function viderDonneesPeremption(onProgress) {
+  var stats = { errors: [] }
+  if (onProgress) onProgress(25)
+  var r = await supabase.from('peremption_evaluations').delete().not('id', 'is', null)
+  if (r.error) stats.errors.push('peremption_evaluations : ' + r.error.message + ' — policy DELETE requise ?')
+  if (onProgress) onProgress(100)
   return stats
 }
 

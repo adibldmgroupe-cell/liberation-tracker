@@ -385,16 +385,46 @@
             <button class="dm-btn-primary" :disabled="!gsHistoUrl" @click="syncHistorique">Synchroniser Historique</button>
           </div>
 
+          <div class="dm-danger-head">⚠ Vidage par volet — chaque volet est indépendant</div>
+
           <div class="dm-section dm-danger">
-            <div class="dm-sec-title">🗑 Vider &amp; réimporter</div>
-            <div class="dm-sec-desc">Efface <strong>tous les lots</strong> (Réception SAP + Historique + saisie manuelle de tests), puis réimporte l'Historique. Le référentiel (produits, comptes, permissions) est conservé.</div>
-            <button v-if="!confirmVider" class="dm-btn-danger" @click="confirmVider=true">Vider &amp; réimporter…</button>
+            <div class="dm-sec-title">🗑 Gestion lots</div>
+            <div class="dm-sec-desc">Efface <strong>tous les lots</strong> et tout leur dossier (circuits OF/OC, documents, AQL, déviations, planning…) <strong>et la production rattachée à ces lots</strong>, puis réimporte l'Historique. Référentiel, comptes, permissions et risque péremption <strong>conservés</strong>.</div>
+            <button v-if="viderWhich!=='lots'" class="dm-btn-danger" @click="startVider('lots')">Vider Gestion lots…</button>
             <template v-else>
-              <div class="dm-confirm-lbl">Tape <strong>VIDER</strong> pour confirmer la suppression définitive :</div>
-              <input v-model="confirmText" class="dm-url" placeholder="VIDER" @keydown.enter="viderEtReimporter" />
+              <div class="dm-confirm-lbl">Saisis le <strong>mot de passe</strong> pour confirmer la suppression définitive :</div>
+              <input v-model="viderPwd" type="password" class="dm-url" placeholder="Mot de passe" @keydown.enter="doVider" />
               <div class="dm-confirm-acts">
-                <button class="dm-btn-danger" :disabled="confirmText!=='VIDER'" @click="viderEtReimporter">Confirmer</button>
-                <button class="m-btn-cancel" @click="confirmVider=false;confirmText=''">Annuler</button>
+                <button class="dm-btn-danger" :disabled="viderPwd!==VIDER_PWD" @click="doVider">Confirmer</button>
+                <button class="m-btn-cancel" @click="cancelVider">Annuler</button>
+              </div>
+            </template>
+          </div>
+
+          <div class="dm-section dm-danger">
+            <div class="dm-sec-title">🗑 Module production</div>
+            <div class="dm-sec-desc">Efface les données <strong>opérationnelles</strong> de production : sessions TRS, suivis fabrication &amp; conditionnement, arrêts, comptages, cadences-session. Les <strong>lots</strong>, le référentiel production (ateliers, équipements, cadences, flux, opérations) et le risque péremption sont <strong>conservés</strong>.</div>
+            <button v-if="viderWhich!=='prod'" class="dm-btn-danger" @click="startVider('prod')">Vider Module production…</button>
+            <template v-else>
+              <div class="dm-confirm-lbl">Saisis le <strong>mot de passe</strong> pour confirmer la suppression définitive :</div>
+              <input v-model="viderPwd" type="password" class="dm-url" placeholder="Mot de passe" @keydown.enter="doVider" />
+              <div class="dm-confirm-acts">
+                <button class="dm-btn-danger" :disabled="viderPwd!==VIDER_PWD" @click="doVider">Confirmer</button>
+                <button class="m-btn-cancel" @click="cancelVider">Annuler</button>
+              </div>
+            </template>
+          </div>
+
+          <div class="dm-section dm-danger">
+            <div class="dm-sec-title">🗑 Risque péremption</div>
+            <div class="dm-sec-desc">Efface toutes les <strong>évaluations</strong> de risque de péremption. Les pondérations &amp; seuils (configuration), les produits, les lots et la production sont <strong>conservés</strong>.</div>
+            <button v-if="viderWhich!=='perem'" class="dm-btn-danger" @click="startVider('perem')">Vider Risque péremption…</button>
+            <template v-else>
+              <div class="dm-confirm-lbl">Saisis le <strong>mot de passe</strong> pour confirmer la suppression définitive :</div>
+              <input v-model="viderPwd" type="password" class="dm-url" placeholder="Mot de passe" @keydown.enter="doVider" />
+              <div class="dm-confirm-acts">
+                <button class="dm-btn-danger" :disabled="viderPwd!==VIDER_PWD" @click="doVider">Confirmer</button>
+                <button class="m-btn-cancel" @click="cancelVider">Annuler</button>
               </div>
             </template>
           </div>
@@ -412,7 +442,7 @@ import { supabase } from '../supabase'
 import { exportToExcel, exportToPDF } from '../services/export'
 import { createNotification } from '../services/notifications'
 import { canPerform, loadPermissions, getPermissionForBulkAction, getPermissionForEtape } from '../services/permissions'
-import { importFromGoogleSheets, importHistoriqueDepuisGoogleSheets, viderDonneesOperationnelles } from '../services/import'
+import { importFromGoogleSheets, importHistoriqueDepuisGoogleSheets, viderDonneesOperationnelles, viderDonneesProduction, viderDonneesPeremption } from '../services/import'
 export default {
   setup() {
     var route = useRoute(), router = useRouter()
@@ -2174,10 +2204,11 @@ var loadCharge = async function() {
     var GS_RECEPTION_URL_DEFAULT = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vScTWm9jzHYQT2sJEZopWbjxkUYSv5LZobGsjdET0ZXKVUaRcJ3S2n-Fpo4y8br_SBWCqRFEqr2D8D7/pub?gid=20353801&single=true&output=csv'
     var GS_HISTO_URL_DEFAULT = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vScTWm9jzHYQT2sJEZopWbjxkUYSv5LZobGsjdET0ZXKVUaRcJ3S2n-Fpo4y8br_SBWCqRFEqr2D8D7/pub?gid=1271101139&single=true&output=csv'
     var showDataModal = ref(false), dataBusy = ref(false), dataProgress = ref(0), dataStats = ref(null), dataAction = ref('')
-    var gsReceptionUrl = ref(''), gsHistoUrl = ref(''), confirmVider = ref(false), confirmText = ref('')
+    var gsReceptionUrl = ref(''), gsHistoUrl = ref(''), viderWhich = ref(null), viderPwd = ref('')
+    var VIDER_PWD = '@1927@'
 
     var openDataModal = async function() {
-      showDataModal.value = true; dataStats.value = null; confirmVider.value = false; confirmText.value = ''
+      showDataModal.value = true; dataStats.value = null; viderWhich.value = null; viderPwd.value = ''
       var rRec = await supabase.from('app_settings').select('value').eq('key','gs_url').maybeSingle()
       gsReceptionUrl.value = (rRec.data && rRec.data.value) || localStorage.getItem('liberation_gs_url') || GS_RECEPTION_URL_DEFAULT
       var rHis = await supabase.from('app_settings').select('value').eq('key','gs_historique_url').maybeSingle()
@@ -2200,15 +2231,25 @@ var loadCharge = async function() {
     var syncHistorique = function() {
       if (gsHistoUrl.value) runData('Sync Historique', function(cb){ return importHistoriqueDepuisGoogleSheets(gsHistoUrl.value, cb) })
     }
-    var viderEtReimporter = function() {
-      if (confirmText.value !== 'VIDER') return
-      confirmVider.value = false; confirmText.value = ''
-      runData('Vidage + réimport Historique', async function(cb){
-        var vid = await viderDonneesOperationnelles(function(p){ cb(Math.round(p * 0.3)) })
-        var imp = await importHistoriqueDepuisGoogleSheets(gsHistoUrl.value, function(p){ cb(30 + Math.round(p * 0.7)) })
-        imp.errors = (vid.errors || []).concat(imp.errors || [])
-        return imp
-      })
+    var startVider = function(which) { viderWhich.value = which; viderPwd.value = '' }
+    var cancelVider = function() { viderWhich.value = null; viderPwd.value = '' }
+    var doVider = function() {
+      if (viderPwd.value !== VIDER_PWD) return
+      var which = viderWhich.value
+      viderWhich.value = null; viderPwd.value = ''
+      if (which === 'lots') {
+        runData('Vidage Gestion lots' + (gsHistoUrl.value ? ' + réimport Historique' : ''), async function(cb){
+          var vid = await viderDonneesOperationnelles(function(p){ cb(Math.round(p * (gsHistoUrl.value ? 0.3 : 1))) })
+          if (!gsHistoUrl.value) return vid
+          var imp = await importHistoriqueDepuisGoogleSheets(gsHistoUrl.value, function(p){ cb(30 + Math.round(p * 0.7)) })
+          imp.errors = (vid.errors || []).concat(imp.errors || [])
+          return imp
+        })
+      } else if (which === 'prod') {
+        runData('Vidage Module production', function(cb){ return viderDonneesProduction(cb) })
+      } else if (which === 'perem') {
+        runData('Vidage Risque péremption', function(cb){ return viderDonneesPeremption(cb) })
+      }
     }
 
     return{lots,total,lotsLoading,hiddenStatuts,toggleStatutVisibility,showStatutPanel,showDates,filteredLots,pagedLots,tablePage,totalPages,filterOptions,
@@ -2226,8 +2267,8 @@ var loadCharge = async function() {
       datePicker,dpInput,openDatePicker,savePlanning,getPlanClass,getPhaseClass,
       chargeCount,chargeLoading,loadCharge,
       planHistory,planHistLoading,
-      showDataModal,dataBusy,dataProgress,dataStats,dataAction,gsReceptionUrl,gsHistoUrl,confirmVider,confirmText,
-      openDataModal,closeDataModal,saveHistoUrl,syncReceptionPF,syncHistorique,viderEtReimporter}
+      showDataModal,dataBusy,dataProgress,dataStats,dataAction,gsReceptionUrl,gsHistoUrl,viderWhich,viderPwd,VIDER_PWD,
+      openDataModal,closeDataModal,saveHistoUrl,syncReceptionPF,syncHistorique,startVider,cancelVider,doVider}
   }
 }
 </script>
@@ -2494,6 +2535,7 @@ var loadCharge = async function() {
 .dm-url:focus{border-color:var(--th-accent,#7c3aed)}
 .dm-btn-primary{width:100%;padding:10px;font-size:13px;font-weight:600;font-family:inherit;background:#7c3aed;color:#fff;border:none;border-radius:5px;cursor:pointer}.dm-btn-primary:hover:not(:disabled){background:#6d28d9}.dm-btn-primary:disabled{opacity:.45;cursor:not-allowed}
 .dm-danger{border-color:#f0b4b4}
+.dm-danger-head{font-size:12px;font-weight:700;color:#E24B4A;margin:14px 0 2px;padding-top:12px;border-top:1px solid var(--th-border,#eee)}
 .dm-btn-danger{width:100%;padding:10px;font-size:13px;font-weight:600;font-family:inherit;background:#E24B4A;color:#fff;border:none;border-radius:5px;cursor:pointer}.dm-btn-danger:hover:not(:disabled){background:#c0392b}.dm-btn-danger:disabled{opacity:.45;cursor:not-allowed}
 .dm-warn{font-size:11px;color:#E24B4A;margin-top:6px}
 .dm-confirm-lbl{font-size:12px;color:var(--th-text,#333);margin-bottom:8px}
