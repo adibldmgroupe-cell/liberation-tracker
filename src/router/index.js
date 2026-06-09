@@ -3,6 +3,7 @@ import { supabase } from '../supabase'
 
 const routes = [
   { path: '/login', name: 'Login', component: () => import('../pages/LoginPage.vue') },
+  { path: '/changer-mot-de-passe', name: 'ChangePassword', component: () => import('../pages/ChangePasswordPage.vue'), meta: { requiresAuth: true } },
   {
     path: '/',
     component: () => import('../layouts/AppLayout.vue'),
@@ -51,10 +52,11 @@ router.beforeEach(async (to) => {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) return '/login'
 
-  // Vérification du profil : compte actif + service admin si nécessaire
+  // Vérification du profil : compte actif + service admin + 1re connexion
+  // select('*') → robuste si la colonne must_change_password n'existe pas encore (avant migration 037)
   const { data: profile } = await supabase
     .from('profiles')
-    .select('is_active, service')
+    .select('*')
     .eq('id', session.user.id)
     .single()
 
@@ -62,6 +64,15 @@ router.beforeEach(async (to) => {
   if (!profile || !profile.is_active) {
     await supabase.auth.signOut()
     return '/login'
+  }
+
+  // 1re connexion : changement de mot de passe obligatoire (cf. migration 037)
+  // Tant que la colonne n'existe pas, must_change_password est undefined → rien n'est forcé.
+  if (profile.must_change_password && to.name !== 'ChangePassword') {
+    return '/changer-mot-de-passe'
+  }
+  if (!profile.must_change_password && to.name === 'ChangePassword') {
+    return '/dashboard'
   }
 
   // Route admin réservée au service 'admin'
