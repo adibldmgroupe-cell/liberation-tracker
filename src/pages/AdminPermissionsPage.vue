@@ -166,6 +166,8 @@ export default {
           { key: 'approuver_da_micro', label: 'Approuver DA Microbiologie (DT)' },
           { key: 'approuver_rvp', label: 'Approuver RVP (DT)' },
           { key: 'liberer_lot', label: 'Libérer le lot' },
+          { key: 'emettre_ccl', label: 'Émettre / transmettre CCL (AQ)' },
+          { key: 'approuver_ccl', label: 'Libérer via CCL — approuver (DT)' },
         ]
       },
       {
@@ -344,7 +346,7 @@ export default {
         'valider_of','valider_oc',
         'verifier_if','verifier_ic','verifier_da_pc','verifier_da_micro','verifier_rvp',
         'retourner_document','rectifier_document',
-        'liberer_lot',
+        'liberer_lot','emettre_ccl',
         'demander_aql_fab','demander_aql_cond',
         'verifier_maj_doc',
         'declarer_nc','cloturer_deviation','dev_bloquer',
@@ -360,7 +362,7 @@ export default {
       dt: [
         'autoriser_lancement',
         'approuver_if','approuver_ic','approuver_da_pc','approuver_da_micro','approuver_rvp',
-        'approuver_maj_doc',
+        'approuver_maj_doc','approuver_ccl',
         'voir_lots','voir_dashboard','voir_timeline','voir_kpi'
       ],
       fabrication: [

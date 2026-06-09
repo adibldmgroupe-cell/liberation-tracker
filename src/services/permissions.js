@@ -65,7 +65,7 @@ export function getPermissionForBulkAction(action) {
     rvp_fab_retour_emetteur:'retourner_document', rvp_cond_retour_emetteur:'retourner_document',
     rvp_lcq_retour_emetteur:'retourner_document', rvp_fab_retour_aq:'retourner_document',
     rvp_cond_retour_aq:'retourner_document', rvp_lcq_retour_aq:'retourner_document',
-    dev_declarer:'declarer_nc', dev_cloture:'cloturer_deviation',
+    dev_declarer:'declarer_nc', dev_bloquer:'dev_bloquer', dev_cloture:'cloturer_deviation',
     // MàJ documents
     maj_if_declarer:'emettre_maj_if', maj_if_emettre:'emettre_maj_if',
     maj_if_verifier:'verifier_maj_doc', maj_if_approuver:'approuver_maj_doc',
