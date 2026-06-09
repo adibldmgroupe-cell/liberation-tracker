@@ -210,6 +210,16 @@ html[data-theme="workshop"] input[type="date"]::-webkit-calendar-picker-indicato
 html[data-theme="night"] input::placeholder,
 html[data-theme="workshop"] input::placeholder { color: var(--th-text3); }
 
+/* Écrans d'authentification (login .lp, changement de mot de passe .cp) : carte blanche
+   → champs TOUJOURS clairs, quel que soit le thème. !important pour battre la règle
+   globale ci-dessus (spécificité gonflée par les :not()). Cf. règle N°16. */
+html[data-theme="night"] .lp input, html[data-theme="workshop"] .lp input,
+html[data-theme="night"] .cp input, html[data-theme="workshop"] .cp input {
+  background: #fff !important; color: #1a1a2e !important; border-color: #ddd !important;
+}
+html[data-theme="night"] .lp input::placeholder, html[data-theme="workshop"] .lp input::placeholder,
+html[data-theme="night"] .cp input::placeholder, html[data-theme="workshop"] .cp input::placeholder { color: #aaa !important; }
+
 html[data-theme="night"] .search-input,
 html[data-theme="workshop"] .search-input {
   background: var(--th-bg2);
