@@ -1110,6 +1110,7 @@ export default {
     }
 
     var deletePdpCond = async function(p) {
+      if (!canPerform('gerer_pdp')) { alert('Permission « gérer le PDP » requise'); return }
       if (!confirm('Supprimer cette entrée PDP ?')) return
       await supabase.from('planification_conditionnement').update({ statut_planification: 'Annulé' }).eq('id', p.id)
       await loadAll()
@@ -1120,6 +1121,7 @@ export default {
     var pdpErr = ref('')
     // Saisie inline de la date de fin réelle (équipe planification)
     var savePdpReelle = async function(p) {
+      if (!canPerform('gerer_pdp')) { alert('Permission « gérer le PDP » requise'); return }
       pdpErr.value = ''
       var dr = bulkParseDate(p.date_fin_reelle)
       // Retard de la ligne = jours OUVRÉS (fin réelle − fin estimée), calendrier de la machine
@@ -1139,6 +1141,7 @@ export default {
     }
     // Recaler tout le PDP conditionnement sur les fins réelles + décaler l'aval du retard cumulé
     var recomputeAllPdp = async function() {
+      if (!canPerform('gerer_pdp')) { alert('Permission « gérer le PDP » requise'); return }
       pdpErr.value = ''; pdpRecomputing.value = true
       // statut réel des lots (date de libération « réel » si Accepté)
       var lotNums = pdpCond.value.map(function(p) { return p.numero_lot }).filter(function(x) { return x && x !== '—' })

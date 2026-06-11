@@ -1810,8 +1810,8 @@ var loadCharge = async function() {
       {key:'plan_lcq',label:'Lib. LCQ',width:12},{key:'plan_aq',label:'Lib. AQ',width:12},{key:'plan_dt1',label:'Lib. DT',width:12},
       {key:'date_fmt',label:'Réception',width:12},{key:'date_lib',label:'Libération',width:12}
     ]
-    var doExportExcel = function(){exportToExcel(filteredLots.value,exportCols,'lots_liberation')}
-    var doExportPDF = function(){exportToPDF(filteredLots.value,exportCols,'lots_liberation')}
+    var doExportExcel = function(){if(!canPerform('exporter_lots')){alert('Permission « exporter » requise');return}exportToExcel(filteredLots.value,exportCols,'lots_liberation')}
+    var doExportPDF = function(){if(!canPerform('exporter_lots')){alert('Permission « exporter » requise');return}exportToPDF(filteredLots.value,exportCols,'lots_liberation')}
 
     // ── Actions en masse ───────────────────────────────────────────────
     var actionLabels = {
@@ -2228,9 +2228,11 @@ var loadCharge = async function() {
       await load()
     }
     var syncReceptionPF = function() {
+      if (!canPerform('importer_donnees_gs')) { alert('Permission « importer depuis Google Sheets » requise'); return }
       if (gsReceptionUrl.value) runData('Sync Réception PF', function(cb){ return importFromGoogleSheets(gsReceptionUrl.value, cb) })
     }
     var syncHistorique = function() {
+      if (!canPerform('importer_donnees_gs')) { alert('Permission « importer depuis Google Sheets » requise'); return }
       if (gsHistoUrl.value) runData('Sync Historique', function(cb){ return importHistoriqueDepuisGoogleSheets(gsHistoUrl.value, cb) })
     }
     var startVider = function(which) { viderWhich.value = which; viderPwd.value = '' }
@@ -2239,6 +2241,8 @@ var loadCharge = async function() {
       if (viderPwd.value !== VIDER_PWD) return
       var which = viderWhich.value
       viderWhich.value = null; viderPwd.value = ''
+      var permVider = { lots: 'vider_donnees_lots', prod: 'vider_donnees_production', perem: 'vider_donnees_peremption' }[which]
+      if (!canPerform(permVider)) { alert('Permission de vidage requise pour ce volet.'); return }
       if (which === 'lots') {
         runData('Vidage Gestion lots' + (gsHistoUrl.value ? ' + réimport Historique' : ''), async function(cb){
           var vid = await viderDonneesOperationnelles(function(p){ cb(Math.round(p * (gsHistoUrl.value ? 0.3 : 1))) })
