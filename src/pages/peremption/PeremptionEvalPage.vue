@@ -34,6 +34,7 @@
         <div class="scores">
           <button v-for="v in vals(c)" :key="v"
             class="sc" :class="['sc-'+v, {on: scores[c.key]===v}]"
+            :disabled="!canCrit(c.key)" :title="canCrit(c.key) ? '' : 'Permission requise pour ce critère'"
             @click="setScore(c.key, v)">
             <span class="sc-n">{{ v }}</span>
             <span class="sc-t">{{ labelFor(c, v) }}</span>
@@ -146,7 +147,9 @@ export default {
     var axWeight = function (ax) { return Number(config.value[ax.poidsKey]) || 0 }
     var disp = function (v) { return v == null ? '—' : v }
     var labelFor = function (c, v) { return v === 1 ? c.s1 : (v === 3 ? c.s3 : c.s5) }
-    var setScore = function (key, v) { scores[key] = v; saveOk.value = false }
+    // Édition d'un critère = permission PAR critère (key sc_xxx → clé crit_xxx). Admin = bypass via canPerform.
+    var canCrit = function (key) { return canPerform('crit_' + key.slice(3)) }
+    var setScore = function (key, v) { if (!canCrit(key)) return; scores[key] = v; saveOk.value = false }
     var fmtDt = function (d) { return d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '' }
 
     // indices de référence depuis le catalogue (aide à la décision, scoring reste manuel)
@@ -227,7 +230,7 @@ export default {
     watch(function () { return route.params.productId }, function (nv, ov) { if (nv && nv !== ov) location.reload() })
 
     return {
-      product, notFound, scores, note, history, submitting, saveOk, canEval, isReady, filledCount, critCount,
+      product, notFound, scores, note, history, submitting, saveOk, canEval, canCrit, isReady, filledCount, critCount,
       preview, decisions, model, typeKey, TYPE_LABELS, NIVEAU_LABELS, NIVEAU_CLASS,
       FORECAST_LABELS, SPLIT_LABELS, MONITORING_LABELS,
       critFor, vals, axisVal, axWeight, disp, labelFor, setScore, hintFor, fmtDt, goBack, save

@@ -393,7 +393,8 @@ export default {
 
     // ── Édition inline des scores critères (saisie depuis le tableau) ──
     var productById = computed(function () { var m = {}; products.value.forEach(function (p) { m[p.id] = p }); return m })
-    var critEditable = function (r, col) { if (!canEval.value || COL_KIND[col] !== 'crit') return false; var p = productById.value[r.id]; if (!p) return false; return getModel(modelForProduct(p)).criteria.some(function (c) { return c.key === col }) }
+    // Édition d'un critère = permission PAR critère (colonne sc_xxx → clé crit_xxx). Admin = bypass via canPerform.
+    var critEditable = function (r, col) { if (COL_KIND[col] !== 'crit' || !canPerform('crit_' + col.slice(3))) return false; var p = productById.value[r.id]; if (!p) return false; return getModel(modelForProduct(p)).criteria.some(function (c) { return c.key === col }) }
     var editCrit = computed(function () { if (!editCell.value) return null; var p = productById.value[editCell.value.productId]; if (!p) return null; return getModel(modelForProduct(p)).criteria.find(function (c) { return c.key === editCell.value.col }) || null })
     var editVals = computed(function () { return editCrit.value ? allowedValues(editCrit.value) : [] })
     var cellClick = function (r, col, ev) {
@@ -431,7 +432,7 @@ export default {
     }
     // Attribution d'un critère en masse aux produits sélectionnés (compatibles)
     var bulkApplyCriterion = async function (critKey, value) {
-      if (!canEval.value) { alert('Permission requise.'); return }
+      if (!canPerform('crit_' + critKey.slice(3))) { alert('Permission requise pour ce critère.'); return }
       if (!selected.value.length) { alert('Sélectionne d\'abord des produits (cases à cocher).'); return }
       if (!(value === 1 || value === 3 || value === 5)) { alert('Choisis une valeur (1 / 3 / 5).'); return }
       var crit = CRIT_COLS.find(function (c) { return c.key === critKey })
