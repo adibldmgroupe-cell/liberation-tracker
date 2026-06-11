@@ -238,6 +238,7 @@
 <script>
 import { ref, computed, reactive, onMounted } from 'vue'
 import { supabase } from '../../supabase'
+import { canPerform } from '../../services/permissions'
 export default {
   setup() {
     var shifts      = ref([])
@@ -422,6 +423,7 @@ export default {
     }
 
     var saveShift = async function() {
+      if (!canPerform('gerer_shifts')) { alert('Permission « gérer shifts & équipes » requise'); return }
       if (!shiftModal.d.nom.trim()) { shiftModal.error='Le nom est requis.'; return }
       shiftModal.saving = true
       var payload = Object.assign({}, shiftModal.d, { nom:shiftModal.d.nom.trim(), updated_at:new Date().toISOString() })
@@ -435,6 +437,7 @@ export default {
     }
 
     var deleteShift = async function(s) {
+      if (!canPerform('gerer_shifts')) { alert('Permission « gérer shifts & équipes » requise'); return }
       if (!confirm('Supprimer le shift "'+s.nom+'" ?')) return
       await supabase.from('shifts').delete().eq('id',s.id)
       shifts.value = shifts.value.filter(function(x){return x.id!==s.id})
@@ -450,6 +453,7 @@ export default {
     }
 
     var saveEquipe = async function() {
+      if (!canPerform('gerer_shifts')) { alert('Permission « gérer shifts & équipes » requise'); return }
       if (!equipeModal.d.nom.trim()) { equipeModal.error='Le nom est requis.'; return }
       equipeModal.saving = true
       var payload = { nom:equipeModal.d.nom.trim(), couleur:equipeModal.d.couleur, actif:equipeModal.d.actif, updated_at:new Date().toISOString() }
@@ -463,6 +467,7 @@ export default {
     }
 
     var deleteEquipe = async function(e) {
+      if (!canPerform('gerer_shifts')) { alert('Permission « gérer shifts & équipes » requise'); return }
       if (!confirm('Supprimer l\'équipe "'+e.nom+'" ?')) return
       await supabase.from('equipes').delete().eq('id',e.id)
       equipes.value = equipes.value.filter(function(x){return x.id!==e.id})
@@ -476,6 +481,7 @@ export default {
     }
 
     var saveAssign = async function() {
+      if (!canPerform('gerer_shifts')) { alert('Permission « gérer shifts & équipes » requise'); return }
       if (!assignModal.equipe_id) return
       assignModal.saving = true
       var r = await supabase.from('shift_planning').upsert({
@@ -488,6 +494,7 @@ export default {
     }
 
     var deletePlan = async function(id) {
+      if (!canPerform('gerer_shifts')) { alert('Permission « gérer shifts & équipes » requise'); return }
       await supabase.from('shift_planning').delete().eq('id',id)
       await loadPlanning()
     }
