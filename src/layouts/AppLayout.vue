@@ -4,35 +4,35 @@
     <aside class="sidebar" :class="{'sidebar-open':mobileMenuOpen}">
       <div class="sidebar-logo"><span class="logo-text">LDM</span><span class="logo-sub">Libération PF</span></div>
       <nav class="sidebar-nav">
-        <router-link to="/dashboard" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">◻</span>Dashboard</router-link>
-<router-link to="/lots" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">▥</span>Lots</router-link>
-        <router-link to="/planifier" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">+</span>Planifier</router-link>
-        <router-link to="/notifications" class="nav-item" active-class="active" @click="mobileMenuOpen=false">
+        <router-link v-if="can('voir_dashboard')" to="/dashboard" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">◻</span>Dashboard</router-link>
+        <router-link v-if="can('voir_lots')" to="/lots" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">▥</span>Lots</router-link>
+        <router-link v-if="can('voir_planification')" to="/planifier" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">+</span>Planifier</router-link>
+        <router-link v-if="can('voir_notifications')" to="/notifications" class="nav-item" active-class="active" @click="mobileMenuOpen=false">
           <span class="nav-icon">🔔</span>Notifications
           <span class="notif-badge" v-if="unreadCount>0">{{unreadCount}}</span>
         </router-link>
-        <router-link to="/tasks" class="nav-item" active-class="active" @click="mobileMenuOpen=false">
+        <router-link v-if="can('voir_taches')" to="/tasks" class="nav-item" active-class="active" @click="mobileMenuOpen=false">
           <span class="nav-icon">📋</span>Tâches
           <span class="notif-badge tasks-badge" v-if="pendingTasksCount>0">{{pendingTasksCount}}</span>
         </router-link>
-        <div class="nav-sep">Risques péremption</div>
-        <router-link to="/peremption" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">⚠️</span>Matrice des risques</router-link>
-        <div class="nav-sep">Module production</div>
+        <div v-if="can('voir_peremption')" class="nav-sep">Risques péremption</div>
+        <router-link v-if="can('voir_peremption')" to="/peremption" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">⚠️</span>Matrice des risques</router-link>
+        <div v-if="can('voir_production_schema')||can('voir_trs_live')||can('voir_suivi_cond')||can('voir_pdp')" class="nav-sep">Module production</div>
         <!-- Groupe TRS -->
-        <div class="nav-grp">
+        <div v-if="can('voir_production_schema')||can('voir_trs_live')||can('voir_suivi_cond')" class="nav-grp">
           <button class="nav-grp-hd" @click="toggleNavGrp('trs')">
             <span class="nav-icon">🏭</span>
             <span class="nav-grp-label">TRS Production</span>
             <span class="nav-grp-chev">{{navGrpOpen.includes('trs')?'▾':'▸'}}</span>
           </button>
           <div v-if="navGrpOpen.includes('trs')" class="nav-grp-body">
-            <router-link to="/production/flux" class="nav-item nav-sub" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🗺</span>Schéma Production</router-link>
-            <router-link to="/tracking/trs" class="nav-item nav-sub" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">⚡</span>TRS Live</router-link>
-            <router-link to="/tracking/trs-sessions" class="nav-item nav-sub" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">📋</span>Sessions</router-link>
+            <router-link v-if="can('voir_production_schema')" to="/production/flux" class="nav-item nav-sub" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🗺</span>Schéma Production</router-link>
+            <router-link v-if="can('voir_trs_live')" to="/tracking/trs" class="nav-item nav-sub" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">⚡</span>TRS Live</router-link>
+            <router-link v-if="can('voir_suivi_cond')" to="/tracking/trs-sessions" class="nav-item nav-sub" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">📋</span>Sessions</router-link>
           </div>
         </div>
         <!-- PDP Production -->
-        <router-link to="/production/pdp" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🗓</span>PDP Production</router-link>
+        <router-link v-if="can('voir_pdp')" to="/production/pdp" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🗓</span>PDP Production</router-link>
         <template v-if="isAdmin">
           <div class="nav-sep">Administration</div>
           <router-link to="/admin/users" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">👥</span>Utilisateurs</router-link>
@@ -212,6 +212,10 @@ export default {
     var hideSug = function(){setTimeout(function(){showSug.value=false},200)}
     var logout = async function(){await supabase.auth.signOut();router.push('/login')}
 
+    // Permissions du service courant (réactif → pilote l'affichage des entrées de la sidebar)
+    var myPerms = ref([])
+    var can = function(a){ return isAdmin.value || (myPerms.value && myPerms.value.indexOf(a) >= 0) }
+
     onMounted(async function(){
       updateClock();clockInt=setInterval(updateClock,1000)
       var userRes=await supabase.auth.getUser()
@@ -219,7 +223,7 @@ export default {
         var pRes=await supabase.from('profiles').select('*').eq('id',userRes.data.user.id).single()
         profile.value=pRes.data
         if(pRes.data){
-          await loadPermissions(pRes.data.service)
+          myPerms.value = (await loadPermissions(pRes.data.service)) || []
           unreadCount.value = await getUnreadCount(pRes.data.service, pRes.data.service === 'admin')
           await loadPendingTasksCount(pRes.data.service)
           notifInt=setInterval(checkNewNotifs,15000)
@@ -244,7 +248,7 @@ export default {
 
     return {profile,initials,displayName,isAdmin,searchQuery,suggestions,showSug,clock,unreadCount,pendingTasksCount,searchInput,
       mobileMenuOpen,toasts,serviceLabels,onSearch,submitSearch,selectSug,hideSug,logout,goToLot,
-      navGrpOpen,toggleNavGrp,theme,cycleTheme,themeIcon}
+      navGrpOpen,toggleNavGrp,theme,cycleTheme,themeIcon,can}
   }
 }
 </script>

@@ -1,5 +1,6 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import { supabase } from '../supabase'
+import { loadPermissions, canPerform } from '../services/permissions'
 
 const routes = [
   { path: '/login', name: 'Login', component: () => import('../pages/LoginPage.vue') },
@@ -44,6 +45,34 @@ const routes = [
   },
 ]
 
+// Route (name) → permission « voir la page ». Vérifiée dans le garde-fou ci-dessous.
+// Admin = bypass (canPerform). Dashboard volontairement absent du blocage (toujours atteignable).
+const ROUTE_PERM = {
+  Dashboard: 'voir_dashboard',
+  Products: 'voir_produits', ProductDetail: 'voir_produits',
+  Lots: 'voir_lots', LotDetail: 'voir_lots', DocumentDetail: 'voir_lots', CircuitDetail: 'voir_lots', AqlDetail: 'voir_lots',
+  Planifier: 'voir_planification',
+  Notifications: 'voir_notifications',
+  Tasks: 'voir_taches',
+  Peremption: 'voir_peremption', PeremptionEval: 'voir_peremption',
+  ProductionFlux: 'voir_production_schema',
+  PdpProduction: 'voir_pdp',
+  TrsLive: 'voir_trs_live',
+  TrsAnalytics: 'voir_trs_analytics',
+  SuiviPDPFab: 'voir_suivi_fab',
+  SuiviTRSCond: 'voir_suivi_cond',
+  AdminReferentiel: 'voir_referentiel',
+  AdminUsers: 'voir_admin_comptes',
+  AdminPermissions: 'voir_admin_permissions',
+  AdminDeadlines: 'voir_admin_delais',
+  AdminProducts: 'voir_admin_produits',
+  AdminFlux: 'voir_admin_flux',
+  AdminAteliers: 'voir_admin_ateliers',
+  AdminArretTypes: 'voir_admin_arrets',
+  AdminEquipements: 'voir_admin_equipements',
+  AdminShifts: 'voir_admin_shifts',
+}
+
 const router = createRouter({ history: createWebHashHistory(), routes })
 
 router.beforeEach(async (to) => {
@@ -75,8 +104,18 @@ router.beforeEach(async (to) => {
     return '/dashboard'
   }
 
-  // Route admin réservée au service 'admin'
+  // Charger les permissions du service courant (pour canPerform : contrôle route + sidebar)
+  await loadPermissions(profile.service)
+
+  // Route admin réservée au service 'admin' (double verrou conservé — décision utilisateur)
   if (to.meta.requiresAdmin && profile.service !== 'admin') {
+    return '/dashboard'
+  }
+
+  // « Voir la page » : permission de vue requise pour cette route.
+  // Admin bypass (canPerform). Dashboard exclu du blocage → jamais de boucle de redirection.
+  var perm = ROUTE_PERM[to.name]
+  if (perm && to.name !== 'Dashboard' && !canPerform(perm)) {
     return '/dashboard'
   }
 })
