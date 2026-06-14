@@ -565,12 +565,12 @@ export default {
 .fa-actions { display:flex; align-items:center; gap:8px; flex-shrink:0; }
 
 /* Services management button */
-.btn-mgr { font-size:12px; padding:6px 14px; border:1px solid #ede9fe; background:#fff; color:#7c3aed; border-radius:5px; cursor:pointer; font-family:'Inter',sans-serif; white-space:nowrap }
-.btn-mgr:hover { background:#f5f3ff }
-.btn-mgr-on { background:#f5f3ff; border-color:#7c3aed }
+.btn-mgr { font-size:12px; padding:6px 14px; border:1px solid #dbeafe; background:#fff; color:#2563eb; border-radius:5px; cursor:pointer; font-family:'Inter',sans-serif; white-space:nowrap }
+.btn-mgr:hover { background:#eff6ff }
+.btn-mgr-on { background:#eff6ff; border-color:#2563eb }
 
 /* Services management panel */
-.mgr-panel { border:1px solid #ede9fe; border-radius:8px; padding:16px; background:#faf5ff; margin-bottom:16px }
+.mgr-panel { border:1px solid #dbeafe; border-radius:8px; padding:16px; background:#faf5ff; margin-bottom:16px }
 .mgr-title { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#6b7280; margin-bottom:10px }
 .mgr-list { display:flex; flex-direction:column; gap:4px; margin-bottom:12px }
 .mgr-row { display:flex; align-items:center; gap:8px; padding:7px 10px; background:#fff; border:1px solid #e5e7eb; border-radius:5px }
@@ -578,17 +578,17 @@ export default {
 .ms-label { font-size:13px; font-weight:500; flex:1; color:#374151 }
 .ms-actions { display:flex; gap:6px; margin-left:auto }
 .mb { font-size:11px; padding:4px 10px; border-radius:4px; cursor:pointer; font-family:'Inter',sans-serif; transition:.1s }
-.mb.edit { border:1px solid #ede9fe; background:#fff; color:#7c3aed }
-.mb.edit:hover { background:#f5f3ff }
+.mb.edit { border:1px solid #dbeafe; background:#fff; color:#2563eb }
+.mb.edit:hover { background:#eff6ff }
 .mb.del { border:1px solid #fecaca; background:#fff; color:#ef4444 }
 .mb.del:hover { background:#fef2f2 }
 .mb.ok { border:1px solid #bbf7d0; background:#f0fdf4; color:#059669 }
 .mb.cancel { border:1px solid #e5e7eb; background:#fff; color:#9ca3af }
 .mgr-inp { font-size:12px; border:1px solid #e5e7eb; border-radius:5px; padding:6px 10px; flex:1; min-width:0; font-family:'Inter',sans-serif; outline:none }
-.mgr-inp:focus { border-color:#7c3aed }
+.mgr-inp:focus { border-color:#2563eb }
 .mgr-add { display:flex; gap:8px; align-items:center }
-.btn-add { font-size:12px; padding:7px 14px; background:#7c3aed; color:#fff; border:none; border-radius:5px; cursor:pointer; white-space:nowrap; font-family:'Inter',sans-serif }
-.btn-add:hover { background:#6d28d9 }
+.btn-add { font-size:12px; padding:7px 14px; background:#2563eb; color:#fff; border:none; border-radius:5px; cursor:pointer; white-space:nowrap; font-family:'Inter',sans-serif }
+.btn-add:hover { background:#1d4ed8 }
 .btn-add:disabled { opacity:0.5; cursor:default }
 .mgr-err { font-size:12px; color:#ef4444; margin-top:8px }
 
@@ -604,48 +604,48 @@ export default {
 /* Sticky top-left corner */
 .corner {
   position:sticky; top:0; left:0; z-index:4;
-  background:#f5f3ff;
+  background:#eff6ff;
   width:220px; min-width:220px;
-  font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:#7c3aed;
+  font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:#2563eb;
   text-align:left; padding:10px 12px;
-  border-bottom:1px solid #ede9fe; border-right:2px solid #ede9fe
+  border-bottom:1px solid #dbeafe; border-right:2px solid #dbeafe
 }
 
 /* Service column headers (sticky top) */
 .svc-hd {
   position:sticky; top:0; z-index:2;
-  background:#f5f3ff;
+  background:#eff6ff;
   min-width:90px; width:90px;
   text-align:center; padding:8px 6px;
   cursor:pointer;
-  border-bottom:1px solid #ede9fe; border-right:1px solid #ede9fe;
+  border-bottom:1px solid #dbeafe; border-right:1px solid #dbeafe;
   transition:background .1s
 }
-.svc-hd:hover { background:#ede9fe }
-.svc-hd-name { font-size:11px; font-weight:700; color:#7c3aed; line-height:1.3 }
+.svc-hd:hover { background:#dbeafe }
+.svc-hd-name { font-size:11px; font-weight:700; color:#2563eb; line-height:1.3 }
 .svc-hd-count { font-size:10px; color:#9ca3af; font-family:'SF Mono',monospace; margin-top:2px }
-.svc-reset-btn { display:block; margin:5px auto 0; font-size:10px; padding:2px 7px; border:1px solid #ede9fe; background:#fff; color:#7c3aed; border-radius:4px; cursor:pointer; font-family:'Inter',sans-serif; white-space:nowrap; opacity:0.7; transition:.1s }
-.svc-reset-btn:hover { opacity:1; background:#f5f3ff }
+.svc-reset-btn { display:block; margin:5px auto 0; font-size:10px; padding:2px 7px; border:1px solid #dbeafe; background:#fff; color:#2563eb; border-radius:4px; cursor:pointer; font-family:'Inter',sans-serif; white-space:nowrap; opacity:0.7; transition:.1s }
+.svc-reset-btn:hover { opacity:1; background:#eff6ff }
 
 /* Group header rows */
 .grp-row .grp-hd-label-cell {
   position:sticky; left:0; z-index:1;
-  background:#f5f3ff;
+  background:#eff6ff;
   padding:6px 12px;
-  border-top:1px solid #ede9fe; border-bottom:1px solid #ede9fe;
-  font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#7c3aed;
+  border-top:1px solid #dbeafe; border-bottom:1px solid #dbeafe;
+  font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#2563eb;
   white-space:nowrap
 }
 .grp-row .grp-svc-cell {
-  background:#f5f3ff;
+  background:#eff6ff;
   text-align:center; padding:4px 2px;
-  border-top:1px solid #ede9fe; border-bottom:1px solid #ede9fe; border-right:1px solid #ede9fe
+  border-top:1px solid #dbeafe; border-bottom:1px solid #dbeafe; border-right:1px solid #dbeafe
 }
 .grp-svc-tog {
-  font-size:13px; padding:1px 4px; border:1px solid #ede9fe; background:#fff;
-  color:#7c3aed; border-radius:4px; cursor:pointer; line-height:1; opacity:0.75; transition:.1s
+  font-size:13px; padding:1px 4px; border:1px solid #dbeafe; background:#fff;
+  color:#2563eb; border-radius:4px; cursor:pointer; line-height:1; opacity:0.75; transition:.1s
 }
-.grp-svc-tog:hover { opacity:1; background:#f5f3ff }
+.grp-svc-tog:hover { opacity:1; background:#eff6ff }
 
 /* Permission name (sticky left) */
 .perm-cell {
@@ -654,7 +654,7 @@ export default {
   width:220px; min-width:220px;
   padding:7px 12px;
   cursor:pointer;
-  border-bottom:1px solid #f3f4f6; border-right:2px solid #ede9fe
+  border-bottom:1px solid #f3f4f6; border-right:2px solid #dbeafe
 }
 .perm-cell:hover { background:#faf5ff }
 .perm-name { font-size:12px; color:#111827; line-height:1.3 }
@@ -667,13 +667,13 @@ export default {
   border-bottom:1px solid #f3f4f6; border-right:1px solid #f3f4f6;
   transition:background .1s
 }
-.cb-cell:hover { background:#ede9fe }
+.cb-cell:hover { background:#dbeafe }
 .cb-on { color:#059669; font-size:15px; font-weight:700 }
 .cb-off { color:transparent; font-size:15px }
 
 /* Alternating permission rows */
 .perm-row:nth-child(even) .cb-cell { background:#fafbfd }
-.perm-row:nth-child(even) .cb-cell:hover { background:#ede9fe }
+.perm-row:nth-child(even) .cb-cell:hover { background:#dbeafe }
 .perm-row:nth-child(even) .perm-cell { background:#fafbfd }
 .perm-row:nth-child(even) .perm-cell:hover { background:#faf5ff }
 .perm-row { height:36px }

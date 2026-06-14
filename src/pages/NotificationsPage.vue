@@ -44,10 +44,10 @@ export default {
 .ph{display:flex;align-items:baseline;justify-content:space-between;padding-bottom:10px;border-bottom:2px solid #0a0a0a;margin-bottom:8px}.pt{font-size:11px;font-weight:500;letter-spacing:1.5px}
 .btn-mark{font-size:11px;padding:4px 12px;border:1px solid #ddd;border-radius:3px;background:#fff;cursor:pointer;color:#666}.btn-mark:hover{background:#f5f5f5}
 .nlist{max-width:600px}.nitem{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #f5f5f5;cursor:pointer}.nitem:hover{background:#fafafa}.nitem.unread{background:#faf5ff}
-.ndot{width:8px;height:8px;border-radius:50%;background:#7c3aed;flex-shrink:0;margin-top:6px}
+.ndot{width:8px;height:8px;border-radius:50%;background:#2563eb;flex-shrink:0;margin-top:6px}
 .ncontent{flex:1}.nmsg{font-size:13px;line-height:1.4}.nmeta{display:flex;gap:12px;margin-top:4px;flex-wrap:wrap}
 .nsvc{font-size:10px;padding:1px 6px;background:#f0f0f0;border-radius:2px;color:#666}
-.nlot{font-family:'SF Mono',monospace;font-size:11px;color:#7c3aed}.ntime{font-family:'SF Mono',monospace;font-size:11px;color:#999}
+.nlot{font-family:'SF Mono',monospace;font-size:11px;color:#2563eb}.ntime{font-family:'SF Mono',monospace;font-size:11px;color:#999}
 .empty{text-align:center;padding:40px;color:#999}
 @media(max-width:480px){
   .btn-mark{min-height:44px;padding:8px 16px;font-size:13px}

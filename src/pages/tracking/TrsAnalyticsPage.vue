@@ -28,9 +28,9 @@ export default {
 
 /* ── JOUR ── */
 .analytics[data-theme="day"] { background:#ffffff; color:#1a1a2e; }
-.analytics[data-theme="day"] .ph { border-bottom-color:#ede9fe; }
-.analytics[data-theme="day"] .pt { color:#7c3aed; }
-.analytics[data-theme="day"] .wip { color:#bbb; border-color:#ede9fe; }
+.analytics[data-theme="day"] .ph { border-bottom-color:#dbeafe; }
+.analytics[data-theme="day"] .pt { color:#2563eb; }
+.analytics[data-theme="day"] .wip { color:#bbb; border-color:#dbeafe; }
 
 /* ── ATELIER ── */
 .analytics[data-theme="workshop"] { background:#161616; color:#f0f0f0; }

@@ -613,7 +613,7 @@ export default {
 }
 </script>
 <style scoped>
-.bc{font-size:12px;color:#7c3aed;cursor:pointer;margin-bottom:8px}
+.bc{font-size:12px;color:#2563eb;cursor:pointer;margin-bottom:8px}
 .lh{display:flex;align-items:center;justify-content:space-between;padding-bottom:8px;border-bottom:1px solid #e5e7eb;flex-wrap:wrap;gap:8px}
 .lh-right{display:flex;align-items:center;gap:6px}
 .ln{font-size:22px;font-weight:500;font-family:'SF Mono',monospace}.lp{font-size:13px;color:#666;margin-left:10px}
@@ -633,7 +633,7 @@ export default {
 .section{margin-top:16px}.sh{display:flex;justify-content:space-between;align-items:center;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:#999;padding-bottom:6px;border-bottom:1px solid #e8e8e8}
 .dc{font-family:'SF Mono',monospace;color:#BA7517}
 .action-btns{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px;margin:10px 0}
-.btn-action{font-size:12px;padding:7px 12px;border-radius:4px;border:none;cursor:pointer;font-weight:500;background:#7c3aed;color:#fff;min-height:36px;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.2}.btn-action:hover{background:#6d28d9}
+.btn-action{font-size:12px;padding:7px 12px;border-radius:4px;border:none;cursor:pointer;font-weight:500;background:#2563eb;color:#fff;min-height:36px;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.2}.btn-action:hover{background:#1d4ed8}
 .btn-orange{background:#BA7517}.btn-orange:hover{background:#8B5A12}
 .btn-violet{background:#5B3CC4}.btn-violet:hover{background:#4A2FA3}
 .btn-teal{background:#0D7C66}.btn-teal:hover{background:#0A6050}
@@ -642,14 +642,14 @@ export default {
 .ct{width:100%;border-collapse:collapse;font-size:13px}.ct td{padding:8px;border-bottom:1px solid #f5f5f5}
 .cs{width:30%}.ca{font-weight:500}.cv{width:14%;color:#999;font-size:12px}.cp{width:8%;text-align:center}.cdt{width:22%;text-align:right;font-family:'SF Mono',monospace;font-size:12px;color:#666}.cac{width:26%;text-align:right}
 .cu{font-size:12px;color:#999}
-.pip{display:inline-block;width:8px;height:8px;border-radius:50%}.pip-done{background:#1D9E75}.pip-active{background:#7c3aed;box-shadow:0 0 0 3px rgba(124,58,237,.15)}.pip-wait{background:#e8e8e8}
-.btn{font-size:12px;padding:5px 14px;border-radius:2px;border:none;cursor:pointer;font-weight:500;background:#7c3aed;color:#fff;margin-left:4px}.btn:hover{background:#6d28d9}.bd{background:#f5f5f5;color:#ccc;cursor:not-allowed}
+.pip{display:inline-block;width:8px;height:8px;border-radius:50%}.pip-done{background:#1D9E75}.pip-active{background:#2563eb;box-shadow:0 0 0 3px rgba(124,58,237,.15)}.pip-wait{background:#e8e8e8}
+.btn{font-size:12px;padding:5px 14px;border-radius:2px;border:none;cursor:pointer;font-weight:500;background:#2563eb;color:#fff;margin-left:4px}.btn:hover{background:#1d4ed8}.bd{background:#f5f5f5;color:#ccc;cursor:not-allowed}
 .br{background:#E24B4A}.bg{background:#1D9E75}.bc2{background:#f5f5f5;color:#666}
 .dg{display:grid;grid-template-columns:1fr 1fr;border:1px solid #e8e8e8}
 .di{padding:10px 12px;border-right:1px solid #e8e8e8;border-bottom:1px solid #e8e8e8;display:flex;gap:10px;cursor:pointer}.di:hover{background:#fafafa}.di:nth-child(2n){border-right:none}.dna{opacity:.35}
-.dind{width:3px;height:28px;border-radius:1px;flex-shrink:0}.ind-wait{background:#e8e8e8}.ind-prog{background:#7c3aed}.ind-done{background:#1D9E75}.ind-ret{background:#E24B4A}.ind-na{background:#e8e8e8;opacity:.3}
+.dind{width:3px;height:28px;border-radius:1px;flex-shrink:0}.ind-wait{background:#e8e8e8}.ind-prog{background:#2563eb}.ind-done{background:#1D9E75}.ind-ret{background:#E24B4A}.ind-na{background:#e8e8e8;opacity:.3}
 .ind-orange{background:#BA7517}.ind-violet{background:#5B3CC4}.ind-teal{background:#0D7C66}.ind-slate{background:#475569}
-.di-act .ds{color:#7c3aed;font-weight:500}.di-act:hover{background:#f5f3ff}
+.di-act .ds{color:#2563eb;font-weight:500}.di-act:hover{background:#eff6ff}
 .dg-1{grid-template-columns:1fr !important}.di-ro{cursor:default}.di-ro:hover{background:transparent}
 .dn{font-size:13px;font-weight:500}.ds{font-size:11px;color:#999;margin-top:1px}.ds-ok{color:#1D9E75}.ds-ret{color:#E24B4A}.ds-na{color:#ccc}
 .ds-block{font-size:10px;color:#BA7517;margin-top:2px}
@@ -678,12 +678,12 @@ export default {
 .dev-bl-mark-btn{background:#FEF5E7;color:#A0620D;border-color:#E89C3A !important}.dev-bl-mark-btn:hover{background:#FDEBD0 !important;color:#7D4E0A !important}
 .dev-cl-btn{margin-left:auto}
 .dev-card-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px;padding-top:6px;border-top:1px solid #f0f0f0}
-.dev-meta-svc{font-size:10px;background:#ede9fe;color:#6d28d9;padding:1px 7px;border-radius:10px;font-weight:600;white-space:nowrap}
+.dev-meta-svc{font-size:10px;background:#dbeafe;color:#1d4ed8;padding:1px 7px;border-radius:10px;font-weight:600;white-space:nowrap}
 .dev-meta-who{font-size:11px;font-weight:500;color:#555}
 .dev-meta-when{font-size:10px;font-family:'SF Mono',monospace;color:#999;margin-left:auto}
 .dev-card-edit{margin-top:8px;display:flex;flex-direction:column;gap:6px}
 .dev-card-row{display:flex;align-items:flex-start;gap:8px}
-.dev-save-btn{align-self:flex-start;font-size:11px;padding:4px 12px;border:1px solid #7c3aed;border-radius:3px;background:#ede9fe;color:#6d28d9;cursor:pointer;font-family:inherit}.dev-save-btn:hover{background:#ddd6fe}
+.dev-save-btn{align-self:flex-start;font-size:11px;padding:4px 12px;border:1px solid #2563eb;border-radius:3px;background:#dbeafe;color:#1d4ed8;cursor:pointer;font-family:inherit}.dev-save-btn:hover{background:#ddd6fe}
 .dim{color:#999;font-size:12px}.mono{font-family:'SF Mono',monospace;font-size:12px}
 .em{font-size:12px;color:#999;padding:12px 0;text-align:center}
 /* Stepper circuit OF/OC */
@@ -695,7 +695,7 @@ export default {
 .fs-num{width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0}
 .fs-label{font-size:11px;line-height:1.3}
 .fs-done{background:#EAF3DE}.fs-done .fs-num{background:#1D9E75;color:#fff}.fs-done .fs-label{color:#3B6D11}
-.fs-active{background:#ede9fe}.fs-active .fs-num{background:#7c3aed;color:#fff}.fs-active .fs-label{color:#6d28d9;font-weight:500}
+.fs-active{background:#dbeafe}.fs-active .fs-num{background:#2563eb;color:#fff}.fs-active .fs-label{color:#1d4ed8;font-weight:500}
 .fs-wait{background:#fafafa}.fs-wait .fs-num{background:#e8e8e8;color:#999}.fs-wait .fs-label{color:#999}
 .circ-act{margin:10px 0;display:flex;align-items:center;gap:10px}
 .circ-done{font-size:12px;color:#1D9E75;font-weight:500}
@@ -709,28 +709,28 @@ export default {
 /* Cartes circuit OF/OC harmonisées avec documents */
 .di-step{cursor:default}
 .di-body{flex:1;min-width:0}
-.dn-active{color:#7c3aed;font-weight:600}
+.dn-active{color:#2563eb;font-weight:600}
 .di-val{display:flex;justify-content:space-between;align-items:center;margin-top:3px;flex-wrap:wrap;gap:4px}
 .di-date{font-family:'SF Mono',monospace;font-size:10px;color:#bbb}
 .di-pending{color:#ccc !important;font-style:italic}
-.btn-step{font-size:11px;padding:3px 12px;border:1px solid #7c3aed;border-radius:3px;background:#ede9fe;color:#6d28d9;cursor:pointer;margin-top:4px;font-family:inherit}.btn-step:hover{background:#ddd6fe}
+.btn-step{font-size:11px;padding:3px 12px;border:1px solid #2563eb;border-radius:3px;background:#dbeafe;color:#1d4ed8;cursor:pointer;margin-top:4px;font-family:inherit}.btn-step:hover{background:#ddd6fe}
 .syg{display:grid;grid-template-columns:1fr 1fr;border:1px solid #e8e8e8}.syc{padding:8px 12px;border-right:1px solid #e8e8e8;border-bottom:1px solid #e8e8e8;display:flex;justify-content:space-between;font-size:13px}.syc:nth-child(2n){border-right:none}.syc span:first-child{color:#666}
 .ok{color:#1D9E75;font-weight:500}.ko{color:#E24B4A;font-weight:500}.na{color:#ccc}
 /* Planning libération */
 .plan-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#e8e8e8;border:1px solid #e8e8e8;margin-top:10px}
-.plan-bloc{background:#fff;padding:12px 14px;border-left:3px solid #7c3aed}
+.plan-bloc{background:#fff;padding:12px 14px;border-left:3px solid #2563eb}
 .plan-titre{font-size:11px;font-weight:600;color:#333;margin-bottom:10px}
 .plan-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:8px}
 .plan-row label{font-size:11px;color:#999;white-space:nowrap;flex-shrink:0}
-.plan-input{padding:4px 8px;border:1px solid #ddd;border-radius:3px;font-size:12px;font-family:inherit;outline:none;width:130px;text-align:right}.plan-input:focus{border-color:#7c3aed}
+.plan-input{padding:4px 8px;border:1px solid #ddd;border-radius:3px;font-size:12px;font-family:inherit;outline:none;width:130px;text-align:right}.plan-input:focus{border-color:#2563eb}
 .plan-revised{border-color:#BA7517 !important;background:#fffbf0}
 .plan-note{font-size:10px;color:#bbb;margin-top:4px}
-.lz{text-align:center;padding:14px 0}.lb{padding:10px 32px;font-size:13px;font-weight:500;background:#7c3aed;color:#fff;border:none;border-radius:2px;cursor:pointer}.lb:disabled{opacity:.4;cursor:not-allowed}.lb:hover:not(:disabled){background:#6d28d9}
+.lz{text-align:center;padding:14px 0}.lb{padding:10px 32px;font-size:13px;font-weight:500;background:#2563eb;color:#fff;border:none;border-radius:2px;cursor:pointer}.lb:disabled{opacity:.4;cursor:not-allowed}.lb:hover:not(:disabled){background:#1d4ed8}
 .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:100}
 .modal{background:#fff;padding:24px;width:400px;border-radius:4px}.modal-title{font-size:16px;font-weight:500;margin-bottom:16px}
 .field{margin-bottom:14px}.field label{display:block;font-size:11px;color:#666;text-transform:uppercase;margin-bottom:4px}
-.input{width:100%;padding:8px 10px;border:1px solid #ddd;font-size:13px;outline:none;box-sizing:border-box}.input:focus{border-color:#7c3aed}
-.auto-list{border:1px solid #ddd;border-radius:4px;margin-top:2px;max-height:160px;overflow-y:auto}.auto-item{padding:6px 10px;cursor:pointer;font-size:12px}.auto-item:hover{background:#f5f5f5}.auto-code{font-family:'SF Mono',monospace;font-weight:500;color:#7c3aed;margin-right:8px}
+.input{width:100%;padding:8px 10px;border:1px solid #ddd;font-size:13px;outline:none;box-sizing:border-box}.input:focus{border-color:#2563eb}
+.auto-list{border:1px solid #ddd;border-radius:4px;margin-top:2px;max-height:160px;overflow-y:auto}.auto-item{padding:6px 10px;cursor:pointer;font-size:12px}.auto-item:hover{background:#f5f5f5}.auto-code{font-family:'SF Mono',monospace;font-weight:500;color:#2563eb;margin-right:8px}
 .modal-actions{display:flex;gap:8px}
 /* AQL harmonisé */
 .aql-list{display:flex;flex-direction:column;gap:0;border:1px solid #e8e8e8;border-radius:2px;overflow:hidden;margin-top:8px}
@@ -738,7 +738,7 @@ export default {
 .aql-row:last-child{border-bottom:none}
 .aql-left{min-width:110px}
 .aql-type-lbl{font-size:12px;font-weight:500;color:#333}
-.aql-type-val{font-family:'SF Mono',monospace;font-size:11px;font-weight:600;color:#7c3aed;margin-left:3px;text-transform:uppercase}
+.aql-type-val{font-family:'SF Mono',monospace;font-size:11px;font-weight:600;color:#2563eb;margin-left:3px;text-transform:uppercase}
 .aql-date{font-family:'SF Mono',monospace;font-size:10px;color:#bbb;margin-top:2px}
 .aql-mid{display:flex;align-items:center;gap:6px;flex:1;flex-wrap:wrap}
 .aql-ar-badge{font-size:10px;color:#BA7517;background:#FFF8E1;border:1px solid #FFE082;padding:2px 6px;border-radius:8px}

@@ -232,15 +232,15 @@ export default {
 .sc-arrêt, .sc-arret { background:#7f1d1d33; color:#f87171; }
 /* JOUR */
 .pdpc[data-theme="day"] { background:#ffffff; color:#1a1a2e; }
-.pdpc[data-theme="day"] .ph { border-bottom-color:#ede9fe; }
-.pdpc[data-theme="day"] .pt { color:#7c3aed; }
+.pdpc[data-theme="day"] .ph { border-bottom-color:#dbeafe; }
+.pdpc[data-theme="day"] .pt { color:#2563eb; }
 .pdpc[data-theme="day"] .stab { background:#f9fafb; color:#6b7280; border-color:#e5e7eb; }
-.pdpc[data-theme="day"] .stab.active { background:#7c3aed; color:#fff; border-color:#7c3aed; }
+.pdpc[data-theme="day"] .stab.active { background:#2563eb; color:#fff; border-color:#2563eb; }
 .pdpc[data-theme="day"] .btn-ref { background:#f9fafb; color:#6b7280; border-color:#e5e7eb; }
 .pdpc[data-theme="day"] .t-srch { background:#fff; color:#1a1a2e; border-color:#e5e7eb; }
 .pdpc[data-theme="day"] .t-sel { background:#fff; color:#1a1a2e; border-color:#e5e7eb; }
 .pdpc[data-theme="day"] .dt-wrap { border-color:#e5e7eb; }
-.pdpc[data-theme="day"] .dt th { background:#f5f3ff; color:#7c3aed; border-bottom-color:#ede9fe; }
+.pdpc[data-theme="day"] .dt th { background:#eff6ff; color:#2563eb; border-bottom-color:#dbeafe; }
 .pdpc[data-theme="day"] .dt td { border-bottom-color:#f3f4f6; color:#374151; }
 .pdpc[data-theme="day"] .dt tr:hover td { background:#faf5ff; }
 .pdpc[data-theme="day"] .sc-en-cours { background:#d1fae5; color:#065f46; }

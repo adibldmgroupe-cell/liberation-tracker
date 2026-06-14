@@ -388,7 +388,7 @@ export default {
 .gs-label { font-size:12px; font-weight:600; color:#6b7280; white-space:nowrap }
 .gs-url-hint { font-size:11px; color:#9ca3af; font-family:'SF Mono',monospace; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex:1 }
 .gs-url-inp { font-size:12px; font-family:'SF Mono',monospace; border:1px solid #d1d5db; border-radius:5px; padding:6px 10px; outline:none; box-sizing:border-box; min-width:300px; flex:1 }
-.gs-url-inp:focus { border-color:#7c3aed }
+.gs-url-inp:focus { border-color:#2563eb }
 .gs-prog-bar { height:3px; background:#ddeefa; border-radius:2px; overflow:hidden; margin-bottom:8px }
 .gs-prog-fill { height:100%; background:#185FA5; transition:width .3s }
 .gs-result { display:flex; align-items:center; gap:12px; padding:8px 14px; background:#f0f8f0; border:1px solid #c8e8c8; border-radius:3px; margin-bottom:10px; font-size:12px }
@@ -406,7 +406,7 @@ export default {
 .em { text-align:center; padding:40px; color:#9ca3af; font-size:13px }
 .table-wrap { overflow-x:auto; overflow-y:auto; max-height:calc(100vh - 260px); border:1px solid #e5e7eb; border-radius:8px; margin-top:0 }
 .pt-table { width:100%; border-collapse:collapse; font-size:12px }
-.pt-table th { text-align:left; font-size:11px; font-weight:700; letter-spacing:.3px; text-transform:uppercase; color:#7c3aed; padding:10px 12px; border-bottom:1px solid #ede9fe; white-space:nowrap; background:#f5f3ff; position:sticky; top:0; z-index:2 }
+.pt-table th { text-align:left; font-size:11px; font-weight:700; letter-spacing:.3px; text-transform:uppercase; color:#2563eb; padding:10px 12px; border-bottom:1px solid #dbeafe; white-space:nowrap; background:#eff6ff; position:sticky; top:0; z-index:2 }
 .pt-table td { padding:9px 10px; border-bottom:1px solid #f5f5f5; vertical-align:middle }
 .pt-table tr:last-child td { border-bottom:none }
 .pt-table tr:hover td { background:#fafbfd }
@@ -429,7 +429,7 @@ export default {
 .modal-body-inner { padding:16px 20px; display:flex; flex-direction:column; gap:4px; }
 .req { color:#E24B4A }
 .inp { font-size:12px; padding:8px 10px; border:1px solid #e5e7eb; border-radius:5px; outline:none; font-family:'Inter',sans-serif; width:100%; box-sizing:border-box; }
-.inp:focus { border-color:#7c3aed }
+.inp:focus { border-color:#2563eb }
 .inp:disabled { background:#f5f5f5; color:#9ca3af; cursor:not-allowed }
 .merr { font-size:11px; color:#ef4444; background:#fef2f2; padding:6px 10px; border-radius:4px; }
 .ma { display:flex; gap:8px; padding:12px 20px; border-top:1px solid #f3f4f6; }

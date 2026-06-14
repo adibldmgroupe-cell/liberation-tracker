@@ -1921,13 +1921,13 @@ export default {
 .trs-live[data-theme="day"] .pt { color: #8896a8; }
 .trs-live[data-theme="day"] .pt-clock { color: #185FA5; }
 .trs-live[data-theme="day"] .site-tab { border-color: #e5e7eb; color: #6b7280; }
-.trs-live[data-theme="day"] .site-tab.active { background: #7c3aed; border-color: #7c3aed; color: #fff; }
+.trs-live[data-theme="day"] .site-tab.active { background: #2563eb; border-color: #2563eb; color: #fff; }
 .trs-live[data-theme="day"] .btn-refresh { border-color: #c8ccd8; color: #888; }
 .trs-live[data-theme="day"] .btn-refresh:hover { color: #333; }
 .trs-live[data-theme="day"] .loading-msg { color: #aaa; }
-.trs-live[data-theme="day"] .trs-thead { background: #f5f3ff; border-bottom: 1px solid #ede9fe; }
-.trs-live[data-theme="day"] .th { color: #7c3aed; }
-.trs-live[data-theme="day"] .th-trs-h { color: #7c3aed; }
+.trs-live[data-theme="day"] .trs-thead { background: #eff6ff; border-bottom: 1px solid #dbeafe; }
+.trs-live[data-theme="day"] .th { color: #2563eb; }
+.trs-live[data-theme="day"] .th-trs-h { color: #2563eb; }
 .trs-live[data-theme="day"] .trs-row-group { border-bottom-color: #e8eaf3; }
 .trs-live[data-theme="day"] .trs-row { background: #ffffff; border-left-color: #e4e7f0; }
 .trs-live[data-theme="day"] .trs-row:hover { background: #f0f2f8; }
@@ -1967,9 +1967,9 @@ export default {
 /* Éléments manquants en day */
 .trs-live[data-theme="day"] .pv { color: #111827; }
 .trs-live[data-theme="day"] .theo-row { color: #2563eb; }
-.trs-live[data-theme="day"] .arrets-sub { background: #faf9ff; border-left-color: #ede9fe; }
-.trs-live[data-theme="day"] .arrets-sub-lbl { color: #7c3aed; }
-.trs-live[data-theme="day"] .arret-tag { background: #f5f3ff; }
+.trs-live[data-theme="day"] .arrets-sub { background: #faf9ff; border-left-color: #dbeafe; }
+.trs-live[data-theme="day"] .arrets-sub-lbl { color: #2563eb; }
+.trs-live[data-theme="day"] .arret-tag { background: #eff6ff; }
 .trs-live[data-theme="day"] .at-nom { color: #6b7280; }
 .trs-live[data-theme="day"] .at-dur { color: #9ca3af; }
 

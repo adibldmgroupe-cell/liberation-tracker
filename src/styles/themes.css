@@ -18,7 +18,7 @@ html, html[data-theme="day"] {
   --th-input-bg:  #ffffff;
   --th-topbar:    #ffffff;
   --th-sidebar:   #0a0a0a;
-  --th-accent:    #7c3aed;
+  --th-accent:    #2563eb;
   --th-font:      'Inter', sans-serif;
   --th-font-size: 13px;
 }
@@ -69,8 +69,8 @@ html[data-theme="workshop"] {
 .tb-search { border: none; background: transparent; outline: none; font-size: 13px; flex: 1; font-family: 'Inter', sans-serif; color: #111827; }
 .tb-search::placeholder { color: #9ca3af; }
 .tb-filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.tb-btn-add { background: #7c3aed; border: none; border-radius: 5px; color: #fff; padding: 7px 14px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; white-space: nowrap; }
-.tb-btn-add:hover { background: #6d28d9; }
+.tb-btn-add { background: #2563eb; border: none; border-radius: 5px; color: #fff; padding: 7px 14px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; white-space: nowrap; }
+.tb-btn-add:hover { background: #1d4ed8; }
 
 /* Overrides night/workshop pour le layout partagé */
 html[data-theme="night"] .fa-title,
@@ -119,41 +119,41 @@ html[data-theme="workshop"] .top-bar {
    SIDEBAR — adaptation aux 3 thèmes (signature commune + personnalité)
    Signature : aurora d'accent en haut + rail d'accent (inset) sur l'item
    actif + teinte d'accent au survol + icône active reprend l'accent.
-   ☀️ Jour    = "Lavande"  — sidebar CLAIRE, accent violet  #7c3aed
+   ☀️ Jour    = "Azur"     — sidebar CLAIRE, accent bleu   #2563eb
    🌙 Nuit    = "Cosmos"   — indigo profond, accent périwinkle #7c7cff
    🏭 Atelier = graphite industriel, accent orange #ff9800
    (specificité html[data-theme] .x = 0,2,1 > scoped 0,2,0 → gagne, règle N°16)
 ══════════════════════════════════════════════════════════════════ */
 
-/* ── ☀️ JOUR — Lavande (sidebar claire) ──────────────────────────── */
+/* ── ☀️ JOUR — Azur (sidebar claire) ─────────────────────────────── */
 html[data-theme="day"] .sidebar {
   background:
-    radial-gradient(130% 55% at 50% -10%, rgba(124,58,237,.10), transparent 70%),
-    linear-gradient(180deg, #f6f3fe 0%, #efeaf9 100%);
-  color: #5b5573;
-  border-right: 1px solid #e7e1f5;
+    radial-gradient(130% 55% at 50% -10%, rgba(37,99,235,.10), transparent 70%),
+    linear-gradient(180deg, #f1f6fe 0%, #e8f1fc 100%);
+  color: #5b6477;
+  border-right: 1px solid #dde8f7;
 }
-html[data-theme="day"] .sidebar-logo { border-bottom-color: #e7e1f5; }
-html[data-theme="day"] .logo-text    { color: #1a1a2e; }
-html[data-theme="day"] .logo-sub     { color: #a78bda; }
+html[data-theme="day"] .sidebar-logo { border-bottom-color: #dde8f7; }
+html[data-theme="day"] .logo-text    { color: #15233e; }
+html[data-theme="day"] .logo-sub     { color: #8aa6d6; }
 html[data-theme="day"] .nav-item,
-html[data-theme="day"] .nav-grp-hd   { color: #6b6385; }
+html[data-theme="day"] .nav-grp-hd   { color: #5b6477; }
 html[data-theme="day"] .nav-item:hover,
-html[data-theme="day"] .nav-grp-hd:hover { color: #7c3aed; background: rgba(124,58,237,.06); }
+html[data-theme="day"] .nav-grp-hd:hover { color: #2563eb; background: rgba(37,99,235,.06); }
 html[data-theme="day"] .nav-item.active {
-  color: #7c3aed;
-  background: rgba(124,58,237,.10);
-  box-shadow: inset 3px 0 0 #7c3aed;
+  color: #2563eb;
+  background: rgba(37,99,235,.10);
+  box-shadow: inset 3px 0 0 #2563eb;
 }
-html[data-theme="day"] .nav-sep      { color: #b3a8d6; }
-html[data-theme="day"] .nav-grp-chev { color: #b3a8d6; }
-html[data-theme="day"] .nav-sub:not(.active)        { color: #8b82ab !important; }
-html[data-theme="day"] .nav-sub:hover:not(.active)  { color: #7c3aed !important; }
-html[data-theme="day"] .sidebar-user { border-top-color: #e7e1f5; }
-html[data-theme="day"] .user-name    { color: #3f3a52; }
-html[data-theme="day"] .user-service { color: #a99fc7; }
-html[data-theme="day"] .logout-btn   { color: #a99fc7; }
-html[data-theme="day"] .logout-btn:hover { color: #7c3aed; }
+html[data-theme="day"] .nav-sep      { color: #a8badd; }
+html[data-theme="day"] .nav-grp-chev { color: #a8badd; }
+html[data-theme="day"] .nav-sub:not(.active)        { color: #7f93b8 !important; }
+html[data-theme="day"] .nav-sub:hover:not(.active)  { color: #2563eb !important; }
+html[data-theme="day"] .sidebar-user { border-top-color: #dde8f7; }
+html[data-theme="day"] .user-name    { color: #2c3850; }
+html[data-theme="day"] .user-service { color: #8aa6d6; }
+html[data-theme="day"] .logout-btn   { color: #8aa6d6; }
+html[data-theme="day"] .logout-btn:hover { color: #2563eb; }
 /* user-avatar jour : déjà var(--th-accent) plus bas (section AppLayout) */
 
 /* ── 🌙 NUIT — Cosmos (indigo profond) ───────────────────────────── */
@@ -609,7 +609,7 @@ html[data-theme="workshop"] .tsw-btn.active { background: rgba(255,152,0,.15); b
 
 /* ══════════════════════════════════════════════════════════════════
    RÉFÉRENTIEL — thème jour
-   Remplace #185FA5 (bleu) → #7c3aed (violet) dans les pages qui
+   Remplace #185FA5 (bleu) → #2563eb (violet) dans les pages qui
    ont encore le bleu codé en dur dans leur scoped CSS.
 ══════════════════════════════════════════════════════════════════ */
 
@@ -649,15 +649,15 @@ html[data-theme="day"] .lbl {
 
 /* ── Boutons — fond violet + border-radius 5px ───────────────── */
 html[data-theme="day"] .btn-add { background: var(--th-accent); color: #fff; border-color: var(--th-accent); border-radius: 5px; }
-html[data-theme="day"] .btn-add:hover:not(:disabled) { background: #6d28d9; }
+html[data-theme="day"] .btn-add:hover:not(:disabled) { background: #1d4ed8; }
 html[data-theme="day"] .btn-save { color: #fff; border-radius: 5px; }
 html[data-theme="day"] .btn-cancel { border-radius: 5px; }
 html[data-theme="day"] .tab-btn { border-radius: 5px; }
 html[data-theme="day"] .tab-btn.active { background: var(--th-accent); border-color: var(--th-accent); color: #fff; }
-html[data-theme="day"] .tab-btn-gs { border-color: var(--th-accent); color: var(--th-accent); background: #f5f3ff; }
+html[data-theme="day"] .tab-btn-gs { border-color: var(--th-accent); color: var(--th-accent); background: #eff6ff; }
 html[data-theme="day"] .tab-btn-gs.active { background: var(--th-accent); border-color: var(--th-accent); color: #fff; }
 html[data-theme="day"] .bg { background: var(--th-accent); color: #fff; }
-html[data-theme="day"] .bg:hover { background: #6d28d9; }
+html[data-theme="day"] .bg:hover { background: #1d4ed8; }
 
 /* ── AdminRefPage ─────────────────────────────────────────────── */
 html[data-theme="day"] .ar-tab.active {
@@ -667,40 +667,40 @@ html[data-theme="day"] .ar-tab.active {
 
 /* ── En-têtes tableaux — couleurs par thème ──────────────────── */
 html[data-theme="day"] .pt-table th {
-  background: #f5f3ff;
-  color: #7c3aed;
+  background: #eff6ff;
+  color: #2563eb;
   font-size: 11px;
   font-weight: 700;
-  border-bottom: 1px solid #ede9fe;
+  border-bottom: 1px solid #dbeafe;
 }
 html[data-theme="day"] .admin-table th {
-  background: #f5f3ff;
-  color: #7c3aed;
+  background: #eff6ff;
+  color: #2563eb;
   font-weight: 700;
-  border-bottom: 1px solid #ede9fe;
+  border-bottom: 1px solid #dbeafe;
 }
 html[data-theme="day"] .table-wrap {
   border-color: #e5e7eb;
   border-radius: 8px;
 }
 html[data-theme="day"] .pg-head {
-  background: #f5f3ff;
-  color: #7c3aed;
-  border-bottom: 1px solid #ede9fe;
-  border-right-color: #ede9fe;
+  background: #eff6ff;
+  color: #2563eb;
+  border-bottom: 1px solid #dbeafe;
+  border-right-color: #dbeafe;
   font-size: 11px;
   font-weight: 700;
 }
 html[data-theme="day"] .mth-head {
-  background: #f5f3ff;
-  color: #7c3aed;
-  border-right-color: #ede9fe;
-  border-bottom: 1px solid #ede9fe;
+  background: #eff6ff;
+  color: #2563eb;
+  border-right-color: #dbeafe;
+  border-bottom: 1px solid #dbeafe;
 }
 html[data-theme="day"] .col-hd {
-  background: #f5f3ff;
-  border-bottom-color: #ede9fe;
-  color: #7c3aed;
+  background: #eff6ff;
+  border-bottom-color: #dbeafe;
+  color: #2563eb;
 }
 html[data-theme="night"] .pt-table th,
 html[data-theme="workshop"] .pt-table th { background: var(--th-bg2); color: var(--th-text2); border-bottom: 1px solid var(--th-border); }
@@ -715,43 +715,43 @@ html[data-theme="workshop"] .col-hd { background: var(--th-bg2); border-bottom-c
 
 /* ── ProductsCatalogPage ──────────────────────────────────────── */
 html[data-theme="day"] .search-inp:focus { border-color: var(--th-accent); }
-html[data-theme="day"] .gs-label { color: #6d28d9; }
+html[data-theme="day"] .gs-label { color: #1d4ed8; }
 html[data-theme="day"] .gs-url-btn { color: var(--th-accent); }
 html[data-theme="day"] .gs-import-btn { background: var(--th-accent); }
-html[data-theme="day"] .gs-import-btn:hover:not(:disabled) { background: #6d28d9; }
+html[data-theme="day"] .gs-import-btn:hover:not(:disabled) { background: #1d4ed8; }
 html[data-theme="day"] .gs-url-inp:focus { border-color: var(--th-accent); }
 html[data-theme="day"] .gs-prog-fill { background: var(--th-accent); }
 html[data-theme="day"] .gs-stat.u { color: var(--th-accent); }
 html[data-theme="day"] .inp:focus { border-color: var(--th-accent); }
 
 /* ── AdminAteliersPage ────────────────────────────────────────── */
-html[data-theme="day"] .btn-sync { border-color: var(--th-accent); background: #f5f3ff; color: #6d28d9; }
-html[data-theme="day"] .btn-sync:hover:not(:disabled) { background: #ede9fe; }
+html[data-theme="day"] .btn-sync { border-color: var(--th-accent); background: #eff6ff; color: #1d4ed8; }
+html[data-theme="day"] .btn-sync:hover:not(:disabled) { background: #dbeafe; }
 
 /* ── AdminShiftsPage ──────────────────────────────────────────── */
-html[data-theme="day"] .pg-assign:hover { border-color: var(--th-accent); color: var(--th-accent); background: #f5f3ff; }
-html[data-theme="day"] .pg-label.today { background: #f5f3ff; }
+html[data-theme="day"] .pg-assign:hover { border-color: var(--th-accent); color: var(--th-accent); background: #eff6ff; }
+html[data-theme="day"] .pg-label.today { background: #eff6ff; }
 html[data-theme="day"] .btn-save { background: var(--th-accent); }
-html[data-theme="day"] .btn-save:hover:not(:disabled) { background: #6d28d9; }
+html[data-theme="day"] .btn-save:hover:not(:disabled) { background: #1d4ed8; }
 html[data-theme="day"] .wn-btn.today { background: var(--th-accent); border-color: var(--th-accent); color: #fff; }
 html[data-theme="day"] .cv-tab.active { background: var(--th-accent); color: #fff; }
 html[data-theme="day"] .mth-day-num.today { background: var(--th-accent); color: #fff; }
 html[data-theme="day"] .card { border-radius: 8px; }
-html[data-theme="day"] .card-hd { background: #f5f3ff; border-bottom-color: #ede9fe; }
-html[data-theme="day"] .card-title { color: #7c3aed; }
+html[data-theme="day"] .card-hd { background: #eff6ff; border-bottom-color: #dbeafe; }
+html[data-theme="day"] .card-title { color: #2563eb; }
 html[data-theme="day"] .planning-grid { border-radius: 8px; }
 
 /* ── AdminArretTypesPage ──────────────────────────────────────── */
-html[data-theme="day"] .tree-item.active { background: #f5f3ff; border-left-color: var(--th-accent); }
+html[data-theme="day"] .tree-item.active { background: #eff6ff; border-left-color: var(--th-accent); }
 html[data-theme="day"] .tree-layout { border-radius: 8px; border-color: #e5e7eb; }
 html[data-theme="day"] .tree-col { border-right-color: #e5e7eb; }
 html[data-theme="day"] .flag-item { background: #f9fafb; border-color: #e5e7eb; }
-html[data-theme="day"] .flag-item:hover { background: #f5f3ff; }
+html[data-theme="day"] .flag-item:hover { background: #eff6ff; }
 
 /* ── AppLayout ────────────────────────────────────────────────── */
 html[data-theme="day"] .user-avatar { background: var(--th-accent); }
 html[data-theme="day"] .search-input:focus { border-color: var(--th-accent); }
-html[data-theme="day"] .t-lot { background: #ede9fe; color: #6d28d9; }
+html[data-theme="day"] .t-lot { background: #dbeafe; color: #1d4ed8; }
 
 /* ══════════════════════════════════════════════════════════════════
    RÉFÉRENTIEL — thème deep-night

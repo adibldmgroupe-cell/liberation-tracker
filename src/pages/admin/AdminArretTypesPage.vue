@@ -383,12 +383,12 @@ export default {
 .tree-layout{display:grid;grid-template-columns:200px 220px 1fr;gap:0;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;min-height:500px;max-height:calc(100vh - 160px)}
 .tree-col{border-right:1px solid #e5e7eb;display:flex;flex-direction:column;min-height:0;overflow-y:auto}
 .tree-col.wide{border-right:none}
-.col-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#f5f3ff;border-bottom:1px solid #ede9fe;flex-shrink:0;position:sticky;top:0;z-index:2}
-.col-title{font-size:11px;font-weight:700;color:#7c3aed;letter-spacing:.3px;display:flex;align-items:center;gap:6px}
+.col-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#eff6ff;border-bottom:1px solid #dbeafe;flex-shrink:0;position:sticky;top:0;z-index:2}
+.col-title{font-size:11px;font-weight:700;color:#2563eb;letter-spacing:.3px;display:flex;align-items:center;gap:6px}
 .col-title.muted{color:#a78bfa}
 .tree-item{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #f0f0f0;position:relative}
 .tree-item:hover{background:#fafafa}
-.tree-item.active{background:#f5f3ff;border-left:3px solid #7c3aed}
+.tree-item.active{background:#eff6ff;border-left:3px solid #2563eb}
 .tree-item.inactive{opacity:.5}
 .cdot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 .item-nom{flex:1;font-size:12px;font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -412,7 +412,7 @@ export default {
 .tag{font-size:10px;padding:1px 6px;border-radius:8px;font-weight:500}
 .tag-plan{background:#EFF6FF;color:#1D4ED8}
 .tag-pause{background:#F0FDF4;color:#15803D}
-.tag-ok{background:#F5F3FF;color:#7C3AED}
+.tag-ok{background:#eff6ff;color:#2563eb}
 .tag-dur{background:#FFF7ED;color:#C2410C;font-family:'SF Mono',monospace}
 .tag-off{background:#F5F5F5;color:#999}
 .type-row:hover .item-acts{display:flex}
@@ -428,7 +428,7 @@ export default {
 .lbl{display:block;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;margin-top:10px}
 .lbl.chk{display:flex;align-items:center;gap:6px;cursor:pointer;margin-top:10px;text-transform:none;font-size:13px}
 .inp{width:100%;padding:8px 10px;border:1px solid #e5e7eb;font-size:12px;outline:none;box-sizing:border-box;font-family:'Inter',sans-serif;border-radius:5px}
-.inp:focus{border-color:#7c3aed}
+.inp:focus{border-color:#2563eb}
 .inp-sm{width:100px}
 .mono{font-family:'SF Mono',monospace;text-transform:uppercase}
 .hint{font-weight:400;text-transform:none;font-size:10px;color:#9ca3af;letter-spacing:0}
@@ -440,18 +440,18 @@ export default {
 .color-presets{display:flex;gap:4px;flex-wrap:wrap}
 .cp{width:20px;height:20px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:.1s}
 .cp:hover{transform:scale(1.2)}
-.cp.selected{border-color:#7c3aed}
+.cp.selected{border-color:#2563eb}
 .btn-clear{font-size:11px;padding:3px 8px;border:1px solid #e5e7eb;background:#fff;border-radius:4px;cursor:pointer;color:#6b7280}
 .flags-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
 .flag-item{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:5px;cursor:pointer;background:#f9fafb}
-.flag-item:hover{background:#f5f3ff}
+.flag-item:hover{background:#eff6ff}
 .flag-label{display:flex;flex-direction:column}
 .flag-label strong{font-size:12px}
 .flag-label small{font-size:10px;color:#9ca3af;margin-top:1px}
 .err{color:#ef4444;font-size:11px;margin-top:10px;padding:6px 10px;background:#fef2f2;border-radius:4px}
 .modal-acts{display:flex;gap:8px;padding:12px 20px;border-top:1px solid #f3f4f6;margin-top:0}
-.btn-save{flex:1;padding:10px;background:#7c3aed;color:#fff;border:none;font-size:12px;font-weight:600;cursor:pointer;border-radius:5px}
-.btn-save:hover:not(:disabled){background:#6d28d9}
+.btn-save{flex:1;padding:10px;background:#2563eb;color:#fff;border:none;font-size:12px;font-weight:600;cursor:pointer;border-radius:5px}
+.btn-save:hover:not(:disabled){background:#1d4ed8}
 .btn-save:disabled{opacity:.5}
 .btn-cancel{flex:1;padding:10px;background:#f5f5f5;color:#6b7280;border:1px solid #e5e7eb;font-size:12px;cursor:pointer;border-radius:5px}
 .btn-cancel:hover{background:#eee}

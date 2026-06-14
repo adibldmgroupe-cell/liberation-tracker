@@ -728,7 +728,7 @@ export default {
 .warn-box { background:#fffbeb; border:1px solid #fbbf24; border-radius:4px; padding:12px 16px; color:#92400e; font-size:13px; margin-bottom:12px; }
 
 .admin-table { width:100%; border-collapse:collapse; }
-.admin-table th { padding:10px 12px; text-align:left; background:#f5f3ff; border-bottom:1px solid #ede9fe; font-size:11px; font-weight:700; color:#7c3aed; text-transform:uppercase; letter-spacing:.3px; position:sticky; top:0; z-index:2; }
+.admin-table th { padding:10px 12px; text-align:left; background:#eff6ff; border-bottom:1px solid #dbeafe; font-size:11px; font-weight:700; color:#2563eb; text-transform:uppercase; letter-spacing:.3px; position:sticky; top:0; z-index:2; }
 .admin-table td { padding:8px 12px; border-bottom:1px solid #f0f0f0; vertical-align:middle; }
 .admin-table tr:hover td { background:#f9fafb; }
 .admin-table tr.inactive td { opacity:.5; }

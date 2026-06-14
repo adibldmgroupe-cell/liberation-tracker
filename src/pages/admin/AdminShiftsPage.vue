@@ -522,8 +522,8 @@ export default {
 .shifts-page{font-family:'Inter',sans-serif;font-size:13px;}
 .two-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .card{border:1px solid #e5e7eb;border-radius:8px;overflow:hidden}
-.card-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f5f3ff;border-bottom:1px solid #ede9fe}
-.card-title{font-size:12px;font-weight:700;color:#7c3aed;letter-spacing:.3px}
+.card-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#eff6ff;border-bottom:1px solid #dbeafe}
+.card-title{font-size:12px;font-weight:700;color:#2563eb;letter-spacing:.3px}
 .btn-add:hover{background:#333}
 .loading{padding:16px;text-align:center;color:#999;font-size:12px}
 .empty{padding:16px;text-align:center;color:#bbb;font-size:12px}
@@ -550,7 +550,7 @@ export default {
 
 /* Planning grid */
 .planning-grid{display:grid;grid-template-columns:140px repeat(var(--cols, 4), 1fr);border:1px solid #e5e7eb;border-radius:8px;overflow:auto;max-height:calc(100vh - 280px);font-size:11px}
-.pg-head{padding:8px 6px;background:#f5f3ff;border-bottom:1px solid #ede9fe;border-right:1px solid #ede9fe;font-size:10px;font-weight:700;color:#7c3aed;text-align:center;position:sticky;top:0;z-index:2}
+.pg-head{padding:8px 6px;background:#eff6ff;border-bottom:1px solid #dbeafe;border-right:1px solid #dbeafe;font-size:10px;font-weight:700;color:#2563eb;text-align:center;position:sticky;top:0;z-index:2}
 .pg-corner{}
 .pg-equip{text-align:center}
 .pg-eq-nom{font-size:11px;font-weight:600}
@@ -581,7 +581,7 @@ export default {
 .lbl{display:block;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;margin-top:10px}
 .lbl.chk{display:flex;align-items:center;gap:6px;cursor:pointer;margin-top:10px;text-transform:none;font-size:13px}
 .inp{width:100%;padding:8px 10px;border:1px solid #e5e7eb;font-size:12px;outline:none;box-sizing:border-box;font-family:'Inter',sans-serif;border-radius:5px}
-.inp:focus{border-color:#7c3aed}
+.inp:focus{border-color:#2563eb}
 .form-row{display:flex;gap:12px}
 .form-field{flex:1}
 .color-row{display:flex;align-items:center;gap:8px;margin-top:4px}
@@ -593,8 +593,8 @@ export default {
 .assign-ctx{padding:8px 10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:5px;font-size:12px;margin-bottom:12px;display:flex;flex-direction:column;gap:2px}
 .err{color:#ef4444;font-size:11px;margin-top:8px;padding:6px 10px;background:#fef2f2;border-radius:4px}
 .modal-acts{display:flex;gap:8px;margin-top:16px;padding-top:12px;border-top:1px solid #f3f4f6}
-.btn-save{flex:1;padding:10px;background:#7c3aed;color:#fff;border:none;font-size:12px;font-weight:600;cursor:pointer;border-radius:5px}
-.btn-save:hover:not(:disabled){background:#6d28d9}
+.btn-save{flex:1;padding:10px;background:#2563eb;color:#fff;border:none;font-size:12px;font-weight:600;cursor:pointer;border-radius:5px}
+.btn-save:hover:not(:disabled){background:#1d4ed8}
 .btn-save:disabled{opacity:.5}
 .btn-cancel{flex:1;padding:10px;background:#f5f5f5;color:#6b7280;border:1px solid #e5e7eb;font-size:12px;cursor:pointer;border-radius:5px}
 .btn-cancel:hover{background:#eee}
@@ -609,7 +609,7 @@ export default {
 
 /* Month grid */
 .month-grid{display:grid;grid-template-columns:repeat(7,1fr);border-left:1px solid #e8e8e8;border-top:1px solid #e8e8e8}
-.mth-head{text-align:center;font-size:10px;font-weight:700;color:#7c3aed;text-transform:uppercase;padding:6px 0;background:#f5f3ff;border-right:1px solid #ede9fe;border-bottom:1px solid #ede9fe;position:sticky;top:0;z-index:2}
+.mth-head{text-align:center;font-size:10px;font-weight:700;color:#2563eb;text-transform:uppercase;padding:6px 0;background:#eff6ff;border-right:1px solid #dbeafe;border-bottom:1px solid #dbeafe;position:sticky;top:0;z-index:2}
 .mth-cell{min-height:76px;border-right:1px solid #e8e8e8;border-bottom:1px solid #e8e8e8;padding:4px 5px;vertical-align:top;position:relative}
 .mth-cell.other-month{background:#f9f9f9}
 .mth-day-num{font-size:11px;font-weight:600;color:#555;margin-bottom:3px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;border-radius:50%}

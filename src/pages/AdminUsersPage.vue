@@ -224,18 +224,18 @@ export default {
 /* Table */
 .ut-wrap{overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 220px);border:1px solid #e5e7eb;border-radius:8px;}
 .ut{width:100%;border-collapse:collapse;font-size:13px}
-.ut th{text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#7c3aed;padding:10px 12px;border-bottom:1px solid #ede9fe;background:#f5f3ff;position:sticky;top:0;z-index:2}
+.ut th{text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#2563eb;padding:10px 12px;border-bottom:1px solid #dbeafe;background:#eff6ff;position:sticky;top:0;z-index:2}
 .ut td{padding:10px 12px;border-bottom:1px solid #f3f4f6;vertical-align:middle}
 .row-off{opacity:.4}
 
 /* User cell */
 .ua{display:flex;align-items:center;gap:10px}
-.av{width:32px;height:32px;border-radius:50%;background:#7c3aed;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.av{width:32px;height:32px;border-radius:50%;background:#2563eb;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
 .un{font-size:13px;font-weight:500;color:#111827}
 .ue{font-size:11px;color:#9ca3af;margin-top:1px}
 
 /* Badges */
-.sb{font-size:11px;background:#ede9fe;color:#7c3aed;padding:2px 8px;border-radius:4px;font-weight:500;white-space:nowrap}
+.sb{font-size:11px;background:#dbeafe;color:#2563eb;padding:2px 8px;border-radius:4px;font-weight:500;white-space:nowrap}
 .rb{font-size:11px;padding:2px 8px;border-radius:4px;font-weight:500}
 .rb-admin{background:#fef3c7;color:#92400e}
 .rb-responsable{background:#d1fae5;color:#065f46}
@@ -266,7 +266,7 @@ export default {
 .fi{margin-bottom:4px}
 .lbl{display:block;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;margin-top:8px}
 .inp{width:100%;padding:8px 10px;border:1px solid #e5e7eb;font-size:12px;outline:none;box-sizing:border-box;font-family:'Inter',sans-serif;border-radius:5px}
-.inp:focus{border-color:#7c3aed}
+.inp:focus{border-color:#2563eb}
 .merr{background:#fef2f2;color:#dc2626;font-size:11px;padding:7px 10px;border-radius:4px;margin-top:4px}
 .btn-cancel{padding:9px 16px;background:#f5f5f5;color:#6b7280;border:1px solid #e5e7eb;font-size:12px;cursor:pointer;border-radius:5px;font-family:'Inter',sans-serif}
 .btn-cancel:hover{background:#eee}
