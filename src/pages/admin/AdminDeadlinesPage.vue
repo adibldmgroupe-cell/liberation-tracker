@@ -36,6 +36,7 @@
 <script>
 import { ref, onMounted } from 'vue'
 import { supabase } from '../../supabase'
+import { canPerform } from '../../services/permissions'
 import { DEADLINE_TYPES, DEADLINE_SERVICES } from '../../services/deadlines'
 export default {
   setup() {
@@ -54,6 +55,7 @@ export default {
     }
 
     var onSave = async function(service, typeKey, ev) {
+      if (!canPerform('gerer_delais')) { alert('Permission « gérer les délais documentaires » requise'); ev.target.value = (vals.value[service + '|' + typeKey] != null ? vals.value[service + '|' + typeKey] : ''); return }
       var raw = (ev.target.value || '').trim()
       var key = service + '|' + typeKey
       var u = await supabase.auth.getUser(); var uid = u.data.user ? u.data.user.id : null

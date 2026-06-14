@@ -15,6 +15,7 @@
           <span class="nav-icon">📋</span>Tâches
           <span class="notif-badge tasks-badge" v-if="pendingTasksCount>0">{{pendingTasksCount}}</span>
         </router-link>
+        <router-link v-if="can('voir_admin_delais')" to="/admin/deadlines" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">⏱</span>Délais documentaires</router-link>
         <div v-if="can('voir_peremption')" class="nav-sep">Risques péremption</div>
         <router-link v-if="can('voir_peremption')" to="/peremption" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">⚠️</span>Matrice des risques</router-link>
         <div v-if="can('voir_production_schema')||can('voir_trs_live')||can('voir_suivi_cond')||can('voir_pdp')" class="nav-sep">Module production</div>
@@ -38,7 +39,6 @@
           <router-link to="/admin/users" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">👥</span>Utilisateurs</router-link>
           <router-link to="/admin/permissions" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🔑</span>Permissions</router-link>
           <router-link to="/admin/referentiel" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">📚</span>Référentiel</router-link>
-          <router-link to="/admin/deadlines" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">⏱</span>Délais documentaires</router-link>
         </template>
       </nav>
       <div class="sidebar-user" v-if="profile">
