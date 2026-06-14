@@ -44,7 +44,7 @@
     </div>
 
     <!-- Feuille de route — parcours de production du lot -->
-    <LotRoadmap v-if="roadmap.length" :steps="roadmap" />
+    <LotRoadmap v-if="roadmap.length" :steps="roadmap" :docs="roadmapDocs" />
 
     <!-- Circuits de lancement (cartes harmonisées — clic → détail) -->
     <div class="section" v-if="of||oc">
@@ -331,6 +331,46 @@ export default {
     // Terminé = toutes les étapes faites par définition (statut terminal) → compteur plein (cohérent avec circuitSummary)
     var ofV = computed(function(){return (of.value && of.value.statut==='termine') ? circuitSteps.length : ofVals.value.length})
     var ocV = computed(function(){return (oc.value && oc.value.statut==='termine') ? circuitSteps.length : ocVals.value.length})
+    // ── Feuille de route documentaire (statuts dérivés des données déjà chargées) ──
+    var rmDocStat = function(type){
+      var d = docs.value.find(function(x){return x.type_document===type})
+      if(!d) return 'na'
+      if(d.is_applicable===false) return 'na'
+      if(d.statut==='retour_emetteur') return 'ko'
+      if(d.statut==='approuve_dt') return 'done'
+      if(d.statut==='non_emis'||!d.statut) return 'wait'
+      return 'cur'
+    }
+    var rmAqlStat = function(type){
+      var a = aqlLatest(type)
+      if(!a) return 'wait'
+      if(aqlAllDone(a)) return a.resultat==='conforme'?'done':'ko'
+      return 'cur'
+    }
+    var rmRvpStat = function(svc){
+      var d = docs.value.find(function(x){return x.type_document==='rvp' && x.service_emetteur===svc})
+      if(!d) return 'na'
+      if(d.statut==='retour_emetteur') return 'ko'
+      if(d.statut==='approuve_dt') return 'done'
+      if(d.statut==='non_emis'||!d.statut) return 'wait'
+      return 'cur'
+    }
+    var roadmapDocs = computed(function(){
+      if(!lot.value) return null
+      return {
+        of: of.value ? { status: ofV.value>=circuitSteps.length?'done':'cur' } : null,
+        oc: oc.value ? { status: ocV.value>=circuitSteps.length?'done':'cur' } : null,
+        fab: [ {label:'IF', status:rmDocStat('if')}, {label:'AQL Fab', status:rmAqlStat('fabrication')} ],
+        cond: [ {label:'IC', status:rmDocStat('ic')}, {label:'AQL Cond', status:rmAqlStat('conditionnement')} ],
+        parallel: [
+          {label:'DA Physico', status:rmDocStat('da_pc')},
+          {label:'DA Micro', status:rmDocStat('da_micro')},
+          {label:'RVP Fab', status:rmRvpStat('fabrication')},
+          {label:'RVP Cond', status:rmRvpStat('conditionnement')},
+          {label:'RVP LCQ', status:rmRvpStat('lcq')}
+        ]
+      }
+    })
     var mainDocs = computed(function(){return docs.value.filter(function(d){return d.type_document!=='rvp'&&!d.type_document.startsWith('maj_')&&!d.type_document.startsWith('cloture_sap_')})})
     var rvpDocs = computed(function(){return docs.value.filter(function(d){return d.type_document==='rvp'})})
     var majDocs = computed(function(){return docs.value.filter(function(d){return d.type_document.startsWith('maj_')})})
@@ -605,7 +645,7 @@ export default {
     // Vue Router réutilise l'instance → recharger explicitement, sinon données du lot précédent.
     watch(function(){ return route.params.id }, function(nv, ov){ if(nv && nv !== ov) loadLot() })
 
-    return{lot,prod,of,oc,ofVals,ocVals,docs,devs,aqls,dossier,roadmap,detailLoading,statusLabels,circuitSteps,isAdmin,
+    return{lot,prod,of,oc,ofVals,ocVals,docs,devs,aqls,dossier,roadmap,roadmapDocs,detailLoading,statusLabels,circuitSteps,isAdmin,
       showDevForm,devObs,devBloquante,devNumeroDn,showModify,editNumLot,editCodeProd,prodSuggestions,rvpDocs,mainDocs,
       getVal,pipClass,stepIndClass,circuitFlowClass,stepStatus,stepClickable,stepClick,circuitOverallInd,circuitSummary,fmtDt,ofV,ocV,docsOk,docsReq,devsOpen,leadTime,dossierComplete,canValidateStep,
       docTypeLabel,docStatLabel,indClass,dsClass,rvpServiceLabel,isDocBlocked,goBack,
