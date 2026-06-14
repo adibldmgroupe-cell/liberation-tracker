@@ -357,18 +357,18 @@ export default {
     }
     var roadmapDocs = computed(function(){
       if(!lot.value) return null
+      var rvpFab=rmRvpStat('fabrication'), rvpCond=rmRvpStat('conditionnement'), rvpLcq=rmRvpStat('lcq')
+      var fab=[ {label:'IF', status:rmDocStat('if')}, {label:'AQL Fab', status:rmAqlStat('fabrication')} ]
+      if(rvpFab!=='na') fab.push({label:'RVP Fab', status:rvpFab})
+      var cond=[ {label:'IC', status:rmDocStat('ic')}, {label:'AQL Cond', status:rmAqlStat('conditionnement')} ]
+      if(rvpCond!=='na') cond.push({label:'RVP Cond', status:rvpCond})
+      var transFC=[ {label:'DA Physico', status:rmDocStat('da_pc'), da:true} ]   // entre fin fab et conditionnement
+      if(rvpLcq!=='na') transFC.push({label:'RVP LCQ', status:rvpLcq})
+      var transCR=[ {label:'DA Micro', status:rmDocStat('da_micro'), da:true} ]  // entre conditionnement et réception
       return {
         of: of.value ? { status: ofV.value>=circuitSteps.length?'done':'cur' } : null,
         oc: oc.value ? { status: ocV.value>=circuitSteps.length?'done':'cur' } : null,
-        fab: [ {label:'IF', status:rmDocStat('if')}, {label:'AQL Fab', status:rmAqlStat('fabrication')} ],
-        cond: [ {label:'IC', status:rmDocStat('ic')}, {label:'AQL Cond', status:rmAqlStat('conditionnement')} ],
-        parallel: [
-          {label:'DA Physico', status:rmDocStat('da_pc')},
-          {label:'DA Micro', status:rmDocStat('da_micro')},
-          {label:'RVP Fab', status:rmRvpStat('fabrication')},
-          {label:'RVP Cond', status:rmRvpStat('conditionnement')},
-          {label:'RVP LCQ', status:rmRvpStat('lcq')}
-        ]
+        fab: fab, cond: cond, transFC: transFC, transCR: transCR
       }
     })
     var mainDocs = computed(function(){return docs.value.filter(function(d){return d.type_document!=='rvp'&&!d.type_document.startsWith('maj_')&&!d.type_document.startsWith('cloture_sap_')})})
