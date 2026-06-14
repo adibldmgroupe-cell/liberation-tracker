@@ -4,55 +4,55 @@
     <aside class="sidebar" :class="{'sidebar-open':mobileMenuOpen}">
       <div class="sidebar-logo"><span class="logo-text">LDM</span><span class="logo-sub">Libération PF</span></div>
       <nav class="sidebar-nav">
-        <router-link v-if="can('voir_dashboard')" to="/dashboard" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">◻</span>Dashboard</router-link>
-        <router-link v-if="can('voir_lots')" to="/lots" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">▥</span>Lots</router-link>
-        <router-link v-if="can('voir_planification')" to="/planifier" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">+</span>Planifier</router-link>
+        <router-link v-if="can('voir_dashboard')" to="/dashboard" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><NavIcon name="layout-dashboard" />Dashboard</router-link>
+        <router-link v-if="can('voir_lots')" to="/lots" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><NavIcon name="package" />Lots</router-link>
+        <router-link v-if="can('voir_planification')" to="/planifier" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><NavIcon name="calendar-plus" />Planifier</router-link>
         <router-link v-if="can('voir_notifications')" to="/notifications" class="nav-item" active-class="active" @click="mobileMenuOpen=false">
-          <span class="nav-icon">🔔</span>Notifications
+          <NavIcon name="bell" />Notifications
           <span class="notif-badge" v-if="unreadCount>0">{{unreadCount}}</span>
         </router-link>
         <router-link v-if="can('voir_taches')" to="/tasks" class="nav-item" active-class="active" @click="mobileMenuOpen=false">
-          <span class="nav-icon">📋</span>Tâches
+          <NavIcon name="clipboard-check" />Tâches
           <span class="notif-badge tasks-badge" v-if="pendingTasksCount>0">{{pendingTasksCount}}</span>
         </router-link>
-        <router-link v-if="can('voir_admin_delais')" to="/admin/deadlines" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">⏱</span>Délais documentaires</router-link>
+        <router-link v-if="can('voir_admin_delais')" to="/admin/deadlines" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><NavIcon name="clock" />Délais documentaires</router-link>
         <div v-if="can('voir_peremption')" class="nav-sep">Risques péremption</div>
-        <router-link v-if="can('voir_peremption')" to="/peremption" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">⚠️</span>Matrice des risques</router-link>
+        <router-link v-if="can('voir_peremption')" to="/peremption" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><NavIcon name="alert-triangle" />Matrice des risques</router-link>
         <div v-if="can('voir_production_schema')||can('voir_trs_live')||can('voir_suivi_cond')||can('voir_pdp')" class="nav-sep">Module production</div>
         <!-- Groupe TRS -->
         <div v-if="can('voir_production_schema')||can('voir_trs_live')||can('voir_suivi_cond')" class="nav-grp">
           <button class="nav-grp-hd" @click="toggleNavGrp('trs')">
-            <span class="nav-icon">🏭</span>
+            <NavIcon name="factory" />
             <span class="nav-grp-label">TRS Production</span>
             <span class="nav-grp-chev">{{navGrpOpen.includes('trs')?'▾':'▸'}}</span>
           </button>
           <div v-if="navGrpOpen.includes('trs')" class="nav-grp-body">
-            <router-link v-if="can('voir_production_schema')" to="/production/flux" class="nav-item nav-sub" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🗺</span>Schéma Production</router-link>
-            <router-link v-if="can('voir_trs_live')" to="/tracking/trs" class="nav-item nav-sub" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">⚡</span>TRS Live</router-link>
-            <router-link v-if="can('voir_suivi_cond')" to="/tracking/trs-sessions" class="nav-item nav-sub" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">📋</span>Sessions</router-link>
+            <router-link v-if="can('voir_production_schema')" to="/production/flux" class="nav-item nav-sub" active-class="active" @click="mobileMenuOpen=false"><NavIcon name="workflow" />Schéma Production</router-link>
+            <router-link v-if="can('voir_trs_live')" to="/tracking/trs" class="nav-item nav-sub" active-class="active" @click="mobileMenuOpen=false"><NavIcon name="activity" />TRS Live</router-link>
+            <router-link v-if="can('voir_suivi_cond')" to="/tracking/trs-sessions" class="nav-item nav-sub" active-class="active" @click="mobileMenuOpen=false"><NavIcon name="history" />Sessions</router-link>
           </div>
         </div>
         <!-- PDP Production -->
-        <router-link v-if="can('voir_pdp')" to="/production/pdp" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🗓</span>PDP Production</router-link>
+        <router-link v-if="can('voir_pdp')" to="/production/pdp" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><NavIcon name="calendar-range" />PDP Production</router-link>
         <template v-if="isAdmin">
           <div class="nav-sep">Administration</div>
-          <router-link to="/admin/users" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">👥</span>Utilisateurs</router-link>
-          <router-link to="/admin/permissions" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">🔑</span>Permissions</router-link>
-          <router-link to="/admin/referentiel" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><span class="nav-icon">📚</span>Référentiel</router-link>
+          <router-link to="/admin/users" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><NavIcon name="users" />Utilisateurs</router-link>
+          <router-link to="/admin/permissions" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><NavIcon name="shield-check" />Permissions</router-link>
+          <router-link to="/admin/referentiel" class="nav-item" active-class="active" @click="mobileMenuOpen=false"><NavIcon name="library" />Référentiel</router-link>
         </template>
       </nav>
       <div class="sidebar-user" v-if="profile">
         <div class="user-avatar">{{initials}}</div>
         <div class="user-info"><div class="user-name">{{displayName}}</div><div class="user-service">{{serviceLabels[profile.service]}}</div></div>
-        <button class="logout-btn" @click="logout" title="Déconnexion">✕</button>
+        <button class="logout-btn" @click="logout" title="Déconnexion" aria-label="Déconnexion"><NavIcon name="log-out" :size="16" /></button>
       </div>
     </aside>
     <main class="main-content">
       <header class="top-bar">
-        <button class="hamburger" @click="mobileMenuOpen=!mobileMenuOpen">☰</button>
+        <button class="hamburger" @click="mobileMenuOpen=!mobileMenuOpen" aria-label="Menu"><NavIcon name="menu" :size="22" /></button>
         <template v-if="!$route.meta.hideHeaderSearch">
           <div class="search-container">
-            <span class="search-icon">⌕</span>
+            <span class="search-icon"><NavIcon name="search" :size="16" /></span>
             <input ref="searchInput" v-model="searchQuery" @input="onSearch" @keydown.enter="submitSearch" @focus="showSug=true" @blur="hideSug" type="text" class="search-input" placeholder="Rechercher..." />
             <div class="suggestions" v-if="showSug && suggestions.length">
               <div v-for="(s,i) in suggestions" :key="i" class="sug-item" @mousedown.prevent="selectSug(s)">
@@ -61,7 +61,7 @@
               </div>
             </div>
           </div>
-          <span class="notif-bell" @click="$router.push('/notifications')">🔔<span class="bell-badge" v-if="unreadCount>0">{{unreadCount}}</span></span>
+          <span class="notif-bell" @click="$router.push('/notifications')" role="button" aria-label="Notifications"><NavIcon name="bell" :size="18" /><span class="bell-badge" v-if="unreadCount>0">{{unreadCount}}</span></span>
         </template>
         <div v-else class="top-spacer"></div>
         <button class="theme-btn" @click="cycleTheme" :title="'Thème : '+theme">{{themeIcon}}</button>
@@ -82,12 +82,14 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useTheme } from '../composables/useTheme'
+import NavIcon from '../components/NavIcon.vue'
 import { supabase } from '../supabase'
 import { loadPermissions } from '../services/permissions'
 import { getUnreadCount, getNewNotifications, check48hDeviations } from '../services/notifications'
 import { checkPlanningAlerts } from '../services/planningAlerts'
 import { playSoundForEvent } from '../services/sounds'
 export default {
+  components: { NavIcon },
   setup() {
     var router = useRouter()
     var route  = useRoute()
@@ -283,7 +285,7 @@ export default {
 .sug-item{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;font-size:13px}.sug-item:hover{background:#f5f5f5}
 .sug-type{font-size:9px;font-weight:600;padding:2px 6px;border-radius:2px;letter-spacing:.5px}.t-lot{background:#E6F1FB;color:#0C447C}.t-product{background:#EAF3DE;color:#3B6D11}
 .sug-label{font-weight:500}.sug-sub{color:#999;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.notif-bell{font-size:18px;cursor:pointer;position:relative;padding:4px}.bell-badge{position:absolute;top:-2px;right:-4px;background:#E24B4A;color:#fff;font-size:9px;font-weight:600;padding:1px 4px;border-radius:6px}
+.notif-bell{font-size:18px;cursor:pointer;position:relative;padding:4px;color:var(--th-text2);display:inline-flex;align-items:center}.bell-badge{position:absolute;top:-2px;right:-4px;background:#E24B4A;color:#fff;font-size:9px;font-weight:600;padding:1px 4px;border-radius:6px}
 .theme-btn{background:none;border:1px solid transparent;border-radius:4px;cursor:pointer;font-size:15px;padding:3px 6px;line-height:1;transition:background .15s,border-color .15s}.theme-btn:hover{background:rgba(0,0,0,.06);border-color:rgba(0,0,0,.12)}
 .clock{margin-left:auto;font-family:'SF Mono','Fira Code',monospace;font-size:12px;color:#999;white-space:nowrap}
 .page-content{flex:1;overflow-y:auto;overflow-x:hidden;padding:16px 20px;min-width:0}
