@@ -4,7 +4,7 @@
     <!-- En-tête -->
     <div class="tp-hd">
       <div class="tp-hd-left">
-        <span class="tp-hd-icon">📋</span>
+        <span class="tp-hd-icon"><NavIcon name="clipboard-check" :size="20" /></span>
         <div>
           <div class="tp-h1">Tâches en attente</div>
           <div class="tp-h2">{{svcLabel}}</div>
@@ -17,24 +17,24 @@
         <span class="tp-total" :class="totalCount>0?'tp-total-bad':'tp-total-ok'">
           {{totalCount}} tâche{{totalCount!==1?'s':''}} en attente
         </span>
-        <button class="tp-refresh" @click="load" :disabled="loading">{{loading?'⟳':'↻'}} Rafraîchir</button>
+        <button class="tp-refresh" @click="load" :disabled="loading"><NavIcon name="refresh" :size="14" /> Rafraîchir</button>
       </div>
     </div>
 
     <!-- Barre de recherche -->
     <div v-if="!loading && totalCount>0" class="tp-search-bar">
-      <span class="tp-search-icon">🔍</span>
+      <span class="tp-search-icon"><NavIcon name="search" :size="15" /></span>
       <input v-model="searchQuery" class="tp-search-inp" type="text" placeholder="Rechercher par numéro de lot ou désignation…" autocomplete="off" />
       <span v-if="searchQuery.trim()" class="tp-search-count">
         {{searchResultCount}} résultat{{searchResultCount!==1?'s':''}}
       </span>
-      <button v-if="searchQuery" class="tp-search-clear" @click="searchQuery=''">✕</button>
+      <button v-if="searchQuery" class="tp-search-clear" @click="searchQuery=''"><NavIcon name="x" :size="14" /></button>
     </div>
 
-    <div v-if="loading" class="tp-loading">⟳ Chargement…</div>
+    <div v-if="loading" class="tp-loading"><NavIcon name="refresh" :size="14" /> Chargement…</div>
 
     <div v-else-if="!loading && totalCount===0" class="tp-empty">
-      <span class="tp-empty-icon">✓</span>
+      <span class="tp-empty-icon"><NavIcon name="check" :size="34" /></span>
       <div class="tp-empty-txt">Aucune tâche en attente pour ce service</div>
     </div>
 
@@ -43,7 +43,7 @@
 
         <!-- En-tête catégorie — barre gauche colorée + titre uppercase -->
         <div class="tp-cat-hd" :class="{'tp-cat-urgent': cat.urgent}" @click="cat.open=!cat.open">
-          <span class="tp-cat-icon">{{cat.icon}}</span>
+          <span class="tp-cat-icon"><NavIcon :name="cat.icon" :size="16" /></span>
           <span class="tp-cat-title">{{cat.title}}</span>
           <span class="tp-cat-badge" :class="cat.urgent?'tp-badge-red':'tp-badge-blue'">{{cat.items.length}} tâche{{cat.items.length>1?'s':''}}</span>
           <span class="tp-cat-chev">{{cat.open?'▲':'▼'}}</span>
@@ -78,7 +78,7 @@
                 <!-- Motif retour inline -->
                 <div v-if="d.showReturnInput" class="tp-return-row">
                   <span class="tp-lot-mono">{{d.lotNum}}</span>
-                  <span class="tp-return-label">↩ {{d.returnLabel}} — motif :</span>
+                  <span class="tp-return-label"><NavIcon name="corner-up-left" :size="13" /> {{d.returnLabel}} — motif :</span>
                   <textarea v-model="d.returnMotif" class="tp-return-motif" placeholder="Motif (optionnel)…" rows="1"></textarea>
                   <button class="tp-do-btn tp-do-nok" :disabled="d.acting" @click.stop="doDocReturn(d,grp,cat)">{{d.acting?'…':'Confirmer'}}</button>
                   <button class="tp-btn-cancel" @click.stop="d.showReturnInput=false;d.returnMotif=''">Annuler</button>
@@ -106,20 +106,20 @@
             <div class="tp-item-main" @click="$router.push('/lots/'+item.lotId)">
               <span class="tp-sap-badge" :class="'sap-'+(item.statutSap||'vide')">{{SAP_SHORT[item.statutSap]||''}}</span>
               <span class="tp-item-lot">{{item.lotNum}}</span>
-              <span v-if="item.urgent" class="tp-item-bl">⚠ BLQ</span>
+              <span v-if="item.urgent" class="tp-item-bl"><NavIcon name="alert-triangle" :size="13" /> BLQ</span>
               <span class="tp-item-prod">{{item.prodDesc}}</span>
             </div>
             <div class="tp-item-right">
-              <span v-if="item.deadline" class="tp-dl" :class="item.deadline.cls" :title="'Échéance : '+item.deadline.dueStr">⏱ {{item.deadline.label}}</span>
+              <span v-if="item.deadline" class="tp-dl" :class="item.deadline.cls" :title="'Échéance : '+item.deadline.dueStr"><NavIcon name="clock" :size="13" /> {{item.deadline.label}}</span>
               <span class="tp-item-action" :class="item.urgent?'tp-action-red':'tp-action-blue'">{{item.action}}</span>
               <template v-if="item.canAqlSaisir">
-                <button class="tp-do-btn tp-do-ok" :disabled="item.acting" @click.stop="doAqlSaisir(item,cat,'conforme')">{{item.acting?'…':'✓ Conf.'}}</button>
-                <button class="tp-do-btn tp-do-nok" :disabled="item.acting" @click.stop="doAqlSaisir(item,cat,'non_conforme')">{{item.acting?'…':'✗ N.C.'}}</button>
+                <button class="tp-do-btn tp-do-ok" :disabled="item.acting" @click.stop="doAqlSaisir(item,cat,'conforme')"><template v-if="item.acting">…</template><template v-else><NavIcon name="check" :size="13" /> Conf.</template></button>
+                <button class="tp-do-btn tp-do-nok" :disabled="item.acting" @click.stop="doAqlSaisir(item,cat,'non_conforme')"><template v-if="item.acting">…</template><template v-else><NavIcon name="x" :size="13" /> N.C.</template></button>
               </template>
               <button v-else-if="item.canAct" class="tp-do-btn" :disabled="item.acting" @click.stop="doItemAction(item,cat)">
                 {{item.acting?'…':item.btnLabel}}
               </button>
-              <span class="tp-item-arr" @click="$router.push('/lots/'+item.lotId)">→</span>
+              <span class="tp-item-arr" @click="$router.push('/lots/'+item.lotId)"><NavIcon name="arrow-right" :size="16" /></span>
             </div>
           </div>
         </div>
@@ -130,7 +130,7 @@
     <!-- ── MODAL AVIS AQL NON CONFORME ── -->
     <div class="tp-ov" v-if="aqlAvisModal.show" @click.self="aqlAvisModal.show=false">
       <div class="tp-modal">
-        <div class="tp-modal-hd">✗ AQL Non conforme — Remarque AQ</div>
+        <div class="tp-modal-hd"><NavIcon name="x" :size="16" /> AQL Non conforme — Remarque AQ</div>
         <div class="tp-modal-ctx">{{aqlAvisModal.lotNum}} — AQL {{aqlAvisModal.aqlType==='fabrication'?'Fabrication':'Conditionnement'}}</div>
         <label class="tp-modal-lbl">Remarque (obligatoire)</label>
         <textarea class="tp-modal-ta" v-model="aqlAvisModal.avis" placeholder="Saisir la remarque AQ…" rows="3" autofocus></textarea>
@@ -151,8 +151,10 @@ import { supabase } from '../supabase'
 import { canPerform, loadPermissions, getPermissionForEtape } from '../services/permissions'
 import { createNotification } from '../services/notifications'
 import { loadDeadlines, getDelai, computeDeadline } from '../services/deadlines'
+import NavIcon from '../components/NavIcon.vue'
 
 export default {
+  components: { NavIcon },
   setup() {
     var userService = ref('')
     var selectedSvc = ref('')
@@ -360,7 +362,7 @@ export default {
         aqlCatObj.items.push(newItem)
         aqlCatObj.open = true
       } else {
-        var newCat = makeCat('aql','🔬','Inspections AQL à réaliser')
+        var newCat = makeCat('aql','microscope','Inspections AQL à réaliser')
         newCat.items.push(newItem)
         newCat.open = true
         categories.value.push(newCat)
@@ -404,7 +406,7 @@ export default {
         docCatObj.items.push({key:'doc_'+arItem.docId,lotId:arItem.lotId,lotNum:arItem.lotNum})
       } else {
         var g2 = makeGrp(typeKey,typeLabel,action); g2.open=true; g2.docs=[newDoc]
-        var newCat = {id:'docs',icon:'📄',title:'Documents à traiter',urgent:false,open:true,
+        var newCat = {id:'docs',icon:'file-text',title:'Documents à traiter',urgent:false,open:true,
           items:[{key:'doc_'+arItem.docId,lotId:arItem.lotId,lotNum:arItem.lotNum}],
           groups:[g2]}
         categories.value.splice(1, 0, newCat)
@@ -564,7 +566,7 @@ export default {
       var circEtapeMap = {planification:'planification',stock:'stock',aq:'aq',dt:'dt',aq_dap:'aq_dap'}
       var circEtape = circEtapeMap[svc]
       if (circEtape || svc==='fabrication' || svc==='conditionnement') {
-        var circCat = makeCat('circuits','🔄','Circuits à valider / réceptionner')
+        var circCat = makeCat('circuits','refresh','Circuits à valider / réceptionner')
         var ofEtape = svc==='fabrication'?'production':circEtape
         var ocEtape = svc==='conditionnement'?'production':(svc==='fabrication'?null:circEtape)
         if (ofEtape) {
@@ -603,7 +605,7 @@ export default {
       }
 
       // ── 2. DOCUMENTS (groupés par type_document) ──────────────────────
-      var docCat = {id:'docs',icon:'📄',title:'Documents à traiter',urgent:false,open:true,items:[],groups:[]}
+      var docCat = {id:'docs',icon:'file-text',title:'Documents à traiter',urgent:false,open:true,items:[],groups:[]}
       var docRaw = []
       if (svc==='aq') {
         var daqRes = await supabase.from('liberation_documents')
@@ -738,7 +740,7 @@ export default {
       if (docCat.items.length) cats.push(docCat)
 
       // ── 3. ACCUSÉS DE RÉCEPTION ───────────────────────────────────────
-      var arCat = makeCat('ar','✅','Accusés de réception à confirmer')
+      var arCat = makeCat('ar','check','Accusés de réception à confirmer')
       var arCanDoc = isAdm || canPerform('accuser_reception_document')
       var arCanCirc = isAdm || canPerform('accuser_reception_circuit')
 
@@ -804,7 +806,7 @@ export default {
 
       // ── 4. AQL À RÉALISER ─────────────────────────────────────────────
       if (svc==='fabrication'||svc==='conditionnement') {
-        var aqlCat = makeCat('aql','🔬','Inspections AQL à réaliser')
+        var aqlCat = makeCat('aql','microscope','Inspections AQL à réaliser')
         var aqlTypeVal = svc==='fabrication'?'fabrication':'conditionnement'
         var canAqlSaisir = isAdm || canPerform('realiser_aql')
         var aqlR = await supabase.from('aql_inspections').select('id,type,lot_id,requested_at').eq('type',aqlTypeVal).eq('resultat','en_attente').order('requested_at',{ascending:true}).limit(200)
@@ -822,7 +824,7 @@ export default {
 
       // ── 5. DÉVIATIONS BLOQUANTES ──────────────────────────────────────
       if (svc==='aq'||svc==='dt'||svc==='admin') {
-        var devCat = makeCat('dev','⚠','Déviations bloquantes ouvertes',true)
+        var devCat = makeCat('dev','alert-triangle','Déviations bloquantes ouvertes',true)
         var devR = await supabase.from('deviations').select('id,lot_id,numero_dn').eq('bloquante',true).in('statut',['ouverte','en_cours']).order('declared_at',{ascending:false}).limit(200)
         var devMap = await getLotsMap((devR.data||[]).map(function(d){return d.lot_id}))
         ;(devR.data||[]).forEach(function(d){
