@@ -10,8 +10,8 @@
         <div class="stabs">
           <button v-for="s in ['Tous','PHARMA','OTC']" :key="s" class="stab" :class="{active:filterSite===s}" @click="filterSite=s">{{s}}</button>
         </div>
-        <button class="btn-ref" @click="loadAll" :class="{spin:loading}">↻</button>
-        <button class="btn-ref" @click="cycleTheme" :title="themeTitle">{{themeIcon}}</button>
+        <button class="btn-ref" @click="loadAll" :class="{spin:loading}"><NavIcon name="refresh" :size="14" /></button>
+        <button class="btn-ref" @click="cycleTheme" :title="themeTitle"><NavIcon :name="themeIcon" :size="15" /></button>
       </div>
     </div>
 
@@ -81,8 +81,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../../supabase'
 import { useTheme } from '../../composables/useTheme'
+import NavIcon from '../../components/NavIcon.vue'
 
 export default {
+  components: { NavIcon },
   setup() {
     var { theme } = useTheme()
 
@@ -175,7 +177,7 @@ export default {
       theme.value = THEME_ORDER[(idx + 1) % THEME_ORDER.length]
     }
     var themeIcon = computed(function() {
-      return theme.value === 'day' ? '☀️' : theme.value === 'workshop' ? '🏭' : '🌙'
+      return theme.value === 'day' ? 'sun' : theme.value === 'workshop' ? 'factory' : 'moon'
     })
     var themeTitle = computed(function() {
       return theme.value === 'night' ? 'Nuit → Jour' : theme.value === 'day' ? 'Jour → Atelier' : 'Atelier → Nuit'

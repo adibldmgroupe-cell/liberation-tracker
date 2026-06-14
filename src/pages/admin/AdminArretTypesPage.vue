@@ -4,7 +4,7 @@
     <!-- ── En-tête ── -->
     <div class="fa-header">
       <div>
-        <div class="fa-title">🛑 Types d'arrêts</div>
+        <div class="fa-title"><NavIcon name="ban" :size="18" /> Types d'arrêts</div>
         <div class="fa-sub">Arbre famille → sous-famille → code arrêt</div>
       </div>
     </div>
@@ -27,8 +27,8 @@
           <span class="item-nom">{{f.nom}}</span>
           <span class="item-badge">{{f.sf_count||0}}</span>
           <div class="item-acts" @click.stop>
-            <button class="ia" @click="openModal('famille', f)" title="Modifier">✏️</button>
-            <button class="ia del" @click="confirmDel('famille', f)" title="Supprimer">🗑</button>
+            <button class="ia" @click="openModal('famille', f)" title="Modifier"><NavIcon name="pencil" :size="13" /></button>
+            <button class="ia del" @click="confirmDel('famille', f)" title="Supprimer"><NavIcon name="trash" :size="13" /></button>
           </div>
         </div>
         <div v-if="!loadingF && familles.length===0" class="empty-col">Aucune famille</div>
@@ -43,7 +43,7 @@
           <span class="col-title muted" v-else>Sous-familles</span>
           <button class="btn-add" @click="openModal('sf')" :disabled="!selF">+ Ajouter</button>
         </div>
-        <div v-if="!selF" class="empty-col">← Choisir une famille</div>
+        <div v-if="!selF" class="empty-col"><NavIcon name="arrow-left" :size="13" /> Choisir une famille</div>
         <div v-else-if="loadingSF" class="loading">Chargement…</div>
         <div
           v-for="sf in sousFamilles" :key="sf.id"
@@ -53,8 +53,8 @@
           <span class="item-nom">{{sf.nom}}</span>
           <span class="item-badge">{{sf.type_count||0}}</span>
           <div class="item-acts" @click.stop>
-            <button class="ia" @click="openModal('sf', sf)" title="Modifier">✏️</button>
-            <button class="ia del" @click="confirmDel('sf', sf)" title="Supprimer">🗑</button>
+            <button class="ia" @click="openModal('sf', sf)" title="Modifier"><NavIcon name="pencil" :size="13" /></button>
+            <button class="ia del" @click="confirmDel('sf', sf)" title="Supprimer"><NavIcon name="trash" :size="13" /></button>
           </div>
         </div>
         <div v-if="selF && !loadingSF && sousFamilles.length===0" class="empty-col">Aucune sous-famille</div>
@@ -67,7 +67,7 @@
           <span class="col-title muted" v-else>Codes arrêts</span>
           <button class="btn-add" @click="openModal('type')" :disabled="!selSF">+ Ajouter</button>
         </div>
-        <div v-if="!selSF" class="empty-col">← Choisir une sous-famille</div>
+        <div v-if="!selSF" class="empty-col"><NavIcon name="arrow-left" :size="13" /> Choisir une sous-famille</div>
         <div v-else-if="loadingT" class="loading">Chargement…</div>
         <div v-for="t in arretTypes" :key="t.id" class="type-row" :class="{inactive: !t.actif}">
           <div class="type-code" :style="{background:(t.couleur||selF.couleur)+'22', color:t.couleur||selF.couleur, borderColor:(t.couleur||selF.couleur)+'44'}">
@@ -84,8 +84,8 @@
             </div>
           </div>
           <div class="item-acts">
-            <button class="ia" @click="openModal('type', t)" title="Modifier">✏️</button>
-            <button class="ia del" @click="confirmDel('type', t)" title="Supprimer">🗑</button>
+            <button class="ia" @click="openModal('type', t)" title="Modifier"><NavIcon name="pencil" :size="13" /></button>
+            <button class="ia del" @click="confirmDel('type', t)" title="Supprimer"><NavIcon name="trash" :size="13" /></button>
           </div>
         </div>
         <div v-if="selSF && !loadingT && arretTypes.length===0" class="empty-col">Aucun code arrêt</div>
@@ -144,7 +144,7 @@
           <div class="color-row">
             <input type="color" v-model="modal.data.couleur" class="color-pick" />
             <span class="color-val">{{modal.data.couleur||'—'}}</span>
-            <button class="btn-clear" @click="modal.data.couleur=''" v-if="modal.data.couleur">✕ Effacer</button>
+            <button class="btn-clear" @click="modal.data.couleur=''" v-if="modal.data.couleur"><NavIcon name="x" :size="13" /> Effacer</button>
           </div>
           <div class="flags-row">
             <label class="flag-item">
@@ -212,7 +212,9 @@
 import { ref, reactive, onMounted } from 'vue'
 import { supabase } from '../../supabase'
 import { canPerform } from '../../services/permissions'
+import NavIcon from '../../components/NavIcon.vue'
 export default {
+  components: { NavIcon },
   setup() {
     var familles    = ref([])
     var sousFamilles = ref([])

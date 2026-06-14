@@ -4,7 +4,7 @@
     <!-- ── En-tête ── -->
     <div class="fa-header">
       <div>
-        <div class="fa-title">🕐 Shifts & Équipes</div>
+        <div class="fa-title"><NavIcon name="clock" :size="18" /> Shifts & Équipes</div>
         <div class="fa-sub">Gestion des shifts horaires et équipes de production</div>
       </div>
     </div>
@@ -32,8 +32,8 @@
           </div>
           <span class="stat-badge" :class="s.actif?'actif':'inactif'">{{s.actif?'Actif':'Inactif'}}</span>
           <div class="row-acts">
-            <button class="ia" @click="openShiftModal(s)">✏️</button>
-            <button class="ia del" @click="deleteShift(s)">🗑</button>
+            <button class="ia" @click="openShiftModal(s)"><NavIcon name="pencil" :size="13" /></button>
+            <button class="ia del" @click="deleteShift(s)"><NavIcon name="trash" :size="13" /></button>
           </div>
         </div>
         <div v-if="!loadingS && shifts.length===0" class="empty">Aucun shift</div>
@@ -52,8 +52,8 @@
           <div class="equipe-nom">{{e.nom}}</div>
           <span class="stat-badge" :class="e.actif?'actif':'inactif'">{{e.actif?'Active':'Inactive'}}</span>
           <div class="row-acts">
-            <button class="ia" @click="openEquipeModal(e)">✏️</button>
-            <button class="ia del" @click="deleteEquipe(e)">🗑</button>
+            <button class="ia" @click="openEquipeModal(e)"><NavIcon name="pencil" :size="13" /></button>
+            <button class="ia del" @click="deleteEquipe(e)"><NavIcon name="trash" :size="13" /></button>
           </div>
         </div>
         <div v-if="!loadingE && equipes.length===0" class="empty">Aucune équipe</div>
@@ -73,9 +73,9 @@
 
       <!-- ── Navigation contextuelle ── -->
       <div class="cal-nav">
-        <button class="wn-btn" @click="calPrev">←</button>
+        <button class="wn-btn" @click="calPrev"><NavIcon name="arrow-left" :size="14" /></button>
         <button class="wn-btn today" @click="calToday">Aujourd'hui</button>
-        <button class="wn-btn" @click="calNext">→</button>
+        <button class="wn-btn" @click="calNext"><NavIcon name="arrow-right" :size="14" /></button>
         <span class="cal-period">{{calPeriodLabel}}</span>
       </div>
 
@@ -100,7 +100,7 @@
               <span class="pc-eq" :style="{color:getEquipeColor(getPlanCell(currentDayIso,sh.id,eq.id).equipe_id)}">
                 {{getEquipeNom(getPlanCell(currentDayIso,sh.id,eq.id).equipe_id)}}
               </span>
-              <button class="pc-del" @click="deletePlan(getPlanCell(currentDayIso,sh.id,eq.id).id)">✕</button>
+              <button class="pc-del" @click="deletePlan(getPlanCell(currentDayIso,sh.id,eq.id).id)"><NavIcon name="x" :size="12" /></button>
             </div>
             <button v-else class="pg-assign" @click="openAssignModal(currentDayIso, sh, eq)" title="Affecter une équipe">+</button>
           </div>
@@ -128,7 +128,7 @@
                 <span class="pc-eq" :style="{color:getEquipeColor(getPlanCell(day.iso, sh.id, eq.id).equipe_id)}">
                   {{getEquipeNom(getPlanCell(day.iso, sh.id, eq.id).equipe_id)}}
                 </span>
-                <button class="pc-del" @click="deletePlan(getPlanCell(day.iso, sh.id, eq.id).id)">✕</button>
+                <button class="pc-del" @click="deletePlan(getPlanCell(day.iso, sh.id, eq.id).id)"><NavIcon name="x" :size="12" /></button>
               </div>
               <button v-else class="pg-assign" @click="openAssignModal(day.iso, sh, eq)" title="Affecter une équipe">+</button>
             </div>
@@ -239,7 +239,9 @@
 import { ref, computed, reactive, onMounted } from 'vue'
 import { supabase } from '../../supabase'
 import { canPerform } from '../../services/permissions'
+import NavIcon from '../../components/NavIcon.vue'
 export default {
+  components: { NavIcon },
   setup() {
     var shifts      = ref([])
     var equipes     = ref([])
