@@ -116,6 +116,7 @@
 <script>
 import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../supabase'
+import { canPerform } from '../services/permissions'
 
 export default {
   setup() {
@@ -356,6 +357,7 @@ export default {
 
     // Single cell toggle
     var togglePerm = async function(svc, action) {
+      if (!canPerform('gerer_permissions')) { alert('Permission « gérer les permissions » requise'); return }
       var current = isAllowed(svc, action)
       var newVal = !current
       if (!permMap.value[svc]) permMap.value[svc] = {}
@@ -367,6 +369,7 @@ export default {
 
     // Toggle all permissions for a service column
     var toggleServiceCol = async function(svc) {
+      if (!canPerform('gerer_permissions')) { alert('Permission « gérer les permissions » requise'); return }
       var allowed = countAllowed(svc.id)
       var newVal = allowed === 0
       var rows = allPerms.value.map(function(p) { return { service: svc.id, action: p.key, allowed: newVal } })
@@ -378,6 +381,7 @@ export default {
 
     // Toggle a permission row for all services
     var togglePermRow = async function(key) {
+      if (!canPerform('gerer_permissions')) { alert('Permission « gérer les permissions » requise'); return }
       var totalAllowed = services.value.filter(function(s) { return isAllowed(s.id, key) }).length
       var newVal = totalAllowed === 0
       var rows = services.value.map(function(s) { return { service: s.id, action: key, allowed: newVal } })
@@ -391,6 +395,7 @@ export default {
 
     // Toggle all permissions in a group for a specific service
     var toggleGroupForService = async function(g, svc) {
+      if (!canPerform('gerer_permissions')) { alert('Permission « gérer les permissions » requise'); return }
       var totalAllowed = g.actions.filter(function(a) { return isAllowed(svc.id, a.key) }).length
       var newVal = totalAllowed === 0
       if (!permMap.value[svc.id]) permMap.value[svc.id] = {}
@@ -466,6 +471,7 @@ export default {
     }
 
     var resetService = async function(svc) {
+      if (!canPerform('gerer_permissions')) { alert('Permission « gérer les permissions » requise'); return }
       if (!confirm('Réinitialiser les permissions de "' + svc.label + '" aux valeurs par défaut ?')) return
       var defaults = defaultPermissions[svc.id]
       var defaultSet = defaults === null

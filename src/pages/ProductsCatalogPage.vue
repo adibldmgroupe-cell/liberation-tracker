@@ -146,6 +146,7 @@
 <script>
 import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../supabase'
+import { canPerform } from '../services/permissions'
 
 var GS_KEY = 'liberation_gs_url_products'
 var DEFAULT_GS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQqKb5_i0U7YeQYMiNEDy4X2gq6W_78NA2EuC2gRqSVXOKuBcBuXR8ASrE9Eq3admceATv4_gdAUppc/pub?gid=0&single=true&output=csv'
@@ -221,11 +222,13 @@ export default {
     }
 
     var saveGsUrl = async function() {
+      if (!canPerform('gerer_produits')) { alert('Permission « gérer le catalogue produits » requise'); return }
       localStorage.setItem(GS_KEY, gsUrl.value || '')
       await supabase.from('app_settings').upsert({ key: 'gs_url_products', value: gsUrl.value || '' }, { onConflict: 'key' })
     }
 
     var importFromGs = async function() {
+      if (!canPerform('gerer_produits')) { alert('Permission « gérer le catalogue produits » requise'); return }
       if (!gsUrl.value) return
       gsImporting.value = true
       gsProgress.value = 10
@@ -321,6 +324,7 @@ export default {
     }
 
     var submitForm = async function() {
+      if (!canPerform('gerer_produits')) { alert('Permission « gérer le catalogue produits » requise'); return }
       if (!form.value.code_article.trim() || !form.value.description.trim()) { formErr.value = 'Code article et description requis'; return }
       saving.value = true; formErr.value = ''
       var data = {
@@ -343,6 +347,7 @@ export default {
     }
 
     var toggleActif = async function(p) {
+      if (!canPerform('gerer_produits')) { alert('Permission « gérer le catalogue produits » requise'); return }
       var newVal = p.actif === false ? true : false
       await supabase.from('products').update({ actif: newVal }).eq('id', p.id)
       p.actif = newVal

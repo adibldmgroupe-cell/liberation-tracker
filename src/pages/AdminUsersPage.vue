@@ -95,6 +95,7 @@
 <script>
 import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../supabase'
+import { canPerform } from '../services/permissions'
 import { adminCreateUser, adminDeleteUser } from '../services/adminAuth'
 export default {
   setup() {
@@ -123,6 +124,7 @@ export default {
     }
 
     var toggleActive = async function(p) {
+      if (!canPerform('gerer_comptes')) { alert('Permission « gérer les comptes » requise'); return }
       var newVal = !p.is_active
       await supabase.from('profiles').update({ is_active: newVal }).eq('id', p.id)
       p.is_active = newVal
@@ -145,6 +147,7 @@ export default {
     }
 
     var submitForm = async function() {
+      if (!canPerform('gerer_comptes')) { alert('Permission « gérer les comptes » requise'); return }
       if (!form.value.prenom || !form.value.nom) { formErr.value = 'Prénom et nom requis'; return }
       saving.value = true; formErr.value = ''
       try {
@@ -178,6 +181,7 @@ export default {
     }
 
     var confirmDelete = async function(p) {
+      if (!canPerform('gerer_comptes')) { alert('Permission « gérer les comptes » requise'); return }
       if (!confirm('Supprimer le compte de ' + p.prenom + ' ' + p.nom + ' ?\nCette action est irréversible.')) return
       try {
         await adminDeleteUser(p.id)
@@ -188,6 +192,7 @@ export default {
     }
 
     var sendReset = async function() {
+      if (!canPerform('gerer_comptes')) { alert('Permission « gérer les comptes » requise'); return }
       var { error } = await supabase.auth.resetPasswordForEmail(editEmail.value)
       if (error) { alert('Erreur : ' + error.message); return }
       alert('Email de réinitialisation envoyé à ' + editEmail.value)
