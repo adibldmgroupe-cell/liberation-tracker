@@ -1,6 +1,6 @@
 <template>
   <div v-if="doc">
-    <div class="bc"><span @click="goBack">← Retour au lot</span></div>
+    <div class="bc"><span @click="goBack"><NavIcon name="arrow-left" :size="13" /> Retour au lot</span></div>
     <div class="lh">
       <div class="lh-info">
         <div class="lh-type"><span class="lt-short">{{shortType}}</span> <span class="lt-full" v-if="typeFull">({{typeFull}})</span></div>
@@ -13,7 +13,7 @@
 
     <!-- DA Micro non applicable : permettre de la déclarer applicable -->
     <div class="na-bloc" v-if="!doc.is_applicable && doc.type_document==='da_micro'">
-      <div class="na-icon">🧫</div>
+      <div class="na-icon"><NavIcon name="flask" :size="28" /></div>
       <div class="na-msg">
         <strong>DA Microbiologie — Non applicable</strong><br>
         Ce document n'est pas encore requis pour ce lot. Le LCQ peut le déclarer applicable si des analyses microbiologiques sont nécessaires.
@@ -36,7 +36,7 @@
             <div class="di-svc">Service : {{s.service}}</div>
             <!-- Action secondaire (retour) : petit bouton, comme la relance AQL -->
             <div v-if="stepActionable(s.n) && retourAct" class="step-acts" @click.stop>
-              <button class="btn-ret" @click="prepareRetour(retourAct.dest)">↩ {{retourAct.label}}</button>
+              <button class="btn-ret" @click="prepareRetour(retourAct.dest)"><NavIcon name="corner-up-left" :size="13" /> {{retourAct.label}}</button>
             </div>
           </div>
         </div>
@@ -74,7 +74,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../supabase'
 import { loadPermissions, canPerform } from '../services/permissions'
 import { createNotification } from '../services/notifications'
+import NavIcon from '../components/NavIcon.vue'
 export default {
+  components: { NavIcon },
   setup() {
     var route = useRoute(), router = useRouter()
     var doc = ref(null), movements = ref([]), showRetour = ref(false), motif = ref(''), userId = ref(null), retourDest = ref(''), userService = ref('')

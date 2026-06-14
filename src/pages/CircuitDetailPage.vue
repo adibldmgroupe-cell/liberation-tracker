@@ -1,6 +1,6 @@
 <template>
   <div v-if="lot">
-    <div class="bc"><span @click="goBack">← Retour au lot</span></div>
+    <div class="bc"><span @click="goBack"><NavIcon name="arrow-left" :size="13" /> Retour au lot</span></div>
     <div class="lh">
       <div class="lh-info">
         <div class="lh-type"><span class="lt-short">{{type.toUpperCase()}}</span> <span class="lt-full">({{typeFull}})</span></div>
@@ -47,7 +47,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../supabase'
 import { loadPermissions, canPerform, getPermissionForEtape } from '../services/permissions'
 import { validateOrder } from '../services/actions'
+import NavIcon from '../components/NavIcon.vue'
 export default {
+  components: { NavIcon },
   setup() {
     var route = useRoute(), router = useRouter()
     var type = route.params.type === 'oc' ? 'oc' : 'of'

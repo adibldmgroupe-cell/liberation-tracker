@@ -1,6 +1,6 @@
 <template>
   <div v-if="lot">
-    <div class="bc"><span @click="goBack">← Retour au lot</span></div>
+    <div class="bc"><span @click="goBack"><NavIcon name="arrow-left" :size="13" /> Retour au lot</span></div>
     <div class="lh">
       <div class="lh-info">
         <div class="lh-type"><span class="lt-short">AQL {{typeLabel}}</span> <span class="lt-full">(Acceptable quality level)</span></div>
@@ -23,20 +23,20 @@
             <div class="di-svc">Service : {{e.service}}</div>
             <div v-if="e.key==='realisation' && realisationActionable" class="aql-choice" @click.stop>
               <template v-if="!showNc">
-                <button class="btn-c" @click="doConforme">✓ Conforme</button>
-                <button class="btn-nc" @click="showNc=true">✗ Non conforme</button>
+                <button class="btn-c" @click="doConforme"><NavIcon name="check" :size="13" /> Conforme</button>
+                <button class="btn-nc" @click="showNc=true"><NavIcon name="x" :size="13" /> Non conforme</button>
               </template>
               <div v-else class="aql-nc">
                 <textarea v-model="ncMotif" rows="2" placeholder="Observation / motif de la non-conformité…"></textarea>
                 <div class="aql-nc-acts">
-                  <button class="btn-nc" @click="doNonConforme">✗ Confirmer la non-conformité</button>
+                  <button class="btn-nc" @click="doNonConforme"><NavIcon name="x" :size="13" /> Confirmer la non-conformité</button>
                   <button class="btn-cancel" @click="showNc=false;ncMotif=''">Annuler</button>
                 </div>
               </div>
             </div>
-            <div v-if="e.key==='realisation' && cur && cur.avis_aq" class="aql-obs">📝 Observation : {{cur.avis_aq}}</div>
+            <div v-if="e.key==='realisation' && cur && cur.avis_aq" class="aql-obs"><NavIcon name="pencil" :size="13" /> Observation : {{cur.avis_aq}}</div>
             <div v-if="e.key==='ar_resultat' && relanceActionable" class="aql-choice" @click.stop>
-              <button class="btn-relance" @click="doRelance">↻ Relancer un nouvel AQL</button>
+              <button class="btn-relance" @click="doRelance"><NavIcon name="refresh" :size="13" /> Relancer un nouvel AQL</button>
             </div>
           </div>
         </div>
@@ -64,7 +64,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../supabase'
 import { loadPermissions, canPerform } from '../services/permissions'
 import { requestAql, acknowledgeAqlRequest, respondAql, acknowledgeAqlResult } from '../services/actions'
+import NavIcon from '../components/NavIcon.vue'
 export default {
+  components: { NavIcon },
   setup() {
     var route = useRoute(), router = useRouter()
     var type = route.params.type === 'conditionnement' ? 'conditionnement' : 'fabrication'
