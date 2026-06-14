@@ -4,12 +4,12 @@
     <!-- ── En-tête ── -->
     <div class="fa-header">
       <div>
-        <div class="fa-title">🏗 Processus & Ateliers</div>
+        <div class="fa-title"><NavIcon name="factory" :size="18" /> Processus & Ateliers</div>
         <div class="fa-sub">{{ tabSub }}</div>
       </div>
       <div class="fa-actions">
-        <button class="fa-btn-gs-reload" v-if="tab==='gs-ref'||tab==='gs-cad'" @click="reloadGs" :disabled="gsLoading||syncAllSaving" :class="{spinning:gsLoading}">↻ Recharger GS</button>
-        <button class="btn-sync" v-if="tab==='gs-ref'||tab==='gs-cad'" @click="syncAll" :disabled="gsLoading||syncAllSaving||syncRefSaving||syncOpSaving||syncCadSaving" :class="{spinning:syncAllSaving}">{{syncAllSaving?'⟳ Synchronisation…':'🔄 Tout synchroniser GS → base'}}</button>
+        <button class="fa-btn-gs-reload" v-if="tab==='gs-ref'||tab==='gs-cad'" @click="reloadGs" :disabled="gsLoading||syncAllSaving" :class="{spinning:gsLoading}"><NavIcon name="refresh" :size="13" /> Recharger GS</button>
+        <button class="btn-sync" v-if="tab==='gs-ref'||tab==='gs-cad'" @click="syncAll" :disabled="gsLoading||syncAllSaving||syncRefSaving||syncOpSaving||syncCadSaving" :class="{spinning:syncAllSaving}"><template v-if="syncAllSaving">Synchronisation…</template><template v-else><NavIcon name="refresh" :size="13" /> Tout synchroniser GS → base</template></button>
         <span v-if="syncAllResult" class="sync-result sync-ok">{{syncAllResult.msg}}</span>
         <button class="tb-btn-add" v-if="tab==='processus'" @click="openProc(null)">+ Nouveau processus</button>
         <button class="tb-btn-add" v-if="tab==='ateliers'" @click="openAtelier(null)" :disabled="!processus.length">+ Nouvel atelier</button>
@@ -21,8 +21,8 @@
       <div class="at-tabs">
         <button class="tab-btn" :class="{active:tab==='processus'}" @click="tab='processus'">Processus ({{processus.length}})</button>
         <button class="tab-btn" :class="{active:tab==='ateliers'}" @click="tab='ateliers'">Ateliers ({{ateliers.length}})</button>
-        <button class="tab-btn tab-btn-gs" :class="{active:tab==='gs-ref'}" @click="switchGsTab('gs-ref')">📋 GS Référentiel ({{gsRows.length}})</button>
-        <button class="tab-btn tab-btn-gs" :class="{active:tab==='gs-cad'}" @click="switchGsTab('gs-cad')">⚡ GS Cadences ({{gsCadences.length}})</button>
+        <button class="tab-btn tab-btn-gs" :class="{active:tab==='gs-ref'}" @click="switchGsTab('gs-ref')"><NavIcon name="clipboard-check" :size="13" /> GS Référentiel ({{gsRows.length}})</button>
+        <button class="tab-btn tab-btn-gs" :class="{active:tab==='gs-cad'}" @click="switchGsTab('gs-cad')"><NavIcon name="zap" :size="13" /> GS Cadences ({{gsCadences.length}})</button>
       </div>
       <div class="at-filters" v-if="tab==='ateliers'">
         <select class="t-sel" v-model="filterProcId">
@@ -33,26 +33,26 @@
       </div>
       <div class="gs-filters-inline" v-if="tab==='gs-ref'">
         <div class="tb-search-wrap" style="min-width:200px">
-          <span class="ts-icon">🔍</span>
+          <span class="ts-icon"><NavIcon name="search" :size="14" /></span>
           <input class="tb-search" v-model="gsSearch" placeholder="Chercher nom, équipement, N°…" />
         </div>
         <select class="t-sel" v-model="gsFilterProc">
           <option value="">Tous processus</option>
           <option v-for="p in gsProcessusUniques" :key="p" :value="p">{{p}}</option>
         </select>
-        <button class="btn-sync" @click="syncRefToSupabase()" :disabled="syncRefSaving||gsLoading||syncAllSaving">{{syncRefSaving?'⟳ …':'💾 Sync plan_rooms'}}</button>
+        <button class="btn-sync" @click="syncRefToSupabase()" :disabled="syncRefSaving||gsLoading||syncAllSaving"><template v-if="syncRefSaving">…</template><template v-else><NavIcon name="save" :size="13" /> Sync plan_rooms</template></button>
         <span v-if="syncRefResult" class="sync-result" :class="syncRefResult.errors&&syncRefResult.errors.length?'sync-warn':'sync-ok'">{{syncRefResult.errors&&syncRefResult.errors.length?syncRefResult.errors.length+' erreur(s)':syncRefResult.updated+' salles'}}</span>
-        <button class="btn-sync" @click="syncOpMasterToSupabase()" :disabled="syncOpSaving||gsLoading||syncAllSaving">{{syncOpSaving?'⟳ …':'💾 Sync operations'}}</button>
+        <button class="btn-sync" @click="syncOpMasterToSupabase()" :disabled="syncOpSaving||gsLoading||syncAllSaving"><template v-if="syncOpSaving">…</template><template v-else><NavIcon name="save" :size="13" /> Sync operations</template></button>
         <span v-if="syncOpResult" class="sync-result" :class="syncOpResult.err?'sync-warn':'sync-ok'">{{syncOpResult.err || (syncOpResult.updated+' opérations')}}</span>
       </div>
       <div class="gs-filters-inline" v-if="tab==='gs-cad'">
         <div class="tb-search-wrap" style="min-width:200px">
-          <span class="ts-icon">🔍</span>
+          <span class="ts-icon"><NavIcon name="search" :size="14" /></span>
           <input class="tb-search" v-model="gsCadArticle" placeholder="Code article ou description…" />
         </div>
         <input class="t-sel" style="max-width:100px" v-model="gsCadSalle" placeholder="N° salle…" />
         <input class="t-sel" v-model="gsCadDesc" placeholder="Description…" />
-        <button class="btn-sync" @click="syncCadencesToSupabase()" :disabled="syncCadSaving||gsLoading||syncAllSaving">{{syncCadSaving?'⟳ …':'💾 Synchroniser'}}</button>
+        <button class="btn-sync" @click="syncCadencesToSupabase()" :disabled="syncCadSaving||gsLoading||syncAllSaving"><template v-if="syncCadSaving">…</template><template v-else><NavIcon name="save" :size="13" /> Synchroniser</template></button>
         <span v-if="syncCadResult" class="sync-result" :class="syncCadResult.err?'sync-warn':'sync-ok'">{{syncCadResult.err || (syncCadResult.updated+' cadences')}}</span>
       </div>
     </div>
@@ -87,8 +87,8 @@
               <span class="badge" :class="p.actif?'badge-on':'badge-off'">{{p.actif?'Actif':'Inactif'}}</span>
             </td>
             <td class="acts">
-              <button class="ia" @click="openProc(p)" title="Modifier">✏️</button>
-              <button class="ia del" @click="toggleActifProc(p)" :title="p.actif?'Désactiver':'Activer'">{{p.actif?'⏸':'▶'}}</button>
+              <button class="ia" @click="openProc(p)" title="Modifier"><NavIcon name="pencil" :size="13" /></button>
+              <button class="ia del" @click="toggleActifProc(p)" :title="p.actif?'Désactiver':'Activer'"><template v-if="p.actif"><NavIcon name="pause" :size="13" /></template><template v-else><NavIcon name="play" :size="13" /></template></button>
             </td>
           </tr>
           <tr v-if="!processus.length"><td colspan="6" class="empty">Aucun processus — cliquez sur "+ Nouveau processus"</td></tr>
@@ -101,7 +101,7 @@
     <div v-show="tab==='ateliers'">
 
       <div v-if="!processus.length" class="warn-box">
-        ⚠ Aucun processus trouvé. Créez d'abord des processus dans l'onglet <strong>Processus</strong>.
+        <NavIcon name="alert-triangle" :size="14" /> Aucun processus trouvé. Créez d'abord des processus dans l'onglet <strong>Processus</strong>.
       </div>
 
       <div class="table-wrap" v-else>
@@ -136,8 +136,8 @@
                 <span class="badge" :class="at.actif?'badge-on':'badge-off'">{{at.actif?'Actif':'Inactif'}}</span>
               </td>
               <td class="acts">
-                <button class="ia" @click="openAtelier(at)" title="Modifier">✏️</button>
-                <button class="ia del" @click="toggleActifAtelier(at)" :title="at.actif?'Désactiver':'Activer'">{{at.actif?'⏸':'▶'}}</button>
+                <button class="ia" @click="openAtelier(at)" title="Modifier"><NavIcon name="pencil" :size="13" /></button>
+                <button class="ia del" @click="toggleActifAtelier(at)" :title="at.actif?'Désactiver':'Activer'"><template v-if="at.actif"><NavIcon name="pause" :size="13" /></template><template v-else><NavIcon name="play" :size="13" /></template></button>
               </td>
             </tr>
             <tr v-if="!getAteliersByProc(p.id).length" class="atelier-row">
@@ -195,8 +195,8 @@
                   <td class="gs-r">{{r.maint_curative_shift_min!=null?r.maint_curative_shift_min+' min':'—'}}</td>
                   <td class="gs-mono">{{r.room_code}}</td>
                   <td>
-                    <span v-if="r.inSchema" class="badge badge-on">✓ Schéma</span>
-                    <span v-else class="badge badge-off">⚠ Absent</span>
+                    <span v-if="r.inSchema" class="badge badge-on"><NavIcon name="check" :size="12" /> Schéma</span>
+                    <span v-else class="badge badge-off"><NavIcon name="alert-triangle" :size="12" /> Absent</span>
                   </td>
                 </tr>
               </tbody>
@@ -302,6 +302,7 @@ import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../../supabase'
 import { canPerform } from '../../services/permissions'
 import { getAll as gsGetAll, clearCache as gsClearCache } from '../../services/googleSheets'
+import NavIcon from '../../components/NavIcon.vue'
 
 // Codes présents dans NODES_DEF de ProductionFlowPage (source de vérité schéma SVG)
 var SCHEMA_CODES_SET = new Set([
@@ -325,6 +326,7 @@ var GS_PROC_COLORS = {
 var GS_PROC_ORDER = ['Fabrication','Conditionnement','PF en attente de livraison','SF en attente de conditionnement']
 
 export default {
+  components: { NavIcon },
   setup() {
     var tab = ref('processus')
     var processus = ref([])

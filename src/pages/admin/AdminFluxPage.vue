@@ -2,11 +2,11 @@
   <div class="flux-admin">
     <div class="fa-header">
       <div>
-        <div class="fa-title">⚙ Paramétrage flux produits</div>
+        <div class="fa-title"><NavIcon name="workflow" :size="18" /> Paramétrage flux produits</div>
         <div class="fa-sub">Configurez les étapes de fabrication et de conditionnement par produit</div>
       </div>
       <button class="fa-btn-gs-reload" @click="reloadGs" :disabled="gsReloading" :class="{spinning:gsReloading}">
-        ↻ Forcer rechargement GS
+        <NavIcon name="refresh" :size="14" /> Forcer rechargement GS
       </button>
     </div>
 
@@ -14,17 +14,17 @@
     <div class="tab-body">
       <div class="tb-toolbar">
         <div class="tb-search-wrap">
-          <span class="ts-icon">🔍</span>
+          <span class="ts-icon"><NavIcon name="search" :size="14" /></span>
           <input class="tb-search" placeholder="Rechercher produit ou code…" v-model="fluxSearch"/>
         </div>
         <div class="tb-filters">
           <div class="view-toggle">
             <button class="vt-btn" :class="{active:fluxView==='pivot'}" @click="fluxView='pivot'" title="Vue tableau croisé machines">⊞ Pivot</button>
-            <button class="vt-btn" :class="{active:fluxView==='cards'}" @click="fluxView='cards'" title="Vue fiches">▤ Fiches</button>
+            <button class="vt-btn" :class="{active:fluxView==='cards'}" @click="fluxView='cards'" title="Vue fiches"><NavIcon name="layout-dashboard" :size="13" /> Fiches</button>
           </div>
-          <button class="tb-btn-gs" @click="openGsImport">↑ Google Sheets</button>
+          <button class="tb-btn-gs" @click="openGsImport"><NavIcon name="upload" :size="13" /> Google Sheets</button>
           <button class="tb-btn-add" @click="openNewFlux">+ Nouveau flux</button>
-          <button class="tb-btn-clear" @click="clearFlux" title="Vider tous les flux importés">🗑 Vider l'import</button>
+          <button class="tb-btn-clear" @click="clearFlux" title="Vider tous les flux importés"><NavIcon name="trash" :size="13" /> Vider l'import</button>
         </div>
       </div>
 
@@ -100,8 +100,8 @@
                   <div class="prs-room prs-flex" v-else>flexible</div>
                 </div>
                 <div class="prs-actions">
-                  <button class="prs-btn" @click="openEditStep(step)" title="Modifier">✏</button>
-                  <button class="prs-btn prs-del" @click="deleteStep(step)" title="Supprimer">✕</button>
+                  <button class="prs-btn" @click="openEditStep(step)" title="Modifier"><NavIcon name="pencil" :size="13" /></button>
+                  <button class="prs-btn prs-del" @click="deleteStep(step)" title="Supprimer"><NavIcon name="x" :size="13" /></button>
                 </div>
               </div>
               <button class="pr-add-step" @click="openAddStep(p.product_code, p.product_name, route.route, null)">+ Étape</button>
@@ -125,9 +125,9 @@
             <option v-for="r in g.rooms" :key="r.code" :value="r">{{r.nom}}</option>
           </optgroup>
         </select>
-        <button class="ba-btn ba-on" :disabled="!bulkRoom" @click="bulkAssign(true)">✓ Cocher</button>
-        <button class="ba-btn ba-off" :disabled="!bulkRoom" @click="bulkAssign(false)">✕ Décocher</button>
-        <button class="ba-clear" @click="selectedRows=[]">✕ Tout désélectionner</button>
+        <button class="ba-btn ba-on" :disabled="!bulkRoom" @click="bulkAssign(true)"><NavIcon name="check" :size="13" /> Cocher</button>
+        <button class="ba-btn ba-off" :disabled="!bulkRoom" @click="bulkAssign(false)"><NavIcon name="x" :size="13" /> Décocher</button>
+        <button class="ba-clear" @click="selectedRows=[]"><NavIcon name="x" :size="13" /> Tout désélectionner</button>
       </div>
     </transition>
 
@@ -135,7 +135,7 @@
     <div class="modal-overlay" v-if="stepModal.open" @click.self="stepModal.open=false">
       <div class="modal-box">
         <div class="modal-hd">
-          {{stepModal.id ? '✏ Modifier étape' : '+ Ajouter étape'}}
+          <template v-if="stepModal.id"><NavIcon name="pencil" :size="14" /> Modifier étape</template><template v-else><NavIcon name="plus" :size="14" /> Ajouter étape</template>
           <span class="mh-sub">— {{stepModal.product_code}}</span>
         </div>
         <div class="modal-body">
@@ -178,7 +178,7 @@
     <!-- ── MODAL GOOGLE SHEETS IMPORT ── -->
     <div class="modal-overlay" v-if="gsModal.open" @click.self="gsModal.open=false">
       <div class="modal-box modal-wide">
-        <div class="modal-hd">↑ Import Google Sheets / CSV<span class="mh-sub"> — product_flux</span></div>
+        <div class="modal-hd"><NavIcon name="upload" :size="16" /> Import Google Sheets / CSV<span class="mh-sub"> — product_flux</span></div>
         <div class="modal-body">
           <div class="mf-row">
             <label>URL Google Sheets (export CSV public)</label>
@@ -236,6 +236,7 @@
 import { ref, computed, onMounted, reactive } from 'vue'
 import { supabase } from '../../supabase'
 import { canPerform } from '../../services/permissions'
+import NavIcon from '../../components/NavIcon.vue'
 
 // Labels des groupes d'opérations
 var OP_LABELS = {
@@ -250,6 +251,7 @@ var OP_LABELS = {
 }
 
 export default {
+  components: { NavIcon },
   setup() {
     var fluxSearch     = ref('')
     var fluxTypeFilter = ref('')
