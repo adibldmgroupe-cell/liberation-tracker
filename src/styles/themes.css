@@ -115,8 +115,108 @@ html[data-theme="workshop"] .top-bar {
   background: var(--th-topbar);
   border-bottom-color: var(--th-border);
 }
-html[data-theme="night"] .sidebar,
-html[data-theme="workshop"] .sidebar { background: var(--th-sidebar); }
+/* ══════════════════════════════════════════════════════════════════
+   SIDEBAR — adaptation aux 3 thèmes (signature commune + personnalité)
+   Signature : aurora d'accent en haut + rail d'accent (inset) sur l'item
+   actif + teinte d'accent au survol + icône active reprend l'accent.
+   ☀️ Jour    = "Lavande"  — sidebar CLAIRE, accent violet  #7c3aed
+   🌙 Nuit    = "Cosmos"   — indigo profond, accent périwinkle #7c7cff
+   🏭 Atelier = graphite industriel, accent orange #ff9800
+   (specificité html[data-theme] .x = 0,2,1 > scoped 0,2,0 → gagne, règle N°16)
+══════════════════════════════════════════════════════════════════ */
+
+/* ── ☀️ JOUR — Lavande (sidebar claire) ──────────────────────────── */
+html[data-theme="day"] .sidebar {
+  background:
+    radial-gradient(130% 55% at 50% -10%, rgba(124,58,237,.10), transparent 70%),
+    linear-gradient(180deg, #f6f3fe 0%, #efeaf9 100%);
+  color: #5b5573;
+  border-right: 1px solid #e7e1f5;
+}
+html[data-theme="day"] .sidebar-logo { border-bottom-color: #e7e1f5; }
+html[data-theme="day"] .logo-text    { color: #1a1a2e; }
+html[data-theme="day"] .logo-sub     { color: #a78bda; }
+html[data-theme="day"] .nav-item,
+html[data-theme="day"] .nav-grp-hd   { color: #6b6385; }
+html[data-theme="day"] .nav-item:hover,
+html[data-theme="day"] .nav-grp-hd:hover { color: #7c3aed; background: rgba(124,58,237,.06); }
+html[data-theme="day"] .nav-item.active {
+  color: #7c3aed;
+  background: rgba(124,58,237,.10);
+  box-shadow: inset 3px 0 0 #7c3aed;
+}
+html[data-theme="day"] .nav-sep      { color: #b3a8d6; }
+html[data-theme="day"] .nav-grp-chev { color: #b3a8d6; }
+html[data-theme="day"] .nav-sub:not(.active)        { color: #8b82ab !important; }
+html[data-theme="day"] .nav-sub:hover:not(.active)  { color: #7c3aed !important; }
+html[data-theme="day"] .sidebar-user { border-top-color: #e7e1f5; }
+html[data-theme="day"] .user-name    { color: #3f3a52; }
+html[data-theme="day"] .user-service { color: #a99fc7; }
+html[data-theme="day"] .logout-btn   { color: #a99fc7; }
+html[data-theme="day"] .logout-btn:hover { color: #7c3aed; }
+/* user-avatar jour : déjà var(--th-accent) plus bas (section AppLayout) */
+
+/* ── 🌙 NUIT — Cosmos (indigo profond) ───────────────────────────── */
+html[data-theme="night"] .sidebar {
+  background:
+    radial-gradient(130% 55% at 50% -10%, rgba(124,124,255,.16), transparent 70%),
+    linear-gradient(180deg, #0e0e2a 0%, #07071a 65%);
+  color: #b9b9e0;
+  border-right: 1px solid #1b1b3c;
+}
+html[data-theme="night"] .sidebar-logo { border-bottom-color: #1b1b3c; }
+html[data-theme="night"] .logo-text    { color: #e8e8ff; }
+html[data-theme="night"] .logo-sub     { color: #6e6ea8; }
+html[data-theme="night"] .nav-item,
+html[data-theme="night"] .nav-grp-hd   { color: #8e8eb8; }
+html[data-theme="night"] .nav-item:hover,
+html[data-theme="night"] .nav-grp-hd:hover { color: #dcdcff; background: rgba(124,124,255,.08); }
+html[data-theme="night"] .nav-item.active {
+  color: #b3b3ff;
+  background: rgba(124,124,255,.16);
+  box-shadow: inset 3px 0 0 #7c7cff;
+}
+html[data-theme="night"] .nav-sep      { color: #50507e; }
+html[data-theme="night"] .nav-grp-chev { color: #50507e; }
+html[data-theme="night"] .nav-sub:not(.active)        { color: #6e6ea0 !important; }
+html[data-theme="night"] .nav-sub:hover:not(.active)  { color: #b3b3ff !important; }
+html[data-theme="night"] .sidebar-user { border-top-color: #1b1b3c; }
+html[data-theme="night"] .user-avatar  { background: #7c7cff; }
+html[data-theme="night"] .user-name    { color: #d8d8f0; }
+html[data-theme="night"] .user-service { color: #6e6ea0; }
+html[data-theme="night"] .logout-btn   { color: #6e6ea0; }
+html[data-theme="night"] .logout-btn:hover { color: #b3b3ff; }
+
+/* ── 🏭 ATELIER — graphite industriel ────────────────────────────── */
+html[data-theme="workshop"] .sidebar {
+  background:
+    radial-gradient(130% 55% at 50% -10%, rgba(255,152,0,.10), transparent 70%),
+    linear-gradient(180deg, #191919 0%, #101010 100%);
+  color: #c4c4c4;
+  border-right: 1px solid #292929;
+}
+html[data-theme="workshop"] .sidebar-logo { border-bottom-color: #292929; }
+html[data-theme="workshop"] .logo-text    { color: #f0f0f0; }
+html[data-theme="workshop"] .logo-sub     { color: #b07a3a; }
+html[data-theme="workshop"] .nav-item,
+html[data-theme="workshop"] .nav-grp-hd   { color: #9a9a9a; }
+html[data-theme="workshop"] .nav-item:hover,
+html[data-theme="workshop"] .nav-grp-hd:hover { color: #ffc680; background: rgba(255,152,0,.07); }
+html[data-theme="workshop"] .nav-item.active {
+  color: #ffb04d;
+  background: rgba(255,152,0,.14);
+  box-shadow: inset 3px 0 0 #ff9800;
+}
+html[data-theme="workshop"] .nav-sep      { color: #5a5a5a; }
+html[data-theme="workshop"] .nav-grp-chev { color: #5a5a5a; }
+html[data-theme="workshop"] .nav-sub:not(.active)        { color: #777 !important; }
+html[data-theme="workshop"] .nav-sub:hover:not(.active)  { color: #ffb04d !important; }
+html[data-theme="workshop"] .sidebar-user { border-top-color: #292929; }
+html[data-theme="workshop"] .user-avatar  { background: #ff9800; }
+html[data-theme="workshop"] .user-name    { color: #e0e0e0; }
+html[data-theme="workshop"] .user-service { color: #888; }
+html[data-theme="workshop"] .logout-btn   { color: #888; }
+html[data-theme="workshop"] .logout-btn:hover { color: #ffb04d; }
 
 /* ── En-têtes de pages (.ph, .pt, .ph-right) ─────────────────── */
 html[data-theme="night"] .ph,
