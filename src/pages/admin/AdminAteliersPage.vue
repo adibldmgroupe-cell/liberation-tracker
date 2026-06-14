@@ -300,6 +300,7 @@
 <script>
 import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../../supabase'
+import { canPerform } from '../../services/permissions'
 import { getAll as gsGetAll, clearCache as gsClearCache } from '../../services/googleSheets'
 
 // Codes présents dans NODES_DEF de ProductionFlowPage (source de vérité schéma SVG)
@@ -394,6 +395,7 @@ export default {
     }
 
     var saveProc = async function() {
+      if (!canPerform('gerer_ateliers')) { alert('Permission « gérer ateliers/machines » requise'); return }
       if (!procModal.value.nom_process.trim()) { procModal.value.err='Nom requis'; return }
       procModal.value.saving = true; procModal.value.err = ''
       var payload = {
@@ -415,6 +417,7 @@ export default {
     }
 
     var toggleActifProc = async function(p) {
+      if (!canPerform('gerer_ateliers')) { alert('Permission « gérer ateliers/machines » requise'); return }
       await supabase.from('processus').update({ actif: !p.actif }).eq('id', p.id)
       await loadAll()
     }
@@ -429,6 +432,7 @@ export default {
     }
 
     var saveAtelier = async function() {
+      if (!canPerform('gerer_ateliers')) { alert('Permission « gérer ateliers/machines » requise'); return }
       if (!atelierModal.value.nom_atelier.trim()) { atelierModal.value.err='Nom requis'; return }
       if (!atelierModal.value.processus_id) { atelierModal.value.err='Processus requis'; return }
       atelierModal.value.saving = true; atelierModal.value.err = ''
@@ -450,6 +454,7 @@ export default {
     }
 
     var toggleActifAtelier = async function(at) {
+      if (!canPerform('gerer_ateliers')) { alert('Permission « gérer ateliers/machines » requise'); return }
       await supabase.from('ateliers').update({ actif: !at.actif }).eq('id', at.id)
       await loadAll()
     }
@@ -509,6 +514,7 @@ export default {
 
     // ── Synchroniser GS Référentiel → plan_rooms (colonnes TRS) ──
     var syncRefToSupabase = async function(skipReload) {
+      if (!canPerform('gerer_ateliers')) { alert('Permission « gérer ateliers/machines » requise'); return }
       if (skipReload !== true) { gsClearCache(); await loadGs() }   // 1 clic = recharge GS frais + stocke (comme Réception SAP)
       syncRefSaving.value = true; syncRefResult.value = null
       if (!gsRows.value.length) { syncRefResult.value = { updated: 0, errors: ['Aucune donnée GS chargée'] }; syncRefSaving.value = false; return }
@@ -542,6 +548,7 @@ export default {
 
     // ── Synchroniser GS Cadences → table cadences ──
     var syncCadencesToSupabase = async function(skipReload) {
+      if (!canPerform('gerer_ateliers')) { alert('Permission « gérer ateliers/machines » requise'); return }
       if (skipReload !== true) { gsClearCache(); await loadGs() }   // 1 clic = recharge GS frais + stocke
       syncCadSaving.value = true; syncCadResult.value = null
       if (!gsCadences.value.length) { syncCadResult.value = { err: 'Aucune cadence dans Google Sheets' }; syncCadSaving.value = false; return }
@@ -566,6 +573,7 @@ export default {
 
     // ── Synchroniser GS Référentiel → operations_master ──
     var syncOpMasterToSupabase = async function(skipReload) {
+      if (!canPerform('gerer_ateliers')) { alert('Permission « gérer ateliers/machines » requise'); return }
       if (skipReload !== true) { gsClearCache(); await loadGs() }   // 1 clic = recharge GS frais + stocke
       syncOpSaving.value = true; syncOpResult.value = null
       if (!gsRows.value.length) { syncOpResult.value = { err: 'Aucune donnée GS chargée' }; syncOpSaving.value = false; return }
