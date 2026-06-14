@@ -135,3 +135,62 @@ export var checkUpstreamForAtelier = async function(lotId, productCode, atelierI
 }
 // Libellés lisibles d'une liste de stageKeys
 export var stageLabels = function(keys) { return (keys || []).map(function(k) { return STAGE_LABELS[k] || k }).join(', ') }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FEUILLE DE ROUTE D'UN LOT (parcours physique de production)
+// Pesée → étapes de fabrication (selon la route) → conditionnement → réception
+// stock → libération. Statut de chaque étape dérivé de suivi_fabrication /
+// suivi_conditionnement (date_fin = terminé, sinon en cours, sinon à venir).
+// Renvoie [{ key, label, status:'done'|'current'|'wait'|'ko', date }].
+// ═══════════════════════════════════════════════════════════════════════════
+export var buildLotRoadmap = async function(lot, productCode) {
+  var steps = []
+  // 1) étapes de la route du produit (fab + cond)
+  var routeStages = {}
+  if (productCode) {
+    var pf = await supabase.from('product_flux').select('room_code,op_number').eq('product_code', productCode)
+    if (!pf.error) (pf.data || []).forEach(function(f) {
+      var st = f.room_code ? ROOM_STAGE[f.room_code] : OP_STAGE[f.op_number]
+      if (st) routeStages[st] = true
+    })
+  }
+  // 2) map plan_rooms (atelier_id / equipement_id → étape) + suivis du lot
+  var pr = await _loadPlanRooms()
+  var atStage = {}, eqStage = {}
+  pr.forEach(function(p) { var st = ROOM_STAGE[p.code]; if (st) { if (p.atelier_id != null) atStage[p.atelier_id] = st; if (p.equipement_id != null) eqStage[p.equipement_id] = st } })
+  var byStage = {}
+  var note = function(stage, r) {
+    if (!stage) return
+    var cur = byStage[stage]
+    if (!cur || (r.date_fin && !cur.date_fin)) byStage[stage] = r   // garder le plus avancé
+  }
+  if (lot && lot.id) {
+    var sres = await Promise.all([
+      supabase.from('suivi_fabrication').select('atelier_id,statut,date_debut,date_fin').eq('lot_id', lot.id).is('deleted_at', null),
+      supabase.from('suivi_conditionnement').select('equipement_id,statut,date_debut,date_fin').eq('lot_id', lot.id).is('deleted_at', null)
+    ])
+    ;(sres[0].data || []).forEach(function(r) { note(atStage[r.atelier_id], r) })
+    ;(sres[1].data || []).forEach(function(r) { note(eqStage[r.equipement_id], r) })
+  }
+  // route = étapes du produit ∪ étapes effectivement suivies (défensif), ordonnées
+  Object.keys(byStage).forEach(function(s) { routeStages[s] = true })
+  STAGE_ORDER.filter(function(s) { return routeStages[s] }).forEach(function(s) {
+    var rec = byStage[s]
+    var done = rec && (rec.date_fin || rec.statut === 'Terminé' || rec.statut === 'Clôturé')
+    steps.push({ key: s, label: STAGE_LABELS[s] || s, status: !rec ? 'wait' : (done ? 'done' : 'current'), date: rec ? (rec.date_fin || rec.date_debut) : null })
+  })
+  // 3) Réception en stock (statut_sap renseigné = reçu)
+  var sap = lot ? lot.statut_sap : null
+  var received = !!sap && sap !== 'vide'
+  steps.push({ key: 'reception', label: 'Réception stock', status: received ? 'done' : 'wait', date: received ? (lot.date_declaration || null) : null })
+  // 4) Libération (refusé → ko ; libéré/accepté → done ; reçu mais non libéré → en cours)
+  var refuse = sap === 'refuse'
+  var libere = !!(lot && (lot.date_liberation || sap === 'accepte'))
+  steps.push({ key: 'liberation', label: 'Libération', status: refuse ? 'ko' : (libere ? 'done' : (received ? 'current' : 'wait')), date: (lot && lot.date_liberation) || null })
+  // Passe arrière : une étape « à venir » située AVANT une étape déjà atteinte est implicitement
+  // passée (lot reçu/libéré sans suivi de production tracé dans l'app — ex. lots importés du SAP).
+  var lastReached = -1
+  for (var i = 0; i < steps.length; i++) { var st = steps[i].status; if (st === 'done' || st === 'current' || st === 'ko') lastReached = i }
+  for (var j = 0; j < lastReached; j++) { if (steps[j].status === 'wait') steps[j].status = 'done' }
+  return steps
+}

@@ -43,6 +43,9 @@
       <div class="k"><div class="kv">{{leadTime||'—'}}<span class="ku" v-if="leadTime">j</span></div><div class="kl">Lead time</div></div>
     </div>
 
+    <!-- Feuille de route — parcours de production du lot -->
+    <LotRoadmap v-if="roadmap.length" :steps="roadmap" />
+
     <!-- Circuits de lancement (cartes harmonisées — clic → détail) -->
     <div class="section" v-if="of||oc">
       <div class="sh"><span>Circuits de lancement</span></div>
@@ -250,11 +253,14 @@ import { supabase } from '../supabase'
 import { loadPermissions, canPerform, getPermissionForEtape } from '../services/permissions'
 import { validateOrder, libererLot, declareDeviation, closeDeviation, declareRVP, declareMajDoc, declareClotureSap, requestAql, respondAql, isAqlConforme, modifyLot, deleteLot } from '../services/actions'
 import NavIcon from '../components/NavIcon.vue'
+import LotRoadmap from '../components/LotRoadmap.vue'
+import { buildLotRoadmap } from '../services/flux'
 export default {
-  components: { NavIcon },
+  components: { NavIcon, LotRoadmap },
   setup() {
     var route = useRoute(), router = useRouter()
     var lot = ref(null), prod = ref({}), of = ref(null), oc = ref(null), ofVals = ref([]), ocVals = ref([])
+    var roadmap = ref([])
     var docs = ref([]), devs = ref([]), aqls = ref([]), dossier = ref(null), userId = ref(null), userService = ref('')
     var showDevForm = ref(false), devObs = ref(''), devBloquante = ref(false), devNumeroDn = ref(''), showModify = ref(false)
     var devEdits = ref({})
@@ -554,6 +560,7 @@ export default {
         ])
         prod.value=r2[0].data||{}
         editCodeProd.value=prod.value.code_article||''
+        try { roadmap.value = await buildLotRoadmap(l, prod.value.code_article) } catch(e){ roadmap.value=[] }
         ofVals.value=(r2[1].data||[]).map(function(v){return{etape:v.etape,validated_at:v.validated_at,user:v.profiles?v.profiles.prenom+' '+v.profiles.nom:''}})
         ocVals.value=(r2[2].data||[]).map(function(v){return{etape:v.etape,validated_at:v.validated_at,user:v.profiles?v.profiles.prenom+' '+v.profiles.nom:''}})
         var toDate=function(d){return d?d.split('T')[0]:''}
@@ -598,7 +605,7 @@ export default {
     // Vue Router réutilise l'instance → recharger explicitement, sinon données du lot précédent.
     watch(function(){ return route.params.id }, function(nv, ov){ if(nv && nv !== ov) loadLot() })
 
-    return{lot,prod,of,oc,ofVals,ocVals,docs,devs,aqls,dossier,detailLoading,statusLabels,circuitSteps,isAdmin,
+    return{lot,prod,of,oc,ofVals,ocVals,docs,devs,aqls,dossier,roadmap,detailLoading,statusLabels,circuitSteps,isAdmin,
       showDevForm,devObs,devBloquante,devNumeroDn,showModify,editNumLot,editCodeProd,prodSuggestions,rvpDocs,mainDocs,
       getVal,pipClass,stepIndClass,circuitFlowClass,stepStatus,stepClickable,stepClick,circuitOverallInd,circuitSummary,fmtDt,ofV,ocV,docsOk,docsReq,devsOpen,leadTime,dossierComplete,canValidateStep,
       docTypeLabel,docStatLabel,indClass,dsClass,rvpServiceLabel,isDocBlocked,goBack,
