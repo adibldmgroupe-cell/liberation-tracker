@@ -18,7 +18,7 @@
             <td v-for="t in TYPES" :key="t.key" class="dl-cell">
               <template v-if="s.types.includes(t.key)">
                 <input type="number" min="0" class="dl-input" :value="vals[s.key+'|'+t.key]"
-                       @change="onSave(s.key, t.key, $event)" placeholder="—" />
+                       :disabled="!canEditRow(s.key)" @change="onSave(s.key, t.key, $event)" placeholder="—" />
                 <span class="dl-unit">j</span>
               </template>
               <span v-else class="dl-na">·</span>
@@ -55,7 +55,7 @@ export default {
     }
 
     var onSave = async function(service, typeKey, ev) {
-      if (!canPerform('gerer_delais')) { alert('Permission « gérer les délais documentaires » requise'); ev.target.value = (vals.value[service + '|' + typeKey] != null ? vals.value[service + '|' + typeKey] : ''); return }
+      if (!canEditRow(service)) { alert('Vous ne pouvez gérer que les délais de votre service.'); ev.target.value = (vals.value[service + '|' + typeKey] != null ? vals.value[service + '|' + typeKey] : ''); return }
       var raw = (ev.target.value || '').trim()
       var key = service + '|' + typeKey
       var u = await supabase.auth.getUser(); var uid = u.data.user ? u.data.user.id : null
@@ -76,8 +76,15 @@ export default {
       setTimeout(function() { savedMsg.value = '' }, 1500)
     }
 
-    onMounted(load)
-    return { TYPES, SERVICES, vals, loaded, savedMsg, onSave }
+    // Chaque service ne gère QUE sa propre ligne (admin = toutes). Édition requiert gerer_delais.
+    var myService = ref('')
+    var canEditRow = function(svcKey) { if (!canPerform('gerer_delais')) return false; return myService.value === 'admin' || svcKey === myService.value }
+    onMounted(async function() {
+      var u = await supabase.auth.getUser()
+      if (u.data.user) { var p = await supabase.from('profiles').select('service').eq('id', u.data.user.id).single(); if (p.data) myService.value = p.data.service }
+      await load()
+    })
+    return { TYPES, SERVICES, vals, loaded, savedMsg, onSave, canEditRow }
   }
 }
 </script>
