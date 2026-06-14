@@ -52,7 +52,7 @@
             <td class="ctr">{{e.travaille_weekend ? '✓' : '—'}}</td>
             <td><span class="stat-badge" :class="e.actif?'actif':'inactif'">{{e.actif?'Actif':'Inactif'}}</span></td>
             <td class="acts">
-              <button class="ia" @click="openModal(e)" title="Modifier">✏️</button>
+              <button class="ia" @click="openModal(e)" title="Modifier"><NavIcon name="pencil" :size="13" /></button>
             </td>
           </tr>
         </tbody>
@@ -140,7 +140,9 @@
 import { ref, computed, reactive, onMounted } from 'vue'
 import { supabase } from '../../supabase'
 import { canPerform } from '../../services/permissions'
+import NavIcon from '../../components/NavIcon.vue'
 export default {
+  components: { NavIcon },
   setup() {
     var equipements = ref([])
     var loading     = ref(false)

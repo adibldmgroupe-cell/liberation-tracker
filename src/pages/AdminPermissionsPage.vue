@@ -4,13 +4,13 @@
     <!-- ── En-tête ── -->
     <div class="fa-header">
       <div>
-        <div class="fa-title">🔐 Permissions par service</div>
+        <div class="fa-title"><NavIcon name="lock" :size="18" /> Permissions par service</div>
         <div class="fa-sub" v-if="!loading">{{services.length}} services · {{allPerms.length}} permissions</div>
         <div class="fa-sub" v-else>Chargement…</div>
       </div>
       <div class="fa-actions">
         <button class="btn-mgr" :class="{'btn-mgr-on': showMgr}" @click="showMgr=!showMgr">
-          {{showMgr ? '✕ Fermer' : '⚙ Gérer les services'}}
+          <template v-if="showMgr"><NavIcon name="x" :size="13" /> Fermer</template><template v-else><NavIcon name="settings" :size="13" /> Gérer les services</template>
         </button>
       </div>
     </div>
@@ -23,8 +23,8 @@
           <template v-if="editSvc && editSvc.id===svc.id">
             <span class="ms-id">{{svc.id}}</span>
             <input v-model="editSvc.label" class="mgr-inp" @keyup.enter="saveEditSvc" @keyup.escape="editSvc=null" />
-            <button class="mb ok" @click="saveEditSvc">✓</button>
-            <button class="mb cancel" @click="editSvc=null">✕</button>
+            <button class="mb ok" @click="saveEditSvc"><NavIcon name="check" :size="13" /></button>
+            <button class="mb cancel" @click="editSvc=null"><NavIcon name="x" :size="13" /></button>
           </template>
           <template v-else>
             <span class="ms-id">{{svc.id}}</span>
@@ -48,7 +48,7 @@
     <div v-else>
       <!-- Legend -->
       <div class="legend">
-        <span class="leg-item"><span class="cb-on-eg">✓</span> Autorisé</span>
+        <span class="leg-item"><span class="cb-on-eg"><NavIcon name="check" :size="12" /></span> Autorisé</span>
         <span class="leg-sep">·</span>
         <span class="leg-item">Clic <strong>en-tête service</strong> = toggle toute la colonne</span>
         <span class="leg-sep">·</span>
@@ -72,7 +72,7 @@
               >
                 <div class="svc-hd-name">{{svc.label}}</div>
                 <div class="svc-hd-count">{{countAllowed(svc.id)}}/{{allPerms.length}}</div>
-                <button class="svc-reset-btn" @click.stop="resetService(svc)" title="Réinitialiser aux permissions par défaut">↺ Réinit.</button>
+                <button class="svc-reset-btn" @click.stop="resetService(svc)" title="Réinitialiser aux permissions par défaut"><NavIcon name="refresh" :size="13" /> Réinit.</button>
               </th>
             </tr>
           </thead>
@@ -102,7 +102,7 @@
                   class="cb-cell"
                   @click="togglePerm(svc.id, p.key)"
                 >
-                  <span :class="isAllowed(svc.id, p.key) ? 'cb-on' : 'cb-off'">{{isAllowed(svc.id, p.key) ? '✓' : ''}}</span>
+                  <span :class="isAllowed(svc.id, p.key) ? 'cb-on' : 'cb-off'"><NavIcon v-if="isAllowed(svc.id, p.key)" name="check" :size="12" /></span>
                 </td>
               </tr>
             </template>
@@ -117,8 +117,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../supabase'
 import { canPerform } from '../services/permissions'
+import NavIcon from '../components/NavIcon.vue'
 
 export default {
+  components: { NavIcon },
   setup() {
     var loading = ref(true)
     var permMap = ref({})

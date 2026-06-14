@@ -4,21 +4,21 @@
     <!-- ── En-tête ── -->
     <div class="fa-header">
       <div>
-        <div class="fa-title">🗃 Catalogue Produits Finis</div>
+        <div class="fa-title"><NavIcon name="package" :size="18" /> Catalogue Produits Finis</div>
         <div class="fa-sub">{{ products.length }} produit(s) au total · {{ filtered.length }} affiché(s)</div>
       </div>
       <div class="fa-actions">
         <button class="fa-btn-gs-reload" :disabled="!gsUrl || gsImporting" @click="importFromGs">
           <span v-if="gsImporting">⟳ Import… {{ gsProgress }}%</span>
-          <span v-else>🔄 Actualiser le catalogue</span>
+          <span v-else><NavIcon name="refresh" :size="13" /> Actualiser le catalogue</span>
         </button>
-        <button class="fa-btn-gs-reload" @click="showGsConfig=!showGsConfig">{{ showGsConfig ? '▲ Config' : '⚙ Config GS' }}</button>
+        <button class="fa-btn-gs-reload" @click="showGsConfig=!showGsConfig"><template v-if="showGsConfig"><NavIcon name="chevron-up" :size="12" /> Config</template><template v-else><NavIcon name="settings" :size="13" /> Config GS</template></button>
       </div>
     </div>
 
     <!-- Config Google Sheets -->
     <div v-if="showGsConfig" class="gs-bar">
-      <span class="gs-icon">🔗</span>
+      <span class="gs-icon"><NavIcon name="link" :size="14" /></span>
       <span class="gs-label">Google Sheets PF</span>
       <span v-if="gsUrl" class="gs-url-hint">{{ gsUrl.slice(0, 60) }}…</span>
       <input v-model="gsUrl" class="gs-url-inp" type="url" placeholder="URL CSV Google Sheets" @change="saveGsUrl" />
@@ -32,13 +32,13 @@
       <span class="gs-stat c">+{{ gsStats.created }} créés</span>
       <span class="gs-stat u">{{ gsStats.updated }} mis à jour</span>
       <span v-if="gsStats.errors.length" class="gs-stat e">{{ gsStats.errors.length }} erreur(s)</span>
-      <span class="gs-stat-close" @click="gsStats=null">✕</span>
+      <span class="gs-stat-close" @click="gsStats=null"><NavIcon name="x" :size="13" /></span>
     </div>
 
     <!-- ── Toolbar ── -->
     <div class="tb-toolbar">
       <div class="tb-search-wrap">
-        <span class="ts-icon">🔍</span>
+        <span class="ts-icon"><NavIcon name="search" :size="14" /></span>
         <input v-model="searchQ" class="tb-search" placeholder="Rechercher code, description, DCI…" />
       </div>
       <div class="tb-filters">
@@ -147,6 +147,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../supabase'
 import { canPerform } from '../services/permissions'
+import NavIcon from '../components/NavIcon.vue'
 
 var GS_KEY = 'liberation_gs_url_products'
 var DEFAULT_GS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQqKb5_i0U7YeQYMiNEDy4X2gq6W_78NA2EuC2gRqSVXOKuBcBuXR8ASrE9Eq3admceATv4_gdAUppc/pub?gid=0&single=true&output=csv'
@@ -180,6 +181,7 @@ function splitCsvLine(line) {
 }
 
 export default {
+  components: { NavIcon },
   setup() {
     var products = ref([])
     var loading = ref(true)

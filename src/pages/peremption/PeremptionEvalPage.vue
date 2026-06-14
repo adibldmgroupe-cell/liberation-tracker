@@ -1,6 +1,6 @@
 <template>
   <div v-if="product" class="pe">
-    <div class="bc"><span @click="goBack">← Retour à la matrice</span></div>
+    <div class="bc"><span @click="goBack"><NavIcon name="arrow-left" :size="13" /> Retour à la matrice</span></div>
 
     <!-- En-tête produit -->
     <div class="lh">
@@ -28,7 +28,7 @@
       <div class="crit" v-for="c in critFor(ax.key)" :key="c.key">
         <div class="crit-head">
           <span class="crit-label">{{ c.label }}</span>
-          <span class="crit-logique" :title="c.logique">ⓘ {{ c.logique }}</span>
+          <span class="crit-logique" :title="c.logique"><NavIcon name="info" :size="13" /> {{ c.logique }}</span>
         </div>
         <div class="crit-hint" v-if="hintFor(c.key)">{{ hintFor(c.key) }}</div>
         <div class="scores">
@@ -62,7 +62,7 @@
           {{ submitting ? 'Enregistrement…' : (canEval ? 'Enregistrer l\'évaluation' : 'Permission requise') }}
         </button>
         <span v-if="!isReady && canEval" class="save-hint">Renseigne les 9 sous-critères ({{ 9 - filledCount }} restant{{ 9 - filledCount > 1 ? 's' : '' }})</span>
-        <span v-if="saveOk" class="save-ok">✓ Évaluation enregistrée</span>
+        <span v-if="saveOk" class="save-ok"><NavIcon name="check" :size="13" /> Évaluation enregistrée</span>
       </div>
     </div>
 
@@ -109,11 +109,13 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../../supabase'
 import { loadPermissions, canPerform } from '../../services/permissions'
+import NavIcon from '../../components/NavIcon.vue'
 import { getModel, modelForProduct, productType, TYPE_LABELS, DEFAULT_CONFIG, NIVEAU_LABELS, NIVEAU_CLASS,
   criteriaForModelAxe, allowedValues, axisScore, computeScores, isComplete,
   decisionsFor, FORECAST_LABELS, SPLIT_LABELS, MONITORING_LABELS } from '../../services/peremptionRisk'
 
 export default {
+  components: { NavIcon },
   setup() {
     var route = useRoute(), router = useRouter()
     var product = ref(null), notFound = ref(false)

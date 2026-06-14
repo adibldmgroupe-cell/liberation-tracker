@@ -7,7 +7,7 @@
         v-for="t in tabs" :key="t.key"
         class="ar-tab" :class="{active: activeTab === t.key}"
         @click="switchTab(t.key)">
-        <span class="ar-ico">{{t.icon}}</span>
+        <span class="ar-ico"><NavIcon :name="t.icon" :size="15" /></span>
         {{t.label}}
       </button>
     </div>
@@ -26,6 +26,7 @@
 
 <script>
 import { ref, computed, defineAsyncComponent } from 'vue'
+import NavIcon from '../../components/NavIcon.vue'
 
 // Composants chargés en async — module téléchargé une seule fois, instance montée
 // à la première activation de l'onglet, puis maintenue en mémoire (v-show).
@@ -38,16 +39,17 @@ var COMPS = {
 }
 
 export default {
+  components: { NavIcon },
   setup() {
     var activeTab   = ref('produits')
     var mountedKeys = ref(['produits'])   // onglets déjà montés (lazy)
 
     var tabs = [
-      { key: 'produits', icon: '🗃', label: 'Catalogue produits'   },
-      { key: 'ateliers', icon: '🏗', label: 'Processus & Ateliers' },
-      { key: 'flux',     icon: '⚙', label: 'Flux produits'        },
-      { key: 'shifts',   icon: '🕐', label: 'Shifts & Équipes'     },
-      { key: 'arrets',   icon: '🛑', label: "Types d'arrêts"       },
+      { key: 'produits', icon: 'package', label: 'Catalogue produits'   },
+      { key: 'ateliers', icon: 'factory', label: 'Processus & Ateliers' },
+      { key: 'flux',     icon: 'workflow', label: 'Flux produits'        },
+      { key: 'shifts',   icon: 'clock', label: 'Shifts & Équipes'     },
+      { key: 'arrets',   icon: 'ban', label: "Types d'arrêts"       },
     ]
 
     // Panels effectivement montés (data chargée uniquement à la 1ère activation)
