@@ -211,6 +211,7 @@
 <script>
 import { ref, reactive, onMounted } from 'vue'
 import { supabase } from '../../supabase'
+import { canPerform } from '../../services/permissions'
 export default {
   setup() {
     var familles    = ref([])
@@ -306,6 +307,7 @@ export default {
     }
 
     var saveModal = async function() {
+      if (!canPerform('gerer_types_arret')) { alert('Permission « gérer les types d\'arrêt » requise'); return }
       modal.error = ''
       if (!modal.data.nom || !modal.data.nom.trim()) { modal.error = 'Le nom est requis.'; return }
       if (modal.kind === 'type' && (!modal.data.code || !modal.data.code.trim())) { modal.error = 'Le code est requis.'; return }
@@ -352,6 +354,7 @@ export default {
     }
 
     var doDelete = async function() {
+      if (!canPerform('gerer_types_arret')) { alert('Permission « gérer les types d\'arrêt » requise'); return }
       delConfirm.saving = true
       var table = delConfirm.kind === 'famille' ? 'arret_familles' : delConfirm.kind === 'sf' ? 'arret_sous_familles' : 'arret_types'
       var r = await supabase.from(table).delete().eq('id', delConfirm.id)

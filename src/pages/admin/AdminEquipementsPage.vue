@@ -139,6 +139,7 @@
 <script>
 import { ref, computed, reactive, onMounted } from 'vue'
 import { supabase } from '../../supabase'
+import { canPerform } from '../../services/permissions'
 export default {
   setup() {
     var equipements = ref([])
@@ -189,6 +190,7 @@ export default {
     }
 
     var saveModal = async function() {
+      if (!canPerform('gerer_equipements')) { alert('Permission « gérer les équipements » requise'); return }
       if (!modal.d.nom_equipement || !modal.d.nom_equipement.trim()) { modal.error='Le nom est requis.'; return }
       modal.saving = true
       var payload = Object.assign({}, modal.d, { nom_equipement: modal.d.nom_equipement.trim(), updated_at: new Date().toISOString() })
