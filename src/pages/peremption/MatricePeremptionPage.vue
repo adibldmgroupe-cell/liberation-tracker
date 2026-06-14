@@ -3,12 +3,12 @@
     <!-- En-tête -->
     <div class="fa-header">
       <div>
-        <div class="fa-title">⚠️ Matrice des risques de péremption</div>
+        <div class="fa-title"><NavIcon name="alert-triangle" :size="18" /> Matrice des risques de péremption</div>
         <div class="fa-sub">{{ products.length }} produit(s) · {{ evaluatedCount }} évalué(s) · {{ products.length - evaluatedCount }} à évaluer</div>
       </div>
       <div class="fa-actions">
-        <button class="mp-btn" :class="{'mp-btn-on': showColPanel}" @click.stop="showColPanel = !showColPanel">⚙ Colonnes</button>
-        <button v-if="canConfig" class="mp-btn-cfg" @click.stop="openConfig">⚙ Pondérations &amp; seuils</button>
+        <button class="mp-btn" :class="{'mp-btn-on': showColPanel}" @click.stop="showColPanel = !showColPanel"><NavIcon name="settings" :size="14" /> Colonnes</button>
+        <button v-if="canConfig" class="mp-btn-cfg" @click.stop="openConfig"><NavIcon name="settings" :size="14" /> Pondérations &amp; seuils</button>
       </div>
     </div>
 
@@ -19,14 +19,14 @@
         <div class="cp-item" v-for="(col, i) in colOrder" :key="col">
           <label><input type="checkbox" :checked="isColVisible(col)" @change="toggleCol(col)" /> {{ COL_LABELS[col] }}</label>
           <span class="cp-move">
-            <button :disabled="i === 0" @click="moveCol(col, -1)">↑</button>
-            <button :disabled="i === colOrder.length - 1" @click="moveCol(col, 1)">↓</button>
+            <button :disabled="i === 0" @click="moveCol(col, -1)"><NavIcon name="arrow-up" :size="13" /></button>
+            <button :disabled="i === colOrder.length - 1" @click="moveCol(col, 1)"><NavIcon name="arrow-down" :size="13" /></button>
           </span>
         </div>
       </div>
     </div>
 
-    <div v-if="needsMigration" class="mp-warn">⚠️ Tables absentes — exécute les migrations <code>034</code> + <code>035</code> dans Supabase, puis recharge.</div>
+    <div v-if="needsMigration" class="mp-warn"><NavIcon name="alert-triangle" :size="15" /> Tables absentes — exécute les migrations <code>034</code> + <code>035</code> dans Supabase, puis recharge.</div>
 
     <!-- KPI par niveau -->
     <div class="mp-kpis">
@@ -39,7 +39,7 @@
 
     <!-- Toolbar : recherche + filtres rapides -->
     <div class="mp-toolbar">
-      <div class="mp-search-wrap"><span class="ts-icon">🔍</span><input v-model="searchQ" class="mp-search" placeholder="Rechercher code, désignation, fabricant…" /></div>
+      <div class="mp-search-wrap"><span class="ts-icon"><NavIcon name="search" :size="15" /></span><input v-model="searchQ" class="mp-search" placeholder="Rechercher code, désignation, fabricant…" /></div>
       <select v-model="typeSel" class="mp-sel">
         <option value="">Tous les types</option>
         <option v-for="t in typeOptions" :key="t.key" :value="t.key">{{ t.label }}</option>
@@ -52,7 +52,7 @@
         <option value="">Tous les groupes</option>
         <option v-for="g in groupeOptions" :key="g" :value="g">{{ g }}</option>
       </select>
-      <span v-if="selected.length" class="sel-count">{{ selected.length }} sélectionné(s) <button class="sel-clear" @click="selected = []">✕</button></span>
+      <span v-if="selected.length" class="sel-count">{{ selected.length }} sélectionné(s) <button class="sel-clear" @click="selected = []"><NavIcon name="x" :size="12" /></button></span>
     </div>
 
     <!-- Action de masse -->
@@ -91,7 +91,7 @@
             <th v-for="col in visibleCols" :key="col" :class="colClass(col)">
               <div class="th-i">
                 <span class="th-txt sortable" @click="sortBy(col)">{{ COL_LABELS[col] }} {{ sortIcon(col) }}</span>
-                <button class="th-f" :class="{'th-f-on': columnFilters[col] && columnFilters[col].length}" @click.stop="openFilter(col, $event)">⌄</button>
+                <button class="th-f" :class="{'th-f-on': columnFilters[col] && columnFilters[col].length}" @click.stop="openFilter(col, $event)"><NavIcon name="chevron-down" :size="12" /></button>
               </div>
             </th>
             <th class="th-act"></th>
@@ -141,7 +141,7 @@
       <button v-for="v in editVals" :key="v" class="ce-opt" :class="'ceo-' + v" @click="setCellScore(v)">
         <span class="ce-n">{{ v }}</span><span class="ce-t">{{ v === 1 ? editCrit.s1 : (v === 3 ? editCrit.s3 : editCrit.s5) }}</span>
       </button>
-      <button class="ce-clear" @click="setCellScore(null)">✕ Effacer</button>
+      <button class="ce-clear" @click="setCellScore(null)"><NavIcon name="x" :size="13" /> Effacer</button>
     </div>
 
     <!-- Pagination -->
@@ -191,6 +191,7 @@ import { loadPermissions, canPerform } from '../../services/permissions'
 import { NIVEAU_LABELS, NIVEAU_CLASS, NIVEAU_ORDER, DEFAULT_CONFIG, decisionsFor, productType, TYPE_LABELS, TYPE_CLASS,
   modelForProduct, getModel, allowedValues, computeScores, MODELS, CRIT_LABELS, CRIT_AXIS_LABEL } from '../../services/peremptionRisk'
 import { exportToExcel, exportToPDF } from '../../services/export'
+import NavIcon from '../../components/NavIcon.vue'
 
 // Colonnes sélectionnables (Code + Désignation sont fixes, hors panneau)
 var COLS = [
@@ -225,6 +226,7 @@ var TYPE_OPTS = [{ key: 'generique', label: 'Générique' }, { key: 'otc', label
 var LS_ORDER = 'peremption_col_order_v3', LS_HIDDEN = 'peremption_hidden_cols'
 
 export default {
+  components: { NavIcon },
   setup() {
     var router = useRouter()
     var products = ref([]), evMap = ref({}), config = ref(Object.assign({}, DEFAULT_CONFIG))
