@@ -12,7 +12,7 @@
       <div class="fh-center">
         <div class="prod-search-wrap" v-click-outside="closeSuggestions">
           <div class="psi-wrap">
-            <span class="psi-icon">🔍</span>
+            <span class="psi-icon"><NavIcon name="search" :size="15" /></span>
             <input
               class="prod-input"
               placeholder="Chercher un produit pour visualiser son flux…"
@@ -21,7 +21,7 @@
               @focus="onProductSearch"
               autocomplete="off"
             />
-            <button v-if="productSearch" class="psi-clear" @click="clearProductSearch">✕</button>
+            <button v-if="productSearch" class="psi-clear" @click="clearProductSearch"><NavIcon name="x" :size="13" /></button>
           </div>
           <div class="prod-dropdown" v-if="productSuggestions.length && showSuggestions">
             <div class="pd-item" v-for="p in productSuggestions" :key="p.product_code+'-'+p.route"
@@ -37,7 +37,7 @@
           <span class="pc-name">{{selectedProduct.product_name}}</span>
           <button v-if="selectedProduct.has_route_2" class="pc-route" @click="toggleRoute"
             :title="'Basculer Route '+(activeRoute===1?2:1)">R{{activeRoute}}</button>
-          <button class="pc-x" @click="clearProduct">✕</button>
+          <button class="pc-x" @click="clearProduct"><NavIcon name="x" :size="13" /></button>
         </div>
       </div>
 
@@ -52,16 +52,16 @@
           <span class="fl"><span class="fl-dot" style="background:#f59e0b"></span>≥60% Moyen</span>
           <span class="fl"><span class="fl-dot" style="background:#ef4444"></span>&lt;60% Faible</span>
         </div>
-        <button class="fh-btn" :class="{spinning:loading}" @click="loadLive" title="Rafraîchir">↻</button>
-        <button class="fh-btn" :class="{'fh-btn-trs-on': trsMode}" @click="toggleTrsMode" title="Mode TRS OEE">📊</button>
-        <router-link to="/admin/flux" class="fh-btn fh-btn-admin" title="⚙ Paramétrer flux produits">⚙</router-link>
-        <button class="fh-btn fh-btn-theme" @click="cycleTheme" :title="themeTitle">{{themeIcon}}</button>
+        <button class="fh-btn" :class="{spinning:loading}" @click="loadLive" title="Rafraîchir"><NavIcon name="refresh" :size="15" /></button>
+        <button class="fh-btn" :class="{'fh-btn-trs-on': trsMode}" @click="toggleTrsMode" title="Mode TRS OEE"><NavIcon name="chart-bar" :size="15" /></button>
+        <router-link to="/admin/flux" class="fh-btn fh-btn-admin" title="Paramétrer flux produits"><NavIcon name="settings" :size="15" /></router-link>
+        <button class="fh-btn fh-btn-theme" @click="cycleTheme" :title="themeTitle"><NavIcon :name="themeIcon" :size="15" /></button>
       </div>
     </div>
 
     <!-- ── TRS BANDEAU ── -->
     <div class="trs-band" v-if="trsMode">
-      <div class="trs-band-label">📊 MODE TRS — OEE TEMPS RÉEL</div>
+      <div class="trs-band-label"><NavIcon name="chart-bar" :size="14" /> MODE TRS — OEE TEMPS RÉEL</div>
       <div class="trs-kpi-group">
         <div class="trs-kpi">
           <div class="trs-kpi-val">{{trsSummary.active}}<span class="trs-kpi-tot">/{{trsSummary.total}}</span></div>
@@ -92,8 +92,8 @@
           <div class="trs-kpi-lbl">Machine la plus faible</div>
         </div>
       </div>
-      <button class="trs-band-refresh" :class="{spinning:trsLoading}" @click="loadTrsData" title="Actualiser TRS">↻</button>
-      <button class="trs-band-histo" @click="openTrsHisto" title="Historique sessions">📅</button>
+      <button class="trs-band-refresh" :class="{spinning:trsLoading}" @click="loadTrsData" title="Actualiser TRS"><NavIcon name="refresh" :size="14" /></button>
+      <button class="trs-band-histo" @click="openTrsHisto" title="Historique sessions"><NavIcon name="calendar" :size="14" /></button>
     </div>
 
     <!-- ── CORPS SVG ── -->
@@ -1046,6 +1046,7 @@ import { useTheme } from '../../composables/useTheme'
 import { declareDeviation } from '../../services/actions'
 import { checkProductFluxRoom, checkProductFluxEquipName, checkUpstreamStages, stageLabels, FLOW_STAGES, FLOW_EDGES, ROOM_STAGE } from '../../services/flux'
 import { loadPermissions, canPerform } from '../../services/permissions'
+import NavIcon from '../../components/NavIcon.vue'
 
 // ── LAYOUT CONSTANTS ──────────────────────────────────────────────
 var SVG_W  = 1580
@@ -1209,6 +1210,7 @@ var STEP_LABELS = [
 // (FLUX RÉEL : FLOW_STAGES / FLOW_EDGES / ROOM_STAGE importés depuis services/flux.js — source unique)
 
 export default {
+  components: { NavIcon },
   directives: {
     'click-outside': {
       mounted(el, binding) {
@@ -1229,7 +1231,7 @@ export default {
       theme.value = THEME_ORDER[(idx + 1) % THEME_ORDER.length]
     }
     var themeIcon = computed(function() {
-      return theme.value === 'day' ? '☀️' : theme.value === 'workshop' ? '🏭' : '🌙'
+      return theme.value === 'day' ? 'sun' : theme.value === 'workshop' ? 'factory' : 'moon'
     })
     var themeTitle = computed(function() {
       return theme.value === 'night' ? 'Nuit → cliquer pour Jour' : theme.value === 'day' ? 'Jour → cliquer pour Atelier' : 'Atelier → cliquer pour Nuit'
