@@ -235,6 +235,7 @@
 <script>
 import { ref, computed, onMounted, reactive } from 'vue'
 import { supabase } from '../../supabase'
+import { canPerform } from '../../services/permissions'
 
 // Labels des groupes d'opérations
 var OP_LABELS = {
@@ -277,6 +278,7 @@ export default {
       else selectedRows.value = pivotMachineRows.value.map(rowKey)
     }
     var bulkAssign = async function(assign) {
+      if (!canPerform('gerer_flux_produits')) { alert('Permission « gérer les flux produits » requise'); return }
       if (!bulkRoom.value || !selectedRows.value.length) return
       var room = bulkRoom.value
       var toInsert = [], toDelete = []
@@ -406,6 +408,7 @@ export default {
 
     // Clic case à cocher → toggle product_flux (mise à jour locale, pas de loadAll)
     var toggleMachineFlux = async function(row, room) {
+      if (!canPerform('gerer_flux_produits')) { alert('Permission « gérer les flux produits » requise'); return }
       var isActive = row.activeRoomCodes.has(room.code)
       if (isActive) {
         await supabase.from('product_flux').delete()
@@ -471,6 +474,7 @@ export default {
     }
 
     var saveStep = async function() {
+      if (!canPerform('gerer_flux_produits')) { alert('Permission « gérer les flux produits » requise'); return }
       if (!stepModal.product_code.trim()) { stepModal.err = 'Code produit requis.'; return }
       if (!stepModal.op_number) { stepModal.err = 'Opération requise.'; return }
       stepModal.saving = true; stepModal.err = ''
@@ -494,6 +498,7 @@ export default {
     }
 
     var deleteStep = async function(step) {
+      if (!canPerform('gerer_flux_produits')) { alert('Permission « gérer les flux produits » requise'); return }
       if (!confirm('Supprimer cette étape ?')) return
       var res = await supabase.from('product_flux').delete().eq('id', step.id)
       if (!res.error) await loadAll()
@@ -501,6 +506,7 @@ export default {
 
     // ── VIDER L'IMPORT ────────────────────────────────────────────
     var clearFlux = async function() {
+      if (!canPerform('gerer_flux_produits')) { alert('Permission « gérer les flux produits » requise'); return }
       if (!confirm('Vider tous les flux produits importés ?\nCette action est irréversible.')) return
       var res = await supabase.from('product_flux').delete().neq('id', 0)
       if (res.error) { alert('Erreur : ' + res.error.message); return }
@@ -585,6 +591,7 @@ export default {
     }
 
     var confirmGsImport = async function() {
+      if (!canPerform('gerer_flux_produits')) { alert('Permission « gérer les flux produits » requise'); return }
       if (!gsModal.preview.length) return
       gsModal.saving = true; gsModal.err = ''
       var groups = {}
