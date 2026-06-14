@@ -10,18 +10,18 @@
         <div class="site-tabs">
           <button v-for="s in ['Tous','PHARMA','OTC']" :key="s" class="site-tab" :class="{active:filterSite===s}" @click="filterSite=s">{{s}}</button>
         </div>
-        <button class="btn-refresh" @click="loadAll" :class="{spinning:loading}" title="Rafraîchir">↻</button>
-        <button class="btn-refresh" @click="cycleTheme" :title="themeTitle">{{themeIcon}}</button>
-        <button class="btn-live-open" @click="openLiveView" title="Mode Live — affichage production plein écran">📺 Mode Live</button>
+        <button class="btn-refresh" @click="loadAll" :class="{spinning:loading}" title="Rafraîchir"><NavIcon name="refresh" :size="14" /></button>
+        <button class="btn-refresh" @click="cycleTheme" :title="themeTitle"><NavIcon :name="themeIcon" :size="15" /></button>
+        <button class="btn-live-open" @click="openLiveView" title="Mode Live — affichage production plein écran"><NavIcon name="monitor" :size="14" /> Mode Live</button>
       </div>
     </div>
 
     <!-- ══ VUE MODE LIVE GÉANTE (plein écran production) ══ -->
     <div class="live-tv" v-if="liveView" :data-theme="theme">
       <div class="ltv-head">
-        <div class="ltv-title">⚡ PRODUCTION&nbsp;LIVE</div>
+        <div class="ltv-title"><NavIcon name="zap" :size="18" /> PRODUCTION&nbsp;LIVE</div>
         <div class="ltv-clock">{{clock}}</div>
-        <button class="ltv-exit" @click="closeLiveView" title="Quitter (Échap)">✕</button>
+        <button class="ltv-exit" @click="closeLiveView" title="Quitter (Échap)"><NavIcon name="x" :size="16" /></button>
       </div>
       <div class="ltv-body">
         <!-- Cartes machines -->
@@ -43,9 +43,9 @@
             </div>
             <div class="ltv-foot">
               <span class="ltv-status">{{p.session.statut}}</span>
-              <span class="ltv-rec" v-if="lineRecords[p.equip.id]">🏆 {{lineRecords[p.equip.id].boites.toLocaleString('fr-FR')}}</span>
+              <span class="ltv-rec" v-if="lineRecords[p.equip.id]"><NavIcon name="award" :size="12" /> {{lineRecords[p.equip.id].boites.toLocaleString('fr-FR')}}</span>
             </div>
-            <div class="ltv-arr" v-if="p.activeArret">⛔ {{p.activeArret.arret_code}} — {{p.activeArret.arret_nom||p.activeArret.famille_nom}}</div>
+            <div class="ltv-arr" v-if="p.activeArret"><NavIcon name="ban" :size="13" /> {{p.activeArret.arret_code}} — {{p.activeArret.arret_nom||p.activeArret.famille_nom}}</div>
             <div class="ltv-win-badge" v-if="p.rendPct>=100">🎉 OBJECTIF DÉPASSÉ</div>
           </div>
           <div v-if="!liveCards.length" class="ltv-empty">Aucune machine en production</div>
@@ -53,7 +53,7 @@
         <!-- Classement équipes + records -->
         <div class="ltv-side">
           <div class="ltv-rank">
-            <div class="ltv-rank-hd">🏆 ÉQUIPES — MOIS</div>
+            <div class="ltv-rank-hd"><NavIcon name="award" :size="14" /> ÉQUIPES — MOIS</div>
             <div v-for="(t,i) in teamRankMonth.slice(0,5)" :key="'m'+t.equipe_id" class="ltv-rank-row" :class="{first:i===0}">
               <span class="ltv-medal">{{['🥇','🥈','🥉'][i]||(i+1)}}</span>
               <span class="ltv-team" :style="{color:t.couleur}">{{t.nom}}</span>
@@ -86,7 +86,7 @@
           <div class="th">Shift / Équipe</div>
           <div class="th">Lot</div>
           <div class="th">Statut</div>
-          <div class="th th-c">⏱ Durée</div>
+          <div class="th th-c"><NavIcon name="clock" :size="13" /> Durée</div>
           <div class="th th-c">Boîtes / Obj.</div>
           <div class="th th-c">b/min</div>
           <div class="th th-c">D%</div>
@@ -201,17 +201,17 @@
             <!-- Actions -->
             <div class="td td-act">
               <template v-if="!p.session">
-                <button class="ab ab-start" @click="openStartModal(p.equip)">▶ Démarrer</button>
+                <button class="ab ab-start" @click="openStartModal(p.equip)"><NavIcon name="play" :size="13" /> Démarrer</button>
               </template>
               <template v-else-if="p.session.statut === 'En cours'">
-                <button class="ab ab-stp" @click="openArretModal(p)" title="Déclarer arrêt">⏸</button>
+                <button class="ab ab-stp" @click="openArretModal(p)" title="Déclarer arrêt"><NavIcon name="pause" :size="13" /></button>
                 <button class="ab ab-cnt" @click="openComptageModal(p)" title="Comptage">+</button>
-                <button class="ab ab-dev" @click="openDevModal(p)" title="Déclarer déviation">⚠</button>
-                <button class="ab ab-cls" @click="openCloseModal(p)" title="Clôturer">✓</button>
+                <button class="ab ab-dev" @click="openDevModal(p)" title="Déclarer déviation"><NavIcon name="alert-triangle" :size="13" /></button>
+                <button class="ab ab-cls" @click="openCloseModal(p)" title="Clôturer"><NavIcon name="check" :size="13" /></button>
               </template>
               <template v-else-if="p.session.statut === 'Arrêt' || p.session.statut === 'Pause'">
-                <button class="ab ab-rsm" @click="clotureArret(p)">▶ Reprendre</button>
-                <button class="ab ab-req" @click="openRequalifModal(p)" v-if="p.activeArret">✎</button>
+                <button class="ab ab-rsm" @click="clotureArret(p)"><NavIcon name="play" :size="13" /> Reprendre</button>
+                <button class="ab ab-req" @click="openRequalifModal(p)" v-if="p.activeArret"><NavIcon name="pencil" :size="13" /></button>
               </template>
             </div>
           </div>
@@ -234,7 +234,7 @@
     <!-- ══ MODAL DÉMARRER SESSION ══ -->
     <div class="overlay" v-if="startModal.show" @click.self="startModal.show=false">
       <div class="modal">
-        <div class="modal-hd">▶ Démarrer une session — {{startModal.equip?.nom_equipement}}</div>
+        <div class="modal-hd"><NavIcon name="play" :size="16" /> Démarrer une session — {{startModal.equip?.nom_equipement}}</div>
 
         <label class="lbl">N° Lot *</label>
         <div class="auto-wrap">
@@ -247,7 +247,7 @@
           </div>
         </div>
         <div class="selected-lot" v-if="startModal.lot">
-          ✓ Lot <strong>{{startModal.lot.numero_lot}}</strong> — {{startModal.lot.description}}
+          <NavIcon name="check" :size="13" /> Lot <strong>{{startModal.lot.numero_lot}}</strong> — {{startModal.lot.description}}
         </div>
 
         <div class="form-row">
@@ -330,7 +330,7 @@
         <div class="err" v-if="startModal.error">{{startModal.error}}</div>
         <div class="modal-acts">
           <button class="btn-save btn-go" @click="doStart" :disabled="startModal.saving || !startModal.lot">
-            {{startModal.saving ? 'Démarrage…' : '▶ Démarrer'}}
+            <template v-if="startModal.saving">Démarrage…</template><template v-else><NavIcon name="play" :size="14" /> Démarrer</template>
           </button>
           <button class="btn-cancel" @click="startModal.show=false">Annuler</button>
         </div>
@@ -340,7 +340,7 @@
     <!-- ══ MODAL DÉCLARER ARRÊT ══ -->
     <div class="overlay" v-if="arretModal.show" @click.self="arretModal.show=false">
       <div class="modal">
-        <div class="modal-hd">⏸ Déclarer un arrêt — {{arretModal.panel?.equip.nom_equipement}}</div>
+        <div class="modal-hd"><NavIcon name="pause" :size="16" /> Déclarer un arrêt — {{arretModal.panel?.equip.nom_equipement}}</div>
 
         <div class="cascade-selects">
           <div class="cs-step">
@@ -390,7 +390,7 @@
         <div class="err" v-if="arretModal.error">{{arretModal.error}}</div>
         <div class="modal-acts">
           <button class="btn-save btn-stop" @click="doArret" :disabled="arretModal.saving || !arretModal.type_id">
-            {{arretModal.saving ? 'Enregistrement…' : '⏸ Démarrer chrono arrêt'}}
+            <template v-if="arretModal.saving">Enregistrement…</template><template v-else><NavIcon name="pause" :size="14" /> Démarrer chrono arrêt</template>
           </button>
           <button class="btn-cancel" @click="arretModal.show=false">Annuler</button>
         </div>
@@ -400,7 +400,7 @@
     <!-- ══ MODAL REQUALIFIER ARRÊT ══ -->
     <div class="overlay" v-if="requalModal.show" @click.self="requalModal.show=false">
       <div class="modal modal-sm">
-        <div class="modal-hd">✎ Requalifier l'arrêt en cours</div>
+        <div class="modal-hd"><NavIcon name="pencil" :size="16" /> Requalifier l'arrêt en cours</div>
         <div class="modal-ctx">{{requalModal.panel?.equip.nom_equipement}} — arrêt actif</div>
 
         <div class="cascade-selects" style="flex-direction:column;gap:8px">
@@ -483,7 +483,7 @@
     <!-- ══ MODAL CLÔTURER SESSION ══ -->
     <div class="overlay" v-if="closeModal.show" @click.self="closeModal.show=false">
       <div class="modal">
-        <div class="modal-hd">✓ Clôturer la session — {{closeModal.panel?.equip.nom_equipement}}</div>
+        <div class="modal-hd"><NavIcon name="check" :size="16" /> Clôturer la session — {{closeModal.panel?.equip.nom_equipement}}</div>
         <div class="modal-ctx" v-if="closeModal.panel?.session">
           Lot {{closeModal.panel.lotNum}} · Démarré à {{closeModal.panel.session.heure_debut}}
         </div>
@@ -520,7 +520,7 @@
         <div class="err" v-if="closeModal.error">{{closeModal.error}}</div>
         <div class="modal-acts">
           <button class="btn-save btn-close-sess" @click="doClose" :disabled="closeModal.saving || !closeModal.heure_fin">
-            {{closeModal.saving ? 'Clôture…' : '✓ Clôturer et calculer OEE'}}
+            <template v-if="closeModal.saving">Clôture…</template><template v-else><NavIcon name="check" :size="14" /> Clôturer et calculer OEE</template>
           </button>
           <button class="btn-cancel" @click="closeModal.show=false">Annuler</button>
         </div>
@@ -530,7 +530,7 @@
     <!-- ══ MODAL DÉCLARER DÉVIATION ══ -->
     <div class="overlay" v-if="devModal.show" @click.self="devModal.show=false">
       <div class="modal">
-        <div class="modal-hd">⚠ Déclarer déviation — {{devModal.panel?.equip.nom_equipement}}</div>
+        <div class="modal-hd"><NavIcon name="alert-triangle" :size="16" /> Déclarer déviation — {{devModal.panel?.equip.nom_equipement}}</div>
         <div class="modal-ctx" v-if="devModal.panel?.session">
           Lot {{devModal.panel.lotNum}} · Session en cours
         </div>
@@ -570,8 +570,10 @@ import { useTheme } from '../../composables/useTheme'
 import { declareDeviation } from '../../services/actions'
 import { checkProductFluxEquipName } from '../../services/flux'
 import { loadPermissions, canPerform } from '../../services/permissions'
+import NavIcon from '../../components/NavIcon.vue'
 
 export default {
+  components: { NavIcon },
   setup() {
     var { theme } = useTheme()
     var panels        = ref([])
@@ -1529,7 +1531,7 @@ export default {
       theme.value = THEME_ORDER[(idx + 1) % THEME_ORDER.length]
     }
     var themeIcon = computed(function() {
-      return theme.value === 'day' ? '☀️' : theme.value === 'workshop' ? '🏭' : '🌙'
+      return theme.value === 'day' ? 'sun' : theme.value === 'workshop' ? 'factory' : 'moon'
     })
     var themeTitle = computed(function() {
       return theme.value === 'night' ? 'Nuit → cliquer pour Jour' : theme.value === 'day' ? 'Jour → cliquer pour Atelier' : 'Atelier → cliquer pour Nuit'
