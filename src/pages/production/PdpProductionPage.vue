@@ -7,7 +7,7 @@
         <span class="pt">PDP PRODUCTION</span>
         <div class="vtabs">
           <button v-for="v in views" :key="v.key" class="vtab" :class="{active:activeView===v.key}" @click="activeView=v.key">
-            <span class="vtab-ic">{{v.icon}}</span>{{v.label}}
+            <span class="vtab-ic"><NavIcon :name="v.icon" :size="14" /></span>{{v.label}}
           </button>
         </div>
       </div>
@@ -31,11 +31,11 @@
             </label>
           </div>
         </div>
-        <button class="btn-ref" @click="loadAll" :class="{spin:loading}" title="Rafraîchir">↻</button>
-        <button class="btn-ref" @click="openGsImport" title="Import Google Sheets">↑ GS</button>
-        <button class="btn-ref" @click="openCalModal" title="Calendrier machines (fériés / arrêts / fermetures)">📅 Calendrier</button>
-        <button class="btn-ref btn-ref-accent" @click="openBulkModal" title="Saisie PDP en masse (coller depuis Excel)">📋 Saisie en masse</button>
-        <button class="btn-ref" @click="cycleTheme" :title="themeTitle">{{themeIcon}}</button>
+        <button class="btn-ref" @click="loadAll" :class="{spin:loading}" title="Rafraîchir"><NavIcon name="refresh" :size="14" /></button>
+        <button class="btn-ref" @click="openGsImport" title="Import Google Sheets"><NavIcon name="upload" :size="13" /> GS</button>
+        <button class="btn-ref" @click="openCalModal" title="Calendrier machines (fériés / arrêts / fermetures)"><NavIcon name="calendar" :size="14" /> Calendrier</button>
+        <button class="btn-ref btn-ref-accent" @click="openBulkModal" title="Saisie PDP en masse (coller depuis Excel)"><NavIcon name="clipboard-check" :size="14" /> Saisie en masse</button>
+        <button class="btn-ref" @click="cycleTheme" :title="themeTitle"><NavIcon :name="themeIcon" :size="15" /></button>
       </div>
     </div>
 
@@ -82,10 +82,10 @@
               <td class="mono sm">{{fmtDate(s.date_fin_reelle)}}</td>
               <td><span class="schip" :class="'sc-'+s.statut.toLowerCase().replace(/\s/g,'-')">{{s.statut}}</span></td>
               <td class="acts">
-                <button class="ia" @click="openSuiviModal(s, s.famille)" title="Modifier">✏</button>
-                <button class="ia" @click="openArretModal(s)" title="Déclarer arrêt" v-if="s.statut==='En cours'">⏸</button>
-                <button class="ia ok" @click="clotureSuivi(s)" title="Clôturer" v-if="s.statut==='En cours'||s.statut==='Arrêt'">✓</button>
-                <button class="ia del" @click="deleteSuivi(s)" title="Supprimer">✕</button>
+                <button class="ia" @click="openSuiviModal(s, s.famille)" title="Modifier"><NavIcon name="pencil" :size="13" /></button>
+                <button class="ia" @click="openArretModal(s)" title="Déclarer arrêt" v-if="s.statut==='En cours'"><NavIcon name="pause" :size="13" /></button>
+                <button class="ia ok" @click="clotureSuivi(s)" title="Clôturer" v-if="s.statut==='En cours'||s.statut==='Arrêt'"><NavIcon name="check" :size="13" /></button>
+                <button class="ia del" @click="deleteSuivi(s)" title="Supprimer"><NavIcon name="x" :size="13" /></button>
               </td>
             </tr>
           </tbody>
@@ -134,8 +134,8 @@
               <td class="mono sm">{{a.heure_fin?fmtDate(a.heure_fin):'⏱ en cours'}}</td>
               <td class="num">{{arretDuree(a)}}</td>
               <td class="acts">
-                <button class="ia ok" @click="closeArret(a)" v-if="!a.heure_fin" title="Clôturer arrêt">✓</button>
-                <button class="ia del" @click="deleteArret(a)" title="Supprimer">✕</button>
+                <button class="ia ok" @click="closeArret(a)" v-if="!a.heure_fin" title="Clôturer arrêt"><NavIcon name="check" :size="13" /></button>
+                <button class="ia del" @click="deleteArret(a)" title="Supprimer"><NavIcon name="x" :size="13" /></button>
               </td>
             </tr>
           </tbody>
@@ -159,7 +159,7 @@
       <div v-if="!hiddenFam.includes('cond')">
         <div class="pdp-section-row">
           <div class="pdp-section-title">Conditionnement — PDP Prévisionnel</div>
-          <button class="btn-ref btn-ref-accent" @click="recomputeAllPdp" :disabled="pdpRecomputing" title="Aligner les dates estimées sur les fins réelles et décaler l'aval du retard cumulé">{{pdpRecomputing?'…':'📌 Recaler sur réel'}}</button>
+          <button class="btn-ref btn-ref-accent" @click="recomputeAllPdp" :disabled="pdpRecomputing" title="Aligner les dates estimées sur les fins réelles et décaler l'aval du retard cumulé"><template v-if="pdpRecomputing">…</template><template v-else><NavIcon name="pin" :size="14" /> Recaler sur réel</template></button>
         </div>
         <div class="pdp-err" v-if="pdpErr">{{pdpErr}}</div>
         <div class="dt-wrap">
@@ -198,7 +198,7 @@
                 <td class="mono sm">{{fmtDate(p.date_liberation)}}</td>
                 <td><span class="schip" :class="'sc-'+(p.statut_planification||'').toLowerCase().replace(/\s/g,'-')">{{p.statut_planification}}</span></td>
                 <td class="acts">
-                  <button class="ia del" @click="deletePdpCond(p)" title="Supprimer">✕</button>
+                  <button class="ia del" @click="deletePdpCond(p)" title="Supprimer"><NavIcon name="x" :size="13" /></button>
                 </td>
               </tr>
             </tbody>
@@ -229,7 +229,7 @@
                 <td class="mono sm">{{fmtDate(sf.date_debut)}}</td>
                 <td><span class="schip" :class="'sc-'+sf.statut.toLowerCase().replace(/\s/g,'-')">{{sf.statut}}</span></td>
                 <td class="acts">
-                  <button class="ia" @click="openSuiviModal({rawId:sf.id,famille:'fab',raw_fab:sf},'fab')" title="Modifier">✏</button>
+                  <button class="ia" @click="openSuiviModal({rawId:sf.id,famille:'fab',raw_fab:sf},'fab')" title="Modifier"><NavIcon name="pencil" :size="13" /></button>
                 </td>
               </tr>
             </tbody>
@@ -314,7 +314,7 @@
     <!-- ══ MODAL ARRÊT ══ -->
     <div class="ov" v-if="arretModal.show" @click.self="arretModal.show=false">
       <div class="modal">
-        <div class="modal-hd">⏸ Déclarer arrêt — {{arretModal.lieu}}</div>
+        <div class="modal-hd"><NavIcon name="pause" :size="16" /> Déclarer arrêt — {{arretModal.lieu}}</div>
         <div class="modal-ctx">{{arretModal.numero_lot}}</div>
         <label class="lbl">Motif *</label>
         <textarea v-model="arretModal.motif" class="inp" rows="2" placeholder="Motif de l'arrêt…"></textarea>
@@ -331,7 +331,7 @@
     <!-- ══ MODAL CALENDRIER MACHINES ══ -->
     <div class="ov" v-if="calModal.show" @click.self="calModal.show=false">
       <div class="modal modal-wide">
-        <div class="modal-hd">📅 Calendrier machines — fériés / arrêts / fermetures</div>
+        <div class="modal-hd"><NavIcon name="calendar" :size="16" /> Calendrier machines — fériés / arrêts / fermetures</div>
         <div class="modal-ctx">Jours non ouvrés pris en compte dans le calcul des dates PDP (en plus des week-ends, gérés par machine).</div>
         <div class="cal-form">
           <div class="cal-f-row">
@@ -370,7 +370,7 @@
                 <td class="mono sm">{{fmtDate(c.date_debut)}}</td>
                 <td class="mono sm">{{fmtDate(c.date_fin)}}</td>
                 <td class="sm">{{c.libelle||'—'}}</td>
-                <td class="acts"><button class="ia del" @click="deleteCalEntry(c)" title="Supprimer">✕</button></td>
+                <td class="acts"><button class="ia del" @click="deleteCalEntry(c)" title="Supprimer"><NavIcon name="x" :size="13" /></button></td>
               </tr>
             </tbody>
           </table>
@@ -383,8 +383,8 @@
     <!-- ══ MODAL SAISIE PDP EN MASSE ══ -->
     <div class="ov" v-if="bulkModal.show" @click.self="bulkModal.show=false">
       <div class="modal modal-xwide">
-        <div class="modal-hd">📋 Saisie PDP en masse</div>
-        <div class="modal-ctx">Colle depuis Excel (colonne par colonne, ou un bloc entier) — la désignation remonte du code produit. N° lot facultatif (renseigné → lot créé façon « Planifier », visible dans Lots). En conditionnement, <b>🧮 Calculer</b> remplit dates de fin estimées + charge (TP/THP/TOTAL/cumul) selon le référentiel machine et le calendrier.</div>
+        <div class="modal-hd"><NavIcon name="clipboard-check" :size="16" /> Saisie PDP en masse</div>
+        <div class="modal-ctx">Colle depuis Excel (colonne par colonne, ou un bloc entier) — la désignation remonte du code produit. N° lot facultatif (renseigné → lot créé façon « Planifier », visible dans Lots). En conditionnement, <b><NavIcon name="calculator" :size="13" /> Calculer</b> remplit dates de fin estimées + charge (TP/THP/TOTAL/cumul) selon le référentiel machine et le calendrier.</div>
 
         <div class="bulk-ctrl">
           <div class="bulk-fam">
@@ -490,7 +490,7 @@
                   <td class="bg-calc bg-date">{{r.liberation?fmtDate(r.liberation):'—'}}<span v-if="r.lib_src" class="lib-src">{{r.lib_src}}</span></td>
                   <td><input v-model="r.date_cible" @paste="onBulkColPaste($event,i,'date_cible')" class="bg-inp mono bg-date" placeholder="jj/mm/aaaa" /></td>
                 </template>
-                <td class="acts"><button class="ia del" @click="bulkRemoveRow(i)" title="Supprimer la ligne">✕</button></td>
+                <td class="acts"><button class="ia del" @click="bulkRemoveRow(i)" title="Supprimer la ligne"><NavIcon name="x" :size="13" /></button></td>
               </tr>
             </tbody>
           </table>
@@ -498,13 +498,13 @@
 
         <div class="bulk-foot">
           <button class="btn-ref" @click="bulkAddRow">+ Ligne</button>
-          <button class="btn-ref" @click="openCampPanel">➕ Insérer campagne</button>
-          <button class="btn-ref" @click="bulkResolveDesignations">↻ Désignations</button>
-          <button v-if="bulkModal.famille==='cond'" class="btn-ref btn-ref-accent" @click="bulkCompute">🧮 Calculer</button>
+          <button class="btn-ref" @click="openCampPanel"><NavIcon name="plus" :size="13" /> Insérer campagne</button>
+          <button class="btn-ref" @click="bulkResolveDesignations"><NavIcon name="refresh" :size="13" /> Désignations</button>
+          <button v-if="bulkModal.famille==='cond'" class="btn-ref btn-ref-accent" @click="bulkCompute"><NavIcon name="calculator" :size="13" /> Calculer</button>
           <button class="btn-ref" @click="bulkClear">Vider</button>
           <span v-if="bulkModal.computed" class="bulk-hint">Dates &amp; charge calculées — vérifie puis « Créer le PDP ».</span>
         </div>
-        <div v-if="bulkModal.cont_info" class="bulk-cont">↪ {{bulkModal.cont_info}}</div>
+        <div v-if="bulkModal.cont_info" class="bulk-cont"><NavIcon name="corner-up-right" :size="13" /> {{bulkModal.cont_info}}</div>
 
         <div class="modal-err" v-if="bulkModal.err">{{bulkModal.err}}</div>
         <div class="bulk-result" v-if="bulkModal.result">
@@ -521,13 +521,13 @@
     <!-- ══ MODAL IMPORT GS ══ -->
     <div class="ov" v-if="gsModal.show" @click.self="gsModal.show=false">
       <div class="modal modal-wide">
-        <div class="modal-hd">↑ Import Google Sheets — PDP Production</div>
+        <div class="modal-hd"><NavIcon name="upload" :size="16" /> Import Google Sheets — PDP Production</div>
         <div class="modal-ctx">
           URL : <code class="gs-url">{{GS_URL}}</code>
         </div>
         <div class="gs-cols">Colonnes détectées : <b>Equipement · Numéro d'article · Description article · Lot interne · Prévisionnel [UN] · Date fin estimée · Date début · Date fin réelle</b></div>
         <button class="btn-gs-fetch" @click="fetchGsData" :disabled="gsModal.fetching">
-          {{gsModal.fetching?'⟳ Chargement…':'↓ Charger les données'}}
+          <template v-if="gsModal.fetching">Chargement…</template><template v-else><NavIcon name="download" :size="14" /> Charger les données</template>
         </button>
         <div class="gs-err" v-if="gsModal.err">{{gsModal.err}}</div>
         <!-- Prévisualisation -->
@@ -564,7 +564,7 @@
             </table>
           </div>
           <div class="gs-warn" v-if="gsModal.preview.some(function(r){return r._err})">
-            ⚠ Certaines lignes ont des équipements non reconnus et seront ignorées.
+            <NavIcon name="alert-triangle" :size="14" /> Certaines lignes ont des équipements non reconnus et seront ignorées.
           </div>
         </div>
         <div class="modal-acts" v-if="gsModal.preview.length">
@@ -588,10 +588,12 @@ import { supabase } from '../../supabase'
 import { useTheme } from '../../composables/useTheme'
 import { checkProductFluxEquipName, checkUpstreamForEquip, checkUpstreamForAtelier, stageLabels } from '../../services/flux'
 import { loadPermissions, canPerform } from '../../services/permissions'
+import NavIcon from '../../components/NavIcon.vue'
 
 var GS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQqKb5_i0U7YeQYMiNEDy4X2gq6W_78NA2EuC2gRqSVXOKuBcBuXR8ASrE9Eq3admceATv4_gdAUppc/pub?gid=1634438429&single=true&output=csv'
 
 export default {
+  components: { NavIcon },
   setup() {
     var { theme } = useTheme()
 
@@ -602,7 +604,7 @@ export default {
       theme.value = THEME_ORDER[(idx + 1) % THEME_ORDER.length]
     }
     var themeIcon = computed(function() {
-      return theme.value === 'day' ? '☀️' : theme.value === 'workshop' ? '🏭' : '🌙'
+      return theme.value === 'day' ? 'sun' : theme.value === 'workshop' ? 'factory' : 'moon'
     })
     var themeTitle = computed(function() {
       return theme.value === 'night' ? 'Nuit → Jour' : theme.value === 'day' ? 'Jour → Atelier' : 'Atelier → Nuit'
@@ -612,9 +614,9 @@ export default {
     var loading       = ref(false)
     var activeView    = ref('suivi')
     var views = [
-      { key: 'suivi',  icon: '▥', label: 'Suivi en cours' },
-      { key: 'arrets', icon: '⚠', label: 'Arrêts' },
-      { key: 'pdp',    icon: '☰', label: 'Gérer PDP' }
+      { key: 'suivi',  icon: 'activity', label: 'Suivi en cours' },
+      { key: 'arrets', icon: 'alert-triangle', label: 'Arrêts' },
+      { key: 'pdp',    icon: 'calendar-range', label: 'Gérer PDP' }
     ]
 
     // Filtre famille
