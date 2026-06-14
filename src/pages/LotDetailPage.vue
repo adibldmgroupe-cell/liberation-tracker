@@ -1,13 +1,13 @@
 <template>
   <div v-if="lot">
-    <div class="bc"><span @click="goBack">← Retour aux lots</span></div>
+    <div class="bc"><span @click="goBack"><NavIcon name="arrow-left" :size="13" /> Retour aux lots</span></div>
     <div class="lh">
       <div><span class="ln">{{lot.numero_lot}}</span><span class="lp">{{prod.description}}</span></div>
       <div class="lh-right">
         <span v-if="phaseLabel" class="sp-phase" :class="getPhaseClass(phaseLabel)">{{phaseLabel}}</span>
         <span class="sp" :class="'s-'+lot.statut_sap">{{statusLabels[lot.statut_sap]}}</span>
-        <button v-if="canPerform('modifier_lot')" class="btn-sm" @click="showModify=true">✏️ Modifier</button>
-        <button v-if="canPerform('supprimer_lot')" class="btn-sm btn-del" @click="confirmDelete">🗑️ Supprimer</button>
+        <button v-if="canPerform('modifier_lot')" class="btn-sm" @click="showModify=true"><NavIcon name="pencil" :size="13" /> Modifier</button>
+        <button v-if="canPerform('supprimer_lot')" class="btn-sm btn-del" @click="confirmDelete"><NavIcon name="trash" :size="13" /> Supprimer</button>
       </div>
     </div>
 
@@ -80,7 +80,7 @@
           <div>
             <div class="dn">{{docTypeLabel(d)}}</div>
             <div class="ds" :class="dsClass(d)">{{docStatLabel(d)}}</div>
-            <div class="ds-block" v-if="isDocBlocked(d)">⚠ AQL requis</div>
+            <div class="ds-block" v-if="isDocBlocked(d)"><NavIcon name="alert-triangle" :size="12" /> AQL requis</div>
             <!-- DA Micro : bouton déclarer applicable -->
             <button v-if="d.type_document==='da_micro' && !d.is_applicable && canPerform('emettre_da_micro')"
                     class="btn-app" @click.stop="doSetDaMicroApplicable(d.id)">
@@ -95,7 +95,7 @@
     <!-- Déviations -->
     <div class="section"><div class="sh"><span>Déviations</span></div>
       <div class="dg" v-if="canPerform('declarer_nc')">
-        <div class="di di-act" @click="showDevForm=!showDevForm"><div class="dind ind-orange"></div><div><div class="dn">Déclarer une déviation</div><div class="ds">{{showDevForm?'✕ Fermer':'＋ Déclarer'}}</div></div></div>
+        <div class="di di-act" @click="showDevForm=!showDevForm"><div class="dind ind-orange"></div><div><div class="dn">Déclarer une déviation</div><div class="ds"><template v-if="showDevForm"><NavIcon name="x" :size="12" /> Fermer</template><template v-else>＋ Déclarer</template></div></div></div>
       </div>
       <div class="dev-form" v-if="showDevForm">
         <div class="dev-form-row">
@@ -127,7 +127,7 @@
           <div class="dev-card-top">
             <span class="dev-badge-bl" :class="d.bloquante?'dev-bl-on':'dev-bl-off'">{{d.bloquante?'BLOQUANTE':'Non bloquante'}}</span>
             <span class="sp2" :class="d.statut==='ouverte'?'sp2-ko':'sp2-ok'">{{d.statut==='ouverte'?'Ouverte':'Clôturée'}}</span>
-            <button v-if="!d.bloquante&&(d.statut==='ouverte'||d.statut==='en_cours')&&canPerform('declarer_nc')" class="btn-sm dev-bl-mark-btn" @click="doMarkBloquante(d.id)">⚠ Marquer bloquante</button>
+            <button v-if="!d.bloquante&&(d.statut==='ouverte'||d.statut==='en_cours')&&canPerform('declarer_nc')" class="btn-sm dev-bl-mark-btn" @click="doMarkBloquante(d.id)"><NavIcon name="alert-triangle" :size="13" /> Marquer bloquante</button>
             <button v-if="(d.statut==='ouverte'||d.statut==='en_cours') && canPerform('cloturer_deviation')" class="btn-sm dev-cl-btn" @click="doCloseDeviation(d.id)">Clôturer</button>
           </div>
           <!-- Ligne 2 : service déclarant / nom / date -->
@@ -146,7 +146,7 @@
               <label class="dev-lbl">Observation</label>
               <textarea v-model="devEdits[d.id].editObs" rows="2" placeholder="Observation..." class="dev-input"></textarea>
             </div>
-            <button class="dev-save-btn" @click="saveDevField(d.id)">💾 Sauvegarder</button>
+            <button class="dev-save-btn" @click="saveDevField(d.id)"><NavIcon name="save" :size="13" /> Sauvegarder</button>
           </div>
         </div>
       </div>
@@ -205,21 +205,21 @@
     <div class="section"><div class="sh"><span>Planification libération</span><span class="dc" v-if="planSaving">Enregistrement…</span></div>
       <div class="plan-grid">
         <div class="plan-bloc">
-          <div class="plan-titre">🔬 Libération LCQ</div>
+          <div class="plan-titre"><NavIcon name="microscope" :size="14" /> Libération LCQ</div>
           <div class="plan-row">
             <label>Date cible</label>
             <input type="date" v-model="planEdit.date_lcq_cible" class="plan-input" @change="savePlanning('date_lcq_cible')" />
           </div>
         </div>
         <div class="plan-bloc">
-          <div class="plan-titre">✅ Libération AQ</div>
+          <div class="plan-titre"><NavIcon name="check" :size="14" /> Libération AQ</div>
           <div class="plan-row">
             <label>Date cible</label>
             <input type="date" v-model="planEdit.date_aq_cible" class="plan-input" @change="savePlanning('date_aq_cible')" />
           </div>
         </div>
         <div class="plan-bloc">
-          <div class="plan-titre">📋 Libération DT</div>
+          <div class="plan-titre"><NavIcon name="clipboard-check" :size="14" /> Libération DT</div>
           <div class="plan-row">
             <label>Date cible</label>
             <input type="date" v-model="planEdit.date_dt_cible" class="plan-input" @change="savePlanning('date_dt_cible')" />
@@ -231,12 +231,12 @@
     <!-- Synthèse -->
     <div class="section" v-if="dossier"><div class="sh"><span>Synthèse libération</span></div>
       <div class="syg">
-        <div class="syc"><span>IF</span><span :class="dossier.if_approved?'ok':'ko'">{{dossier.if_approved?'✓':'✕'}}</span></div>
-        <div class="syc"><span>IC</span><span :class="dossier.ic_approved?'ok':'ko'">{{dossier.ic_approved?'✓':'✕'}}</span></div>
-        <div class="syc"><span>DA PC</span><span :class="dossier.da_pc_approved?'ok':'ko'">{{dossier.da_pc_approved?'✓':'✕'}}</span></div>
-        <div class="syc"><span>DA Micro</span><span :class="!dossier.da_micro_applicable?'na':dossier.da_micro_approved?'ok':'ko'">{{!dossier.da_micro_applicable?'N/A':dossier.da_micro_approved?'✓':'✕'}}</span></div>
-        <div class="syc"><span>Dév. clôturées</span><span :class="dossier.deviations_closed?'ok':'ko'">{{dossier.deviations_closed?'✓':'✕'}}</span></div>
-        <div class="syc"><span>Pièces compl.</span><span :class="dossier.pieces_complementaires_ok?'ok':'ko'">{{dossier.pieces_complementaires_ok?'✓':'✕'}}</span></div>
+        <div class="syc"><span>IF</span><span :class="dossier.if_approved?'ok':'ko'"><NavIcon v-if="dossier.if_approved" name="check" :size="11" /><NavIcon v-else name="x" :size="11" /></span></div>
+        <div class="syc"><span>IC</span><span :class="dossier.ic_approved?'ok':'ko'"><NavIcon v-if="dossier.ic_approved" name="check" :size="11" /><NavIcon v-else name="x" :size="11" /></span></div>
+        <div class="syc"><span>DA PC</span><span :class="dossier.da_pc_approved?'ok':'ko'"><NavIcon v-if="dossier.da_pc_approved" name="check" :size="11" /><NavIcon v-else name="x" :size="11" /></span></div>
+        <div class="syc"><span>DA Micro</span><span :class="!dossier.da_micro_applicable?'na':dossier.da_micro_approved?'ok':'ko'"><template v-if="!dossier.da_micro_applicable">N/A</template><template v-else-if="dossier.da_micro_approved"><NavIcon name="check" :size="11" /></template><template v-else><NavIcon name="x" :size="11" /></template></span></div>
+        <div class="syc"><span>Dév. clôturées</span><span :class="dossier.deviations_closed?'ok':'ko'"><NavIcon v-if="dossier.deviations_closed" name="check" :size="11" /><NavIcon v-else name="x" :size="11" /></span></div>
+        <div class="syc"><span>Pièces compl.</span><span :class="dossier.pieces_complementaires_ok?'ok':'ko'"><NavIcon v-if="dossier.pieces_complementaires_ok" name="check" :size="11" /><NavIcon v-else name="x" :size="11" /></span></div>
       </div>
       <div class="lz" v-if="canPerform('liberer_lot')"><button class="lb" :disabled="!dossierComplete" @click="doLiberer">{{dossierComplete?'Libérer le lot':'Conditions non remplies'}}</button></div>
     </div>
@@ -249,7 +249,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../supabase'
 import { loadPermissions, canPerform, getPermissionForEtape } from '../services/permissions'
 import { validateOrder, libererLot, declareDeviation, closeDeviation, declareRVP, declareMajDoc, declareClotureSap, requestAql, respondAql, isAqlConforme, modifyLot, deleteLot } from '../services/actions'
+import NavIcon from '../components/NavIcon.vue'
 export default {
+  components: { NavIcon },
   setup() {
     var route = useRoute(), router = useRouter()
     var lot = ref(null), prod = ref({}), of = ref(null), oc = ref(null), ofVals = ref([]), ocVals = ref([])
