@@ -6,9 +6,9 @@
       <div class="tb-left">
         <span class="tb-title">PILOTAGE PRODUCTION</span>
         <div class="tb-modes">
-          <button class="mode-btn" :class="{active: mode==='plan'}"  @click="mode='plan'">🗺 Plan</button>
-          <button class="mode-btn" :class="{active: mode==='flux'}"  @click="mode='flux'">🔄 Flux produit</button>
-          <button class="mode-btn" :class="{active: mode==='trs'}"   @click="mode='trs'">📊 TRS</button>
+          <button class="mode-btn" :class="{active: mode==='plan'}"  @click="mode='plan'"><NavIcon name="map" :size="13" /> Plan</button>
+          <button class="mode-btn" :class="{active: mode==='flux'}"  @click="mode='flux'"><NavIcon name="workflow" :size="13" /> Flux produit</button>
+          <button class="mode-btn" :class="{active: mode==='trs'}"   @click="mode='trs'"><NavIcon name="chart-bar" :size="13" /> TRS</button>
         </div>
         <div class="flux-selector" v-if="mode==='flux'">
           <select class="tb-sel" v-model="selectedLotId" @change="buildFlux">
@@ -17,7 +17,7 @@
               Lot {{s.numero_lot}} · {{s.nom_produit||'—'}}
             </option>
           </select>
-          <button class="btn-sm-tb" v-if="selectedLotId" @click="selectedLotId=null;fluxArrows=[]">✕</button>
+          <button class="btn-sm-tb" v-if="selectedLotId" @click="selectedLotId=null;fluxArrows=[]"><NavIcon name="x" :size="13" /></button>
         </div>
       </div>
       <div class="tb-right">
@@ -26,10 +26,10 @@
             <span class="leg-dot" :style="{background:l.color}"></span>{{l.label}}
           </span>
         </div>
-        <button class="tb-icon-btn" @click="loadAll" :class="{spinning:loading}" title="Rafraîchir">↻</button>
+        <button class="tb-icon-btn" @click="loadAll" :class="{spinning:loading}" title="Rafraîchir"><NavIcon name="refresh" :size="14" /></button>
         <button class="tb-icon-btn" @click="toggleFullscreen" :title="isFullscreen?'Quitter':'Plein écran'">{{isFullscreen?'⊠':'⊞'}}</button>
         <button class="tb-icon-btn admin-btn" v-if="isAdmin" @click="editMode=!editMode"
-          :class="{active:editMode}" title="Édition hotspots">✎</button>
+          :class="{active:editMode}" title="Édition hotspots"><NavIcon name="pencil" :size="14" /></button>
       </div>
     </div>
 
@@ -224,7 +224,7 @@
               <div class="sp-nom">{{selectedRoom.nom}}</div>
               <div class="sp-zone">{{zoneLabel(selectedRoom.zone)}}</div>
             </div>
-            <button class="sp-close" @click="selectedRoom=null">✕</button>
+            <button class="sp-close" @click="selectedRoom=null"><NavIcon name="x" :size="14" /></button>
           </div>
 
           <div class="sp-status-bar" :style="{background:roomFill(selectedRoom)+'bb'}">
@@ -254,7 +254,7 @@
           </div>
 
           <div class="sp-section" v-if="getRoomDevs(selectedRoom).length">
-            <div class="sp-sec-title sp-sec-warn">⚠ Déviations</div>
+            <div class="sp-sec-title sp-sec-warn"><NavIcon name="alert-triangle" :size="13" /> Déviations</div>
             <div v-for="d in getRoomDevs(selectedRoom)" :key="d.id" class="sp-dev-row">
               <span class="sp-dev-bl" v-if="d.bloquante">BLOQUANTE</span>
               <span class="sp-dev-desc">{{d.description||'Déviation en cours'}}</span>
@@ -262,7 +262,7 @@
           </div>
 
           <div class="sp-section" v-if="getRoomArrets(selectedRoom).length">
-            <div class="sp-sec-title sp-sec-stop">⏸ Arrêts actifs</div>
+            <div class="sp-sec-title sp-sec-stop"><NavIcon name="pause" :size="13" /> Arrêts actifs</div>
             <div v-for="a in getRoomArrets(selectedRoom)" :key="a.id" class="sp-arr-row">
               <span class="sp-arr-timer">{{a.elapsed}}</span>
               <span class="sp-arr-nom">{{a.arret_nom||a.motif||'Arrêt'}}</span>
@@ -270,10 +270,10 @@
           </div>
 
           <div class="sp-actions">
-            <button class="sp-btn" @click="goToFab(selectedRoom)"  v-if="selectedRoom.type==='fab'">📋 Suivi Fab</button>
-            <button class="sp-btn" @click="goToCond(selectedRoom)" v-if="selectedRoom.type==='cond'">📦 Suivi Cond</button>
+            <button class="sp-btn" @click="goToFab(selectedRoom)"  v-if="selectedRoom.type==='fab'"><NavIcon name="clipboard-check" :size="13" /> Suivi Fab</button>
+            <button class="sp-btn" @click="goToCond(selectedRoom)" v-if="selectedRoom.type==='cond'"><NavIcon name="package" :size="13" /> Suivi Cond</button>
             <button class="sp-btn sp-btn-sec" @click="goToLot(selectedRoom)"
-              v-if="getRoomLots(selectedRoom).length">🔍 Voir lot</button>
+              v-if="getRoomLots(selectedRoom).length"><NavIcon name="search" :size="13" /> Voir lot</button>
           </div>
         </div>
       </transition>
@@ -312,10 +312,10 @@
 
       <!-- ── MESSAGE PNG en chargement ── -->
       <div class="plan-loading-msg" v-if="!planLoaded && !planError">
-        <span>⏳ Chargement du plan…</span>
+        <span><NavIcon name="hourglass" :size="14" /> Chargement du plan…</span>
       </div>
       <div class="plan-loading-msg plan-error-msg" v-if="planError">
-        <span>📐 Vue schématique — plan PNG non disponible</span>
+        <span><NavIcon name="ruler" :size="14" /> Vue schématique — plan PNG non disponible</span>
       </div>
 
     </div>
@@ -326,8 +326,10 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '../../supabase'
+import NavIcon from '../../components/NavIcon.vue'
 
 export default {
+  components: { NavIcon },
   setup() {
     var router = useRouter()
 
