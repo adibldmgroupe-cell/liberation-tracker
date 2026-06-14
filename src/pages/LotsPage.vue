@@ -27,7 +27,7 @@
         </div>
         <button class="btn-toggle" @click.stop="showDates=!showDates">{{showDates?'Voir statuts':'Voir dates'}}</button>
         <div class="col-panel-wrap" @click.stop>
-          <button class="btn-cols" :class="{'btn-cols-on':showColPanel}" @click="showColPanel=!showColPanel">⚙ Colonnes</button>
+          <button class="btn-cols" :class="{'btn-cols-on':showColPanel}" @click="showColPanel=!showColPanel"><NavIcon name="settings" :size="14" /> Colonnes</button>
           <div class="col-panel" v-if="showColPanel">
             <div class="col-panel-title">Colonnes (ordre & visibilité)</div>
             <div v-for="(col,idx) in colDefs" :key="col.key" class="col-item"
@@ -44,9 +44,9 @@
             <button class="col-reset" @click="resetCols">Réinitialiser</button>
           </div>
         </div>
-        <button class="btn-exp" @click="doExportExcel">📥 Excel</button>
-        <button class="btn-exp" @click="doExportPDF">📄 PDF</button>
-        <button class="btn-data" @click.stop="openDataModal">⬆ Données</button>
+        <button class="btn-exp" @click="doExportExcel"><NavIcon name="download" :size="14" /> Excel</button>
+        <button class="btn-exp" @click="doExportPDF"><NavIcon name="file-text" :size="14" /> PDF</button>
+        <button class="btn-data" @click.stop="openDataModal"><NavIcon name="upload" :size="14" /> Données</button>
       </div>
     </div>
 
@@ -57,12 +57,12 @@
           <span class="action-trigger-label">{{actionType ? actionLabel : '— Choisir une action —'}}</span>
           <span class="action-trigger-arr">{{showActionPanel ? '▲' : '▼'}}</span>
         </button>
-        <button v-if="actionType" class="action-clear" @click.stop="actionType=''" title="Effacer">✕</button>
+        <button v-if="actionType" class="action-clear" @click.stop="actionType=''" title="Effacer"><NavIcon name="x" :size="13" /></button>
         <div class="action-palette" v-if="showActionPanel">
           <div class="ap-search-wrap">
-            <span class="ap-search-ico">🔍</span>
+            <span class="ap-search-ico"><NavIcon name="search" :size="14" /></span>
             <input class="ap-search" v-model="actionSearch" placeholder="Rechercher une action…" @click.stop />
-            <button v-if="actionSearch" class="ap-search-clr" @click.stop="actionSearch=''">✕</button>
+            <button v-if="actionSearch" class="ap-search-clr" @click.stop="actionSearch=''"><NavIcon name="x" :size="13" /></button>
           </div>
           <div class="ap-body">
             <!-- Mode recherche : liste plate avec séparateurs de groupe -->
@@ -113,7 +113,7 @@
         Exécuter<span v-if="selected.length"> ({{selected.length}})</span>
       </button>
       <span v-if="selected.length" class="bulk-info">{{selected.length}} lot(s) sélectionné(s)</span>
-      <button v-if="selected.length" class="bulk-clear" @click="selected=[]">✕ Tout désélectionner</button>
+      <button v-if="selected.length" class="bulk-clear" @click="selected=[]"><NavIcon name="x" :size="13" /> Tout désélectionner</button>
     </div>
 
     <!-- Chips filtres colonnes actifs -->
@@ -121,7 +121,7 @@
       <span class="cf-label">Filtres actifs :</span>
       <span v-for="(val,col) in columnFilters" :key="col" class="cf-chip">
         {{col}} : <strong>{{val}}</strong>
-        <button class="cf-rm" @click="removeColumnFilter(col)">✕</button>
+        <button class="cf-rm" @click="removeColumnFilter(col)"><NavIcon name="x" :size="12" /></button>
       </span>
       <button class="cf-clear" @click="clearColumnFilters">Tout effacer</button>
     </div>
@@ -134,16 +134,16 @@
       <table class="tb">
         <thead><tr>
           <th class="th-chk"><input type="checkbox" :checked="allVisibleChecked" @change="toggleAll" /></th>
-          <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('numero_lot')">N° Lot <span class="sort-arrow">{{sortIcon('numero_lot')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['numero_lot']}" @click="openDropdown('numero_lot',$event)">⌄</button></div></th>
-          <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('prod_desc')">Produit <span class="sort-arrow">{{sortIcon('prod_desc')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['prod_desc']}" @click="openDropdown('prod_desc',$event)">⌄</button></div></th>
-          <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('statut_label')">Statut <span class="sort-arrow">{{sortIcon('statut_label')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['statut_label']}" @click="openDropdown('statut_label',$event)">⌄</button></div></th>
+          <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('numero_lot')">N° Lot <span class="sort-arrow">{{sortIcon('numero_lot')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['numero_lot']}" @click="openDropdown('numero_lot',$event)"><NavIcon name="chevron-down" :size="12" /></button></div></th>
+          <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('prod_desc')">Produit <span class="sort-arrow">{{sortIcon('prod_desc')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['prod_desc']}" @click="openDropdown('prod_desc',$event)"><NavIcon name="chevron-down" :size="12" /></button></div></th>
+          <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('statut_label')">Statut <span class="sort-arrow">{{sortIcon('statut_label')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['statut_label']}" @click="openDropdown('statut_label',$event)"><NavIcon name="chevron-down" :size="12" /></button></div></th>
           <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('liberable_sort')">Libérable <span class="sort-arrow">{{sortIcon('liberable_sort')}}</span></span></div></th>
-          <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('phase')">Phase <span class="sort-arrow">{{sortIcon('phase')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['phase']}" @click="openDropdown('phase',$event)">⌄</button></div></th>
+          <th><div class="th-i"><span class="th-txt sortable" @click="sortBy('phase')">Phase <span class="sort-arrow">{{sortIcon('phase')}}</span></span><button class="th-f" :class="{'th-f-on':columnFilters['phase']}" @click="openDropdown('phase',$event)"><NavIcon name="chevron-down" :size="12" /></button></div></th>
           <!-- Dynamic columns driven by visibleCols order -->
           <template v-for="ck in visibleCols" :key="'h-'+ck">
             <th><div class="th-i">
               <span class="th-txt" :class="{'sortable':sortKeyFor(ck)}" @click="sortKeyFor(ck)?sortBy(sortKeyFor(ck)):null">{{CC[ck].l2&&showDates?CC[ck].l2:CC[ck].l}} <span v-if="sortKeyFor(ck)" class="sort-arrow">{{sortIcon(sortKeyFor(ck))}}</span></span>
-              <button class="th-f" :class="{'th-f-on':columnFilters[CC[ck].f]}" @click="openDropdown(CC[ck].f,$event)">⌄</button>
+              <button class="th-f" :class="{'th-f-on':columnFilters[CC[ck].f]}" @click="openDropdown(CC[ck].f,$event)"><NavIcon name="chevron-down" :size="12" /></button>
             </div></th>
           </template>
         </tr></thead>
@@ -202,8 +202,8 @@
         <div class="inline-motif-title">{{inlineMenu.pendingAction.label}}</div>
         <textarea v-model="inlineMenu.motifText" class="inline-motif-input" placeholder="Motif du retour (optionnel)…" rows="3"></textarea>
         <div class="inline-motif-btns">
-          <button class="inline-motif-confirm" @click="confirmInlineMotif">✓ Confirmer</button>
-          <button class="inline-motif-cancel" @click="inlineMenu.pendingAction=null">✕ Annuler</button>
+          <button class="inline-motif-confirm" @click="confirmInlineMotif"><NavIcon name="check" :size="13" /> Confirmer</button>
+          <button class="inline-motif-cancel" @click="inlineMenu.pendingAction=null"><NavIcon name="x" :size="13" /> Annuler</button>
         </div>
       </template>
       <template v-else>
@@ -233,9 +233,9 @@
       <input type="date" v-model="datePicker.value" class="dp-input" @change="loadCharge" @keydown.enter="savePlanning" @keydown.escape="datePicker=null" ref="dpInput" />
       <div class="dp-charge" v-if="datePicker.value">
         <span v-if="chargeLoading" class="charge-loading">⟳ Vérification…</span>
-        <span v-else-if="chargeCount===0" class="charge-ok">✓ Aucun autre lot prévu ce jour</span>
+        <span v-else-if="chargeCount===0" class="charge-ok"><NavIcon name="check" :size="13" /> Aucun autre lot prévu ce jour</span>
         <span v-else-if="chargeCount!==null" :class="chargeCount>=15?'charge-high':chargeCount>=8?'charge-med':'charge-low'">
-          📅 {{chargeCount}} autre{{chargeCount>1?'s':''}} lot{{chargeCount>1?'s':''}} prévu{{chargeCount>1?'s':''}} ce jour
+          <NavIcon name="calendar" :size="13" /> {{chargeCount}} autre{{chargeCount>1?'s':''}} lot{{chargeCount>1?'s':''}} prévu{{chargeCount>1?'s':''}} ce jour
         </span>
       </div>
       <!-- Historique des modifications -->
@@ -249,8 +249,8 @@
         </div>
       </div>
       <div class="dp-actions">
-        <button class="dp-ok" @click="savePlanning">✓ Valider</button>
-        <button class="dp-cancel" @click="datePicker=null">✕</button>
+        <button class="dp-ok" @click="savePlanning"><NavIcon name="check" :size="13" /> Valider</button>
+        <button class="dp-cancel" @click="datePicker=null"><NavIcon name="x" :size="13" /></button>
       </div>
     </div>
 
@@ -258,7 +258,7 @@
     <div v-if="devPopup" class="dev-pop" :style="{top:devPopup.top+'px',left:devPopup.left+'px'}" @click.stop>
       <div class="dev-pop-header">
         <span class="dev-pop-title">Déviations — {{devPopup.lotNum}}</span>
-        <button class="dev-pop-x" @click="devPopup=null">✕</button>
+        <button class="dev-pop-x" @click="devPopup=null"><NavIcon name="x" :size="13" /></button>
       </div>
       <!-- Résumé -->
       <div class="dev-pop-summary">
@@ -290,8 +290,8 @@
               <textarea v-model="d.editObs" rows="2" placeholder="Observation" class="dev-pop-ta-sm"></textarea>
             </div>
             <div class="dev-pop-acc-actions">
-              <button class="dev-save-btn" @click="saveDevField(d)">💾 Sauvegarder</button>
-              <button v-if="!d.bloquante&&(d.statut==='ouverte'||d.statut==='en_cours')&&(userService==='admin'||canPerform('declarer_nc'))" class="dev-bl-btn" @click="markBloquanteInPopup(d.id)">⚠ Marquer bloquante</button>
+              <button class="dev-save-btn" @click="saveDevField(d)"><NavIcon name="save" :size="13" /> Sauvegarder</button>
+              <button v-if="!d.bloquante&&(d.statut==='ouverte'||d.statut==='en_cours')&&(userService==='admin'||canPerform('declarer_nc'))" class="dev-bl-btn" @click="markBloquanteInPopup(d.id)"><NavIcon name="alert-triangle" :size="13" /> Marquer bloquante</button>
               <button v-if="(d.statut==='ouverte'||d.statut==='en_cours')&&(userService==='admin'||canPerform('cloturer_deviation'))" class="dev-close-btn" @click="closeDevInPopup(d.id)">Clôturer</button>
             </div>
           </div>
@@ -306,7 +306,7 @@
           {{devPopup.bloquante?'BLOQUANTE':'Non bloquante'}}
         </button>
         <div class="dev-pop-actions">
-          <button class="dp-ok" @click="confirmDevPopup">✓ Déclarer</button>
+          <button class="dp-ok" @click="confirmDevPopup"><NavIcon name="check" :size="13" /> Déclarer</button>
         </div>
       </template>
     </div>
@@ -364,33 +364,33 @@
               <div class="m-rc"><div class="m-rv" style="color:#999">{{dataStats.skipped}}</div><div class="m-rl">Ignorés</div></div>
               <div class="m-rc"><div class="m-rv" style="color:#E24B4A">{{(dataStats.errors||[]).length}}</div><div class="m-rl">Erreurs</div></div>
             </div>
-            <div v-else class="dm-done">✓ Opération terminée</div>
+            <div v-else class="dm-done"><NavIcon name="check" :size="14" /> Opération terminée</div>
             <div v-if="dataStats.errors && dataStats.errors.length" class="m-errs">
               <div v-for="(e,i) in dataStats.errors.slice(0,12)" :key="i" class="m-err">{{e}}</div>
             </div>
           </div>
-          <div class="m-actions"><button class="m-btn-cancel" @click="dataStats=null">← Retour</button></div>
+          <div class="m-actions"><button class="m-btn-cancel" @click="dataStats=null"><NavIcon name="arrow-left" :size="13" /> Retour</button></div>
         </div>
 
         <div v-else class="dm-body">
           <div class="dm-section">
-            <div class="dm-sec-title">🔄 Réception PF (SAP)</div>
+            <div class="dm-sec-title"><NavIcon name="refresh" :size="14" /> Réception PF (SAP)</div>
             <div class="dm-sec-desc">Synchronise les lots depuis la feuille SAP « Réception PF ».</div>
             <button class="dm-btn-primary" :disabled="!gsReceptionUrl" @click="syncReceptionPF">Synchroniser Réception PF</button>
             <div v-if="!gsReceptionUrl" class="dm-warn">URL non configurée (voir page Import).</div>
           </div>
 
           <div class="dm-section">
-            <div class="dm-sec-title">🔄 Historique</div>
+            <div class="dm-sec-title"><NavIcon name="history" :size="14" /> Historique</div>
             <div class="dm-sec-desc">Importe l'état complet depuis la feuille « Historique » (Google Sheets).</div>
             <input v-model="gsHistoUrl" class="dm-url" type="url" placeholder="URL CSV publiée…" @change="saveHistoUrl" />
             <button class="dm-btn-primary" :disabled="!gsHistoUrl" @click="syncHistorique">Synchroniser Historique</button>
           </div>
 
-          <div class="dm-danger-head">⚠ Vidage par volet — chaque volet est indépendant</div>
+          <div class="dm-danger-head"><NavIcon name="alert-triangle" :size="14" /> Vidage par volet — chaque volet est indépendant</div>
 
           <div class="dm-section dm-danger">
-            <div class="dm-sec-title">🗑 Gestion lots</div>
+            <div class="dm-sec-title"><NavIcon name="trash" :size="14" /> Gestion lots</div>
             <div class="dm-sec-desc">Efface <strong>tous les lots</strong> et tout leur dossier (circuits OF/OC, documents, AQL, déviations, planning…) <strong>et la production rattachée à ces lots</strong>, puis réimporte l'Historique. Référentiel, comptes, permissions et risque péremption <strong>conservés</strong>.</div>
             <button v-if="viderWhich!=='lots'" class="dm-btn-danger" @click="startVider('lots')">Vider Gestion lots…</button>
             <template v-else>
@@ -404,7 +404,7 @@
           </div>
 
           <div class="dm-section dm-danger">
-            <div class="dm-sec-title">🗑 Module production</div>
+            <div class="dm-sec-title"><NavIcon name="trash" :size="14" /> Module production</div>
             <div class="dm-sec-desc">Efface les données <strong>opérationnelles</strong> de production : sessions TRS, suivis fabrication &amp; conditionnement, arrêts, comptages, cadences-session. Les <strong>lots</strong>, le référentiel production (ateliers, équipements, cadences, flux, opérations) et le risque péremption sont <strong>conservés</strong>.</div>
             <button v-if="viderWhich!=='prod'" class="dm-btn-danger" @click="startVider('prod')">Vider Module production…</button>
             <template v-else>
@@ -418,7 +418,7 @@
           </div>
 
           <div class="dm-section dm-danger">
-            <div class="dm-sec-title">🗑 Risque péremption</div>
+            <div class="dm-sec-title"><NavIcon name="trash" :size="14" /> Risque péremption</div>
             <div class="dm-sec-desc">Efface toutes les <strong>évaluations</strong> de risque de péremption. Les pondérations &amp; seuils (configuration), les produits, les lots et la production sont <strong>conservés</strong>.</div>
             <button v-if="viderWhich!=='perem'" class="dm-btn-danger" @click="startVider('perem')">Vider Risque péremption…</button>
             <template v-else>
@@ -445,7 +445,9 @@ import { exportToExcel, exportToPDF } from '../services/export'
 import { createNotification } from '../services/notifications'
 import { canPerform, loadPermissions, getPermissionForBulkAction, getPermissionForEtape } from '../services/permissions'
 import { importFromGoogleSheets, importHistoriqueDepuisGoogleSheets, viderDonneesOperationnelles, viderDonneesProduction, viderDonneesPeremption } from '../services/import'
+import NavIcon from '../components/NavIcon.vue'
 export default {
+  components: { NavIcon },
   setup() {
     var route = useRoute(), router = useRouter()
     var lots = ref([]), total = ref(0)
