@@ -418,26 +418,35 @@ Pour lire des fichiers, extraire du CSS, chercher des patterns → **toujours ut
 ## RÈGLE N°15 — Checklist restructuration au pattern AdminFluxPage
 
 Quand une page est restructurée pour adopter le pattern AdminFluxPage, **tous les éléments
-"header" doivent être mis en violet immédiatement** — ne jamais laisser un gris par défaut.
+"header" doivent être mis à l'accent immédiatement** — ne jamais laisser un gris par défaut.
 
-### Palette violet AdminFluxPage (à appliquer partout)
+> ⚠️ **MàJ juin 2026 — l'accent du thème JOUR est passé du violet au BLEU « Azur » `#2563eb`**
+> (Nuit = périwinkle `#7c7cff`, Atelier = orange `#ff9800`, **inchangés** — overrides dans
+> `themes.css` via `var(--th-accent)`). **Partout dans ce CLAUDE.md où `#7c3aed` (violet) est cité
+> comme « l'accent », lire désormais `#2563eb` (bleu) en jour** (`#f5f3ff`→`#eff6ff`,
+> `#ede9fe`→`#dbeafe`). Le sidebar jour est aussi devenu clair (bleu presque blanc).
+> ⚠️ Les **icônes d'UI** ne sont plus des emojis → composant `<NavIcon>` (SVG `currentColor`).
+> Détails en mémoire locale `navicon-icon-system` + `no-subagents-do-it-yourself`.
+
+### Palette accent AdminFluxPage — JOUR (à appliquer partout)
 
 | Élément | background | color | border |
 |---|---|---|---|
-| En-têtes tableau `th` | `#f5f3ff` | `#7c3aed` | `1px solid #ede9fe` |
-| En-têtes cards `.card-hd` | `#f5f3ff` | `#7c3aed` | `1px solid #ede9fe` |
-| En-têtes colonnes `.col-hd` | `#f5f3ff` | `#7c3aed` | `1px solid #ede9fe` |
-| En-têtes grille `.pg-head` | `#f5f3ff` | `#7c3aed` | `1px solid #ede9fe` |
-| En-têtes calendrier `.mth-head` | `#f5f3ff` | `#7c3aed` | `1px solid #ede9fe` |
+| En-têtes tableau `th` | `#eff6ff` | `#2563eb` | `1px solid #dbeafe` |
+| En-têtes cards `.card-hd` | `#eff6ff` | `#2563eb` | `1px solid #dbeafe` |
+| En-têtes colonnes `.col-hd` | `#eff6ff` | `#2563eb` | `1px solid #dbeafe` |
+| En-têtes grille `.pg-head` | `#eff6ff` | `#2563eb` | `1px solid #dbeafe` |
+| En-têtes calendrier `.mth-head` | `#eff6ff` | `#2563eb` | `1px solid #dbeafe` |
 | Titre de page `.fa-title` | — | `#1a1a2e` (jour) | — |
 
 ### Checklist avant de committer une restructuration
 
-- [ ] Tous les `th` → `#f5f3ff / #7c3aed`
-- [ ] Tous les `.card-hd` → `#f5f3ff / #7c3aed`
-- [ ] Tous les `.col-hd`, `.pg-head`, `.mth-head` → `#f5f3ff / #7c3aed`
+- [ ] Tous les `th` → `#eff6ff / #2563eb`
+- [ ] Tous les `.card-hd` → `#eff6ff / #2563eb`
+- [ ] Tous les `.col-hd`, `.pg-head`, `.mth-head` → `#eff6ff / #2563eb`
 - [ ] Grep `themes.css` pour chaque classe modifiée (règle N°16 ci-dessous)
 - [ ] **Badges de statut/rôle** : toujours ajouter les overrides night/workshop (voir règle N°15c)
+- [ ] **Icônes** : `<NavIcon name="…">` (SVG), jamais d'emoji (voir mémoire `navicon-icon-system`)
 
 ---
 
