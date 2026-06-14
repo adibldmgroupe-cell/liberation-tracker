@@ -7,7 +7,7 @@
         <span class="pt">PDP FABRICATION</span>
         <div class="vtabs">
           <button v-for="v in views" :key="v.key" class="vtab" :class="{active:activeView===v.key}" @click="activeView=v.key">
-            <span class="vtab-ic">{{v.icon}}</span>{{v.label}}
+            <span class="vtab-ic"><NavIcon :name="v.icon" :size="14" /></span>{{v.label}}
           </button>
         </div>
       </div>
@@ -16,8 +16,8 @@
           <button v-for="p in ['Tous',...processus.map(function(x){return x.nom_process})]" :key="p" class="proc-tab"
             :class="{active:filterProc===p}" @click="filterProc=p">{{p}}</button>
         </div>
-        <button class="btn-ref" @click="loadAll" :class="{spin:loading}">↻</button>
-        <button class="btn-ref" @click="cycleTheme" :title="themeTitle">{{themeIcon}}</button>
+        <button class="btn-ref" @click="loadAll" :class="{spin:loading}"><NavIcon name="refresh" :size="14" /></button>
+        <button class="btn-ref" @click="cycleTheme" :title="themeTitle"><NavIcon :name="themeIcon" :size="15" /></button>
       </div>
     </div>
 
@@ -29,9 +29,9 @@
       <!-- Toolbar -->
       <div class="tc-bar">
         <div class="tc-nav">
-          <button class="tn" @click="navPeriod(-1)">◀</button>
+          <button class="tn" @click="navPeriod(-1)"><NavIcon name="arrow-left" :size="13" /></button>
           <button class="tn tn-now" @click="goToday">Auj.</button>
-          <button class="tn" @click="navPeriod(1)">▶</button>
+          <button class="tn" @click="navPeriod(1)"><NavIcon name="arrow-right" :size="13" /></button>
           <span class="tc-range">{{rangeLabel}}</span>
         </div>
         <div class="tc-pds">
@@ -144,10 +144,10 @@
                 <span v-else class="arr-none">—</span>
               </td>
               <td class="acts">
-                <button class="ia" @click="openFabModal(sf,sf.atelier_id)" title="Modifier">✏</button>
-                <button class="ia" @click="openArretAtelier(sf)" title="Arrêt" v-if="sf.statut==='En cours'">⏸</button>
-                <button class="ia ok" @click="clotureAtelier(sf)" title="Clôturer" v-if="sf.statut==='En cours'||sf.statut==='Arrêt'">✓</button>
-                <button class="ia del" @click="deleteFab(sf)" title="Supprimer">✕</button>
+                <button class="ia" @click="openFabModal(sf,sf.atelier_id)" title="Modifier"><NavIcon name="pencil" :size="13" /></button>
+                <button class="ia" @click="openArretAtelier(sf)" title="Arrêt" v-if="sf.statut==='En cours'"><NavIcon name="pause" :size="13" /></button>
+                <button class="ia ok" @click="clotureAtelier(sf)" title="Clôturer" v-if="sf.statut==='En cours'||sf.statut==='Arrêt'"><NavIcon name="check" :size="13" /></button>
+                <button class="ia del" @click="deleteFab(sf)" title="Supprimer"><NavIcon name="x" :size="13" /></button>
               </td>
             </tr>
             <tr v-if="!filteredSuivis.length"><td colspan="10" class="empty">Aucun suivi trouvé</td></tr>
@@ -201,8 +201,8 @@
               <td class="mono">{{arretDuree(arr)}}</td>
               <td><span :class="arr.heure_fin?'schip sc-clôturé':'schip sc-en-cours'">{{arr.heure_fin?'Clôturé':'En cours'}}</span></td>
               <td class="acts">
-                <button v-if="!arr.heure_fin" class="ia ok" @click="closeArretAtelier(arr)">✓ Lever</button>
-                <button class="ia del" @click="deleteArret(arr)">✕</button>
+                <button v-if="!arr.heure_fin" class="ia ok" @click="closeArretAtelier(arr)"><NavIcon name="check" :size="13" /> Lever</button>
+                <button class="ia del" @click="deleteArret(arr)"><NavIcon name="x" :size="13" /></button>
               </td>
             </tr>
             <tr v-if="!filteredArrets.length"><td colspan="8" class="empty">Aucun arrêt</td></tr>
@@ -219,11 +219,11 @@
             <div class="dp-eq">{{detailPanel.atNom}}</div>
             <div class="dp-date">{{detailPanel.dayLabel}} {{detailPanel.dateLabel}} · {{detailPanel.procNom}}</div>
           </div>
-          <button class="dp-x" @click="detailPanel.show=false">✕</button>
+          <button class="dp-x" @click="detailPanel.show=false"><NavIcon name="x" :size="14" /></button>
         </div>
         <div class="dp-body">
           <div v-if="detailPanel.suivis&&detailPanel.suivis.length" class="dp-sec">
-            <div class="dp-stitle">🏭 Réalisé (suivi fabrication)</div>
+            <div class="dp-stitle"><NavIcon name="factory" :size="15" /> Réalisé (suivi fabrication)</div>
             <div v-for="sf in detailPanel.suivis" :key="sf.id" class="dp-item">
               <div class="dpi-row">
                 <span class="dpi-lot">{{sf.lots&&sf.lots.numero_lot||sf.lot_id}}</span>
@@ -232,7 +232,7 @@
               <div class="dpi-prod">{{sf.lots&&sf.lots.products&&sf.lots.products.description||'—'}}</div>
               <div class="dpi-meta">Début : {{fmtDate(sf.date_debut)}}<span v-if="sf.date_fin"> · Fin : {{fmtDate(sf.date_fin)}}</span><span v-else> · En cours</span></div>
               <div class="dpi-meta">Durée : {{calcDuree(sf)}}</div>
-              <div class="dpi-meta" v-if="getArretCount(sf.id)">⚠ {{getArretCount(sf.id)}} arrêt(s)</div>
+              <div class="dpi-meta" v-if="getArretCount(sf.id)"><NavIcon name="alert-triangle" :size="12" /> {{getArretCount(sf.id)}} arrêt(s)</div>
               <div class="dpi-acts">
                 <button class="dpi-btn" @click="openFabModal(sf,sf.atelier_id);detailPanel.show=false">Modifier</button>
                 <button class="dpi-btn" @click="openArretAtelier(sf);detailPanel.show=false" v-if="sf.statut==='En cours'">Arrêt</button>
@@ -250,7 +250,7 @@
       <div class="modal modal-fab">
         <div class="modal-hd">
           {{fabModal.id?'Modifier suivi':'Nouveau suivi fabrication'}}
-          <button class="dp-x" @click="fabModal.open=false">✕</button>
+          <button class="dp-x" @click="fabModal.open=false"><NavIcon name="x" :size="14" /></button>
         </div>
         <div class="modal-body">
           <div class="form-row">
@@ -264,7 +264,7 @@
                 </div>
               </div>
             </div>
-            <div v-if="fabModal.lotId" class="sel-lot-info">✓ {{fabModal.lotNum}} — {{fabModal.lotProd}}</div>
+            <div v-if="fabModal.lotId" class="sel-lot-info"><NavIcon name="check" :size="13" /> {{fabModal.lotNum}} — {{fabModal.lotProd}}</div>
           </div>
           <div class="form-row">
             <label class="lbl">Atelier *</label>
@@ -310,7 +310,7 @@
       <div class="modal modal-arret">
         <div class="modal-hd">
           Déclarer arrêt — {{getAtelierNom(arretModal.atelierId)}}
-          <button class="dp-x" @click="arretModal.open=false">✕</button>
+          <button class="dp-x" @click="arretModal.open=false"><NavIcon name="x" :size="14" /></button>
         </div>
         <div class="modal-body">
           <div class="arr-lot-info">
@@ -342,8 +342,10 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { supabase } from '../../supabase'
 import { useTheme } from '../../composables/useTheme'
 import { loadPermissions, canPerform } from '../../services/permissions'
+import NavIcon from '../../components/NavIcon.vue'
 
 export default {
+  components: { NavIcon },
   setup() {
     var { theme } = useTheme()
 
@@ -395,8 +397,8 @@ export default {
 
     var views = [
       { key:'tableau', icon:'⊞', label:'Planning' },
-      { key:'lotfab',  icon:'▥', label:'Suivi lots' },
-      { key:'arrets',  icon:'⚠', label:'Arrêts' }
+      { key:'lotfab',  icon:'activity', label:'Suivi lots' },
+      { key:'arrets',  icon:'alert-triangle', label:'Arrêts' }
     ]
 
     // ─── LOAD ──────────────────────────────────────────────────
@@ -764,7 +766,7 @@ export default {
       theme.value = THEME_ORDER[(idx + 1) % THEME_ORDER.length]
     }
     var themeIcon = computed(function() {
-      return theme.value === 'day' ? '☀️' : theme.value === 'workshop' ? '🏭' : '🌙'
+      return theme.value === 'day' ? 'sun' : theme.value === 'workshop' ? 'factory' : 'moon'
     })
     var themeTitle = computed(function() {
       return theme.value === 'night' ? 'Nuit → cliquer pour Jour' : theme.value === 'day' ? 'Jour → cliquer pour Atelier' : 'Atelier → cliquer pour Nuit'
