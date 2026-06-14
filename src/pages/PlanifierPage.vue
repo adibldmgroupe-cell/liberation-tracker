@@ -48,7 +48,7 @@
       <button class="btn-plan" :disabled="!canSubmit" @click="showConfirm = true">
         Planifier {{lotCount}} lot{{lotCount > 1 ? 's' : ''}}
       </button>
-      <div v-if="!canCreate" class="perm-hint">🔒 Permission « Créer un lot » requise pour planifier.</div>
+      <div v-if="!canCreate" class="perm-hint"><NavIcon name="lock" :size="14" /> Permission « Créer un lot » requise pour planifier.</div>
     </div>
 
     <div class="modal-overlay" v-if="showConfirm" @click="showConfirm = false">
@@ -73,7 +73,7 @@
         <div class="rc"><div class="rv" style="color:#999">{{result.skipped}}</div><div class="rl">Déjà existants</div></div>
         <div class="rc"><div class="rv" style="color:#E24B4A">{{result.errors}}</div><div class="rl">Erreurs</div></div>
       </div>
-      <button class="btn-see" @click="$router.push('/lots?statut=vide')">Voir les lots planifiés →</button>
+      <button class="btn-see" @click="$router.push('/lots?statut=vide')">Voir les lots planifiés <NavIcon name="arrow-right" :size="13" /></button>
     </div>
   </div>
 </template>
@@ -81,7 +81,9 @@
 import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../supabase'
 import { loadPermissions, canPerform } from '../services/permissions'
+import NavIcon from '../components/NavIcon.vue'
 export default {
+  components: { NavIcon },
   setup() {
     var codeInput = ref('')
     var suggestions = ref([])

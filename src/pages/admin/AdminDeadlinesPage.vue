@@ -1,7 +1,7 @@
 <template>
   <div class="dl-page" v-if="loaded">
     <div class="dl-head">
-      <div class="dl-title">⏱ Délais documentaires</div>
+      <div class="dl-title"><NavIcon name="clock" :size="18" /> Délais documentaires</div>
       <div class="dl-sub">Délai de traitement (en jours) par <b>service</b> et par <b>type</b>. Le compteur démarre à l'arrivée de l'item au niveau du service (accusé de réception ; réception du lot pour l'émission). À l'échéance, la tâche correspondante est signalée dans « Tâches ». Laisser vide = aucun délai.</div>
     </div>
     <div class="dl-grid-wrap">
@@ -38,7 +38,9 @@ import { ref, onMounted } from 'vue'
 import { supabase } from '../../supabase'
 import { canPerform } from '../../services/permissions'
 import { DEADLINE_TYPES, DEADLINE_SERVICES } from '../../services/deadlines'
+import NavIcon from '../../components/NavIcon.vue'
 export default {
+  components: { NavIcon },
   setup() {
     var TYPES = DEADLINE_TYPES
     var SERVICES = DEADLINE_SERVICES

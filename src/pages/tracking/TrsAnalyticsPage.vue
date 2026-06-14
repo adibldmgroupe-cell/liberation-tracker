@@ -3,9 +3,9 @@
     <div class="ph">
       <span class="pt">ANALYTICS TRS</span>
       <div class="theme-sw">
-        <button class="tsw-btn" :class="{active:theme==='night'}" @click="theme='night'" title="Nuit">🌙</button>
-        <button class="tsw-btn" :class="{active:theme==='day'}" @click="theme='day'" title="Jour">☀️</button>
-        <button class="tsw-btn" :class="{active:theme==='workshop'}" @click="theme='workshop'" title="Atelier">🏭</button>
+        <button class="tsw-btn" :class="{active:theme==='night'}" @click="theme='night'" title="Nuit"><NavIcon name="moon" :size="14" /></button>
+        <button class="tsw-btn" :class="{active:theme==='day'}" @click="theme='day'" title="Jour"><NavIcon name="sun" :size="14" /></button>
+        <button class="tsw-btn" :class="{active:theme==='workshop'}" @click="theme='workshop'" title="Atelier"><NavIcon name="factory" :size="14" /></button>
       </div>
     </div>
     <div class="wip">Page en cours de développement — disponible dans l'étape suivante.</div>
@@ -13,7 +13,9 @@
 </template>
 <script>
 import { useTheme } from '../../composables/useTheme'
+import NavIcon from '../../components/NavIcon.vue'
 export default {
+  components: { NavIcon },
   setup() {
     var { theme } = useTheme()
     return { theme }

@@ -4,7 +4,7 @@
     <!-- ── En-tête ── -->
     <div class="fa-header">
       <div>
-        <div class="fa-title">👤 Utilisateurs</div>
+        <div class="fa-title"><NavIcon name="user" :size="18" /> Utilisateurs</div>
         <div class="fa-sub">{{ profiles.length }} compte(s) enregistré(s)</div>
       </div>
       <div class="fa-actions">
@@ -97,7 +97,9 @@ import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../supabase'
 import { canPerform } from '../services/permissions'
 import { adminCreateUser, adminDeleteUser } from '../services/adminAuth'
+import NavIcon from '../components/NavIcon.vue'
 export default {
+  components: { NavIcon },
   setup() {
     var profiles = ref([]), loading = ref(true), currentUserId = ref(null)
     var showModal = ref(false), isEdit = ref(false), saving = ref(false), formErr = ref('')
