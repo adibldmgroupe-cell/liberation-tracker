@@ -355,16 +355,28 @@ export default {
       if(d.statut==='non_emis'||!d.statut) return 'wait'
       return 'cur'
     }
+    // DA : gris si phase amont pas finie · jaune (todo) si finie mais DA pas faite · vert si faite · na si non applicable
+    var rmDaStat = function(type, phaseDone){
+      var base = rmDocStat(type)
+      if(base==='na') return 'na'
+      if(!phaseDone) return 'wait'
+      if(base==='done') return 'done'
+      return 'todo'
+    }
     var roadmapDocs = computed(function(){
       if(!lot.value) return null
+      var rm = roadmap.value || []
+      var condI = rm.findIndex(function(s){return s.key==='cond'})
+      var condDone = condI>=0 && rm[condI] && rm[condI].status==='done'
+      var fabDone = condI>0 && rm[condI-1] && rm[condI-1].status==='done'
       var rvpFab=rmRvpStat('fabrication'), rvpCond=rmRvpStat('conditionnement'), rvpLcq=rmRvpStat('lcq')
       var fab=[ {label:'IF', status:rmDocStat('if')}, {label:'AQL Fab', status:rmAqlStat('fabrication')} ]
       if(rvpFab!=='na') fab.push({label:'RVP Fab', status:rvpFab})
       var cond=[ {label:'IC', status:rmDocStat('ic')}, {label:'AQL Cond', status:rmAqlStat('conditionnement')} ]
       if(rvpCond!=='na') cond.push({label:'RVP Cond', status:rvpCond})
-      var transFC=[ {label:'DA Physico', status:rmDocStat('da_pc'), da:true} ]   // entre fin fab et conditionnement
+      var transFC=[ {label:'DA PC', full:'DA physico-chimie', status:rmDaStat('da_pc', fabDone), da:true} ]   // sur la ligne, entre fin fab et conditionnement
       if(rvpLcq!=='na') transFC.push({label:'RVP LCQ', status:rvpLcq})
-      var transCR=[ {label:'DA Micro', status:rmDocStat('da_micro'), da:true} ]  // entre conditionnement et réception
+      var transCR=[ {label:'DA Micro', full:'DA microbiologie', status:rmDaStat('da_micro', condDone), da:true} ]  // sur la ligne, entre conditionnement et réception
       return {
         of: of.value ? { status: ofV.value>=circuitSteps.length?'done':'cur' } : null,
         oc: oc.value ? { status: ocV.value>=circuitSteps.length?'done':'cur' } : null,
