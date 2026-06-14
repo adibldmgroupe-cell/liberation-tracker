@@ -64,7 +64,7 @@
           <span class="notif-bell" @click="$router.push('/notifications')" role="button" aria-label="Notifications"><NavIcon name="bell" :size="18" /><span class="bell-badge" v-if="unreadCount>0">{{unreadCount}}</span></span>
         </template>
         <div v-else class="top-spacer"></div>
-        <button class="theme-btn" @click="cycleTheme" :title="'Thème : '+theme">{{themeIcon}}</button>
+        <button class="theme-btn" @click="cycleTheme" :title="'Thème : '+theme" :aria-label="'Thème : '+theme"><NavIcon :name="themeIcon" :size="17" /></button>
         <span class="clock">{{clock}}</span>
       </header>
       <div class="page-content" :class="{'page-full':$route.name==='ProductionFlux'}"><router-view /></div>
@@ -100,7 +100,7 @@ export default {
       theme.value = THEME_ORDER[(idx + 1) % THEME_ORDER.length]
     }
     var themeIcon = computed(function() {
-      return theme.value === 'day' ? '☀️' : theme.value === 'workshop' ? '🏭' : '🌙'
+      return theme.value === 'day' ? 'sun' : theme.value === 'workshop' ? 'factory' : 'moon'
     })
     var profile = ref(null), searchQuery = ref(''), suggestions = ref([]), showSug = ref(false)
     var clock = ref(''), unreadCount = ref(0), pendingTasksCount = ref(0), searchInput = ref(null), mobileMenuOpen = ref(false)
@@ -286,7 +286,7 @@ export default {
 .sug-type{font-size:9px;font-weight:600;padding:2px 6px;border-radius:2px;letter-spacing:.5px}.t-lot{background:#E6F1FB;color:#0C447C}.t-product{background:#EAF3DE;color:#3B6D11}
 .sug-label{font-weight:500}.sug-sub{color:#999;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .notif-bell{font-size:18px;cursor:pointer;position:relative;padding:4px;color:var(--th-text2);display:inline-flex;align-items:center}.bell-badge{position:absolute;top:-2px;right:-4px;background:#E24B4A;color:#fff;font-size:9px;font-weight:600;padding:1px 4px;border-radius:6px}
-.theme-btn{background:none;border:1px solid transparent;border-radius:4px;cursor:pointer;font-size:15px;padding:3px 6px;line-height:1;transition:background .15s,border-color .15s}.theme-btn:hover{background:rgba(0,0,0,.06);border-color:rgba(0,0,0,.12)}
+.theme-btn{background:none;border:1px solid transparent;border-radius:4px;cursor:pointer;color:var(--th-text2);display:inline-flex;align-items:center;padding:4px 6px;line-height:1;transition:background .15s,border-color .15s}.theme-btn:hover{background:rgba(0,0,0,.06);border-color:rgba(0,0,0,.12)}
 .clock{margin-left:auto;font-family:'SF Mono','Fira Code',monospace;font-size:12px;color:#999;white-space:nowrap}
 .page-content{flex:1;overflow-y:auto;overflow-x:hidden;padding:16px 20px;min-width:0}
 
