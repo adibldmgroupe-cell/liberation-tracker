@@ -369,7 +369,7 @@
               {{selectedTrsPanel && selectedTrsPanel.session ? selectedTrsPanel.session.statut : 'Disponible'}}
             </div>
             <div class="tdp-clock">{{trsClock}}</div>
-            <button class="tdp-close" @click="selectedNode=null; selectedTrsPanel=null">✕</button>
+            <button class="tdp-close" @click="selectedNode=null; selectedTrsPanel=null"><NavIcon name="x" :size="14" /></button>
           </div>
         </div>
 
@@ -446,11 +446,11 @@
           <!-- ── Comptage théorique vs réel ── -->
           <div class="tdp-comptage-bloc" v-if="selectedTrsPanel.session && trsTheoCounters[selectedTrsPanel.equip.id]">
             <div class="tdp-cad-line">
-              <span class="tdp-cad-ic">⚙</span>
+              <span class="tdp-cad-ic"><NavIcon name="settings" :size="13" /></span>
               <span class="tdp-cad-val">{{trsTheoCounters[selectedTrsPanel.equip.id]?.currentCadence || '—'}} b/min</span>
               <span v-if="trsTheoCounters[selectedTrsPanel.equip.id]?.isFallback" class="tdp-cad-fb"> (obj.)</span>
               <span v-if="selectedTrsPanel.session.colisage_confirme" class="tdp-cad-col"> · {{selectedTrsPanel.session.colisage_confirme}} btes/colis</span>
-              <button class="tdp-cad-edit" @click="trsOpenCadence(selectedTrsPanel)" v-if="selectedTrsPanel.session.statut==='En cours'">✎</button>
+              <button class="tdp-cad-edit" @click="trsOpenCadence(selectedTrsPanel)" v-if="selectedTrsPanel.session.statut==='En cours'"><NavIcon name="pencil" :size="12" /></button>
             </div>
             <div class="tdp-cpt-table">
               <div class="tdp-cpt-row tdp-cpt-hd">
@@ -470,7 +470,7 @@
               </div>
             </div>
             <div class="tdp-reminder" v-if="trsTheoCounters[selectedTrsPanel.equip.id]?.needsComptage">
-              ⚠ COMPTAGE EN ATTENTE — {{trsTheoCounters[selectedTrsPanel.equip.id]?.minsSinceCpt}} min
+              <NavIcon name="alert-triangle" :size="13" /> COMPTAGE EN ATTENTE — {{trsTheoCounters[selectedTrsPanel.equip.id]?.minsSinceCpt}} min
             </div>
           </div>
 
@@ -497,17 +497,17 @@
           <!-- Actions -->
           <div class="tdp-actions">
             <template v-if="!selectedTrsPanel.session">
-              <button class="tdp-btn tdp-btn-start" @click="trsOpenStart(selectedTrsPanel.equip)">▶ Démarrer session</button>
+              <button class="tdp-btn tdp-btn-start" @click="trsOpenStart(selectedTrsPanel.equip)"><NavIcon name="play" :size="13" /> Démarrer session</button>
             </template>
             <template v-else-if="selectedTrsPanel.session.statut === 'En cours'">
-              <button class="tdp-btn tdp-btn-stop"  @click="trsOpenArret(selectedTrsPanel)">⏸ Arrêt</button>
+              <button class="tdp-btn tdp-btn-stop"  @click="trsOpenArret(selectedTrsPanel)"><NavIcon name="pause" :size="13" /> Arrêt</button>
               <button class="tdp-btn tdp-btn-count" @click="trsOpenComptage(selectedTrsPanel)">+ Comptage</button>
-              <button class="tdp-btn tdp-btn-dev"   @click="trsOpenDev(selectedTrsPanel)">⚠ Déviation</button>
-              <button class="tdp-btn tdp-btn-close" @click="trsOpenClose(selectedTrsPanel)">✓ Clôturer</button>
+              <button class="tdp-btn tdp-btn-dev"   @click="trsOpenDev(selectedTrsPanel)"><NavIcon name="alert-triangle" :size="13" /> Déviation</button>
+              <button class="tdp-btn tdp-btn-close" @click="trsOpenClose(selectedTrsPanel)"><NavIcon name="check" :size="13" /> Clôturer</button>
             </template>
             <template v-else-if="selectedTrsPanel.session.statut === 'Arrêt' || selectedTrsPanel.session.statut === 'Pause'">
-              <button class="tdp-btn tdp-btn-resume"  @click="trsClotureArret(selectedTrsPanel)">▶ Reprendre</button>
-              <button class="tdp-btn tdp-btn-requal"  @click="trsOpenRequalif(selectedTrsPanel)" v-if="selectedTrsPanel.activeArret">✎ Requalifier</button>
+              <button class="tdp-btn tdp-btn-resume"  @click="trsClotureArret(selectedTrsPanel)"><NavIcon name="play" :size="13" /> Reprendre</button>
+              <button class="tdp-btn tdp-btn-requal"  @click="trsOpenRequalif(selectedTrsPanel)" v-if="selectedTrsPanel.activeArret"><NavIcon name="pencil" :size="13" /> Requalifier</button>
             </template>
           </div>
 
@@ -534,7 +534,7 @@
             <div class="dp-nom">{{selectedNode.nom}}</div>
             <div class="dp-zone">{{zoneLabel(selectedNode.zone)}}</div>
           </div>
-          <button class="dp-close" @click="selectedNode=null">✕</button>
+          <button class="dp-close" @click="selectedNode=null"><NavIcon name="x" :size="14" /></button>
         </div>
 
         <!-- Statut -->
@@ -562,22 +562,22 @@
           <div class="dp-sec-title">Actions</div>
           <div class="dp-actions-grid">
             <button class="dp-act-btn dp-act-start" @click="openStartModal">
-              ▶ Démarrer
+              <NavIcon name="play" :size="13" /> Démarrer
             </button>
             <button class="dp-act-btn dp-act-stop"
               :disabled="!getNodeLots(selectedNode).length"
               @click="openStopModal">
-              ⏸ Arrêt
+              <NavIcon name="pause" :size="13" /> Arrêt
             </button>
             <button class="dp-act-btn dp-act-close"
               :disabled="!getNodeLots(selectedNode).length"
               @click="openCloseModal">
-              ✓ Clôturer
+              <NavIcon name="check" :size="13" /> Clôturer
             </button>
             <button class="dp-act-btn dp-act-dev"
               :disabled="!getNodeLots(selectedNode).length"
               @click="openDevModal">
-              ⚠ Déviation
+              <NavIcon name="alert-triangle" :size="13" /> Déviation
             </button>
           </div>
         </div>
@@ -601,7 +601,7 @@
       <div class="modal-box">
         <!-- MODAL : DÉMARRER SESSION -->
         <template v-if="modal.type==='start'">
-          <div class="modal-hd">▶ Démarrer — <span class="mh-code">{{selectedNode?.code}}</span></div>
+          <div class="modal-hd"><NavIcon name="play" :size="16" /> Démarrer — <span class="mh-code">{{selectedNode?.code}}</span></div>
           <div class="modal-body">
             <div class="mf-row">
               <label>Lots <span class="mf-badge" v-if="modal.lots&&modal.lots.length">{{modal.lots.length}}</span></label>
@@ -612,7 +612,7 @@
                   <div v-for="l in modal.lotDropdown" :key="l.id" class="ld-item"
                     @click="selectModalLot(l)">
                     <b>{{l.numero_lot}}</b> — {{l.products?.description||'—'}}
-                    <span v-if="modal.lots&&modal.lots.find(function(x){return x.id===l.id})" class="ld-check">✓</span>
+                    <span v-if="modal.lots&&modal.lots.find(function(x){return x.id===l.id})" class="ld-check"><NavIcon name="check" :size="12" /></span>
                   </div>
                 </div>
               </div>
@@ -635,15 +635,15 @@
             <button class="mb-cancel" @click="closeModal">Annuler</button>
             <button class="mb-ok" @click="saveStart" :disabled="modal.saving||!(modal.lots&&modal.lots.length)">
               <template v-if="modal.saving">…</template>
-              <template v-else-if="modal.lots&&modal.lots.length>1">▶ Démarrer ({{modal.lots.length}} lots)</template>
-              <template v-else>▶ Démarrer</template>
+              <template v-else-if="modal.lots&&modal.lots.length>1"><NavIcon name="play" :size="14" /> Démarrer ({{modal.lots.length}} lots)</template>
+              <template v-else><NavIcon name="play" :size="14" /> Démarrer</template>
             </button>
           </div>
         </template>
 
         <!-- MODAL : DÉCLARER ARRÊT -->
         <template v-if="modal.type==='stop'">
-          <div class="modal-hd">⏸ Déclarer arrêt — <span class="mh-code">{{selectedNode?.code}}</span></div>
+          <div class="modal-hd"><NavIcon name="pause" :size="16" /> Déclarer arrêt — <span class="mh-code">{{selectedNode?.code}}</span></div>
           <div class="modal-body">
             <div class="mf-row">
               <label>Lot concerné</label>
@@ -666,14 +666,14 @@
           <div class="modal-ft">
             <button class="mb-cancel" @click="closeModal">Annuler</button>
             <button class="mb-ok mb-warn" @click="saveStop" :disabled="modal.saving">
-              {{modal.saving?'…':'⏸ Confirmer arrêt'}}
+              <template v-if="modal.saving">…</template><template v-else><NavIcon name="pause" :size="14" /> Confirmer arrêt</template>
             </button>
           </div>
         </template>
 
         <!-- MODAL : CLÔTURER -->
         <template v-if="modal.type==='close'">
-          <div class="modal-hd">✓ Clôturer session — <span class="mh-code">{{selectedNode?.code}}</span></div>
+          <div class="modal-hd"><NavIcon name="check" :size="16" /> Clôturer session — <span class="mh-code">{{selectedNode?.code}}</span></div>
           <div class="modal-body">
             <div class="mf-row">
               <label>Session à clôturer</label>
@@ -693,14 +693,14 @@
           <div class="modal-ft">
             <button class="mb-cancel" @click="closeModal">Annuler</button>
             <button class="mb-ok mb-green" @click="saveClose" :disabled="modal.saving">
-              {{modal.saving?'…':'✓ Clôturer'}}
+              <template v-if="modal.saving">…</template><template v-else><NavIcon name="check" :size="14" /> Clôturer</template>
             </button>
           </div>
         </template>
 
         <!-- MODAL : DÉVIATION -->
         <template v-if="modal.type==='deviation'">
-          <div class="modal-hd">⚠ Déclarer déviation — <span class="mh-code">{{selectedNode?.code}}</span></div>
+          <div class="modal-hd"><NavIcon name="alert-triangle" :size="16" /> Déclarer déviation — <span class="mh-code">{{selectedNode?.code}}</span></div>
           <div class="modal-body">
             <div class="mf-row">
               <label>Lot concerné</label>
@@ -741,7 +741,7 @@
     <!-- ══ TRS MODAL : DÉMARRER SESSION ══ -->
     <div class="trs-overlay" v-if="trsStartModal.show" @click.self="trsStartModal.show=false">
       <div class="trs-modal">
-        <div class="trs-modal-hd">▶ Démarrer — {{trsStartModal.equip?.nom_equipement}}</div>
+        <div class="trs-modal-hd"><NavIcon name="play" :size="16" /> Démarrer — {{trsStartModal.equip?.nom_equipement}}</div>
         <label class="trs-lbl">N° Lot *</label>
         <div class="trs-auto-wrap">
           <input v-model="trsStartModal.lotSearch" class="trs-inp" placeholder="Rechercher numéro de lot…" @input="trsSearchLots" />
@@ -752,7 +752,7 @@
             </div>
           </div>
         </div>
-        <div class="trs-sel-lot" v-if="trsStartModal.lot">✓ Lot <strong>{{trsStartModal.lot.numero_lot}}</strong> — {{trsStartModal.lot.description}}</div>
+        <div class="trs-sel-lot" v-if="trsStartModal.lot"><NavIcon name="check" :size="13" /> Lot <strong>{{trsStartModal.lot.numero_lot}}</strong> — {{trsStartModal.lot.description}}</div>
         <div class="trs-form-row">
           <div class="trs-form-field">
             <label class="trs-lbl">Shift</label>
@@ -813,7 +813,7 @@
         </div>
         <div class="trs-err" v-if="trsStartModal.error">{{trsStartModal.error}}</div>
         <div class="trs-modal-acts">
-          <button class="trs-btn-save trs-btn-go" @click="trsDoStart" :disabled="trsStartModal.saving || !trsStartModal.lot">{{trsStartModal.saving ? 'Démarrage…' : '▶ Démarrer'}}</button>
+          <button class="trs-btn-save trs-btn-go" @click="trsDoStart" :disabled="trsStartModal.saving || !trsStartModal.lot"><template v-if="trsStartModal.saving">Démarrage…</template><template v-else><NavIcon name="play" :size="14" /> Démarrer</template></button>
           <button class="trs-btn-cancel" @click="trsStartModal.show=false">Annuler</button>
         </div>
       </div>
@@ -822,7 +822,7 @@
     <!-- ══ TRS MODAL : DÉCLARER ARRÊT ══ -->
     <div class="trs-overlay" v-if="trsArretModal.show" @click.self="trsArretModal.show=false">
       <div class="trs-modal">
-        <div class="trs-modal-hd">⏸ Déclarer un arrêt — {{trsArretModal.panel?.equip.nom_equipement}}</div>
+        <div class="trs-modal-hd"><NavIcon name="pause" :size="16" /> Déclarer un arrêt — {{trsArretModal.panel?.equip.nom_equipement}}</div>
         <div class="trs-cascade">
           <div class="trs-cs-step">
             <label class="trs-lbl">Famille *</label>
@@ -864,7 +864,7 @@
         <input v-model="trsArretModal.commentaire" class="trs-inp" placeholder="Optionnel…" />
         <div class="trs-err" v-if="trsArretModal.error">{{trsArretModal.error}}</div>
         <div class="trs-modal-acts">
-          <button class="trs-btn-save trs-btn-stop" @click="trsDoArret" :disabled="trsArretModal.saving || !trsArretModal.type_id">{{trsArretModal.saving ? 'Enregistrement…' : '⏸ Démarrer chrono arrêt'}}</button>
+          <button class="trs-btn-save trs-btn-stop" @click="trsDoArret" :disabled="trsArretModal.saving || !trsArretModal.type_id"><template v-if="trsArretModal.saving">Enregistrement…</template><template v-else><NavIcon name="pause" :size="14" /> Démarrer chrono arrêt</template></button>
           <button class="trs-btn-cancel" @click="trsArretModal.show=false">Annuler</button>
         </div>
       </div>
@@ -873,7 +873,7 @@
     <!-- ══ TRS MODAL : REQUALIFIER ARRÊT ══ -->
     <div class="trs-overlay" v-if="trsRequalModal.show" @click.self="trsRequalModal.show=false">
       <div class="trs-modal trs-modal-sm">
-        <div class="trs-modal-hd">✎ Requalifier l'arrêt en cours — {{trsRequalModal.panel?.equip.nom_equipement}}</div>
+        <div class="trs-modal-hd"><NavIcon name="pencil" :size="16" /> Requalifier l'arrêt en cours — {{trsRequalModal.panel?.equip.nom_equipement}}</div>
         <div style="display:flex;flex-direction:column;gap:8px;">
           <div><label class="trs-lbl">Famille</label>
             <select v-model="trsRequalModal.famille_id" class="trs-inp" @change="trsOnRequalFamilleChange">
@@ -901,7 +901,7 @@
     <!-- ══ TRS MODAL : MODIFIER CADENCE ══ -->
     <div class="trs-overlay" v-if="trsCadenceModal.show" @click.self="trsCadenceModal.show=false">
       <div class="trs-modal trs-modal-sm">
-        <div class="trs-modal-hd">⚙ Modifier cadence — {{trsCadenceModal.panel?.equip.nom_equipement}}</div>
+        <div class="trs-modal-hd"><NavIcon name="settings" :size="16" /> Modifier cadence — {{trsCadenceModal.panel?.equip.nom_equipement}}</div>
         <div class="trs-modal-ctx">Nouvelle valeur lue sur la machine</div>
         <div class="trs-form-row">
           <div class="trs-form-field" style="flex:1">
@@ -919,7 +919,7 @@
     <!-- ══ TRS MODAL : HISTORIQUE ══ -->
     <div class="trs-overlay trs-histo-overlay" v-if="trsHistoModal.show" @click.self="trsHistoModal.show=false">
       <div class="trs-modal trs-modal-lg">
-        <div class="trs-modal-hd">📅 Historique des sessions TRS</div>
+        <div class="trs-modal-hd"><NavIcon name="calendar" :size="16" /> Historique des sessions TRS</div>
 
         <!-- Filtres -->
         <div class="trs-histo-filters">
@@ -935,7 +935,7 @@
             </select>
           </div>
           <button class="trs-btn-save" style="align-self:flex-end" @click="loadTrsHistoData" :disabled="trsHistoModal.loading">
-            {{trsHistoModal.loading ? '…' : '🔍 Chercher'}}
+            <template v-if="trsHistoModal.loading">…</template><template v-else><NavIcon name="search" :size="13" /> Chercher</template>
           </button>
         </div>
 
@@ -1007,7 +1007,7 @@
     <!-- ══ TRS MODAL : CLÔTURER SESSION ══ -->
     <div class="trs-overlay" v-if="trsCloseModal.show" @click.self="trsCloseModal.show=false">
       <div class="trs-modal">
-        <div class="trs-modal-hd">✓ Clôturer la session — {{trsCloseModal.panel?.equip.nom_equipement}}</div>
+        <div class="trs-modal-hd"><NavIcon name="check" :size="16" /> Clôturer la session — {{trsCloseModal.panel?.equip.nom_equipement}}</div>
         <div class="trs-modal-ctx" v-if="trsCloseModal.panel?.session">Lot {{trsCloseModal.panel.lotNum}} · Démarré à {{trsCloseModal.panel.session.heure_debut}}</div>
         <div class="trs-form-row">
           <div class="trs-form-field"><label class="trs-lbl">Heure fin *</label><input type="time" v-model="trsCloseModal.heure_fin" class="trs-inp" step="60" /></div>
@@ -1029,7 +1029,7 @@
         </div>
         <div class="trs-err" v-if="trsCloseModal.error">{{trsCloseModal.error}}</div>
         <div class="trs-modal-acts">
-          <button class="trs-btn-save trs-btn-cloture" @click="trsDoClose" :disabled="trsCloseModal.saving || !trsCloseModal.heure_fin">{{trsCloseModal.saving ? 'Clôture…' : '✓ Clôturer et calculer OEE'}}</button>
+          <button class="trs-btn-save trs-btn-cloture" @click="trsDoClose" :disabled="trsCloseModal.saving || !trsCloseModal.heure_fin"><template v-if="trsCloseModal.saving">Clôture…</template><template v-else><NavIcon name="check" :size="14" /> Clôturer et calculer OEE</template></button>
           <button class="trs-btn-cancel" @click="trsCloseModal.show=false">Annuler</button>
         </div>
       </div>
