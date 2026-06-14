@@ -128,10 +128,10 @@ html[data-theme="workshop"] .top-bar {
 /* ── ☀️ JOUR — Azur (sidebar claire) ─────────────────────────────── */
 html[data-theme="day"] .sidebar {
   background:
-    radial-gradient(130% 55% at 50% -10%, rgba(37,99,235,.06), transparent 70%),
-    linear-gradient(180deg, #f8fbff 0%, #f0f6ff 100%);
+    radial-gradient(130% 55% at 50% -10%, rgba(37,99,235,.035), transparent 70%),
+    linear-gradient(180deg, #fdfeff 0%, #f6faff 100%);
   color: #5b6477;
-  border-right: 1px solid #e2ebf8;
+  border-right: 1px solid #e8eef9;
 }
 html[data-theme="day"] .sidebar-logo { border-bottom-color: #dde8f7; }
 html[data-theme="day"] .logo-text    { color: #15233e; }
