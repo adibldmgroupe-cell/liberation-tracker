@@ -173,11 +173,18 @@ export async function closeDeviation(deviationId, lotId, userId) {
 export async function declareRVP(lotId, rvpType, userId) {
   var now = new Date().toISOString()
   var serviceMap = { rvp_fab: 'fabrication', rvp_cond: 'conditionnement', rvp_lcq: 'lcq' }
-  await supabase.from('liberation_documents').insert({
+  var svc = serviceMap[rvpType] || 'fabrication'
+  // Éviter le doublon : si un RVP de ce service existe déjà pour le lot, ne pas réinsérer.
+  var ex = await supabase.from('liberation_documents').select('id')
+    .eq('lot_id', lotId).eq('type_document', 'rvp').eq('service_emetteur', svc).limit(1)
+  if (ex.error) throw new Error('RVP ' + svc + ' (lecture) : ' + ex.error.message)
+  if (ex.data && ex.data.length) return
+  var res = await supabase.from('liberation_documents').insert({
     lot_id: lotId, type_document: 'rvp', statut: 'non_emis',
     is_applicable: true, is_required: true,
-    service_emetteur: serviceMap[rvpType] || 'fabrication'
+    service_emetteur: svc
   })
+  if (res.error) throw new Error('RVP ' + svc + ' : ' + res.error.message)
   await supabase.from('liberation_dossiers').update({ pieces_complementaires_ok: false, updated_at: now }).eq('lot_id', lotId)
   await supabase.from('lot_events').insert({
     lot_id: lotId, event_type: 'rvp_declare',

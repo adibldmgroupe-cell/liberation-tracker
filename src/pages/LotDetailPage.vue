@@ -157,6 +157,7 @@
 
     <!-- RVP -->
     <div class="section"><div class="sh"><span>RVP</span></div>
+      <div v-if="docErrMsg" class="doc-err">{{docErrMsg}}</div>
       <div class="dg" v-if="canPerform('emettre_rvp') || rvpDocs.length">
         <template v-for="r in rvpRows" :key="r.key">
           <!-- pas encore déclaré → ＋ Déclarer -->
@@ -458,7 +459,9 @@ export default {
     var doDeclareRvp = async function(type){
       if(rvpSubmitting.value) return
       rvpSubmitting.value = true
+      docErrMsg.value = ''
       try { await declareRVP(lot.value.id,type,userId.value); await loadLot() }
+      catch(e){ docErrMsg.value = 'Erreur RVP : ' + e.message; console.error('declareRVP', e) }
       finally { rvpSubmitting.value = false }
     }
     var docErrMsg = ref('')
