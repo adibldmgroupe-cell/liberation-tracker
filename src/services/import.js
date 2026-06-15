@@ -203,7 +203,7 @@ export async function importFromGoogleSheets(url, onProgress) {
 // Source : feuille "Historique" publiée en CSV (mêmes colonnes que l'ancien import Excel
 // Historique). Particularité : 1re ligne = groupes de services → on détecte la vraie
 // ligne d'en-têtes (celle contenant "N°LOT"). Optimisé en batch (upserts groupés).
-// Prérequis migration : UNIQUE(lot_id,type_document) sur liberation_documents.
+// Prérequis migration : UNIQUE(lot_id,type_document,service_emetteur) sur liberation_documents (migration 039).
 function chunk(arr, size) { var out = []; for (var i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size)); return out }
 
 export async function importHistoriqueDepuisGoogleSheets(url, onProgress) {
@@ -356,8 +356,8 @@ export async function importHistoriqueDepuisGoogleSheets(url, onProgress) {
 
   // ── 8. Upsert docs / dossiers / OF / OC (batch) ──
   for (var dc of chunk(docRows, 500)) {
-    var rD = await supabase.from('liberation_documents').upsert(dc, { onConflict: 'lot_id,type_document' })
-    if (rD.error) stats.errors.push('Documents : ' + rD.error.message + ' — exécuter la migration UNIQUE(lot_id,type_document)')
+    var rD = await supabase.from('liberation_documents').upsert(dc, { onConflict: 'lot_id,type_document,service_emetteur' })
+    if (rD.error) stats.errors.push('Documents : ' + rD.error.message + ' — exécuter la migration 039 (UNIQUE lot_id,type_document,service_emetteur)')
   }
   for (var dsc of chunk(dossierRows, 500)) {
     var rDs = await supabase.from('liberation_dossiers').upsert(dsc, { onConflict: 'lot_id' })
