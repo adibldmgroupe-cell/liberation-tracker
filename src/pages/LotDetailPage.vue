@@ -157,18 +157,23 @@
 
     <!-- RVP -->
     <div class="section"><div class="sh"><span>RVP</span></div>
-      <div class="dg" v-if="canPerform('emettre_rvp')">
-        <div class="di di-act" @click="doDeclareRvp('rvp_fab')"><div class="dind ind-violet"></div><div><div class="dn">RVP Fabrication</div><div class="ds">＋ Émettre</div></div></div>
-        <div class="di di-act" @click="doDeclareRvp('rvp_cond')"><div class="dind ind-violet"></div><div><div class="dn">RVP Conditionnement</div><div class="ds">＋ Émettre</div></div></div>
-        <div class="di di-act" @click="doDeclareRvp('rvp_lcq')"><div class="dind ind-violet"></div><div><div class="dn">RVP LCQ</div><div class="ds">＋ Émettre</div></div></div>
+      <div class="dg" v-if="canPerform('emettre_rvp') || rvpDocs.length">
+        <template v-for="r in rvpRows" :key="r.key">
+          <!-- pas encore déclaré → ＋ Déclarer -->
+          <div v-if="r.mode==='declare' && canPerform('emettre_rvp')" class="di di-act" @click="doDeclareRvp(r.key)">
+            <div class="dind ind-wait"></div><div><div class="dn">RVP {{r.label}}</div><div class="ds">＋ Déclarer</div></div>
+          </div>
+          <!-- déclaré, non émis → ＋ Émettre (clic = entrer le circuit) -->
+          <div v-else-if="r.mode==='emit'" class="di di-act" @click="$router.push('/lots/'+lot.id+'/documents/'+r.doc.id)">
+            <div class="dind ind-violet"></div><div><div class="dn">RVP {{r.label}}</div><div class="ds">＋ Émettre</div></div>
+          </div>
+          <!-- circuit en cours / terminé → statut, clic = circuit -->
+          <div v-else-if="r.mode==='status'" class="di" @click="$router.push('/lots/'+lot.id+'/documents/'+r.doc.id)">
+            <div class="dind" :class="indClass(r.doc)"></div><div><div class="dn">RVP {{r.label}}</div><div class="ds" :class="dsClass(r.doc)">{{docStatLabel(r.doc)}}</div></div>
+          </div>
+        </template>
       </div>
-      <div v-if="!rvpDocs.length" class="em">Aucun RVP</div>
-      <div class="dg" v-else>
-        <div class="di" v-for="d in rvpDocs" :key="d.id" @click="$router.push('/lots/'+lot.id+'/documents/'+d.id)">
-          <div class="dind" :class="indClass(d)"></div>
-          <div><div class="dn">RVP — {{rvpServiceLabel(d)}}</div><div class="ds" :class="dsClass(d)">{{docStatLabel(d)}}</div></div>
-        </div>
-      </div>
+      <div v-else class="em">Aucun RVP</div>
     </div>
 
     <!-- MàJ Documents -->
@@ -385,6 +390,20 @@ export default {
     })
     var mainDocs = computed(function(){return docs.value.filter(function(d){return d.type_document!=='rvp'&&!d.type_document.startsWith('maj_')&&!d.type_document.startsWith('cloture_sap_')})})
     var rvpDocs = computed(function(){return docs.value.filter(function(d){return d.type_document==='rvp'})})
+    var RVP_TYPES = [
+      { key:'rvp_fab', svc:'fabrication', label:'Fabrication' },
+      { key:'rvp_cond', svc:'conditionnement', label:'Conditionnement' },
+      { key:'rvp_lcq', svc:'lcq', label:'LCQ' }
+    ]
+    // Une ligne par type RVP qui transitionne : pas de doc => 'declare' (＋ Déclarer) ;
+    // doc non_emis => 'emit' (＋ Émettre, clic = entrer le circuit) ; sinon 'status' (clic = circuit).
+    var rvpRows = computed(function(){
+      return RVP_TYPES.map(function(t){
+        var d = rvpDocs.value.find(function(x){return x.service_emetteur===t.svc})
+        var mode = !d ? 'declare' : (d.statut==='non_emis' ? 'emit' : 'status')
+        return { key:t.key, label:t.label, doc:d, mode:mode }
+      })
+    })
     var majDocs = computed(function(){return docs.value.filter(function(d){return d.type_document.startsWith('maj_')})})
     var clotDocs = computed(function(){return docs.value.filter(function(d){return d.type_document.startsWith('cloture_sap_')})})
     var docsOk = computed(function(){return docs.value.filter(function(d){return d.statut==='approuve_dt'&&d.is_applicable}).length})
@@ -435,7 +454,13 @@ export default {
       await supabase.from('lot_events').insert({lot_id:lot.value.id,event_type:'deviation_bloquante',description:'Déviation marquée bloquante',triggered_by:userId.value,created_at:new Date().toISOString()})
       await loadLot()
     }
-    var doDeclareRvp = async function(type){await declareRVP(lot.value.id,type,userId.value);await loadLot()}
+    var rvpSubmitting = ref(false)
+    var doDeclareRvp = async function(type){
+      if(rvpSubmitting.value) return
+      rvpSubmitting.value = true
+      try { await declareRVP(lot.value.id,type,userId.value); await loadLot() }
+      finally { rvpSubmitting.value = false }
+    }
     var docErrMsg = ref('')
     var doDeclareMajDoc = async function(type){
       docErrMsg.value=''
@@ -658,7 +683,7 @@ export default {
     watch(function(){ return route.params.id }, function(nv, ov){ if(nv && nv !== ov) loadLot() })
 
     return{lot,prod,of,oc,ofVals,ocVals,docs,devs,aqls,dossier,roadmap,roadmapDocs,detailLoading,statusLabels,circuitSteps,isAdmin,
-      showDevForm,devObs,devBloquante,devNumeroDn,showModify,editNumLot,editCodeProd,prodSuggestions,rvpDocs,mainDocs,
+      showDevForm,devObs,devBloquante,devNumeroDn,showModify,editNumLot,editCodeProd,prodSuggestions,rvpDocs,rvpRows,mainDocs,
       getVal,pipClass,stepIndClass,circuitFlowClass,stepStatus,stepClickable,stepClick,circuitOverallInd,circuitSummary,fmtDt,ofV,ocV,docsOk,docsReq,devsOpen,leadTime,dossierComplete,canValidateStep,
       docTypeLabel,docStatLabel,indClass,dsClass,rvpServiceLabel,isDocBlocked,goBack,
       userService,
